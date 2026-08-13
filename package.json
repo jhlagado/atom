@@ -1,0 +1,21 @@
+{
+  "name": "zap-z80",
+  "version": "0.1.0",
+  "private": true,
+  "description": "zap: a streaming Z80 assembler that runs on a Z80",
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "generate": "node src/generate-mnemonics.mjs",
+    "pretest": "npm run generate",
+    "test": "node --test test/*.test.mjs",
+    "measure": "node test/measure.mjs"
+  },
+  "dependencies": {
+    "@jhlagado/azm": "file:../debug80/packages/azm",
+    "@jhlagado/debug80-runtime": "file:../debug80/packages/debug80-runtime"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
