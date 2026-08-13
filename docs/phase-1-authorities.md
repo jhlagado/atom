@@ -2,8 +2,9 @@
 
 ## Frozen repositories
 
-- `zap`: `/Users/johnhardy/projects/zap`, branch `main`, initially an unborn
-  repository when Phase 1 began.
+- `atom`: `/Users/johnhardy/projects/atom`, branch `main`. The repository was
+  created in Phase 1; its pre-rename HEAD was
+  `1e92fb27a9fd7052f130645843c30c33a57dda4c`.
 - AZM and Nucleus reference tree: `/Users/johnhardy/projects/debug80`, branch
   `main`, HEAD `f0c6643c145bdcfddf11255116ad39ec9836bc9f`, clean when Phase 1 began.
 
@@ -20,7 +21,7 @@ CB forms with plain-register destinations.
 The resident Phase 1 account includes:
 
 - rule-driven encoder code;
-- validation and `ZapFormLength` code;
+- validation and `AtomFormLength` code;
 - mnemonic recognition code;
 - the shared one-to-eight-character RADIX-40 packer;
 - immutable opcode and mnemonic tables.

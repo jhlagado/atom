@@ -20,7 +20,7 @@ absolute, displacement, and relative operand classes.
 
 ## Entry points
 
-`ZapRadix40Pack`
+`AtomRadix40Pack`
 
 - Input: `HL` text, `B` length 1–8, `DE` six-byte destination.
 - Success: carry clear, exactly three packed words written.
@@ -28,19 +28,19 @@ absolute, displacement, and relative operand classes.
 - Accepts ASCII letters case-insensitively, digits, and underscore. Names are
   rejected rather than truncated.
 
-`ZapRecognizeMnemonic`
+`AtomRecognizeMnemonic`
 
 - Input: `HL` text, `B` length.
 - Success: carry clear, `A` mnemonic ordinal.
 - Failure: carry set, `A=0`.
 
-`ZapValidateForm` / `ZapFormLength`
+`AtomValidateForm` / `AtomFormLength`
 
 - Input: `IX` parsed-instruction record; concrete values are ignored.
 - Success: carry clear, `A` encoded length (1–4).
 - Failure: carry set, `A=0`.
 
-`ZapEncode`
+`AtomEncode`
 
 - Input: `IX` parsed-instruction record, `DE` output cursor.
 - Success: carry clear, `A` encoded length, `DE` advanced by that length, and

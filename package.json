@@ -1,8 +1,8 @@
 {
-  "name": "zap-z80",
+  "name": "atom-z80",
   "version": "0.1.0",
   "private": true,
-  "description": "zap: a streaming Z80 assembler that runs on a Z80",
+  "description": "atom: a streaming Z80 assembler that runs on a Z80",
   "license": "GPL-3.0-only",
   "type": "module",
   "scripts": {

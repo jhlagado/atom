@@ -1,6 +1,6 @@
-# zap
+# atom
 
-`zap` is a single-pass streaming assembler for the Z80, written in Z80
+`atom` is a single-pass streaming assembler for the Z80, written in Z80
 assembly. It targets a TEC-1 and is intended to assemble its own source in less
 than 16 KiB of resident code and immutable data.
 

@@ -23,13 +23,13 @@ export async function createHarness() {
       return value === undefined ? [] : [[symbol.name, value]];
     }),
   );
-  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.ZapHarnessEntry);
+  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomHarnessEntry);
   const memory = runtime.hardware.memory;
 
   function run(entry, setup = () => {}) {
-    memory.fill(0xa5, symbols.ZapHarnessOutput, symbols.ZapHarnessOutput + 7);
-    memory[symbols.ZapHarnessLength] = 0xa5;
-    memory[symbols.ZapHarnessCarry] = 0xa5;
+    memory.fill(0xa5, symbols.AtomHarnessOutput, symbols.AtomHarnessOutput + 7);
+    memory[symbols.AtomHarnessLength] = 0xa5;
+    memory[symbols.AtomHarnessCarry] = 0xa5;
     setup(memory, symbols);
     runtime.cpu.pc = symbols[entry];
     runtime.cpu.halted = false;
@@ -42,9 +42,9 @@ export async function createHarness() {
     }
     assert.equal(runtime.isHalted(), true, `${entry} exceeded execution budget`);
     return {
-      value: memory[symbols.ZapHarnessLength],
-      carry: memory[symbols.ZapHarnessCarry],
-      output: Array.from(memory.slice(symbols.ZapHarnessOutput, symbols.ZapHarnessOutput + 7)),
+      value: memory[symbols.AtomHarnessLength],
+      carry: memory[symbols.AtomHarnessCarry],
+      output: Array.from(memory.slice(symbols.AtomHarnessOutput, symbols.AtomHarnessOutput + 7)),
       instructions,
       cycles,
     };
@@ -54,29 +54,29 @@ export async function createHarness() {
     symbols,
     memory,
     encode(record) {
-      return run("ZapHarnessEntry", (target, names) => {
-        target.set(record, names.ZapHarnessInput);
+      return run("AtomHarnessEntry", (target, names) => {
+        target.set(record, names.AtomHarnessInput);
       });
     },
     length(record) {
-      return run("ZapHarnessLengthEntry", (target, names) => {
-        target.set(record, names.ZapHarnessInput);
+      return run("AtomHarnessLengthEntry", (target, names) => {
+        target.set(record, names.AtomHarnessInput);
       });
     },
     pack(text) {
       const bytes = new TextEncoder().encode(text);
-      return run("ZapHarnessPackEntry", (target, names) => {
-        target[names.ZapHarnessTextLength] = bytes.length;
-        target.fill(0, names.ZapHarnessText, names.ZapHarnessText + 9);
-        target.set(bytes.slice(0, 9), names.ZapHarnessText);
+      return run("AtomHarnessPackEntry", (target, names) => {
+        target[names.AtomHarnessTextLength] = bytes.length;
+        target.fill(0, names.AtomHarnessText, names.AtomHarnessText + 9);
+        target.set(bytes.slice(0, 9), names.AtomHarnessText);
       });
     },
     recognize(text) {
       const bytes = new TextEncoder().encode(text);
-      return run("ZapHarnessRecognizeEntry", (target, names) => {
-        target[names.ZapHarnessTextLength] = bytes.length;
-        target.fill(0, names.ZapHarnessText, names.ZapHarnessText + 9);
-        target.set(bytes.slice(0, 9), names.ZapHarnessText);
+      return run("AtomHarnessRecognizeEntry", (target, names) => {
+        target[names.AtomHarnessTextLength] = bytes.length;
+        target.fill(0, names.AtomHarnessText, names.AtomHarnessText + 9);
+        target.set(bytes.slice(0, 9), names.AtomHarnessText);
       });
     },
   };

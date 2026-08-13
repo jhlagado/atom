@@ -17,29 +17,29 @@ const result = {
     head: "f0c6643c145bdcfddf11255116ad39ec9836bc9f",
   },
   resident: {
-    total: extent(s, "ZapEncoderCoreStart", "ZapEncoderCoreEnd"),
-    code: extent(s, "ZapEncoderCodeStart", "ZapEncoderCodeEnd"),
-    immutable: extent(s, "ZapEncoderImmutableStart", "ZapEncoderImmutableEnd"),
-    ruleEncodingCode: extent(s, "ZapRuleEncodingCodeStart", "ZapRuleEncodingCodeEnd"),
-    validationCode: extent(s, "ZapValidationCodeStart", "ZapValidationCodeEnd"),
-    radix40Code: extent(s, "ZapRadix40CodeStart", "ZapRadix40CodeEnd"),
-    recognitionCode: extent(s, "ZapRecognitionCodeStart", "ZapRecognitionCodeEnd"),
-    opcodeTables: extent(s, "ZapOpcodeTableStart", "ZapOpcodeTableEnd"),
-    mnemonicTable: extent(s, "ZapMnemonicTable", "ZapMnemonicTableEnd"),
-    ldValidationCode: extent(s, "ZapLdValidationStart", "ZapLdValidationEnd"),
-    ldEncodingCode: extent(s, "ZapLdEncodingStart", "ZapLdEncodingEnd"),
+    total: extent(s, "AtomEncoderCoreStart", "AtomEncoderCoreEnd"),
+    code: extent(s, "AtomEncoderCodeStart", "AtomEncoderCodeEnd"),
+    immutable: extent(s, "AtomEncoderImmutableStart", "AtomEncoderImmutableEnd"),
+    ruleEncodingCode: extent(s, "AtomRuleEncodingCodeStart", "AtomRuleEncodingCodeEnd"),
+    validationCode: extent(s, "AtomValidationCodeStart", "AtomValidationCodeEnd"),
+    radix40Code: extent(s, "AtomRadix40CodeStart", "AtomRadix40CodeEnd"),
+    recognitionCode: extent(s, "AtomRecognitionCodeStart", "AtomRecognitionCodeEnd"),
+    opcodeTables: extent(s, "AtomOpcodeTableStart", "AtomOpcodeTableEnd"),
+    mnemonicTable: extent(s, "AtomMnemonicTable", "AtomMnemonicTableEnd"),
+    ldValidationCode: extent(s, "AtomLdValidationStart", "AtomLdValidationEnd"),
+    ldEncodingCode: extent(s, "AtomLdEncodingStart", "AtomLdEncodingEnd"),
     ldDirectTotal:
-      extent(s, "ZapLdValidationStart", "ZapLdValidationEnd") +
-      extent(s, "ZapLdEncodingStart", "ZapLdEncodingEnd"),
+      extent(s, "AtomLdValidationStart", "AtomLdValidationEnd") +
+      extent(s, "AtomLdEncodingStart", "AtomLdEncodingEnd"),
     recognitionExclusive:
-      extent(s, "ZapRecognitionCodeStart", "ZapRecognitionCodeEnd") +
-      extent(s, "ZapMnemonicTable", "ZapMnemonicTableEnd"),
+      extent(s, "AtomRecognitionCodeStart", "AtomRecognitionCodeEnd") +
+      extent(s, "AtomMnemonicTable", "AtomMnemonicTableEnd"),
     recognitionIncludingSharedPacker:
-      extent(s, "ZapRecognitionCodeStart", "ZapRecognitionCodeEnd") +
-      extent(s, "ZapMnemonicTable", "ZapMnemonicTableEnd") +
-      extent(s, "ZapRadix40CodeStart", "ZapRadix40CodeEnd"),
+      extent(s, "AtomRecognitionCodeStart", "AtomRecognitionCodeEnd") +
+      extent(s, "AtomMnemonicTable", "AtomMnemonicTableEnd") +
+      extent(s, "AtomRadix40CodeStart", "AtomRadix40CodeEnd"),
   },
-  workspace: extent(s, "ZapEncoderWorkspaceStart", "ZapEncoderWorkspaceEnd"),
+  workspace: extent(s, "AtomEncoderWorkspaceStart", "AtomEncoderWorkspaceEnd"),
   coverage: {
     mnemonicSpellings: MNEMONICS.length - 1,
     validSourceCases: valid.length,

@@ -9,10 +9,10 @@ const harness = await createHarness();
 
 test("assembles inside the Phase 1 review and reject gates", () => {
   const { symbols } = harness;
-  const core = extent(symbols, "ZapEncoderCoreStart", "ZapEncoderCoreEnd");
+  const core = extent(symbols, "AtomEncoderCoreStart", "AtomEncoderCoreEnd");
   assert.ok(core > 3_500, `expected the measured review gate to be crossed, got ${core}`);
   assert.ok(core <= 5_000, `reject gate crossed: ${core}`);
-  assert.equal(extent(symbols, "ZapEncoderWorkspaceStart", "ZapEncoderWorkspaceEnd"), 9);
+  assert.equal(extent(symbols, "AtomEncoderWorkspaceStart", "AtomEncoderWorkspaceEnd"), 9);
 });
 
 test("RADIX-40 packing is exact, case-insensitive, bounded, and atomic", () => {

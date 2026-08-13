@@ -1,4 +1,4 @@
-# zap Phase 1 measurement report
+# atom Phase 1 measurement report
 
 ## Result
 
@@ -71,7 +71,7 @@ the agreed boundary partitions.
 | Valid source cases compared with AZM | Measured 3,445 |
 | Distinct normalized input records | Measured 3,310 |
 | Distinct emitted byte sequences | Measured 3,222 |
-| AZM-rejected cases also rejected by zap | Measured 526 |
+| AZM-rejected cases also rejected by atom | Measured 526 |
 | AZM-supported logical instruction forms covered | **Measured 3,445 / 3,445 (100%)** |
 
 The valid set includes:
@@ -91,13 +91,13 @@ The denominator is AZM's logical source-form grammar, not every redundant byte
 stream a Z80 will execute after arbitrary or repeated prefixes.
 
 **Unsupported AZM forms: Measured none.** No valid form accepted by the frozen
-AZM grammar is intentionally omitted by zap. Forms AZM itself rejects are not
-claimed by zap and do not enter the denominator; examples include immediate
+AZM grammar is intentionally omitted by atom. Forms AZM itself rejects are not
+claimed by atom and do not enter the denominator; examples include immediate
 loads into index-half registers and a three-operand indexed `BIT` spelling.
 
 Negative cases include the LD operand cross-product plus targeted arity,
 condition, branch, stack, I/O, RST, IM, CB, and index-half failures. Both
-`ZapFormLength` and `ZapEncode` reject them. The commit-buffer canary proves no
+`AtomFormLength` and `AtomEncode` reject them. The commit-buffer canary proves no
 byte is published on failure.
 
 ## Whole-assembler projection
@@ -105,7 +105,7 @@ byte is published on failure.
 The encoder is the only newly measured wide-uncertainty component. For a
 whole-assembler projection, the frozen Nucleus tree supplies two directly
 comparable measurements: **Measured 142 bytes** for its streaming source
-adapter and **Measured 865 bytes** for its tokenizer. zap needs a different
+adapter and **Measured 865 bytes** for its tokenizer. atom needs a different
 operand/directive grammar, so those numbers are a basis, not copied totals.
 
 The remaining resident components are provisionally budgeted as follows:
