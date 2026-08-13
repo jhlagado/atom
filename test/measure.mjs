@@ -1,5 +1,5 @@
 import { MNEMONICS } from "../src/abi.mjs";
-import { invalidCases, validCases } from "./cases.mjs";
+import { invalidCases, systematicInvalidRecords, validCases } from "./cases.mjs";
 import { azmBytes, azmRejects, createHarness, extent } from "./support.mjs";
 
 const harness = await createHarness();
@@ -14,7 +14,9 @@ const result = {
   authority: {
     repository: "/Users/johnhardy/projects/debug80",
     branch: "main",
-    head: "f0c6643c145bdcfddf11255116ad39ec9836bc9f",
+    head: "24aa93e521665b0a25de9665a62330b21b6c72c6",
+    azmTree: "049b9e22fb1448bbb1619406e3ea13a124286ce4",
+    runtimeTree: "a921abc89dcbd88211dd008e705b69d646cfb9bb",
   },
   resident: {
     total: extent(s, "AtomEncoderCoreStart", "AtomEncoderCoreEnd"),
@@ -46,14 +48,15 @@ const result = {
     normalizedRecords: records.size,
     uniqueByteSequences: encodings.size,
     rejectedSourceCases: negative.length,
-    azmSupportedFraction: "1/1 of the explicitly modelled AZM instruction-form grammar",
+    systematicRejectedRecords: systematicInvalidRecords().length,
+    azmSupportedFraction: `${valid.length}/${valid.length} of the frozen AZM form census`,
     unsupportedAzmForms: [],
   },
   wholeAssembler: {
     classification: "Projected",
-    bytes: { low: 9968, high: 12568 },
-    kibibytes: { low: 9.7, high: 12.3 },
-    basis: "Measured 3968-byte core plus a projected 6000-8600 remaining resident bytes; see docs/phase-1-report.md",
+    bytes: { low: 9997, high: 12597 },
+    kibibytes: { low: 9.8, high: 12.3 },
+    basis: "Measured 3997-byte core plus a projected 6000-8600 remaining resident bytes; see docs/phase-1-report.md",
   },
   gates: { target: 3000, reviewAbove: 3500, rejectAbove: 5000 },
 };

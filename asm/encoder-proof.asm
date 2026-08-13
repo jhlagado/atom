@@ -39,9 +39,15 @@ AtomHarnessCapture:
 
 AtomHarnessLength: .db 0
 AtomHarnessCarry:  .db 0
+AtomHarnessOutputBefore: .db $3C
 AtomHarnessOutput: .db $A5,$A5,$A5,$A5,$A5,$A5,$A5
+AtomHarnessOutputAfter: .db $C3
+AtomHarnessInputBefore: .db $5A
 AtomHarnessInput:  .ds 10
+AtomHarnessInputAfter: .db $A5
 AtomHarnessTextLength: .db 0
+AtomHarnessTextBefore: .db $69
 AtomHarnessText:   .ds 9
+AtomHarnessTextAfter: .db $96
 AtomHarnessEnd:
             .end

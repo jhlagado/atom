@@ -1,0 +1,12 @@
+{
+  "name": "Atom Phase 1 encoder correctness proof",
+  "source": "../asm/encoder-proof.asm",
+  "memoryProfile": "phase-1-memory.json",
+  "contracts": "strict",
+  "executionBudgets": {
+    "AtomFormLength": { "measuredInstructions": 100, "maxInstructions": 125, "measuredCycles": 919, "maxCycles": 1150 },
+    "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 2040, "maxCycles": 2450 },
+    "AtomRadix40Pack": { "measuredInstructions": 446, "maxInstructions": 550, "measuredCycles": 3931, "maxCycles": 4800 },
+    "AtomRecognizeMnemonic": { "measuredInstructions": 646, "maxInstructions": 800, "measuredCycles": 5689, "maxCycles": 7000 }
+  }
+}

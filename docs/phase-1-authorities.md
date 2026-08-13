@@ -3,14 +3,19 @@
 ## Frozen repositories
 
 - `atom`: `/Users/johnhardy/projects/atom`, branch `main`. The repository was
-  created in Phase 1; its pre-rename HEAD was
-  `1e92fb27a9fd7052f130645843c30c33a57dda4c`.
+  created in Phase 1; proof hardening began from clean HEAD
+  `3a2410e9b1662551736e3a8e354acfc8ff4eda91` (pre-rename HEAD
+  `1e92fb27a9fd7052f130645843c30c33a57dda4c`).
 - AZM and Nucleus reference tree: `/Users/johnhardy/projects/debug80`, branch
-  `main`, HEAD `f0c6643c145bdcfddf11255116ad39ec9836bc9f`, clean when Phase 1 began.
+  `main`, current reviewed HEAD `24aa93e521665b0a25de9665a62330b21b6c72c6`.
+  Phase 1 began at `f0c6643c145bdcfddf11255116ad39ec9836bc9f`.
+  The AZM subtree is identical at both revisions, tree
+  `049b9e22fb1448bbb1619406e3ea13a124286ce4`; the Debug80 runtime subtree is
+  likewise identical, tree `a921abc89dcbd88211dd008e705b69d646cfb9bb`.
 
-AZM at that exact revision is the byte oracle and the assembler used to build
-the native encoder. Nucleus at that revision supplies the proof and measurement
-conventions only.
+The proof scripts verify those subtree identities, rebuild both dependencies,
+then use AZM as byte oracle and assembler. Nucleus supplies the proof and
+measurement conventions only.
 
 ## Target and boundary
 

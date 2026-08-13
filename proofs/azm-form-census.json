@@ -1,0 +1,19 @@
+{
+  "authority": "Frozen AZM instruction-form census for Atom Phase 1",
+  "caseCount": 3445,
+  "mnemonicCount": 69,
+  "canonicalSourceRecordSha256": "6f497f3f3e5b2d08a518dc3042390a9f6b0fa5ff8313f0a9b6e6024bdd3293fb",
+  "countsByMnemonic": {
+    "NOP": 1, "DI": 1, "EI": 1, "SCF": 1, "CCF": 1, "CPL": 1, "DAA": 1,
+    "EXX": 1, "HALT": 1, "RLCA": 1, "RRCA": 1, "RLA": 1, "RRA": 1,
+    "NEG": 1, "RRD": 1, "RLD": 1, "LDI": 1, "LDIR": 1, "LDD": 1, "LDDR": 1,
+    "CPI": 1, "CPIR": 1, "CPD": 1, "CPDR": 1, "INI": 1, "INIR": 1,
+    "IND": 1, "INDR": 1, "OUTI": 1, "OTIR": 1, "OUTD": 1, "OTDR": 1,
+    "RETI": 1, "RETN": 1, "RET": 9, "EX": 5, "IM": 3, "RST": 8,
+    "INC": 28, "DEC": 28, "PUSH": 6, "POP": 6, "LD": 454, "IN": 13,
+    "OUT": 13, "BIT": 144, "RES": 704, "SET": 704, "RLC": 88, "RRC": 88,
+    "RL": 88, "RR": 88, "SLA": 88, "SRA": 88, "SLL": 88, "SLS": 88,
+    "SRL": 88, "ADD": 39, "ADC": 31, "SUB": 54, "SBC": 31, "AND": 54,
+    "XOR": 54, "OR": 54, "CP": 54, "JP": 48, "CALL": 45, "JR": 25, "DJNZ": 5
+  }
+}

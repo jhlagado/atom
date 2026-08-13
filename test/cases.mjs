@@ -273,4 +273,37 @@ export function invalidCases() {
   return cases;
 }
 
+export function systematicInvalidRecords() {
+  const none = O.NONE;
+  const records = [];
+  for (const ordinal of [0, ...Array.from({ length: 186 }, (_, index) => index + 70)]) {
+    records.push(new Uint8Array([ordinal, none, none, none, 0, 0, 0, 0, 0, 0]));
+  }
+
+  const incClasses = new Set([
+    O.B, O.C, O.D, O.E, O.H, O.L, O.MEM_HL, O.A,
+    O.BC, O.DE, O.HL, O.SP, O.IX, O.IY, O.IXH, O.IXL, O.IYH, O.IYL,
+    O.INDEX_IX, O.INDEX_IY,
+  ]);
+  for (let operandClass = 0; operandClass < 256; operandClass += 1) {
+    if (!incClasses.has(operandClass)) {
+      records.push(new Uint8Array([M.INC, operandClass, none, none, 0, 0, 0, 0, 0, 0]));
+    }
+  }
+
+  const hidden = new Map();
+  for (const { record } of validCases()) {
+    if (record[3] !== none) continue;
+    const optionalIndexedDestination =
+      (record[0] === M.RES || record[0] === M.SET) &&
+      (record[2] === O.INDEX_IX || record[2] === O.INDEX_IY);
+    if (optionalIndexedDestination) continue;
+    const changed = record.slice();
+    changed[3] = O.B;
+    hidden.set(Buffer.from(changed).toString("hex"), changed);
+  }
+  records.push(...hidden.values());
+  return records;
+}
+
 export const boundaries = { IMM8, IMM16, DISP8 };
