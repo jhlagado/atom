@@ -14,8 +14,8 @@ const result = {
   authority: {
     repository: "/Users/johnhardy/projects/debug80",
     branch: "main",
-    head: "24aa93e521665b0a25de9665a62330b21b6c72c6",
-    azmTree: "049b9e22fb1448bbb1619406e3ea13a124286ce4",
+    head: "b4046badd29b1dd1bc146029728bacaa5e5fe603",
+    azmTree: "7889245c380334768f62805e73c13e979aa9f8c8",
     runtimeTree: "a921abc89dcbd88211dd008e705b69d646cfb9bb",
   },
   resident: {

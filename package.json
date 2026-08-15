@@ -7,14 +7,15 @@
   "type": "module",
   "scripts": {
     "generate": "node src/generate-mnemonics.mjs",
-    "annotate:contracts": "node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/encoder-proof.asm",
+    "annotate:contracts": "node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/encoder-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/symbol-proof.asm",
     "build:dependencies": "npm --prefix ../debug80/packages/azm run build && npm --prefix ../debug80/packages/debug80-runtime run build",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "prepare:proof": "npm run generate && npm run verify:dependencies && npm run build:dependencies",
     "pretest": "npm run prepare:proof",
     "test": "node --test test/*.test.mjs",
     "premeasure": "npm run prepare:proof",
-    "measure": "node test/measure.mjs"
+    "measure": "node test/measure.mjs",
+    "measure:symbols": "node test/measure-symbols.mjs"
   },
   "dependencies": {
     "@jhlagado/azm": "file:../debug80/packages/azm",

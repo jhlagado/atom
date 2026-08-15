@@ -1,0 +1,18 @@
+{
+  "name": "Atom Phase 2a symbol and pending prototype correctness proof",
+  "source": "../asm/symbol-proof.asm",
+  "memoryProfile": "phase-2a-memory.json",
+  "contracts": "strict",
+  "proofCapacity": { "symbolRecords": 8, "pendingRecords": 4 },
+  "executionBudgets": {
+    "AtomSymbolReset": { "measuredInstructions": 7, "maxInstructions": 10, "measuredCycles": 99, "maxCycles": 125 },
+    "AtomPendingReset": { "measuredInstructions": 5, "maxInstructions": 8, "measuredCycles": 66, "maxCycles": 85 },
+    "AtomPackSymbol": { "measuredInstructions": 475, "maxInstructions": 600, "measuredCycles": 4145, "maxCycles": 5200 },
+    "AtomSymbolDeclare": { "measuredInstructions": 200, "maxInstructions": 250, "measuredCycles": 2340, "maxCycles": 3000 },
+    "AtomSymbolFind": { "measuredInstructions": 169, "maxInstructions": 215, "measuredCycles": 1847, "maxCycles": 2350 },
+    "AtomSymbolReference": { "measuredInstructions": 194, "maxInstructions": 245, "measuredCycles": 2095, "maxCycles": 2650 },
+    "AtomSymbolAdvanceScope": { "measuredInstructions": 100, "maxInstructions": 125, "measuredCycles": 1178, "maxCycles": 1500 },
+    "AtomPendingAdd": { "measuredInstructions": 43, "maxInstructions": 55, "measuredCycles": 428, "maxCycles": 550 },
+    "AtomPendingTake": { "measuredInstructions": 92, "maxInstructions": 120, "measuredCycles": 1136, "maxCycles": 1450 }
+  }
+}

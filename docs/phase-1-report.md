@@ -13,6 +13,10 @@ stop-and-review gate by 497 bytes. It is 1,003 bytes below the 5,000-byte reject
 gate. Phase 1 therefore stops here without a compression pass and without work
 on the tokenizer, symbol table, directives, or output layer.
 
+The review accepted the 3,997-byte result without a compression pass. The
+one-bank question remains open until the other components have measured
+accounts; crossing the review gate did not by itself select a second bank.
+
 Writable workspace is **Measured 9 bytes**: six overlaid RADIX-40/commit bytes
 and three binary-search state bytes.
 

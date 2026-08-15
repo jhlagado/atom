@@ -5,7 +5,7 @@ import path from "node:path";
 const repository = path.resolve("../debug80");
 const expected = {
   branch: "main",
-  azmTree: "049b9e22fb1448bbb1619406e3ea13a124286ce4",
+  azmTree: "7889245c380334768f62805e73c13e979aa9f8c8",
   runtimeTree: "a921abc89dcbd88211dd008e705b69d646cfb9bb",
 };
 
