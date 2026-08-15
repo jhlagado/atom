@@ -20,3 +20,8 @@ npm run measure:symbols
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
 The Phase 2a decisions and measurements are in
 [`docs/phase-2a-report.md`](docs/phase-2a-report.md).
+
+## License
+
+Atom is licensed under the GNU General Public License, version 3 only
+(`GPL-3.0-only`).
