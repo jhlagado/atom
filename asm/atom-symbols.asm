@@ -417,6 +417,46 @@ _AtomPendingAlreadyDefined:
 ; in IX=symbol record
 ; out DE=patch address, B=kind, C=aux, A=AtomStatusOk and carry clear;
 ;     or A=AtomStatusNotFound and carry set
+.if AtomSymbolOutputMode
+; Inspect one pending entry without removing it. Phase 2f uses this entry to
+; validate and submit a patch before it reclaims the record with PendingTake.
+.routine in IX out A,carry,BC,DE clobbers IX,sign,parity,halfCarry,zero,HL
+AtomPendingPeek:
+            PUSH IX
+            POP  HL
+            LD   (AtomPendingOperationSymbol),HL
+            LD   IX,(AtomPendingArenaBase)
+            LD   DE,(AtomPendingNext)
+_AtomPendingPeekLoop:
+            PUSH IX
+            POP  HL
+            OR   A
+            SBC  HL,DE
+            JR   Z,_AtomPendingPeekNotFound
+            LD   L,(IX+0)
+            LD   H,(IX+1)
+            PUSH DE
+            LD   DE,(AtomPendingOperationSymbol)
+            OR   A
+            SBC  HL,DE
+            POP  DE
+            JR   Z,_AtomPendingPeekFound
+            LD   BC,AtomPendingRecordBytes
+            ADD  IX,BC
+            JR   _AtomPendingPeekLoop
+_AtomPendingPeekFound:
+            LD   E,(IX+2)
+            LD   D,(IX+3)
+            LD   B,(IX+4)
+            LD   C,(IX+5)
+            XOR  A
+            RET
+_AtomPendingPeekNotFound:
+            LD   A,AtomStatusNotFound
+            SCF
+            RET
+.endif
+
 .routine in IX out A,carry maybe-out BC,DE clobbers HL,IX,sign,parity,halfCarry,BC,DE,zero
 AtomPendingTake:
             PUSH IX

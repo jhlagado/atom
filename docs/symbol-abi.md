@@ -58,8 +58,13 @@ Each six-byte entry contains:
 entry for a newly defined symbol, returns its patch metadata, and fills the
 hole with the last live record. Repeating `AtomPendingTake` drains all entries
 for that symbol. This keeps resident use proportional to concurrent unresolved
-references. Patch-byte construction and append-only NOBJ serialization belong
-to the later output layer.
+references.
+
+The Phase 2f build also exposes `AtomPendingPeek`. It returns the same patch
+metadata without removing the record. The output layer peeks, constructs and
+submits final patch bytes through the Nucleus sink boundary, then calls
+`AtomPendingTake` after the sink succeeds. Historical Phase 2a–2e images omit
+this entry and retain their measured bytes exactly.
 
 All public routines return `A=AtomStatusOk` with carry clear on success. Failure
 returns a nonzero status with carry set. Unless a routine contract says

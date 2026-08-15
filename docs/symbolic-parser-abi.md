@@ -58,6 +58,11 @@ DE. It preflights the complete pending-list requirement, converts each byte
 offset to a logical patch address, and appends the existing six-byte pending
 records. Failure from insufficient pending capacity appends nothing.
 
-Patch-byte construction when a symbol becomes defined remains part of the
-output layer. Phase 2e records all information that operation requires but
-does not serialize IMAGE or PATCH records.
+The Phase 2f build exposes the same preflight separately as
+`AtomParserCheckReferences`. The output layer calls it before the first image
+sink operation, then calls `AtomParserQueueReferences` after every instruction
+byte succeeds. Historical Phase 2c and Phase 2e images retain the original
+combined entry byte for byte.
+
+Patch-byte construction and logical image/patch publication are specified in
+[`output-abi.md`](output-abi.md). The operating adapter owns serialized NOBJ.

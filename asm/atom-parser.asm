@@ -1203,13 +1203,17 @@ AtomParserPublicReferenceAddress:
             ADD  HL,DE
             RET
 
-; Queue every published reference after proving the complete pending capacity.
-;
-; in DE=logical instruction output address
-; out A=Atom status, carry clear on success; carry set on failure
-.routine in DE out A,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry,IX
+; Prove complete pending capacity and confirm that every referenced symbol is
+; still undefined. This entry publishes no pending record.
+.if AtomParserOutputMode
+.routine out A,carry clobbers BC,DE,HL,sign,parity,halfCarry,zero,IX
+AtomParserCheckReferences:
+.else
+; Phase 2c/2e retain the original combined preflight-and-commit entry exactly.
+.routine in DE out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry
 AtomParserQueueReferences:
             LD   (AtomParserQueueBase),DE
+.endif
             LD   A,(AtomParserReferenceCount)
             LD   B,A
             ADD  A,A
@@ -1220,13 +1224,13 @@ AtomParserQueueReferences:
             LD   DE,(AtomPendingNext)
             OR   A
             SBC  HL,DE
-            JR   C,_AtomParserQueueCapacity
+            JR   C,AtomParserQueueCapacity
             LD   A,H
             OR   A
             JR   NZ,_AtomParserQueueCheckSymbols
             LD   A,L
             CP   B
-            JR   C,_AtomParserQueueCapacity
+            JR   C,AtomParserQueueCapacity
 _AtomParserQueueCheckSymbols:
             XOR  A
             LD   (AtomParserReferenceScan),A
@@ -1235,7 +1239,11 @@ _AtomParserQueueCheckLoop:
             LD   B,A
             LD   A,(AtomParserReferenceScan)
             CP   B
+.if AtomParserOutputMode
+            JR   Z,_AtomParserQueuePreflightDone
+.else
             JR   Z,_AtomParserQueueCommit
+.endif
             CALL AtomParserPublicReferenceAddress
             LD   E,(HL)
             INC  HL
@@ -1244,10 +1252,25 @@ _AtomParserQueueCheckLoop:
             LD   DE,5
             ADD  HL,DE
             BIT  6,(HL)
-            JR   NZ,_AtomParserQueueAlreadyDefined
+            JR   NZ,AtomParserQueueAlreadyDefined
             LD   HL,AtomParserReferenceScan
             INC  (HL)
             JR   _AtomParserQueueCheckLoop
+.if AtomParserOutputMode
+_AtomParserQueuePreflightDone:
+            XOR  A
+            RET
+
+; Queue every published reference after proving the complete pending capacity.
+;
+; in DE=logical instruction output address
+; out A=Atom status, carry clear on success; carry set on failure
+.routine in DE out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry
+AtomParserQueueReferences:
+            LD   (AtomParserQueueBase),DE
+            CALL AtomParserCheckReferences
+            RET  C
+.endif
 _AtomParserQueueCommit:
             XOR  A
             LD   (AtomParserReferenceScan),A
@@ -1283,11 +1306,11 @@ _AtomParserQueueLoop:
 _AtomParserQueueDone:
             XOR  A
             RET
-_AtomParserQueueCapacity:
+AtomParserQueueCapacity:
             LD   A,AtomStatusPendingCapacity
             SCF
             RET
-_AtomParserQueueAlreadyDefined:
+AtomParserQueueAlreadyDefined:
             LD   A,AtomStatusAlreadyDefined
             SCF
             RET

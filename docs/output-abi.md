@@ -1,0 +1,76 @@
+# Nucleus-model output ABI
+
+Atom uses the Nucleus target-output boundary. Native compiler code submits
+image bytes and final patch bytes to an operating adapter. The adapter retains
+the image and patch spools and owns NOBJ framing, CRC, `BEGIN`, `MAP`,
+`COMMIT`, abort, storage capacity, and publication.
+
+Phase 2f is flat bank zero. The settled six-byte pending record has no bank
+field.
+
+## Sink entries
+
+The operating adapter provides three routines:
+
+| Entry | Inputs | Operation |
+| --- | --- | --- |
+| `AtomSinkImageByte` | `A=byte`, `C=bank`, `HL=address` | Append one byte to the image spool. |
+| `AtomSinkPatchByte` | `A=byte`, `C=bank`, `HL=address` | Append one final replacement byte to the patch spool. |
+| `AtomSinkPatchWord` | `C=bank`, `DE=address`, `HL=word` | Append one final little-endian replacement word to the patch spool. |
+
+Success returns carry clear. Failure returns carry set and a nonzero adapter
+status in A. A failed call appends no operation. An earlier successful call may
+remain in the uncommitted generation; the compiler driver must then call the
+adapter's abort operation, as Nucleus does.
+
+The proof adapter records the same logical operation shape used by the Nucleus
+Z80 proofs: kind, bank, target address, byte count, and final bytes.
+
+## Atom entries
+
+`AtomOutputReset` accepts `HL=target start` and `DE=byte capacity`. It selects
+flat bank zero and initializes the target cursor and remaining-capacity word.
+The target descriptor must already have validated the mathematical extent.
+
+`AtomOutputEmitInstruction` accepts IX pointing to the existing ten-byte parsed
+instruction record. It performs these operations:
+
+1. encodes into a four-byte resident scratch buffer;
+2. checks complete instruction and pending-list capacity;
+3. calls `AtomSinkImageByte` for each encoded byte at increasing addresses;
+4. advances the cursor after each successful call; and
+5. queues the parser's pending records after every image byte succeeds.
+
+Local capacity failure occurs before the first sink call. Adapter failure
+returns the adapter's status. The cursor counts only image bytes accepted by
+the adapter.
+
+`AtomOutputResolveSymbol` accepts IX pointing to a defined symbol record. It
+peeks at one matching pending record, forms and range-checks the final patch,
+submits it through the byte or word patch sink, and then removes the pending
+record. It repeats until no pending record names that symbol.
+
+The patch rules are:
+
+| Kind | Final calculation |
+| --- | --- |
+| Byte | Symbol plus signed addend must fit 0–255. |
+| Word | Symbol plus signed addend must remain in Atom's accepted word domain; the low word is stored little endian. |
+| Relative | Subtract `patchAddress+1`; the result must fit -128–127. |
+| Displacement | Symbol plus signed addend must fit -128–127. |
+
+Range or adapter failure leaves the current pending record in place. Patches
+accepted earlier in the same symbol drain remain in the uncommitted adapter
+spool and disappear when the driver aborts that generation.
+
+`AtomPendingPeek` is the non-destructive counterpart of `AtomPendingTake`. It
+accepts IX pointing to a symbol and returns `DE=patch address`, `B=kind`, and
+`C=signed addend`. `AtomStatusNotFound` means the symbol has no remaining
+pending record.
+
+## Later integration
+
+The label and equate handlers will call `AtomSymbolDeclare` followed by
+`AtomOutputResolveSymbol`. The final driver will diagnose remaining undefined
+symbols, construct the map, and call the operating adapter's commit or abort
+entries. Those handlers and lifecycle calls are outside Phase 2f.
