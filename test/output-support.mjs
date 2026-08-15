@@ -231,6 +231,14 @@ export async function createOutputHarness({ contracts = "strict", auditEveryCall
     failSinkAfter(calls) {
       memory[symbols.AtomOutputProofFailAfter] = calls;
     },
+    setLogAvailable(bytes) {
+      const next = symbols.AtomOutputProofLogLimit - bytes;
+      memory[symbols.AtomOutputProofLogNext] = next & 0xff;
+      memory[symbols.AtomOutputProofLogNext + 1] = next >>> 8;
+    },
+    logCursor() {
+      return word(memory, symbols.AtomOutputProofLogNext);
+    },
     outputState() {
       return {
         cursor: word(memory, symbols.AtomOutputCursor),

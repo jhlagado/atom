@@ -16,8 +16,8 @@ AZM strict register contracts pass for the complete Phase 2f image. Runtime
 proofs check exact return PC and SP, two-sided canaries, immutable resident
 bytes, source and parsed-record preservation, output and pending capacity,
 injected adapter failures, named execution budgets, and the complete
-**Measured: 65,536-byte address space** on every output and resolution failure
-path.
+**Measured: 65,536-byte address space** on every exercised output and
+resolution failure path.
 
 Phase 2f does not add labels, equates, directives, source-manifest iteration,
 final undefined-symbol checks, map construction, or sink commit and abort
@@ -44,8 +44,8 @@ Phase 2e established **Measured: 9,717 bytes** of code and immutable data plus
 | --- | --- | ---: | ---: |
 | Non-destructive pending lookup | Measured | 64 | 0 |
 | Read-only parser pending preflight | Measured | 6 | 0 |
-| Nucleus-model output and patch resolver | Measured | 362 | 22 |
-| **Phase 2f increment** | **Measured** | **432** | **22** |
+| Nucleus-model output and patch resolver | Measured | 359 | 21 |
+| **Phase 2f increment** | **Measured** | **429** | **21** |
 
 The integrated account is:
 
@@ -57,16 +57,16 @@ The integrated account is:
 | Expression evaluator | Measured | 1,908 |
 | Patch-field locator | Measured | 73 |
 | Symbolic parser with output preflight | Measured | 2,035 |
-| Nucleus-model output and resolver | Measured | 362 |
-| **Integrated code and immutable data** | **Measured** | **10,149** |
-| **Integrated fixed workspace** | **Measured** | **492** |
+| Nucleus-model output and resolver | Measured | 359 |
+| **Integrated code and immutable data** | **Measured** | **10,146** |
+| **Integrated fixed workspace** | **Measured** | **491** |
 
 The output workspace contains the target cursor, remaining capacity, a
 four-byte instruction buffer, and patch calculation scratch. Caller-owned
 symbol records, pending records, source, sink spools, sink state, and the Z80
 stack remain outside fixed workspace.
 
-The proof adapter measures **Measured: 139 code bytes** and **Measured: 10
+The proof adapter measures **Measured: 178 code bytes** and **Measured: 10
 workspace bytes**. It is external-service evidence, not Atom resident code.
 
 ## Image publication
@@ -82,6 +82,11 @@ positions of a four-byte instruction**. Earlier accepted image operations
 remain in the uncommitted proof spool, the cursor reports their exact count,
 and no pending record is published. The future driver will abort that
 generation, matching Nucleus.
+
+The proof adapter reserves each complete logical operation before writing it.
+Image and word-patch operations are exercised with one byte less than needed,
+exactly enough space, and one byte more; rejected operations leave both the
+spool cursor and its after-canary unchanged.
 
 ## Patch resolution
 
@@ -112,6 +117,7 @@ a name, symbol pointer, expression, or relocation request.
 | Z80 instruction lengths | Measured 4 / 4 |
 | Patch kinds | Measured 4 / 4 |
 | Four-byte instruction sink-failure positions | Measured 4 / 4 |
+| Proof-spool capacity boundaries | Measured 6 / 6 |
 | Maximum proof pending drain | Measured 8 / 8 records |
 | Claimed output banks | Measured 1 / 1, flat bank zero |
 
@@ -124,12 +130,12 @@ ordinal.
 
 | Entry | Classification | Instructions | T-states | Measured case |
 | --- | --- | ---: | ---: | --- |
-| `AtomOutputReset` | Measured | 5 | 63 | flat output reset |
-| `AtomOutputEmitInstruction` | Measured | 763 | 7,256 | four-byte instruction with two pending records |
+| `AtomOutputReset` | Measured | 4 | 50 | flat output reset |
+| `AtomOutputEmitInstruction` | Measured | 828 | 7,778 | four-byte instruction with two pending records |
 | `AtomPendingPeek` | Measured | 136 | 1,683 | eighth pending record |
-| `AtomOutputResolveSymbol` | Measured | 1,212 | 14,975 | drain eight word patches |
+| `AtomOutputResolveSymbol` | Measured | 1,348 | 16,039 | drain eight word patches |
 
-At 4 MHz, the measured eight-patch drain takes **Measured: about 3.74 ms**.
+At 4 MHz, the measured eight-patch drain takes **Measured: about 4.01 ms**.
 The named proof budgets retain margin above every measured maximum.
 
 ## Whole-assembler projection
@@ -144,10 +150,10 @@ measured implementation. Remaining Atom-resident work is:
 | Control, diagnostics, sink lifecycle, and final integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **1,400–2,550** |
 
-Adding that range to **Measured: 10,149 bytes** gives a **Projected:
-whole-assembler total of 11,549–12,699 bytes**, or **Projected: 11.3–12.4
+Adding that range to **Measured: 10,146 bytes** gives a **Projected:
+whole-assembler total of 11,546–12,696 bytes**, or **Projected: 11.3–12.4
 KiB**. The margin below the **Target: 16 KiB bank** is **Projected:
-3,685–4,835 bytes**. Operating-adapter code and storage remain platform
+3,688–4,838 bytes**. Operating-adapter code and storage remain platform
 services, as they do in Nucleus.
 
 ## Reproduction

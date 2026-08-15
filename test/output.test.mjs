@@ -115,6 +115,47 @@ test("sink failure retains only accepted uncommitted image operations", () => {
   }
 });
 
+test("proof spool reserves one byte below, exactly at, and above an image operation", () => {
+  for (const { available, carry, status, cursor } of [
+    { available: 6, carry: 1, status: 0xe2, cursor: 0x4000 },
+    { available: 7, carry: 0, status: 0, cursor: 0x4001 },
+    { available: 8, carry: 0, status: 0, cursor: 0x4001 },
+  ]) {
+    h.reset();
+    assert.equal(h.parse("NOP").carry, 0);
+    h.setLogAvailable(available);
+    const logCursor = h.logCursor();
+    const emitted = h.emit();
+    assert.equal(emitted.carry, carry, `available ${available}`);
+    assert.equal(emitted.status, status, `available ${available}`);
+    assert.equal(h.outputState().cursor, cursor, `available ${available}`);
+    if (carry) assert.equal(h.logCursor(), logCursor, `available ${available}`);
+    assert.equal(h.memory[h.symbols.AtomOutputLogAfter], 0xa5, `available ${available}`);
+  }
+});
+
+test("proof spool reserves one byte below, exactly at, and above a word patch", () => {
+  for (const { available, carry, status, pending } of [
+    { available: 7, carry: 1, status: 0xe2, pending: 1 },
+    { available: 8, carry: 0, status: 0, pending: 0 },
+    { available: 9, carry: 0, status: 0, pending: 0 },
+  ]) {
+    h.reset();
+    assert.equal(h.parse("JP Forward").carry, 0);
+    assert.equal(h.emit().carry, 0);
+    const declared = h.declare("Forward", 0x1234);
+    assert.equal(declared.carry, 0);
+    h.setLogAvailable(available);
+    const logCursor = h.logCursor();
+    const resolved = h.resolve(declared.ix);
+    assert.equal(resolved.carry, carry, `available ${available}`);
+    assert.equal(resolved.status, status, `available ${available}`);
+    assert.equal(h.pendingRecords().length, pending, `available ${available}`);
+    if (carry) assert.equal(h.logCursor(), logCursor, `available ${available}`);
+    assert.equal(h.memory[h.symbols.AtomOutputLogAfter], 0xa5, `available ${available}`);
+  }
+});
+
 test("queues both unresolved fields only after every image byte succeeds", () => {
   h.reset();
   assert.equal(h.parse("LD (IX+Disp),Forward").carry, 0);

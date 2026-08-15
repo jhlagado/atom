@@ -18,7 +18,6 @@ AtomOutputReset:
             LD   (AtomOutputCursor),HL
             LD   (AtomOutputRemaining),DE
             XOR  A
-            LD   (AtomOutputBank),A
             RET
 
 ; Encode and submit one parsed instruction through the Nucleus image-byte
@@ -250,7 +249,6 @@ AtomOutputInstructionStart:    .dw 0
 AtomOutputInstructionBytes:    .ds 4
 AtomOutputInstructionLength:   .db 0
 AtomOutputInstructionScan:     .db 0
-AtomOutputBank:                .db 0
 AtomOutputResolveSymbolPointer:.dw 0
 AtomOutputResolvePatchAddress: .dw 0
 AtomOutputResolveKind:         .db 0

@@ -42,6 +42,9 @@ AtomProofSinkByte:
             LD   (AtomOutputProofSinkAddress),HL
             CALL AtomProofSinkCheckFailure
             RET  C
+            LD   A,7
+            CALL AtomProofSinkReserve
+            RET  C
             LD   HL,(AtomOutputProofLogNext)
             LD   A,(AtomOutputProofSinkKind)
             LD   (HL),A
@@ -66,13 +69,16 @@ AtomProofSinkByte:
             RET
 
 ; Nucleus-model logical sink entry: C=bank, DE=address, HL=word.
-.routine in C,DE,HL out A,carry clobbers HL,zero,sign,parity,halfCarry,DE
+.routine in C,DE,HL out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE
 AtomSinkPatchWord:
             LD   A,C
             LD   (AtomOutputProofSinkBank),A
             LD   (AtomOutputProofSinkAddress),DE
             LD   (AtomOutputProofSinkWord),HL
             CALL AtomProofSinkCheckFailure
+            RET  C
+            LD   A,8
+            CALL AtomProofSinkReserve
             RET  C
             LD   HL,(AtomOutputProofLogNext)
             LD   (HL),2
@@ -107,6 +113,29 @@ AtomProofSinkCheckFailure:
             LD   (AtomOutputProofFailAfter),A
             RET  NZ
             LD   A,$E1
+            SCF
+            RET
+
+; Reserve A bytes in the half-open proof-log arena without changing its cursor.
+.routine in A out A,carry clobbers BC,DE,HL,sign,parity,halfCarry,zero
+AtomProofSinkReserve:
+            LD   B,A
+            LD   HL,AtomOutputProofLogLimit
+            LD   DE,(AtomOutputProofLogNext)
+            OR   A
+            SBC  HL,DE
+            JR   C,.capacity
+            LD   A,H
+            OR   A
+            JR   NZ,.accepted
+            LD   A,L
+            CP   B
+            JR   C,.capacity
+.accepted:
+            XOR  A
+            RET
+.capacity:
+            LD   A,$E2
             SCF
             RET
 
