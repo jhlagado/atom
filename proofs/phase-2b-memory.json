@@ -1,0 +1,25 @@
+{
+  "addressSpaceBytes": 65536,
+  "regions": [
+    { "name": "reserved-low", "start": 0, "end": "AtomEncoderCoreStart", "exactBytes": 8192 },
+    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3997 },
+    { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 9 },
+    { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 659 },
+    { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 28 },
+    { "name": "tokenizer-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1051 },
+    { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 32 },
+    { "name": "lower-free", "start": "AtomTokenizerWorkspaceEnd", "end": "AtomTokenizerProofSourceStart", "exactBytes": 18800 },
+    { "name": "proof-source", "start": "AtomTokenizerProofSourceStart", "end": "AtomTokenizerProofSourceEnd", "exactBytes": 514 },
+    { "name": "upper-free", "start": "AtomTokenizerProofSourceEnd", "end": 65024, "exactBytes": 31742 },
+    { "name": "proof-stack", "start": 65024, "end": 65280, "exactBytes": 256 },
+    { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
+  ],
+  "extents": [
+    { "name": "tokenizer-rule-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerRuleCodeEnd", "exactBytes": 1018 },
+    { "name": "tokenizer-immutable-tables", "start": "AtomTokenizerImmutableStart", "end": "AtomTokenizerImmutableEnd", "exactBytes": 33 },
+    { "name": "tokenizer-code-and-tables", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1051 },
+    { "name": "fixed-tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 32 },
+    { "name": "token-record", "start": "AtomTokenRecord", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 9 },
+    { "name": "proof-source-capacity", "start": "AtomTokenizerSource", "end": "AtomTokenizerSourceLimit", "exactBytes": 512 }
+  ]
+}

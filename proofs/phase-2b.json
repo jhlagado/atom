@@ -1,0 +1,27 @@
+{
+  "name": "Atom Phase 2b streaming tokenizer correctness proof",
+  "source": "../asm/tokenizer-proof.asm",
+  "memoryProfile": "phase-2b-memory.json",
+  "contracts": "strict",
+  "targetCpu": "Zilog Z80",
+  "proofCapacity": {
+    "sourcePartBytes": 512,
+    "globalNameBytes": 8,
+    "privateSourceBytes": 9,
+    "rawStringTokenBytes": 255
+  },
+  "executionBudgets": {
+    "AtomTokenizerReset": {
+      "measuredInstructions": 22,
+      "maxInstructions": 30,
+      "measuredCycles": 248,
+      "maxCycles": 320
+    },
+    "AtomTokenizerNext": {
+      "measuredInstructions": 24619,
+      "maxInstructions": 30000,
+      "measuredCycles": 277004,
+      "maxCycles": 340000
+    }
+  }
+}
