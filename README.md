@@ -10,8 +10,9 @@ adds the measured symbol and pending-reference core. Phase 2b adds the measured
 streaming tokenizer. Phase 2c adds the native concrete instruction parser and
 proves the complete tokenizer-to-encoder path. Phase 2d adds the measured
 constant-expression evaluator and its forward-symbol handoff. Connecting
-expressions to instruction operands, directives, object serialization, macros,
-and op expansion remains out of scope.
+Phase 2e connects expressions to instruction operands and proves their pending
+patch metadata.
+Directives, object serialization, macros, and op expansion remain out of scope.
 
 ```sh
 npm install
@@ -21,6 +22,7 @@ npm run measure:symbols
 npm run measure:tokenizer
 npm run measure:parser
 npm run measure:expression
+npm run measure:integration
 ```
 
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
@@ -32,6 +34,9 @@ The Phase 2c parser contract and measurements are in
 [`docs/phase-2c-report.md`](docs/phase-2c-report.md).
 The Phase 2d expression contract and measurements are in
 [`docs/phase-2d-report.md`](docs/phase-2d-report.md).
+The Phase 2e symbolic-parser contract and measurements are in
+[`docs/phase-2e-report.md`](docs/phase-2e-report.md), with its public metadata
+layout in [`docs/symbolic-parser-abi.md`](docs/symbolic-parser-abi.md).
 
 ## License
 

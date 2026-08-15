@@ -79,12 +79,12 @@ the measured tokenizer, not claims about AZM's accepted source language.
 
 ## Parsed-instruction handoff
 
-The later parser consumes tokens until EOL, classifies up to three operands,
-and fills the existing ten-byte parsed-instruction record documented in
-`encoder-abi.md`. Concrete values belong only in the three value words.
-Registers, conditions, bit numbers, interrupt modes, and restart vectors use
-operand-class ordinals. The parser then calls `AtomFormLength` before reserving
-forward-reference output and `AtomEncode` after all concrete bytes are known.
+The parser consumes tokens until EOL, classifies up to three operands, and
+fills the ten-byte parsed-instruction record documented in `encoder-abi.md`.
+Concrete values belong only in the three value words. Registers, conditions,
+bit numbers, interrupt modes, and restart vectors use operand-class ordinals.
+Phase 2e adds general expression evaluation and publishes up to two fixed-field
+references using the layout in `symbolic-parser-abi.md`.
 
 No token pointer may enter the symbol table, pending list, parsed-instruction
 record, or output stream. Symbols are packed before insertion, and pending

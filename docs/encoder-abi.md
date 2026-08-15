@@ -50,3 +50,8 @@ absolute, displacement, and relative operand classes.
 
 Unless returned above, registers and flags are clobbered. The stack is balanced
 on every return.
+
+Phase 2e links the separate `atom-patch.asm` module after the encoder. Its
+`AtomPatchLocate` entry maps a validated operand class to the fixed byte field
+described in [`symbolic-parser-abi.md`](symbolic-parser-abi.md). Keeping the
+locator separate preserves the measured Phase 1 encoder image.

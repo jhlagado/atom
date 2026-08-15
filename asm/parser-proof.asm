@@ -1,4 +1,5 @@
             .org $2000
+AtomParserExpressionMode: .equ 0
             .include "atom-encoder.asm"
 
             .include "atom-symbols.asm"

@@ -1,4 +1,5 @@
-; atom Phase 2c concrete instruction parser.
+; atom instruction parser. Phase 2c assembles the concrete-only path;
+; Phase 2e enables expression and forward-reference integration.
 ;
 ; This module consumes one tokenized instruction line and commits the existing
 ; ten-byte encoder record only after syntax, form, and concrete ranges pass.
@@ -19,6 +20,30 @@ AtomParserStatusInvalidForm:     .equ 9
 AtomParserStatusValueRange:      .equ 10
 AtomParserStatusRelativeRange:   .equ 11
 AtomParserStatusInternal:        .equ 12
+.if AtomParserExpressionMode
+AtomParserStatusExpression:      .equ 13
+AtomParserStatusUnpatchable:     .equ 14
+AtomParserStatusSymbol:          .equ 15
+AtomParserStatusReferenceCapacity:.equ 16
+
+AtomParserReferenceCapacity:     .equ 2
+AtomParserBuildReferenceBytes:   .equ 13
+AtomParserPublicReferenceBytes:  .equ 9
+AtomParserBuildKey:              .equ 0
+AtomParserBuildAddend:           .equ 6
+AtomParserBuildOperand:          .equ 7
+AtomParserBuildKind:             .equ 8
+AtomParserBuildPatchOffset:      .equ 9
+AtomParserBuildPart:             .equ 10
+AtomParserBuildSourceOffset:     .equ 11
+AtomParserReferenceSymbol:       .equ 0
+AtomParserReferenceAddend:       .equ 2
+AtomParserReferenceOperand:      .equ 3
+AtomParserReferenceKind:         .equ 4
+AtomParserReferencePatchOffset:  .equ 5
+AtomParserReferencePart:         .equ 6
+AtomParserReferenceSourceOffset: .equ 7
+.endif
 
 ; Scratch-only operand classes. They can never reach the committed record.
 AtomParserGenericNumber:       .equ 240
@@ -35,6 +60,10 @@ AtomParserGenericC:            .equ 242
 AtomParserParse:
             LD   (AtomParserInstructionAddress),BC
             LD   (AtomParserDestination),DE
+.if AtomParserExpressionMode
+            XOR  A
+            LD   (AtomParserReferenceCount),A
+.endif
             CALL AtomParserInitializeScratch
             CALL AtomParserNextToken
             RET  C
@@ -93,6 +122,10 @@ _AtomParserParsedOperands:
             LD   (AtomParserInstructionLength),A
             CALL AtomParserCheckConcreteValues
             RET  C
+.if AtomParserExpressionMode
+            CALL AtomParserFinalizeReferences
+            RET  C
+.endif
             JP   AtomParserCommit
 
 _AtomParserEof:
@@ -122,6 +155,10 @@ _AtomParserInitializeValues:
             LD   (AtomParserOperandCount),A
             LD   (AtomParserFlexibleMask),A
             LD   (AtomParserConditionMask),A
+.if AtomParserExpressionMode
+            LD   (AtomParserReferenceBuildCount),A
+            LD   (AtomParserUnresolvedMask),A
+.endif
             RET
 
 ; Map tokenizer failure to one parser status while retaining its exact source
@@ -161,14 +198,30 @@ AtomParserParseOperand:
             CP   AtomTokenName
             JR   Z,_AtomParserOperandName
             CP   AtomTokenNumber
+.if AtomParserExpressionMode
+            JR   Z,_AtomParserOperandExpression
+            CP   AtomTokenCurrent
+            JR   Z,_AtomParserOperandExpression
+            CP   AtomTokenPlus
+            JR   Z,_AtomParserOperandExpression
+            CP   AtomTokenMinus
+            JR   Z,_AtomParserOperandExpression
+            CP   AtomTokenTilde
+            JR   Z,_AtomParserOperandExpression
+.else
             JR   Z,_AtomParserOperandNumber
+.endif
             CP   AtomTokenLeftParen
             JP   Z,AtomParserParseMemory
             JP   AtomParserExpectedOperand
 
 _AtomParserOperandName:
             CALL AtomParserLookupOperandWord
+.if AtomParserExpressionMode
+            JR   C,_AtomParserOperandExpression
+.else
             RET  C
+.endif
             LD   HL,(AtomParserClassPointer)
             LD   (HL),A
             LD   (AtomParserLastClass),A
@@ -187,12 +240,116 @@ _AtomParserOperandParsed:
             XOR  A
             RET
 
+.if AtomParserExpressionMode
+_AtomParserOperandExpression:
+            CALL AtomParserParseExpression
+            RET  C
+            LD   A,AtomParserGenericNumber
+            LD   HL,(AtomParserClassPointer)
+            LD   (HL),A
+            XOR  A
+            RET
+.else
 _AtomParserOperandNumber:
             LD   A,AtomParserGenericNumber
             LD   HL,(AtomParserClassPointer)
             LD   (HL),A
             CALL AtomParserStoreTokenValue
             JP   AtomParserNextToken
+.endif
+
+.if AtomParserExpressionMode
+; Parse one general expression beginning at the current token. Concrete words
+; enter the selected value slot. A forward affine expression enters the
+; private two-entry build list without publishing its symbol record.
+.routine out A,carry clobbers BC,DE,HL,IX,IY,zero,sign,parity,halfCarry
+AtomParserParseExpression:
+            LD   BC,(AtomParserInstructionAddress)
+            CALL AtomExpressionParseDeferred
+            JR   C,AtomParserExpressionFailure
+            CP   AtomExpressionUnresolved
+            JR   Z,AtomParserAddReference
+            JP   AtomParserStoreHLValue
+
+.routine in HL out carry,zero clobbers DE,sign,parity,halfCarry,A
+AtomParserStoreHLValue:
+            LD   DE,(AtomParserValuePointer)
+            LD   A,L
+            LD   (DE),A
+            INC  DE
+            LD   A,H
+            LD   (DE),A
+            XOR  A
+            RET
+
+.routine in IX,HL out A,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry,IX
+AtomParserAddReference:
+            LD   (AtomParserReferenceAddendScratch),HL
+            LD   A,(AtomParserReferenceBuildCount)
+            CP   AtomParserReferenceCapacity
+            JR   NC,AtomParserReferenceCapacityFailure
+            CALL AtomParserBuildReferenceAddress
+            PUSH IX
+            POP  HL
+            LD   BC,6
+            LDIR
+            LD   HL,(AtomParserReferenceAddendScratch)
+            LD   A,L
+            LD   (DE),A
+            INC  DE
+            LD   A,(AtomParserOperandCount)
+            LD   (DE),A
+            INC  DE
+            XOR  A
+            LD   (DE),A
+            INC  DE
+            LD   (DE),A
+            INC  DE
+            LD   A,(AtomExpressionSymbolPart)
+            LD   (DE),A
+            INC  DE
+            LD   HL,(AtomExpressionSymbolOffset)
+            LD   A,L
+            LD   (DE),A
+            INC  DE
+            LD   A,H
+            LD   (DE),A
+            LD   A,(AtomParserOperandCount)
+            CALL AtomParserIndexBit
+            LD   HL,AtomParserUnresolvedMask
+            OR   (HL)
+            LD   (HL),A
+            LD   HL,AtomParserReferenceBuildCount
+            INC  (HL)
+            LD   HL,0
+            JP   AtomParserStoreHLValue
+
+AtomParserReferenceCapacityFailure:
+            LD   A,AtomParserStatusReferenceCapacity
+            JP   AtomParserFailExpressionSymbol
+
+; A=build-reference index 0..1, out DE=entry address.
+.routine in A out DE clobbers HL,A,F
+AtomParserBuildReferenceAddress:
+            LD   DE,AtomParserReferenceBuild
+            OR   A
+            RET  Z
+            LD   HL,AtomParserBuildReferenceBytes
+            ADD  HL,DE
+            EX   DE,HL
+            RET
+
+AtomParserExpressionFailure:
+            LD   (AtomParserExpressionStatus),A
+            LD   A,(AtomExpressionErrorPart)
+            LD   (AtomParserErrorPart),A
+            LD   HL,(AtomExpressionErrorOffset)
+            LD   (AtomParserErrorOffset),HL
+            LD   A,AtomParserStatusExpression
+            LD   (AtomParserErrorStatus),A
+            SCF
+            RET
+.endif
 
 ; Look up the current one-to-three-character operand word.
 .routine out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry
@@ -236,11 +393,29 @@ AtomParserParseMemory:
             RET  C
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenNumber
+.if AtomParserExpressionMode
+            JR   Z,_AtomParserMemoryExpression
+            CP   AtomTokenCurrent
+            JR   Z,_AtomParserMemoryExpression
+            CP   AtomTokenPlus
+            JR   Z,_AtomParserMemoryExpression
+            CP   AtomTokenMinus
+            JR   Z,_AtomParserMemoryExpression
+            CP   AtomTokenTilde
+            JR   Z,_AtomParserMemoryExpression
+            CP   AtomTokenLeftParen
+            JR   Z,_AtomParserMemoryExpression
+.else
             JR   Z,_AtomParserMemoryNumber
+.endif
             CP   AtomTokenName
             JP   NZ,AtomParserExpectedOperand
             CALL AtomParserLookupOperandWord
+.if AtomParserExpressionMode
+            JR   C,_AtomParserMemoryExpression
+.else
             RET  C
+.endif
             LD   (AtomParserMemoryBase),A
             CALL AtomParserNextToken
             RET  C
@@ -261,6 +436,14 @@ AtomParserParseMemory:
             JR   Z,_AtomParserMemoryIY
             JP   AtomParserUnknownOperand
 
+.if AtomParserExpressionMode
+_AtomParserMemoryExpression:
+            CALL AtomParserParseExpression
+            RET  C
+            LD   HL,(AtomParserClassPointer)
+            LD   (HL),AtomParserGenericParenNumber
+            JP   AtomParserRequireRightParen
+.else
 _AtomParserMemoryNumber:
             CALL AtomParserStoreTokenValue
             LD   HL,(AtomParserClassPointer)
@@ -268,6 +451,7 @@ _AtomParserMemoryNumber:
             CALL AtomParserNextToken
             RET  C
             JP   AtomParserRequireRightParen
+.endif
 
 _AtomParserMemoryPortC:
             LD   A,AtomOpPortC
@@ -302,6 +486,18 @@ _AtomParserMemoryIndex:
             CP   AtomTokenRightParen
             JR   Z,_AtomParserMemoryIndexPlain
             CP   AtomTokenPlus
+.if AtomParserExpressionMode
+            JR   Z,_AtomParserMemoryIndexExpression
+            CP   AtomTokenMinus
+            JP   NZ,AtomParserExpectedDelimiter
+_AtomParserMemoryIndexExpression:
+            CALL AtomParserParseExpression
+            RET  C
+            LD   HL,(AtomParserClassPointer)
+            LD   A,(AtomParserIndexClass)
+            LD   (HL),A
+            JP   AtomParserRequireRightParen
+.else
             JR   Z,_AtomParserMemoryIndexPositive
             CP   AtomTokenMinus
             JP   NZ,AtomParserExpectedDelimiter
@@ -349,6 +545,7 @@ _AtomParserMemoryIndexValueReady:
             CALL AtomParserNextToken
             RET  C
             JP   AtomParserRequireRightParen
+.endif
 _AtomParserMemoryIndexPlain:
             LD   HL,(AtomParserClassPointer)
             LD   A,(AtomParserScratch+AtomInstrMnemonic)
@@ -420,9 +617,39 @@ _AtomParserMaybeAccumulatorAlias:
             LD   (AtomParserScratch+AtomInstrValue1+1),A
             INC  A
             LD   (AtomParserOperandCount),A
+.if AtomParserExpressionMode
+            LD   A,(AtomParserUnresolvedMask)
+            AND  2
+            JR   Z,_AtomParserAccumulatorSuccess
+            LD   A,1
+            LD   (AtomParserUnresolvedMask),A
+            CALL AtomParserRemapAliasReference
+.endif
 _AtomParserAccumulatorSuccess:
             XOR  A
             RET
+
+.if AtomParserExpressionMode
+.routine out carry,zero clobbers B,sign,parity,halfCarry,DE,HL,A
+AtomParserRemapAliasReference:
+            XOR  A
+            LD   B,A
+_AtomParserRemapAliasLoop:
+            LD   A,(AtomParserReferenceBuildCount)
+            CP   B
+            RET  Z
+            LD   A,B
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildOperand
+            ADD  HL,DE
+            LD   A,(HL)
+            CP   1
+            JR   NZ,_AtomParserRemapAliasNext
+            LD   (HL),0
+_AtomParserRemapAliasNext:
+            INC  B
+            JR   _AtomParserRemapAliasLoop
+.endif
 
 ; Convert generic numeric syntax to fixed encoder classes. Flexible immediates
 ; begin as imm8 and may be retried as imm16 if the form matrix rejects imm8.
@@ -717,12 +944,25 @@ _AtomParserCheckValueLoop:
             RET  Z
             LD   A,B
             CALL AtomParserSelectOperand
+.if AtomParserExpressionMode
+            LD   A,(AtomParserScanIndex)
+            CALL AtomParserIndexBit
+            LD   HL,AtomParserUnresolvedMask
+            AND  (HL)
+            JR   NZ,_AtomParserCheckValueNext
+.endif
             LD   HL,(AtomParserClassPointer)
             LD   A,(HL)
             CP   AtomOpImm8
             JR   Z,_AtomParserCheckByte
             CP   AtomOpRel8
             JR   Z,_AtomParserCheckRelative
+.if AtomParserExpressionMode
+            CP   AtomOpIndexIX
+            JR   Z,_AtomParserCheckDisplacement
+            CP   AtomOpIndexIY
+            JR   Z,_AtomParserCheckDisplacement
+.endif
 _AtomParserCheckValueNext:
             LD   HL,AtomParserScanIndex
             INC  (HL)
@@ -731,6 +971,22 @@ _AtomParserCheckByte:
             CALL AtomParserRequireByteValue
             RET  C
             JR   _AtomParserCheckValueNext
+.if AtomParserExpressionMode
+_AtomParserCheckDisplacement:
+            CALL AtomParserSelectedValue
+            LD   A,H
+            OR   A
+            JR   Z,_AtomParserCheckDisplacementPositive
+            INC  A
+            JP   NZ,AtomParserValueRange
+            BIT  7,L
+            JP   Z,AtomParserValueRange
+            JR   _AtomParserCheckValueNext
+_AtomParserCheckDisplacementPositive:
+            BIT  7,L
+            JP   NZ,AtomParserValueRange
+            JR   _AtomParserCheckValueNext
+.endif
 _AtomParserCheckRelative:
             CALL AtomParserSelectedValue
             LD   DE,(AtomParserInstructionAddress)
@@ -761,6 +1017,309 @@ _AtomParserRelativeStore:
             LD   A,H
             LD   (DE),A
             JR   _AtomParserCheckValueNext
+
+.if AtomParserExpressionMode
+; Convert each private unresolved operand into stable public metadata, then
+; publish all referenced symbol records after one exact shared-arena preflight.
+.routine out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry,IY
+AtomParserFinalizeReferences:
+            XOR  A
+            LD   (AtomParserReferenceScan),A
+_AtomParserLocateReferenceLoop:
+            LD   A,(AtomParserReferenceBuildCount)
+            LD   B,A
+            LD   A,(AtomParserReferenceScan)
+            CP   B
+            JR   Z,_AtomParserPreflightReferences
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildOperand
+            ADD  HL,DE
+            LD   A,(HL)
+            LD   IX,AtomParserScratch
+            CALL AtomPatchLocate
+            JR   C,_AtomParserUnpatchableReference
+            LD   (AtomParserReferenceKindScratch),A
+            LD   A,B
+            LD   (AtomParserReferenceOffsetScratch),A
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildKind
+            ADD  HL,DE
+            LD   A,(AtomParserReferenceKindScratch)
+            LD   (HL),A
+            INC  HL
+            LD   A,(AtomParserReferenceOffsetScratch)
+            LD   (HL),A
+            LD   HL,AtomParserReferenceScan
+            INC  (HL)
+            JR   _AtomParserLocateReferenceLoop
+
+_AtomParserUnpatchableReference:
+            LD   A,AtomParserStatusUnpatchable
+            JP   AtomParserFailReference
+
+_AtomParserPreflightReferences:
+            XOR  A
+            LD   (AtomParserReferenceMissingCount),A
+            LD   (AtomParserReferenceSameKey),A
+            LD   A,(AtomParserReferenceBuildCount)
+            OR   A
+            RET  Z
+            CP   2
+            JR   NZ,_AtomParserPreflightFirst
+            CALL AtomParserCompareReferenceKeys
+            LD   A,0
+            ADC  A,0
+            XOR  1
+            LD   (AtomParserReferenceSameKey),A
+_AtomParserPreflightFirst:
+            XOR  A
+            LD   (AtomParserReferenceScan),A
+            CALL AtomParserPreflightReference
+            RET  C
+            LD   A,(AtomParserReferenceBuildCount)
+            CP   2
+            JR   NZ,_AtomParserPreflightCapacity
+            LD   A,(AtomParserReferenceSameKey)
+            OR   A
+            JR   NZ,_AtomParserPreflightCapacity
+            LD   A,1
+            LD   (AtomParserReferenceScan),A
+            CALL AtomParserPreflightReference
+            RET  C
+_AtomParserPreflightCapacity:
+            LD   A,(AtomParserReferenceMissingCount)
+            OR   A
+            JR   Z,_AtomParserPublishReferences
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            LD   B,A
+            LD   HL,(AtomSymbolLocalBegin)
+            LD   DE,(AtomSymbolGlobalEnd)
+            OR   A
+            SBC  HL,DE
+            JR   C,AtomParserSymbolCapacityFailure
+            LD   A,H
+            OR   A
+            JR   NZ,_AtomParserPublishReferences
+            LD   A,L
+            CP   B
+            JR   C,AtomParserSymbolCapacityFailure
+
+_AtomParserPublishReferences:
+            XOR  A
+            LD   (AtomParserReferenceScan),A
+_AtomParserPublishReferenceLoop:
+            LD   A,(AtomParserReferenceBuildCount)
+            LD   B,A
+            LD   A,(AtomParserReferenceScan)
+            CP   B
+            JR   Z,_AtomParserPublishReferenceCount
+            CALL AtomParserBuildReferenceAddress
+            LD   H,D
+            LD   L,E
+            CALL AtomSymbolReference
+            JR   C,AtomParserUnexpectedSymbolFailure
+            PUSH IX
+            POP  BC
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserPublicReferenceAddress
+            LD   (HL),C
+            INC  HL
+            LD   (HL),B
+            INC  HL
+            PUSH HL
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildAddend
+            ADD  HL,DE
+            POP  DE
+            LD   BC,7
+            LDIR
+            LD   HL,AtomParserReferenceScan
+            INC  (HL)
+            JR   _AtomParserPublishReferenceLoop
+_AtomParserPublishReferenceCount:
+            LD   A,(AtomParserReferenceBuildCount)
+            LD   (AtomParserReferenceCount),A
+            XOR  A
+            RET
+
+; Preflight the key selected by AtomParserReferenceScan.
+.routine out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry,IY
+AtomParserPreflightReference:
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+            LD   H,D
+            LD   L,E
+            CALL AtomSymbolFind
+            RET  NC
+            CP   AtomStatusNotFound
+            JR   NZ,_AtomParserPreflightSymbolFailure
+            LD   HL,AtomParserReferenceMissingCount
+            INC  (HL)
+            XOR  A
+            RET
+_AtomParserPreflightSymbolFailure:
+            LD   (AtomParserSymbolStatus),A
+            LD   A,AtomParserStatusSymbol
+            JP   AtomParserFailReference
+
+; Carry clear when the two build keys are equal, carry set otherwise.
+.routine out A,carry clobbers DE,HL,zero,sign,parity,halfCarry,B
+AtomParserCompareReferenceKeys:
+            LD   HL,AtomParserReferenceBuild
+            LD   DE,AtomParserReferenceBuild+AtomParserBuildReferenceBytes
+            LD   B,6
+_AtomParserCompareReferenceKeyLoop:
+            LD   A,(DE)
+            CP   (HL)
+            SCF
+            RET  NZ
+            INC  DE
+            INC  HL
+            DJNZ _AtomParserCompareReferenceKeyLoop
+            OR   A
+            RET
+
+AtomParserSymbolCapacityFailure:
+            LD   A,AtomStatusSymbolCapacity
+            LD   (AtomParserSymbolStatus),A
+            LD   A,AtomParserStatusSymbol
+            JP   AtomParserFailReference
+AtomParserUnexpectedSymbolFailure:
+            LD   (AtomParserSymbolStatus),A
+            LD   A,AtomParserStatusInternal
+            JP   AtomParserFailReference
+
+; A=public-reference index 0..1, out HL=entry address.
+.routine in A out HL clobbers DE,A,F
+AtomParserPublicReferenceAddress:
+            LD   HL,AtomParserReferences
+            OR   A
+            RET  Z
+            LD   DE,AtomParserPublicReferenceBytes
+            ADD  HL,DE
+            RET
+
+; Queue every published reference after proving the complete pending capacity.
+;
+; in DE=logical instruction output address
+; out A=Atom status, carry clear on success; carry set on failure
+.routine in DE out A,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry,IX
+AtomParserQueueReferences:
+            LD   (AtomParserQueueBase),DE
+            LD   A,(AtomParserReferenceCount)
+            LD   B,A
+            ADD  A,A
+            ADD  A,B
+            ADD  A,A
+            LD   B,A
+            LD   HL,(AtomPendingArenaEnd)
+            LD   DE,(AtomPendingNext)
+            OR   A
+            SBC  HL,DE
+            JR   C,_AtomParserQueueCapacity
+            LD   A,H
+            OR   A
+            JR   NZ,_AtomParserQueueCheckSymbols
+            LD   A,L
+            CP   B
+            JR   C,_AtomParserQueueCapacity
+_AtomParserQueueCheckSymbols:
+            XOR  A
+            LD   (AtomParserReferenceScan),A
+_AtomParserQueueCheckLoop:
+            LD   A,(AtomParserReferenceCount)
+            LD   B,A
+            LD   A,(AtomParserReferenceScan)
+            CP   B
+            JR   Z,_AtomParserQueueCommit
+            CALL AtomParserPublicReferenceAddress
+            LD   E,(HL)
+            INC  HL
+            LD   D,(HL)
+            EX   DE,HL
+            LD   DE,5
+            ADD  HL,DE
+            BIT  6,(HL)
+            JR   NZ,_AtomParserQueueAlreadyDefined
+            LD   HL,AtomParserReferenceScan
+            INC  (HL)
+            JR   _AtomParserQueueCheckLoop
+_AtomParserQueueCommit:
+            XOR  A
+            LD   (AtomParserReferenceScan),A
+_AtomParserQueueLoop:
+            LD   A,(AtomParserReferenceCount)
+            LD   B,A
+            LD   A,(AtomParserReferenceScan)
+            CP   B
+            JR   Z,_AtomParserQueueDone
+            CALL AtomParserPublicReferenceAddress
+            LD   E,(HL)
+            INC  HL
+            LD   D,(HL)
+            PUSH DE
+            POP  IX
+            INC  HL
+            LD   C,(HL)
+            INC  HL
+            INC  HL
+            LD   B,(HL)
+            INC  HL
+            LD   A,(HL)
+            LD   HL,(AtomParserQueueBase)
+            LD   E,A
+            LD   D,0
+            ADD  HL,DE
+            EX   DE,HL
+            CALL AtomPendingAdd
+            RET  C
+            LD   HL,AtomParserReferenceScan
+            INC  (HL)
+            JR   _AtomParserQueueLoop
+_AtomParserQueueDone:
+            XOR  A
+            RET
+_AtomParserQueueCapacity:
+            LD   A,AtomStatusPendingCapacity
+            SCF
+            RET
+_AtomParserQueueAlreadyDefined:
+            LD   A,AtomStatusAlreadyDefined
+            SCF
+            RET
+
+AtomParserFailExpressionSymbol:
+            LD   (AtomParserErrorStatus),A
+            LD   A,(AtomExpressionSymbolPart)
+            LD   (AtomParserErrorPart),A
+            LD   HL,(AtomExpressionSymbolOffset)
+            LD   (AtomParserErrorOffset),HL
+            LD   A,(AtomParserErrorStatus)
+            SCF
+            RET
+
+; A=parser status; source position comes from AtomParserReferenceScan.
+AtomParserFailReference:
+            LD   (AtomParserErrorStatus),A
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildPart
+            ADD  HL,DE
+            LD   A,(HL)
+            LD   (AtomParserErrorPart),A
+            INC  HL
+            LD   E,(HL)
+            INC  HL
+            LD   D,(HL)
+            LD   (AtomParserErrorOffset),DE
+            LD   A,(AtomParserErrorStatus)
+            SCF
+            RET
+.endif
 
 ; Commit exactly ten bytes after every check succeeds.
 .routine out A,IX,carry clobbers BC,DE,HL,sign,parity,halfCarry,zero
@@ -849,4 +1408,20 @@ AtomParserErrorStatus:        .db 0
 AtomParserErrorPart:          .db 0
 AtomParserErrorOffset:        .dw 0
 AtomParserScratch:            .ds 10
+.if AtomParserExpressionMode
+AtomParserExpressionStatus:   .db 0
+AtomParserSymbolStatus:       .db 0
+AtomParserReferenceCount:     .db 0
+AtomParserReferenceBuildCount:.db 0
+AtomParserUnresolvedMask:     .db 0
+AtomParserReferenceScan:      .db 0
+AtomParserReferenceMissingCount:.db 0
+AtomParserReferenceSameKey:   .db 0
+AtomParserReferenceKindScratch:.db 0
+AtomParserReferenceOffsetScratch:.db 0
+AtomParserReferenceAddendScratch:.dw 0
+AtomParserQueueBase:          .dw 0
+AtomParserReferenceBuild:     .ds AtomParserBuildReferenceBytes*AtomParserReferenceCapacity
+AtomParserReferences:         .ds AtomParserPublicReferenceBytes*AtomParserReferenceCapacity
+.endif
 AtomParserWorkspaceEnd:

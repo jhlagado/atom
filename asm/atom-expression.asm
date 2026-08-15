@@ -5,6 +5,9 @@
 ; 24-bit intermediates and must finish in Atom's accepted 16-bit domain.
 ; A deferred result is exactly one symbol plus a signed-byte addend, matching
 ; the six-byte pending-reference record without retaining an expression tree.
+; AtomExpressionDeferredMode is supplied by the integration image. Zero keeps
+; the Phase 2d standalone entry byte-for-byte stable; nonzero also exposes a
+; deferred-key entry that does not publish a symbol record during parsing.
 
 AtomExpressionCodeStart:
 
@@ -48,7 +51,22 @@ AtomExpressionUnaryTilde:       .equ $80+AtomTokenTilde
 ;                 HL=sign-extended addend, carry clear
 ;     failure: A=status, carry set; no new symbol is published
 .routine in BC out A,HL,IX,carry clobbers BC,DE,IY,zero,sign,parity,halfCarry
+.if AtomExpressionDeferredMode
 AtomExpressionParse:
+            LD   A,1
+            LD   (AtomExpressionPublishSymbol),A
+            JR   AtomExpressionParseCommon
+
+; Parse without inserting a missing symbol. On unresolved success IX points
+; to the six-byte packed key in evaluator workspace instead of a symbol record.
+.routine in BC out A,HL,IX,carry clobbers sign,parity,halfCarry,zero,BC,DE,IY
+AtomExpressionParseDeferred:
+            XOR  A
+            LD   (AtomExpressionPublishSymbol),A
+AtomExpressionParseCommon:
+.else
+AtomExpressionParse:
+.endif
             LD   (AtomExpressionCurrentAddress),BC
             XOR  A
             LD   (AtomExpressionValueDepth),A
@@ -81,6 +99,11 @@ _AtomExpressionParseOperator:
 _AtomExpressionFinishUnresolved:
             CALL AtomExpressionRequireAddend
             RET  C
+.if AtomExpressionDeferredMode
+            LD   A,(AtomExpressionPublishSymbol)
+            OR   A
+            JR   Z,_AtomExpressionFinishDeferred
+.endif
             LD   HL,AtomExpressionResultKey
             CALL AtomSymbolReference
             JP   C,AtomExpressionSymbolFailure
@@ -88,6 +111,14 @@ _AtomExpressionFinishUnresolved:
             LD   A,AtomExpressionUnresolved
             OR   A
             RET
+.if AtomExpressionDeferredMode
+_AtomExpressionFinishDeferred:
+            LD   IX,AtomExpressionResultKey
+            LD   HL,(AtomExpressionResultValue)
+            LD   A,AtomExpressionUnresolved
+            OR   A
+            RET
+.endif
 .routine in A out A,carry clobbers HL,zero,sign,parity,halfCarry
 AtomExpressionSymbolFailure:
             LD   (AtomExpressionSymbolStatus),A
@@ -1262,6 +1293,9 @@ AtomExpressionCodeEnd:
 
 AtomExpressionWorkspaceStart:
 AtomExpressionCurrentAddress:       .dw 0
+.if AtomExpressionDeferredMode
+AtomExpressionPublishSymbol:        .db 0
+.endif
 AtomExpressionResultValue:          .ds 3
 AtomExpressionResultUnresolved:     .db 0
 AtomExpressionResultKey:            .ds 6
