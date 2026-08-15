@@ -7,8 +7,9 @@ than 16 KiB of resident code and immutable data.
 Phase 1 contains the parsed-instruction encoder, its case-insensitive RADIX-40
 mnemonic recognizer, and host-side differential proofs against AZM. Phase 2a
 adds the measured symbol and pending-reference core. Phase 2b adds the measured
-streaming tokenizer and its parsed-instruction handoff. Directives, expression
-parsing, object serialization, macros, and op expansion remain out of scope.
+streaming tokenizer. Phase 2c adds the native concrete instruction parser and
+proves the complete tokenizer-to-encoder path. Symbolic expressions,
+directives, object serialization, macros, and op expansion remain out of scope.
 
 ```sh
 npm install
@@ -16,6 +17,7 @@ npm test
 npm run measure
 npm run measure:symbols
 npm run measure:tokenizer
+npm run measure:parser
 ```
 
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
@@ -23,6 +25,8 @@ The Phase 2a decisions and measurements are in
 [`docs/phase-2a-report.md`](docs/phase-2a-report.md).
 The Phase 2b tokenizer contract and measurements are in
 [`docs/phase-2b-report.md`](docs/phase-2b-report.md).
+The Phase 2c parser contract and measurements are in
+[`docs/phase-2c-report.md`](docs/phase-2c-report.md).
 
 ## License
 
