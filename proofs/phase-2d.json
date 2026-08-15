@@ -1,0 +1,26 @@
+{
+  "name": "Atom Phase 2d expression and forward-symbol correctness proof",
+  "source": "../asm/expression-proof.asm",
+  "memoryProfile": "phase-2d-memory.json",
+  "contracts": "strict",
+  "targetCpu": "Zilog Z80",
+  "proofCapacity": {
+    "sourcePartBytes": 512,
+    "symbolRecords": 16,
+    "pendingRecords": 8,
+    "valueStackEntries": 16,
+    "operatorStackEntries": 16,
+    "maximumGroupingOrUnaryDepth": 16
+  },
+  "executionBudgets": {
+    "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
+    "AtomTokenizerNext": { "measuredInstructions": 494, "maxInstructions": 650, "measuredCycles": 5038, "maxCycles": 6500 },
+    "AtomSymbolReset": { "measuredInstructions": 7, "maxInstructions": 12, "measuredCycles": 99, "maxCycles": 150 },
+    "AtomPendingReset": { "measuredInstructions": 5, "maxInstructions": 10, "measuredCycles": 66, "maxCycles": 120 },
+    "AtomPackSymbol": { "measuredInstructions": 368, "maxInstructions": 500, "measuredCycles": 3207, "maxCycles": 4200 },
+    "AtomSymbolDeclare": { "measuredInstructions": 63, "maxInstructions": 100, "measuredCycles": 870, "maxCycles": 1200 },
+    "AtomSymbolAdvanceScope": { "measuredInstructions": 20, "maxInstructions": 40, "measuredCycles": 258, "maxCycles": 500 },
+    "AtomExpressionParse": { "measuredInstructions": 4189, "maxInstructions": 5500, "measuredCycles": 41491, "maxCycles": 50000 },
+    "AtomExpressionQueue": { "measuredInstructions": 45, "maxInstructions": 70, "measuredCycles": 442, "maxCycles": 700 }
+  }
+}
