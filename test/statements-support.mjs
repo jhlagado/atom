@@ -30,11 +30,22 @@ export async function createStatementsHarness() {
   const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomTokenizerReset);
   const memory = runtime.hardware.memory;
   const pristine = memory.slice();
+  const immutable = [
+    [symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd],
+    [symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd],
+    [symbols.AtomTokenizerCodeStart, symbols.AtomTokenizerCodeEnd],
+    [symbols.AtomExpressionCodeStart, symbols.AtomExpressionCodeEnd],
+    [symbols.AtomPatchCodeStart, symbols.AtomPatchCodeEnd],
+    [symbols.AtomParserCodeStart, symbols.AtomParserCodeEnd],
+  ].map(([start, end]) => ({ start, bytes: pristine.slice(start, end) }));
+  const statistics = {};
+  let sourceBytes = new Uint8Array();
 
   function restart() {
     memory.set(pristine);
     runtime.reset();
     runtime.cpu.halted = false;
+    sourceBytes = new Uint8Array();
   }
 
   function execute(entry, setup = () => {}, label = entry) {
@@ -44,6 +55,7 @@ export async function createStatementsHarness() {
     memory[RETURN_SLOT] = RETURN_SENTINEL & 0xff;
     memory[RETURN_SLOT + 1] = RETURN_SENTINEL >>> 8;
     memory[STACK_AFTER] = 0x78;
+    const before = memory.slice();
     runtime.cpu.sp = RETURN_SLOT;
     runtime.cpu.pc = symbols[entry];
     const budget = manifest.executionBudgets[entry];
@@ -57,12 +69,38 @@ export async function createStatementsHarness() {
     }
     assert.equal(runtime.cpu.pc, RETURN_SENTINEL, `${label}: did not return`);
     assert.equal(runtime.cpu.sp, RETURN_SLOT + 2, `${label}: unbalanced stack`);
+    assert.ok(instructions <= budget.maxInstructions, `${label}: instruction budget exceeded`);
+    assert.ok(cycles <= budget.maxCycles, `${label}: cycle budget exceeded`);
     assert.equal(memory[STACK_BEFORE], 0x87, `${label}: stack underrun`);
     assert.equal(memory[STACK_AFTER], 0x78, `${label}: stack overrun`);
     assert.equal(memory[symbols.AtomStatementSourceBefore], 0x3c, `${label}: source-before canary`);
     assert.equal(memory[symbols.AtomStatementSourceAfter], 0xc3, `${label}: source-after canary`);
     assert.equal(memory[symbols.AtomStatementRecordBefore], 0x69, `${label}: record-before canary`);
     assert.equal(memory[symbols.AtomStatementRecordAfter], 0x96, `${label}: record-after canary`);
+    assert.equal(memory[symbols.AtomStatementSymbolBefore], 0x39, `${label}: symbol-before canary`);
+    assert.equal(memory[symbols.AtomStatementSymbolAfter], 0x93, `${label}: symbol-after canary`);
+    assert.equal(memory[symbols.AtomStatementPendingBefore], 0x4b, `${label}: pending-before canary`);
+    assert.equal(memory[symbols.AtomStatementPendingAfter], 0xb4, `${label}: pending-after canary`);
+    assert.deepEqual(memory.slice(symbols.AtomStatementSource, symbols.AtomStatementSource + sourceBytes.length), sourceBytes, `${label}: source changed`);
+    for (const region of immutable) {
+      assert.deepEqual(memory.slice(region.start, region.start + region.bytes.length), region.bytes, `${label}: immutable bytes changed`);
+    }
+    const inside = (address, start, end) => address >= start && address < end;
+    for (let address = 0; address < memory.length; address += 1) {
+      const allowed =
+        inside(address, symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd) ||
+        inside(address, symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd) ||
+        inside(address, symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd) ||
+        inside(address, symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd) ||
+        inside(address, symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd) ||
+        (entry === "AtomParserParsePublished" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 10)) ||
+        (address > STACK_BEFORE && address < STACK_AFTER);
+      if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
+    }
+    const observed = statistics[entry] ?? { instructions: 0, cycles: 0, instructionCase: "", cycleCase: "" };
+    if (instructions > observed.instructions) Object.assign(observed, { instructions, instructionCase: label });
+    if (cycles > observed.cycles) Object.assign(observed, { cycles, cycleCase: label });
+    statistics[entry] = observed;
     return {
       status: runtime.cpu.a,
       carry: runtime.cpu.flags.C,
@@ -76,6 +114,7 @@ export async function createStatementsHarness() {
     const bytes = new TextEncoder().encode(source);
     memory.fill(0xa5, symbols.AtomStatementSource, symbols.AtomStatementSourceLimit);
     memory.set(bytes, symbols.AtomStatementSource);
+    sourceBytes = bytes.slice();
     const result = execute("AtomTokenizerReset", (_memory, names, cpu) => {
       cpu.a = 7;
       cpu.h = names.AtomStatementSource >>> 8;
@@ -90,6 +129,7 @@ export async function createStatementsHarness() {
   return {
     symbols,
     memory,
+    statistics,
     parsePublished(source, { address = 0x4000 } = {}) {
       restart();
       installSource(source);

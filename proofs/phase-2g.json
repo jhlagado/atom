@@ -4,11 +4,9 @@
   "contracts": "strict",
   "targetCpu": "Zilog Z80",
   "executionBudgets": {
-    "AtomSymbolReset": { "maxInstructions": 12, "maxCycles": 150 },
-    "AtomPendingReset": { "maxInstructions": 10, "maxCycles": 120 },
-    "AtomTokenizerReset": { "maxInstructions": 30, "maxCycles": 320 },
-    "AtomTokenizerNext": { "maxInstructions": 900, "maxCycles": 9000 },
-    "AtomRecognizeMnemonic": { "maxInstructions": 550, "maxCycles": 5000 },
-    "AtomParserParsePublished": { "maxInstructions": 8500, "maxCycles": 85000 }
+    "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
+    "AtomTokenizerNext": { "measuredInstructions": 234, "maxInstructions": 300, "measuredCycles": 2427, "maxCycles": 3100 },
+    "AtomRecognizeMnemonic": { "measuredInstructions": 470, "maxInstructions": 600, "measuredCycles": 4146, "maxCycles": 5200 },
+    "AtomParserParsePublished": { "measuredInstructions": 1321, "maxInstructions": 1700, "measuredCycles": 13316, "maxCycles": 17000 }
   }
 }
