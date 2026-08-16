@@ -812,3 +812,30 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
   instructions and 248 T-states for reset, and 24,619 instructions and 277,004
   T-states for the 512-space next-token case. Debug80 remained at
   `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
+
+### 2026-08-16 — Checkpoint 9 Atom project composition
+
+- **Atom:** fetched `origin/codex/atom-host-packager` at
+  `bfb5140fa2e0b98c07809521edf9c1082fc3d1ab`; committed and pushed
+  `b50be5468b868628a87ea3edd5b18e7e698ba292`.
+- **Red:** all 15 end-to-end observations failed because the public
+  `resolveAtomProject` composition was absent.
+- **Green:** the focused composition suite passed 15 of 15 observations,
+  `npm run test:host` passed 80 of 80, and `npm test` passed 162 of 162 with
+  zero failures in 70,338 ms.
+- **Coverage:** deterministic diamond order and deduplication, active and
+  inactive includes, mixed-case directives, LF and CRLF retention, exact masks
+  and source offsets, path-keyed placement, SP1 parse-back, relocation,
+  explicit-part equivalence, immutable caller-configuration snapshots,
+  post-resolution filesystem mutation, every graph capacity, dependency and
+  preprocessing diagnostics, invalid placement, and failure before atomic SP1
+  publication.
+- **Implementation:** the Atom composition creates the confined Node reader,
+  Atom profile, and neutral resolver request. It snapshots definitions,
+  placement, and limits before the first filesystem wait; path handling, graph
+  traversal, masking, placement, provenance, and SP1 remain in their existing
+  modules.
+- **Measured scope:** this checkpoint changed only host JavaScript, fixtures,
+  and tests. Atom remains at 10,314 resident code-and-table bytes and 491 fixed
+  workspace bytes. Debug80 remained at
+  `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
