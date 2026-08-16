@@ -39,6 +39,8 @@ h.assemble("Start:\n  LD A,$42\n_Loop: DJNZ _Loop\n");
 h.assemble("JR Later\nNOP\nLater:\n");
 h.assemble("Unknown thing\n");
 h.assemble("LD BC,A\n");
+h.assemble("Low EQU -32768\nHigh EQU 65535\nCalc EQU ((2+3)*4)|1\nLD HL,Low\nLD DE,High\nLD A,Calc\n");
+h.assemble("Alpha EQU Beta+1\nBeta EQU 16\n");
 
 const s = h.symbols;
 const extent = (start, end) => s[end] - s[start];
@@ -76,6 +78,8 @@ console.log(JSON.stringify({
     outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
     statementDispatcherCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),
     statementDispatcherWorkspace: extent("AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd"),
+    equAndDirectiveRecognitionCodeIncrement: extent("AtomStatementCodeStart", "AtomStatementCodeEnd") - 263,
+    equWorkspaceIncrement: extent("AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd") - 22,
   },
   integrated: {
     codeAndTablesThroughParser: codeThroughParser,

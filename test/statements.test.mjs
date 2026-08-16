@@ -20,6 +20,7 @@ const STATUS = Object.freeze({
 const STATEMENT = Object.freeze({
   OK: 0,
   EXPECTED: 2,
+  EQUATE: 4,
   SYMBOL: 5,
   INSTRUCTION: 6,
 });
@@ -203,6 +204,75 @@ test("unknown statements and invalid instructions retain their nested category",
   result = h.assemble("LD BC,A\n");
   assert.equal(result.status, STATEMENT.INSTRUCTION);
   assert.deepEqual(h.operations(), []);
+});
+
+test("bare EQU is case-insensitive and byte-identical to AZM", () => {
+  const source = "Value eQu $42\nLD A,vAlUe\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), azmBytes("Value EQU $42\nLD A,Value\n"));
+  assert.deepEqual(h.finalBytes(), [0x3e, 0x42]);
+});
+
+test("global EQU leaves the current private scope open", () => {
+  const source = "Routine:\n_Local EQU 3\nValue EQU 4\nLD A,_local\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x3e, 0x03]);
+  assert.equal(h.find(h.pack("_LOCAL").key).status, STATUS.OK);
+});
+
+test("a later EQU resolves an earlier instruction patch", () => {
+  const result = h.assemble("LD A,Value\nValue EQU $42\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.operations(), [
+    { kind: 1, bank: 0, address: 0x4000, bytes: [0x3e] },
+    { kind: 1, bank: 0, address: 0x4001, bytes: [0x00] },
+    { kind: 2, bank: 0, address: 0x4001, bytes: [0x42] },
+  ]);
+  assert.deepEqual(h.finalBytes(), [0x3e, 0x42]);
+});
+
+test("EQU accepts the proved expression domain and word boundaries", () => {
+  const source = [
+    "Low EQU -32768",
+    "High EQU 65535",
+    "Calc EQU ((2+3)*4)|1",
+    "LD HL,Low",
+    "LD DE,High",
+    "LD A,Calc",
+    "",
+  ].join("\n");
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), azmBytes(source));
+});
+
+test("forward-dependent and malformed EQU publish no declaration", () => {
+  let result = h.assemble("Alpha EQU Beta+1\nBeta EQU 16\n");
+  assert.equal(result.status, STATEMENT.EQUATE);
+  assert.equal(result.detail, 1);
+  assert.equal(h.find(h.pack("Alpha").key).status, STATUS.NOT_FOUND);
+  assert.equal(h.find(h.pack("Beta").key).status, STATUS.NOT_FOUND);
+  assert.deepEqual(h.operations(), []);
+
+  result = h.assemble("Value EQU 1,2\n");
+  assert.equal(result.status, STATEMENT.EQUATE);
+  assert.equal(h.find(h.pack("Value").key).status, STATUS.NOT_FOUND);
+  assert.deepEqual(h.operations(), []);
+});
+
+test("private EQU requires a global scope and duplicate EQU is atomic", () => {
+  let result = h.assemble("_Value EQU 1\n");
+  assert.equal(result.status, STATEMENT.SYMBOL);
+  assert.equal(result.detail, STATUS.PRIVATE_NO_SCOPE);
+
+  result = h.assemble("Value EQU 1\nValue EQU 2\n");
+  assert.equal(result.status, STATEMENT.SYMBOL);
+  assert.equal(result.detail, STATUS.DUPLICATE);
+  const found = h.find(h.pack("Value").key);
+  assert.equal(found.status, STATUS.OK);
+  assert.equal(h.memory[found.ix + 6] | (h.memory[found.ix + 7] << 8), 1);
 });
 
 test("Phase 2g measured public-entry execution matches the pinned observations", () => {

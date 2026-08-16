@@ -15,7 +15,7 @@
     "AtomPendingAdd": { "measuredInstructions": 43, "maxInstructions": 60, "measuredCycles": 428, "maxCycles": 600 },
     "AtomProofSinkReset": { "measuredInstructions": 5, "maxInstructions": 10, "measuredCycles": 53, "maxCycles": 100 },
     "AtomOutputReset": { "measuredInstructions": 4, "maxInstructions": 10, "measuredCycles": 50, "maxCycles": 120 },
-    "AtomAssemblePart": { "measuredInstructions": 9339, "maxInstructions": 12000, "measuredCycles": 90512, "maxCycles": 115000 },
+    "AtomAssemblePart": { "measuredInstructions": 23315, "maxInstructions": 30000, "measuredCycles": 228572, "maxCycles": 290000 },
     "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
     "AtomTokenizerNext": { "measuredInstructions": 234, "maxInstructions": 300, "measuredCycles": 2427, "maxCycles": 3100 },
     "AtomRecognizeMnemonic": { "measuredInstructions": 470, "maxInstructions": 600, "measuredCycles": 4146, "maxCycles": 5200 },

@@ -17,6 +17,13 @@ AtomStatementStatusOutput:      .equ 7
 AtomStatementStatusUndefined:   .equ 8
 AtomStatementStatusInternal:    .equ 9
 
+AtomDirectiveEqu: .equ 1
+AtomDirectiveOrg: .equ 2
+AtomDirectiveDb:  .equ 3
+AtomDirectiveDw:  .equ 4
+AtomDirectiveDs:  .equ 5
+AtomDirectiveCount:.equ 5
+
 ; Assemble the source part already installed in the tokenizer. Part EOF is not
 ; final assembly EOF: a later source part may still define a global reference.
 ;
@@ -63,8 +70,18 @@ AtomStatementAfterFirstName:
             JR   Z,AtomStatementLabel
             LD   A,(AtomStatementMnemonicValid)
             OR   A
-            JP   Z,AtomStatementExpectedSaved
-            JP   AtomStatementInstructionPublished
+            JR   NZ,AtomStatementInstructionPublished
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenName
+            JP   NZ,AtomStatementExpectedSaved
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            LD   B,A
+            CALL AtomRecognizeDirective
+            JP   C,AtomStatementExpectedSaved
+            CP   AtomDirectiveEqu
+            JP   NZ,AtomStatementExpectedSaved
+            JP   AtomStatementEquate
 
 AtomStatementLabel:
             LD   HL,AtomStatementKey+5
@@ -108,9 +125,75 @@ AtomStatementInstructionPublished:
             JP   C,AtomStatementOutputFailure
             JP   AtomStatementNext
 
+AtomStatementEquate:
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            LD   BC,(AtomOutputCursor)
+            CALL AtomExpressionParseDeferred
+            JP   C,AtomStatementEquateFailure
+            OR   A
+            JP   NZ,AtomStatementEquateUnresolved
+            LD   (AtomStatementEquateValue),HL
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   NZ,AtomStatementEquateDelimiter
+            LD   HL,AtomStatementKey
+            LD   DE,(AtomStatementEquateValue)
+            CALL AtomSymbolDeclare
+            JP   C,AtomStatementSymbolFailure
+            CALL AtomOutputResolveSymbol
+            JP   C,AtomStatementOutputFailure
+            JP   AtomStatementNext
+
 AtomStatementSuccess:
             XOR  A
             RET
+
+; Recognize the five reserved bare assembler directives through the same
+; case-insensitive RADIX-40 packing used by mnemonics and symbols.
+;
+; in HL=text, B=length; out A=directive ordinal and carry clear, or carry set
+.routine in B,HL out A,carry clobbers BC,HL,IX,zero,sign,parity,halfCarry,DE
+AtomRecognizeDirective:
+            LD   A,B
+            LD   (AtomStatementDirectiveLength),A
+            LD   DE,AtomScratch
+            CALL AtomRadix40Pack
+            RET  C
+            LD   IX,AtomStatementDirectiveTable
+            LD   B,AtomDirectiveCount
+AtomRecognizeDirectiveLoop:
+            LD   A,(AtomStatementDirectiveLength)
+            CP   (IX+2)
+            JR   NZ,AtomRecognizeDirectiveNext
+            LD   A,(AtomScratch)
+            CP   (IX+0)
+            JR   NZ,AtomRecognizeDirectiveNext
+            LD   A,(AtomScratch+1)
+            CP   (IX+1)
+            JR   NZ,AtomRecognizeDirectiveNext
+            LD   A,(IX+3)
+            OR   A
+            RET
+AtomRecognizeDirectiveNext:
+            LD   DE,4
+            ADD  IX,DE
+            DJNZ AtomRecognizeDirectiveLoop
+            XOR  A
+            SCF
+            RET
+
+AtomStatementDirectiveTable:
+            .dw $21FD
+            .db 3,AtomDirectiveEqu
+            .dw $6097
+            .db 3,AtomDirectiveOrg
+            .dw $1950
+            .db 2,AtomDirectiveDb
+            .dw $1C98
+            .db 2,AtomDirectiveDw
+            .dw $1BF8
+            .db 2,AtomDirectiveDs
 
 .routine out carry clobbers A,HL,zero,sign,parity,halfCarry
 AtomStatementCapturePosition:
@@ -159,6 +242,18 @@ AtomStatementOutputFailure:
             LD   A,AtomStatementStatusOutput
             SCF
             RET
+.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+AtomStatementEquateFailure:
+            LD   (AtomStatementDetail),A
+            LD   A,AtomStatementStatusEquate
+            SCF
+            RET
+AtomStatementEquateUnresolved:
+            LD   A,AtomExpressionUnresolved
+            JR   AtomStatementEquateFailure
+AtomStatementEquateDelimiter:
+            LD   A,AtomExpressionStatusExpectedPrimary
+            JR   AtomStatementEquateFailure
 
 AtomStatementCodeEnd:
 
@@ -170,4 +265,6 @@ AtomStatementMnemonicValid: .db 0
 AtomStatementDetail:        .db 0
 AtomStatementErrorPart:     .db 0
 AtomStatementErrorOffset:   .dw 0
+AtomStatementDirectiveLength:.db 0
+AtomStatementEquateValue:   .dw 0
 AtomStatementWorkspaceEnd:
