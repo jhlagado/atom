@@ -28,38 +28,38 @@ AtomHostServiceCodeStart:
 
 .routine in IX out A,carry clobbers halfCarry,zero,sign,parity
 AtomSinkBegin:
-            LD   A,$FF
             SCF
+            SBC  A,A
             RET
 
 .routine in A,C,HL out A,carry clobbers halfCarry,zero,sign,parity
 AtomSinkImageByte:
-            LD   A,$FF
             SCF
+            SBC  A,A
             RET
 
 .routine in A,C,HL out A,carry clobbers halfCarry,zero,sign,parity
 AtomSinkPatchByte:
-            LD   A,$FF
             SCF
+            SBC  A,A
             RET
 
 .routine in C,DE,HL out A,carry clobbers halfCarry,zero,sign,parity
 AtomSinkPatchWord:
-            LD   A,$FF
             SCF
+            SBC  A,A
             RET
 
 .routine in IX,HL,DE out A,carry clobbers halfCarry,zero,sign,parity
 AtomSinkCommit:
-            LD   A,$FF
             SCF
+            SBC  A,A
             RET
 
 .routine out A,carry clobbers halfCarry,zero,sign,parity
 AtomSinkAbort:
-            LD   A,$FF
             SCF
+            SBC  A,A
             RET
 
 AtomHostServiceCodeEnd:

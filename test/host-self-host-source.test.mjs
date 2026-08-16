@@ -21,7 +21,7 @@ test("the checked self-host symbol ledger is exact, scoped, and readable", async
   const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
   assert.equal(ledger.format, "atom-self-host-symbol-map");
   assert.equal(ledger.version, 1);
-  assert.equal(ledger.symbols.length, 1277);
+  assert.equal(ledger.symbols.length, 1283);
 
   const globalNames = new Set();
   const privateNames = new Set();

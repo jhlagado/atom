@@ -55,8 +55,8 @@ test("Phase 2a memory profile covers all 64 KiB without gaps or overlap", () => 
 test("symbol records remain eight bytes and pending records remain six", () => {
   assert.equal(s.AtomSymbolRecordBytes, 8);
   assert.equal(s.AtomPendingRecordBytes, 6);
-  assert.equal(s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart, 659);
-  assert.equal(s.AtomSymbolWorkspaceEnd - s.AtomSymbolWorkspaceStart, 28);
+  assert.equal(s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart, 590);
+  assert.equal(s.AtomSymbolWorkspaceEnd - s.AtomSymbolWorkspaceStart, 22);
 });
 
 test("private prefix is syntax, case folding is exact, and limits are atomic", () => {

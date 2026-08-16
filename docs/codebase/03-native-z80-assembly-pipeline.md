@@ -4,7 +4,7 @@
 
 The native pipeline begins at `AtomAssemble` and ends when the output adapter
 accepts a commit or abort. Everything between those points runs as Z80 code.
-The compiler uses caller-owned source, symbol, and pending arenas plus 551 bytes
+The compiler uses caller-owned source, symbol, and pending arenas plus 531 bytes
 of fixed non-reentrant workspace linked beside the code and immutable tables.
 
 `asm/atom-host-runtime.asm` selects the complete configuration. Smaller proof
@@ -260,7 +260,7 @@ depends only on a form that validation has already accepted.
 `asm/atom-encoder.asm` combines four related facilities:
 
 1. RADIX-40 packing;
-2. packed mnemonic recognition by binary search;
+2. packed mnemonic recognition through an exact three-byte-per-name table;
 3. form validation and length calculation; and
 4. byte encoding into a four-byte commit buffer.
 
@@ -285,8 +285,8 @@ The implementation exploits the instruction set's regular fields:
 
 Irregular core and ED forms use small tables. LD has its own validation and
 encoding paths because it contains the broadest set of register, memory,
-absolute, index, half-register, and special-register interactions. The Phase 1
-measurement records 1,043 direct LD bytes inside the 3,997-byte encoder core.
+absolute, index, half-register, and special-register interactions. The current
+measurement records 939 direct LD bytes inside the 3,348-byte encoder core.
 
 The frozen differential census contains 69 mnemonic spellings and 3,445 valid
 logical forms. The encoder also rejects 526 AZM-invalid source forms and 2,453

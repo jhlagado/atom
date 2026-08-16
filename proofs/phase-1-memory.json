@@ -2,22 +2,22 @@
   "addressSpaceBytes": 65536,
   "regions": [
     { "name": "reserved-low", "start": 0, "end": "AtomEncoderCoreStart", "exactBytes": 8192 },
-    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3997 },
-    { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 9 },
-    { "name": "lower-free", "start": "AtomEncoderWorkspaceEnd", "end": "AtomHarnessEntry", "exactBytes": 20570 },
+    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3348 },
+    { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 6 },
+    { "name": "lower-free", "start": "AtomEncoderWorkspaceEnd", "end": "AtomHarnessEntry", "exactBytes": 21222 },
     { "name": "proof-harness", "start": "AtomHarnessEntry", "end": "AtomHarnessEnd", "exactBytes": 107 },
     { "name": "upper-free", "start": "AtomHarnessEnd", "end": 65024, "exactBytes": 32149 },
     { "name": "proof-stack", "start": 65024, "end": 65280, "exactBytes": 256 },
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "code", "start": "AtomEncoderCodeStart", "end": "AtomEncoderCodeEnd", "exactBytes": 3564 },
-    { "name": "immutable", "start": "AtomEncoderImmutableStart", "end": "AtomEncoderImmutableEnd", "exactBytes": 433 },
-    { "name": "validation", "start": "AtomValidationCodeStart", "end": "AtomValidationCodeEnd", "exactBytes": 1427 },
-    { "name": "rule-encoding", "start": "AtomRuleEncodingCodeStart", "end": "AtomRuleEncodingCodeEnd", "exactBytes": 1834 },
-    { "name": "radix40", "start": "AtomRadix40CodeStart", "end": "AtomRadix40CodeEnd", "exactBytes": 194 },
-    { "name": "recognition", "start": "AtomRecognitionCodeStart", "end": "AtomRecognitionCodeEnd", "exactBytes": 109 },
-    { "name": "ld-validation", "start": "AtomLdValidationStart", "end": "AtomLdValidationEnd", "exactBytes": 411 },
-    { "name": "ld-encoding", "start": "AtomLdEncodingStart", "end": "AtomLdEncodingEnd", "exactBytes": 632 }
+    { "name": "code", "start": "AtomEncoderCodeStart", "end": "AtomEncoderCodeEnd", "exactBytes": 3070 },
+    { "name": "immutable", "start": "AtomEncoderImmutableStart", "end": "AtomEncoderImmutableEnd", "exactBytes": 278 },
+    { "name": "validation", "start": "AtomValidationCodeStart", "end": "AtomValidationCodeEnd", "exactBytes": 1307 },
+    { "name": "rule-encoding", "start": "AtomRuleEncodingCodeStart", "end": "AtomRuleEncodingCodeEnd", "exactBytes": 1527 },
+    { "name": "radix40", "start": "AtomRadix40CodeStart", "end": "AtomRadix40CodeEnd", "exactBytes": 177 },
+    { "name": "recognition", "start": "AtomRecognitionCodeStart", "end": "AtomRecognitionCodeEnd", "exactBytes": 59 },
+    { "name": "ld-validation", "start": "AtomLdValidationStart", "end": "AtomLdValidationEnd", "exactBytes": 389 },
+    { "name": "ld-encoding", "start": "AtomLdEncodingStart", "end": "AtomLdEncodingEnd", "exactBytes": 550 }
   ]
 }

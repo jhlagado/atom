@@ -5,8 +5,8 @@
   "targetCpu": "Zilog Z80",
   "executionBudgets": {
     "AtomProofDriverReset": { "measuredInstructions": 11, "maxInstructions": 20, "measuredCycles": 131, "maxCycles": 250 },
-    "AtomDriverValidateDescriptor": { "measuredInstructions": 489, "maxInstructions": 700, "measuredCycles": 4374, "maxCycles": 6500 },
-    "AtomAssembleFinish": { "measuredInstructions": 354, "maxInstructions": 500, "measuredCycles": 4116, "maxCycles": 6000 },
-    "AtomAssemble": { "measuredInstructions": 99900, "maxInstructions": 130000, "measuredCycles": 992426, "maxCycles": 1300000 }
+    "AtomDriverValidateDescriptor": { "measuredInstructions": 525, "maxInstructions": 700, "measuredCycles": 4539, "maxCycles": 6500 },
+    "AtomAssembleFinish": { "measuredInstructions": 426, "maxInstructions": 600, "measuredCycles": 5088, "maxCycles": 6800 },
+    "AtomAssemble": { "measuredInstructions": 115283, "maxInstructions": 150000, "measuredCycles": 1181051, "maxCycles": 1500000 }
   }
 }

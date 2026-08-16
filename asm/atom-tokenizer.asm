@@ -171,11 +171,11 @@ AtomTokenCommit:
 ; Ordinary source tokens mark their physical line as non-empty.
 .routine in A out A,IX,carry clobbers HL,zero,sign,parity,halfCarry
 AtomTokenFinish:
-            LD   (AtomTokenPendingKind),A
+            PUSH AF
             LD   A,1
             LD   (AtomTokenLineHasToken),A
-            LD   A,(AtomTokenPendingKind)
-            JP   AtomTokenCommit
+            POP  AF
+            JR   AtomTokenCommit
 
 ; A failed scan publishes only a separate diagnostic position. The last
 ; successful token record remains byte-for-byte unchanged.
@@ -193,17 +193,19 @@ AtomTokenFail:
             RET
 
 ; Carry is set for an ASCII letter. A is preserved.
-.routine in A out A,carry clobbers C,sign,parity,halfCarry,zero
+.routine in A out A,carry clobbers sign,parity,halfCarry,zero
 AtomTokenIsLetter:
+            PUSH BC
             LD   C,A
             OR   $20
             SUB  "a"
             CP   26
             LD   A,C
+            POP  BC
             RET
 
 ; Carry is set for a name start: letter or underscore.
-.routine in A out A,carry clobbers C,zero,sign,parity,halfCarry
+.routine in A out A,carry clobbers zero,sign,parity,halfCarry
 AtomTokenIsNameStart:
             CALL AtomTokenIsLetter
             RET  C
@@ -213,7 +215,7 @@ AtomTokenIsNameStart:
             RET
 
 ; Carry is set for a name continuation byte.
-.routine in A out A,carry clobbers C,zero,sign,parity,halfCarry
+.routine in A out A,carry clobbers zero,sign,parity,halfCarry
 AtomTokenIsNameByte:
             CALL AtomTokenIsNameStart
             RET  C
@@ -254,13 +256,11 @@ _AtomTokenHexNo:
 ; admits the prefix plus eight significant bytes and is published as a name.
 .routine out A,IX,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry
 AtomTokenScanName:
-            LD   A,8
-            LD   (AtomTokenNameLimit),A
+            LD   C,8
             CALL AtomTokenSourcePeek
             CP   "."
             JR   NZ,_AtomTokenScanNameGlobal
-            LD   A,9
-            LD   (AtomTokenNameLimit),A
+            LD   C,9
             CALL AtomTokenSourceTake
             CALL AtomTokenSourcePeek
             JP   C,AtomTokenInvalidByte
@@ -276,7 +276,7 @@ _AtomTokenScanNameLoop:
             CALL AtomTokenIsNameByte
             JR   NC,_AtomTokenScanNameDone
             INC  B
-            LD   A,(AtomTokenNameLimit)
+            LD   A,C
             CP   B
             JR   C,AtomTokenNameTooLong
             CALL AtomTokenSourceTake
@@ -518,9 +518,7 @@ AtomTokenScanString:
 _AtomTokenScanStringLoop:
             CALL AtomTokenStringTake
             JP   C,AtomTokenFail
-            CP   $0A
-            JR   Z,AtomTokenUnterminatedString
-            CP   $0D
+            CALL AtomTokenIsLineEnding
             JR   Z,AtomTokenUnterminatedString
             CP   $20
             JR   C,AtomTokenInvalidByte
@@ -534,17 +532,9 @@ _AtomTokenScanStringLoop:
             JP   C,AtomTokenFail
             CP   "x"
             JR   Z,_AtomTokenScanHexEscape
-            LD   HL,AtomTokenEscapeTable
-            LD   C,AtomTokenEscapeCount
-_AtomTokenScanEscapeLoop:
-            CP   (HL)
-            JR   Z,_AtomTokenScanStringLoop
-            INC  HL
-            INC  HL
-            DEC  C
-            JR   NZ,_AtomTokenScanEscapeLoop
-            LD   A,AtomTokenStatusInvalidEscape
-            JP   AtomTokenFail
+            CALL AtomTokenDecodeEscape
+            JR   C,AtomTokenInvalidEscape
+            JR   _AtomTokenScanStringLoop
 _AtomTokenScanHexEscape:
             CALL AtomTokenStringTake
             JP   C,AtomTokenFail
@@ -600,9 +590,7 @@ AtomTokenSkipComment:
 _AtomTokenSkipCommentLoop:
             CALL AtomTokenSourcePeek
             RET  C
-            CP   $0A
-            RET  Z
-            CP   $0D
+            CALL AtomTokenIsLineEnding
             RET  Z
             CALL AtomTokenSourceTake
             JR   _AtomTokenSkipCommentLoop
@@ -632,9 +620,9 @@ _AtomTokenizerNextLoop:
             CP   $27
             JP   Z,_AtomTokenizerApostrophe
             CP   "$"
-            JP   Z,_AtomTokenizerDollar
+            JR   Z,_AtomTokenizerDollar
             CP   "%"
-            JP   Z,_AtomTokenizerPercent
+            JR   Z,_AtomTokenizerPercent
             CP   "<"
             JP   Z,_AtomTokenizerLeftShift
             CP   ">"
@@ -655,7 +643,7 @@ _AtomTokenizerPunctuationLoop:
             JR   Z,_AtomTokenizerPunctuation
             INC  HL
             DJNZ _AtomTokenizerPunctuationLoop
-            JP   AtomTokenInvalidByte
+            JR   AtomTokenInvalidByte
 
 _AtomTokenizerPunctuation:
             LD   C,(HL)
@@ -787,12 +775,12 @@ _AtomTokenizerApostrophe:
             LD   HL,(AtomTokenScanOffset)
             LD   A,H
             OR   L
-            JP   Z,AtomTokenScanCharacter
+            JR   Z,AtomTokenScanCharacter
             LD   HL,(AtomTokenScanPointer)
             DEC  HL
             LD   A,(HL)
             CALL AtomTokenIsNameByte
-            JP   NC,AtomTokenScanCharacter
+            JR   NC,AtomTokenScanCharacter
             CALL AtomTokenSourceTake
             LD   A,1
             LD   (AtomTokenScanLength),A
@@ -808,9 +796,7 @@ AtomTokenScanCharacter:
             CALL AtomTokenSourceTake
             JP   C,AtomTokenUnterminatedCharacter
             INC  B
-            CP   $0A
-            JP   Z,AtomTokenUnterminatedCharacter
-            CP   $0D
+            CALL AtomTokenIsLineEnding
             JP   Z,AtomTokenUnterminatedCharacter
             CP   $27
             JP   Z,AtomTokenInvalidCharacter
@@ -828,19 +814,8 @@ _AtomTokenScanCharacterEscape:
             INC  B
             CP   "x"
             JR   Z,_AtomTokenScanCharacterHex
-            LD   HL,AtomTokenEscapeTable
-            LD   C,AtomTokenEscapeCount
-_AtomTokenScanCharacterEscapeLoop:
-            CP   (HL)
-            JR   Z,_AtomTokenScanCharacterEscapeFound
-            INC  HL
-            INC  HL
-            DEC  C
-            JR   NZ,_AtomTokenScanCharacterEscapeLoop
-            JP   AtomTokenInvalidEscape
-_AtomTokenScanCharacterEscapeFound:
-            INC  HL
-            LD   A,(HL)
+            CALL AtomTokenDecodeEscape
+            JP   C,AtomTokenInvalidEscape
             LD   (AtomTokenScanValue),A
             JR   _AtomTokenScanCharacterClose
 _AtomTokenScanCharacterHex:
@@ -866,9 +841,7 @@ _AtomTokenScanCharacterClose:
             CALL AtomTokenSourceTake
             JP   C,AtomTokenUnterminatedCharacter
             INC  B
-            CP   $0A
-            JP   Z,AtomTokenUnterminatedCharacter
-            CP   $0D
+            CALL AtomTokenIsLineEnding
             JP   Z,AtomTokenUnterminatedCharacter
             CP   $27
             JP   NZ,AtomTokenInvalidCharacter
@@ -878,6 +851,15 @@ _AtomTokenScanCharacterClose:
             JP   AtomTokenFinish
 
 AtomTokenizerRuleCodeEnd:
+
+; Shared token-name input for the parser, expression, and statement modules.
+.routine out A,B,HL
+AtomTokenLoadLexeme:
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            LD   B,A
+            RET
+
 AtomTokenizerImmutableStart:
 AtomTokenPunctuationTable:
             .db ",",AtomTokenComma
@@ -899,6 +881,33 @@ AtomTokenPunctuationCount: .equ (AtomTokenPunctuationEnd-AtomTokenPunctuationTab
 AtomTokenEscapeTable:
             .db "0",0,"n",$0A,"r",$0D,"t",$09,$27,$27,$22,$22,"\\","\\"
 AtomTokenEscapeCount: .equ 7
+
+; Decode one supported escape byte. Carry means no table entry.
+.routine in A out A,carry clobbers C,HL,zero,sign,parity,halfCarry
+AtomTokenDecodeEscape:
+            LD   HL,AtomTokenEscapeTable
+            LD   C,AtomTokenEscapeCount
+_AtomTokenDecodeEscapeLoop:
+            CP   (HL)
+            JR   Z,_AtomTokenDecodeEscapeFound
+            INC  HL
+            INC  HL
+            DEC  C
+            JR   NZ,_AtomTokenDecodeEscapeLoop
+            SCF
+            RET
+_AtomTokenDecodeEscapeFound:
+            INC  HL
+            LD   A,(HL)
+            RET
+
+; Preserve A and return Z for either physical line-ending byte.
+.routine in A out A,zero clobbers carry,sign,parity,halfCarry
+AtomTokenIsLineEnding:
+            CP   $0A
+            RET  Z
+            CP   $0D
+            RET
 AtomTokenizerImmutableEnd:
 
 AtomTokenizerCodeEnd:
@@ -916,8 +925,6 @@ AtomTokenScanOffset:         .dw 0
 AtomTokenScanLength:         .db 0
 AtomTokenScanValue:          .dw 0
 AtomTokenDigitsSeen:         .db 0
-AtomTokenNameLimit:          .db 0
-AtomTokenPendingKind:        .db 0
 AtomTokenErrorStatus:        .db 0
 AtomTokenErrorPart:          .db 0
 AtomTokenErrorOffset:        .dw 0

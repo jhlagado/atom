@@ -125,8 +125,8 @@ the owner of a behavior quickly.
 
 | File | Role |
 | --- | --- |
-| `atom-00.atm` through `atom-05.atm` | Checked Atom-valid content parts derived during the AZM-to-Atom migration |
-| `atom.atm` | `%INCLUDE` entry that orders the six content parts through the normal host resolver |
+| `atom-00.atm` through `atom-04.atm` | Checked Atom-valid content parts derived during the AZM-to-Atom migration |
+| `atom.atm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
 
 During the migration checkpoint, `scripts/generate-self-host-source.mjs` is the

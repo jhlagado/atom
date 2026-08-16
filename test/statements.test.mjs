@@ -199,11 +199,13 @@ test("a private label before the first global is rejected without output", () =>
 });
 
 test("unknown statements and invalid instructions retain their nested category", () => {
-  let result = h.assemble("Unknown thing\n");
-  assert.equal(result.status, STATEMENT.EXPECTED);
-  assert.deepEqual(h.operations(), []);
+  for (const source of ["Unknown thing\n", "CSTX \"A\"\n", "PSTX \"A\"\n", "ISTX \"A\"\n", "ALIXY 4\n", "ALIGNX 4\n"]) {
+    const result = h.assemble(source);
+    assert.equal(result.status, STATEMENT.EXPECTED, source);
+    assert.deepEqual(h.operations(), []);
+  }
 
-  result = h.assemble("LD BC,A\n");
+  const result = h.assemble("LD BC,A\n");
   assert.equal(result.status, STATEMENT.INSTRUCTION);
   assert.deepEqual(h.operations(), []);
 });

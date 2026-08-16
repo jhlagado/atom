@@ -15,12 +15,12 @@
     "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
     "AtomSymbolReset": { "measuredInstructions": 7, "maxInstructions": 12, "measuredCycles": 99, "maxCycles": 150 },
     "AtomPendingReset": { "measuredInstructions": 5, "maxInstructions": 10, "measuredCycles": 66, "maxCycles": 120 },
-    "AtomPackSymbol": { "measuredInstructions": 435, "maxInstructions": 500, "measuredCycles": 3736, "maxCycles": 4200 },
-    "AtomSymbolDeclare": { "measuredInstructions": 120, "maxInstructions": 1000, "measuredCycles": 1488, "maxCycles": 12000 },
-    "AtomSymbolAdvanceScope": { "measuredInstructions": 20, "maxInstructions": 40, "measuredCycles": 258, "maxCycles": 500 },
-    "AtomParserParse": { "measuredInstructions": 5950, "maxInstructions": 8000, "measuredCycles": 60269, "maxCycles": 80000 },
-    "AtomPatchLocate": { "measuredInstructions": 129, "maxInstructions": 180, "measuredCycles": 1152, "maxCycles": 1600 },
-    "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 2040, "maxCycles": 2450 },
-    "AtomParserQueueReferences": { "measuredInstructions": 228, "maxInstructions": 320, "measuredCycles": 2091, "maxCycles": 3000 }
+    "AtomPackSymbol": { "measuredInstructions": 440, "maxInstructions": 500, "measuredCycles": 3788, "maxCycles": 4200 },
+    "AtomSymbolDeclare": { "measuredInstructions": 130, "maxInstructions": 1000, "measuredCycles": 1608, "maxCycles": 12000 },
+    "AtomSymbolAdvanceScope": { "measuredInstructions": 24, "maxInstructions": 40, "measuredCycles": 312, "maxCycles": 500 },
+    "AtomParserParse": { "measuredInstructions": 6244, "maxInstructions": 8000, "measuredCycles": 63708, "maxCycles": 80000 },
+    "AtomPatchLocate": { "measuredInstructions": 131, "maxInstructions": 180, "measuredCycles": 1151, "maxCycles": 1600 },
+    "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 1997, "maxCycles": 2450 },
+    "AtomParserQueueReferences": { "measuredInstructions": 220, "maxInstructions": 320, "measuredCycles": 1938, "maxCycles": 3000 }
   }
 }

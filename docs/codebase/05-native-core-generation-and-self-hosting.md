@@ -89,8 +89,8 @@ The mapping records the readable original, exact short name, module, privacy,
 and private scope. It never resolves a collision by silent truncation.
 
 The default maximum generated part size is 20 KiB, below the 24 KiB native
-source-page limit. The current source produces six generated content parts.
-`scripts/generate-self-host-source.mjs` also writes a seventh entry part:
+source-page limit. The current source produces five generated content parts.
+`scripts/generate-self-host-source.mjs` also writes a sixth entry part:
 
 ```asm
 %INCLUDE "ATOM-00.ATM"
@@ -98,11 +98,10 @@ source-page limit. The current source produces six generated content parts.
 %INCLUDE "ATOM-02.ATM"
 %INCLUDE "ATOM-03.ATM"
 %INCLUDE "ATOM-04.ATM"
-%INCLUDE "ATOM-05.ATM"
 ```
 
 The host resolver orders those dependencies before `atom.atm`, so the checked
-self-host project presented to the native driver has seven parts. The empty
+self-host project presented to the native driver has six parts. The empty
 entry still has its own identity and descriptor.
 
 `native/atom-symbols.json` retains generator statistics and the complete
@@ -127,9 +126,9 @@ The self-host proof resolves `native/atom.atm` through the ordinary host
 source packager and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 
-The pinned AZM-built native core assembles all seven parts. The resulting
+The pinned AZM-built native core assembles all six parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
-events, execution measurements, and a complete 13,812-byte materialized image.
+events, execution measurements, and a complete 12,502-byte materialized image.
 
 The proof compares that image with the memory initialized by the pinned core's
 Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
@@ -201,20 +200,20 @@ The checked measurement records:
 | Observation | Measured value |
 | --- | ---: |
 | Readable input files | 13 |
-| Flattened native statements | 7,529 |
+| Flattened native statements | 7,293 |
 | Generated content parts | 5 |
 | Checked resolver parts, including entry | 6 |
-| Checked source bytes | 99,469 |
-| Generated global symbols | 847 |
-| Generated private symbols | 430 |
-| Initialized resident bytes | 13,436 |
-| Reserved resident bytes | 376 |
-| Forward PATCH records | 2,247 |
-| Declared symbols | 1,277 |
-| Linked resident extent | 13,812 bytes |
+| Checked source bytes | 102,344 |
+| Generated global symbols | 861 |
+| Generated private symbols | 422 |
+| Initialized resident bytes | 12,129 |
+| Reserved resident bytes | 373 |
+| Forward PATCH records | 2,007 |
+| Declared symbols | 1,283 |
+| Linked resident extent | 12,502 bytes |
 
-The first generation currently executes 163,392,529 instructions and
-1,492,523,777 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 98,988,344 instructions and
+1,057,105,655 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

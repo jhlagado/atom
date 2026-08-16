@@ -7,6 +7,6 @@
     "AtomFormLength": { "measuredInstructions": 100, "maxInstructions": 125, "measuredCycles": 919, "maxCycles": 1150 },
     "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 2040, "maxCycles": 2450 },
     "AtomRadix40Pack": { "measuredInstructions": 446, "maxInstructions": 550, "measuredCycles": 3931, "maxCycles": 4800 },
-    "AtomRecognizeMnemonic": { "measuredInstructions": 646, "maxInstructions": 800, "measuredCycles": 5689, "maxCycles": 7000 }
+    "AtomRecognizeMnemonic": { "measuredInstructions": 915, "maxInstructions": 1150, "measuredCycles": 9538, "maxCycles": 12000 }
   }
 }

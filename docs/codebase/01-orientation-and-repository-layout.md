@@ -146,19 +146,19 @@ The current pinned strict-contract image divides into these measured ranges:
 
 | Native module | Code and immutable bytes | Fixed workspace bytes |
 | --- | ---: | ---: |
-| Encoder, validation, recognition, and tables | 3,997 | 9 |
-| Symbols and pending references | 874 | 28 |
-| Tokenizer | 1,380 | 32 |
-| Expression evaluator | 2,135 | 303 |
-| Patch-field locator | 73 | 0 |
-| Operand parser | 2,162 | 98 |
-| Output and patch submission | 503 | 24 |
-| Statements and directives | 1,458 | 48 |
-| Multipart driver | 655 | 9 |
-| Fail-closed host sink stubs | 24 | 0 |
-| **Total** | **13,261** | **551** |
+| Encoder, validation, recognition, and tables | 3,348 | 6 |
+| Symbols and pending references | 730 | 22 |
+| Tokenizer | 1,360 | 30 |
+| Expression evaluator | 1,922 | 297 |
+| Patch-field locator | 67 | 0 |
+| Operand parser | 2,070 | 98 |
+| Output and patch submission | 467 | 22 |
+| Statements and directives | 1,370 | 47 |
+| Multipart driver | 619 | 9 |
+| Fail-closed host sink stubs | 18 | 0 |
+| **Total** | **11,971** | **531** |
 
-The linked resident extent is measured at 13,812 bytes, leaving 2,572 bytes
+The linked resident extent is measured at 12,502 bytes, leaving 3,882 bytes
 below a 16 KiB boundary. Caller-owned source, symbol, pending, descriptor, and
 stack storage are separate accounts. The values above come from
 `assets/native-core.json` and the workspace symbols used by
@@ -193,7 +193,7 @@ are generated from it or from shared JavaScript descriptions:
 | `asm/atom-mnemonics.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
 | `asm/atom-operands.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
 | `assets/native-core.json` | `scripts/generate-native-core.mjs` using strict AZM | `npm run verify:native-core` |
-| `native/atom-00.atm` through `atom-05.atm` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
+| `native/atom-00.atm` through `atom-04.atm` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
 | `native/atom.atm` and `atom-symbols.json` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
 
 Changes belong in the generator or readable source, followed by regeneration.

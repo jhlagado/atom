@@ -37,35 +37,38 @@ AtomOutputCheckCapacity:
 ; in A=byte
 .routine in A out A,carry clobbers DE,HL,zero,sign,parity,halfCarry,BC,IX,IY
 AtomOutputEmitByte:
-            LD   (AtomOutputDataValue),A
+            LD   B,A
             LD   HL,1
             CALL AtomOutputCheckCapacity
             RET  C
-            LD   A,(AtomOutputDataValue)
-            JP   AtomOutputEmitByteReady
+            LD   A,B
+            JR   AtomOutputEmitByteReady
 
 ; Submit one little-endian initialized data word.
 ; in HL=word
 .routine in HL out A,carry clobbers DE,HL,zero,sign,parity,halfCarry,BC,IX,IY
 AtomOutputEmitWord:
-            LD   (AtomOutputDataValue),HL
+            LD   B,H
+            LD   C,L
             LD   HL,2
             CALL AtomOutputCheckCapacity
             RET  C
-            LD   A,(AtomOutputDataValue)
+            LD   A,C
+            PUSH BC
             CALL AtomOutputEmitByteReady
+            POP  BC
             RET  C
-            LD   A,(AtomOutputDataValue+1)
-            JP   AtomOutputEmitByteReady
+            LD   A,B
+            JR   AtomOutputEmitByteReady
 
 ; Advance over uninitialized reserved bytes without emitting IMAGE records.
 ; in HL=count
 .routine in HL out A,carry clobbers DE,HL,zero,sign,parity,halfCarry
 AtomOutputReserve:
-            LD   (AtomOutputDataValue),HL
+            PUSH HL
             CALL AtomOutputCheckCapacity
+            POP  DE
             RET  C
-            LD   DE,(AtomOutputDataValue)
             LD   HL,(AtomOutputCursor)
             ADD  HL,DE
             LD   (AtomOutputCursor),HL
@@ -83,6 +86,7 @@ AtomOutputSetOrigin:
             LD   (AtomOutputCursor),HL
             XOR  A
             RET
+.endif
 
 .routine in A out A,carry clobbers BC,HL,zero,sign,parity,halfCarry,DE,IX,IY
 AtomOutputEmitByteReady:
@@ -98,6 +102,7 @@ AtomOutputEmitByteReady:
             LD   (AtomOutputRemaining),HL
             XOR  A
             RET
+.if AtomParserStatementMode
 AtomOutputDataCapacityFailure:
             LD   A,AtomOutputStatusCapacity
             SCF
@@ -140,23 +145,14 @@ _AtomOutputInstructionLoop:
             LD   HL,AtomOutputInstructionBytes
             ADD  HL,DE
             LD   A,(HL)
-            LD   HL,(AtomOutputCursor)
-            LD   C,0
-            CALL AtomSinkImageByte
+            CALL AtomOutputEmitByteReady
             RET  C
-            LD   HL,(AtomOutputCursor)
-            INC  HL
-            LD   (AtomOutputCursor),HL
-            LD   HL,(AtomOutputRemaining)
-            DEC  HL
-            LD   (AtomOutputRemaining),HL
             LD   HL,AtomOutputInstructionScan
             INC  (HL)
             JR   _AtomOutputInstructionLoop
 _AtomOutputInstructionDone:
             LD   DE,(AtomOutputInstructionStart)
-            CALL AtomParserQueueReferences
-            RET
+            JP   AtomParserQueueReferences
 _AtomOutputInstructionCapacityFailure:
             LD   A,AtomOutputStatusCapacity
             SCF
@@ -238,8 +234,7 @@ _AtomOutputResolveSignReady:
             CP   AtomPatchKindLowByte
             JR   Z,_AtomOutputResolveSubmitByte
             CP   AtomPatchKindHighByte
-            JR   Z,_AtomOutputResolveHighByte
-            JP   AtomOutputResolveInternal
+            JP   NZ,AtomOutputResolveInternal
 
 _AtomOutputResolveHighByte:
             LD   A,(AtomOutputResolveValue+1)
@@ -315,6 +310,7 @@ _AtomOutputResolveWord:
 
 _AtomOutputResolveRemove:
             LD   IX,(AtomOutputResolveSymbolPointer)
+            .expectout A,carry,BC,DE
             CALL AtomPendingTake
             JR   C,AtomOutputResolveInternal
             JP   _AtomOutputResolveLoop
@@ -366,7 +362,6 @@ AtomOutputResolveKind:         .db 0
 AtomOutputResolveAddend:       .db 0
 AtomOutputResolveValue:        .ds 3
 .if AtomParserStatementMode
-AtomOutputDataValue:           .dw 0
 AtomOutputResolveBaseHigh:     .db 0
 .endif
 AtomOutputWorkspaceEnd:

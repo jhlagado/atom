@@ -35,42 +35,38 @@ AtomPatchLocate:
             POP  DE
             ADD  HL,DE
             LD   A,(HL)
-            CP   AtomOpIndexIX
+            SUB  AtomOpIndexIX
+            CP   7
+            JR   NC,_AtomPatchInvalid
+            LD   E,A
+            LD   D,0
+            LD   HL,AtomPatchOperandKinds
+            ADD  HL,DE
+            LD   A,(HL)
+            OR   A
+            JR   Z,_AtomPatchInvalid
+            CP   AtomPatchKindDisplacement
             JR   Z,_AtomPatchDisplacement
-            CP   AtomOpIndexIY
-            JR   Z,_AtomPatchDisplacement
-            CP   AtomOpRel8
-            JR   Z,_AtomPatchRelative
-            CP   AtomOpImm8
-            JR   Z,_AtomPatchByte
-            CP   AtomOpImm16
-            JR   Z,_AtomPatchWord
-            CP   AtomOpMemAbs
-            JR   Z,_AtomPatchWord
+            DEC  B
+            CP   AtomPatchKindWord
+            JR   NZ,_AtomPatchReady
+            DEC  B
+_AtomPatchReady:
+            OR   A
+            RET
 _AtomPatchInvalid:
             XOR  A
             SCF
             RET
 _AtomPatchDisplacement:
             LD   B,2
-            LD   A,AtomPatchKindDisplacement
             OR   A
             RET
-_AtomPatchRelative:
-            DEC  B
-            LD   A,AtomPatchKindRelative
-            OR   A
-            RET
-_AtomPatchByte:
-            DEC  B
-            LD   A,AtomPatchKindByte
-            OR   A
-            RET
-_AtomPatchWord:
-            DEC  B
-            DEC  B
-            LD   A,AtomPatchKindWord
-            OR   A
-            RET
+
+; Operand classes 48..54 map to patch kinds; zero is not patchable.
+AtomPatchOperandKinds:
+            .db AtomPatchKindDisplacement,AtomPatchKindDisplacement
+            .db AtomPatchKindWord,AtomPatchKindByte,AtomPatchKindWord
+            .db 0,AtomPatchKindRelative
 
 AtomPatchCodeEnd:

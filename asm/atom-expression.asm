@@ -112,7 +112,7 @@ _AtomExpressionFinishUnresolved:
 .endif
             LD   HL,AtomExpressionResultKey
             CALL AtomSymbolReference
-            JP   C,AtomExpressionSymbolFailure
+            JR   C,AtomExpressionSymbolFailure
             LD   HL,(AtomExpressionResultValue)
             LD   A,AtomExpressionUnresolved
             OR   A
@@ -196,6 +196,15 @@ _AtomExpressionNotFunction:
             SCF
             RET
 
+; Publish A as one precedence-seven unary/function operator.
+.routine in A out A,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry
+AtomExpressionPushHighOperator:
+            LD   (AtomExpressionOperator),A
+            LD   A,7
+            LD   (AtomExpressionOperatorPrecedence),A
+            CALL AtomExpressionCaptureOperatorPosition
+            JP   AtomExpressionPushOperator
+
 ; Consume one operand, grouping marker, or unary operator. The operator and
 ; value stacks make the parser finite and non-recursive for strict proof.
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE,IX,IY
@@ -219,11 +228,7 @@ AtomExpressionParseOperand:
             JP   AtomExpressionFailHere
 _AtomExpressionPushUnary:
             ADD  A,$80
-            LD   (AtomExpressionOperator),A
-            LD   A,7
-            LD   (AtomExpressionOperatorPrecedence),A
-            CALL AtomExpressionCaptureOperatorPosition
-            CALL AtomExpressionPushOperator
+            CALL AtomExpressionPushHighOperator
             RET  C
             JP   AtomExpressionNextToken
 _AtomExpressionPushParen:
@@ -264,17 +269,13 @@ _AtomExpressionPrimaryPublish:
             RET
 
 _AtomExpressionPushFunction:
-            LD   (AtomExpressionOperator),A
-            LD   A,7
-            LD   (AtomExpressionOperatorPrecedence),A
-            CALL AtomExpressionCaptureOperatorPosition
-            CALL AtomExpressionPushOperator
+            CALL AtomExpressionPushHighOperator
             RET  C
             CALL AtomExpressionNextToken
             RET  C
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenLeftParen
-            JP   Z,_AtomExpressionPushParen
+            JR   Z,_AtomExpressionPushParen
             LD   A,AtomExpressionStatusExpectedPrimary
             JP   AtomExpressionFailHere
 
@@ -297,8 +298,8 @@ AtomExpressionParseOperator:
             LD   (AtomExpressionExpectOperand),A
             CALL AtomExpressionNextToken
             RET  C
-            LD   A,1
-            OR   A
+            XOR  A
+            INC  A
             RET
 _AtomExpressionRightParen:
             LD   A,(AtomExpressionParenDepth)
@@ -314,8 +315,8 @@ _AtomExpressionRightParen:
             RET  C
             CALL AtomExpressionApplyUnary
             RET  C
-            LD   A,1
-            OR   A
+            XOR  A
+            INC  A
             RET
 _AtomExpressionDelimiter:
             LD   A,(AtomExpressionParenDepth)
@@ -335,9 +336,7 @@ AtomExpressionPrimaryName:
             LD   (AtomExpressionSymbolPart),A
             LD   HL,(AtomTokenRecord+AtomTokenSourceOffset)
             LD   (AtomExpressionSymbolOffset),HL
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             LD   DE,AtomExpressionResultKey
             CALL AtomPackSymbol
             JP   C,AtomExpressionSymbolFailure
@@ -380,74 +379,38 @@ _AtomExpressionPrimaryUnresolved:
 .routine out A,carry clobbers zero,sign,parity,halfCarry,C,HL
 AtomExpressionClassifyOperator:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
-            CP   AtomTokenPipe
-            JR   Z,_AtomExpressionOperatorOr
-            CP   AtomTokenCaret
-            JR   Z,_AtomExpressionOperatorXor
-            CP   AtomTokenAmpersand
-            JR   Z,_AtomExpressionOperatorAnd
-            CP   AtomTokenLeftShift
-            JR   Z,_AtomExpressionOperatorLeft
-            CP   AtomTokenRightShift
-            JR   Z,_AtomExpressionOperatorRight
-            CP   AtomTokenPlus
-            JR   Z,_AtomExpressionOperatorAdd
-            CP   AtomTokenMinus
-            JR   Z,_AtomExpressionOperatorSubtract
-            CP   AtomTokenStar
-            JR   Z,_AtomExpressionOperatorMultiply
-            CP   AtomTokenSlash
-            JR   Z,_AtomExpressionOperatorDivide
-            CP   AtomTokenPercent
-            JR   Z,_AtomExpressionOperatorRemainder
-            SCF
-            RET
-_AtomExpressionOperatorOr:
-            LD   A,AtomExpressionOpOr
-            LD   C,1
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorXor:
-            LD   A,AtomExpressionOpXor
-            LD   C,2
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorAnd:
-            LD   A,AtomExpressionOpAnd
-            LD   C,3
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorLeft:
-            LD   A,AtomExpressionOpLeft
-            LD   C,4
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorRight:
-            LD   A,AtomExpressionOpRight
-            LD   C,4
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorAdd:
-            LD   A,AtomExpressionOpAdd
-            LD   C,5
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorSubtract:
-            LD   A,AtomExpressionOpSubtract
-            LD   C,5
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorMultiply:
-            LD   A,AtomExpressionOpMultiply
-            LD   C,6
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorDivide:
-            LD   A,AtomExpressionOpDivide
-            LD   C,6
-            JR   _AtomExpressionOperatorStore
-_AtomExpressionOperatorRemainder:
-            LD   A,AtomExpressionOpRemainder
-            LD   C,6
-_AtomExpressionOperatorStore:
+            SUB  AtomTokenPlus
+            CP   12
+            JR   NC,_AtomExpressionOperatorDelimiter
+            PUSH DE
+            LD   E,A
+            LD   D,0
+            LD   HL,AtomExpressionOperatorTable
+            ADD  HL,DE
+            LD   A,(HL)
+            POP  DE
+            OR   A
+            JR   Z,_AtomExpressionOperatorDelimiter
+            LD   C,A
+            AND  $0F
             LD   (AtomExpressionOperator),A
             LD   A,C
+            AND  $F0
+            RRCA
+            RRCA
+            RRCA
+            RRCA
             LD   (AtomExpressionOperatorPrecedence),A
             CALL AtomExpressionCaptureOperatorPosition
             OR   A
             RET
+_AtomExpressionOperatorDelimiter:
+            SCF
+            RET
+
+; High nibble is precedence; low nibble is the internal operation ordinal.
+AtomExpressionOperatorTable:
+            .db $56,$57,$68,$69,$6A,$33,$22,$11,0,0,$44,$45
 
 .routine out carry,zero clobbers A,HL,sign,parity,halfCarry
 AtomExpressionCaptureOperatorPosition:
@@ -477,31 +440,31 @@ AtomExpressionPushValue:
 
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE
 AtomExpressionPopValue:
-            LD   A,(AtomExpressionValueDepth)
-            OR   A
-            JP   Z,AtomExpressionInternalFailure
-            DEC  A
-            LD   (AtomExpressionValueDepth),A
-            CALL AtomExpressionValueAddress
             LD   DE,AtomExpressionResultValue
-            LD   BC,AtomExpressionValueBytes
-            LDIR
-            XOR  A
-            RET
+            JR   AtomExpressionPopValueTo
 
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE
 AtomExpressionPopLeftValue:
+            LD   DE,AtomExpressionLeftValue
+            JR   AtomExpressionPopValueTo
+
+.routine in DE out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE
+AtomExpressionPopValueTo:
+            PUSH DE
             LD   A,(AtomExpressionValueDepth)
             OR   A
-            JP   Z,AtomExpressionInternalFailure
+            JR   Z,AtomExpressionPopValueEmpty
             DEC  A
             LD   (AtomExpressionValueDepth),A
             CALL AtomExpressionValueAddress
-            LD   DE,AtomExpressionLeftValue
+            POP  DE
             LD   BC,AtomExpressionValueBytes
             LDIR
             XOR  A
             RET
+AtomExpressionPopValueEmpty:
+            POP  DE
+            JR   AtomExpressionInternalFailure
 
 ; A=value index, out HL=value address (index*10).
 .routine in A out HL clobbers DE,A,F
@@ -525,7 +488,7 @@ AtomExpressionValueAddress:
 AtomExpressionPushOperator:
             LD   A,(AtomExpressionOperatorDepth)
             CP   AtomExpressionOperatorCapacity
-            JP   NC,AtomExpressionCapacityFailure
+            JR   NC,AtomExpressionCapacityFailure
             CALL AtomExpressionOperatorAddress
             LD   D,H
             LD   E,L
@@ -592,13 +555,13 @@ AtomExpressionInternalFailure:
 AtomExpressionSaveIncoming:
             LD   HL,AtomExpressionOperator
             LD   DE,AtomExpressionIncoming
-            LD   BC,AtomExpressionOperatorBytes
-            LDIR
-            RET
+            JR   AtomExpressionCopyIncoming
 .routine out carry,zero clobbers BC,DE,HL,parity,halfCarry,sign,A
 AtomExpressionRestoreIncoming:
             LD   HL,AtomExpressionIncoming
             LD   DE,AtomExpressionOperator
+.routine in HL,DE out carry,zero clobbers BC,DE,HL,parity,halfCarry,sign,A
+AtomExpressionCopyIncoming:
             LD   BC,AtomExpressionOperatorBytes
             LDIR
             RET
@@ -618,8 +581,7 @@ _AtomExpressionReduceIncomingLoop:
             LD   A,(AtomExpressionIncoming+1)
             CP   (HL)
             JR   C,_AtomExpressionReduceIncomingNow
-            JR   Z,_AtomExpressionReduceIncomingNow
-            RET
+            RET  NZ
 _AtomExpressionReduceIncomingNow:
             CALL AtomExpressionReduce
             RET  C
@@ -633,7 +595,7 @@ _AtomExpressionReduceIncomingDone:
 AtomExpressionReduceToParen:
 _AtomExpressionReduceToParenLoop:
             CALL AtomExpressionPeekOperator
-            JP   C,AtomExpressionInternalFailure
+            JR   C,AtomExpressionInternalFailure
             CP   AtomExpressionMarkerLeftParen
             RET  Z
             CALL AtomExpressionReduce
@@ -755,39 +717,38 @@ AtomExpressionReduceLoaded:
             LD   B,A
             LD   A,(AtomExpressionResultUnresolved)
             OR   B
-            JP   NZ,AtomExpressionReduceForward
+            JR   NZ,AtomExpressionReduceForward
             LD   A,(AtomExpressionOperator)
-            CP   AtomExpressionOpOr
-            JP   Z,AtomExpressionOr
-            CP   AtomExpressionOpXor
-            JP   Z,AtomExpressionXor
-            CP   AtomExpressionOpAnd
-            JP   Z,AtomExpressionAnd
-            CP   AtomExpressionOpLeft
-            JP   Z,AtomExpressionShiftLeft
-            CP   AtomExpressionOpRight
-            JP   Z,AtomExpressionShiftRight
-            CP   AtomExpressionOpAdd
-            JP   Z,AtomExpressionAdd
-            CP   AtomExpressionOpSubtract
-            JP   Z,AtomExpressionSubtract
-            CP   AtomExpressionOpMultiply
-            JP   Z,AtomExpressionMultiply
-            CP   AtomExpressionOpDivide
-            JP   Z,AtomExpressionDivide
-            CP   AtomExpressionOpRemainder
-            JP   Z,AtomExpressionRemainder
-            JP   AtomExpressionInternalFailure
+            DEC  A
+            CP   10
+            JP   NC,AtomExpressionInternalFailure
+            ADD  A,A
+            LD   L,A
+            LD   H,0
+            LD   DE,AtomExpressionReductionTable
+            ADD  HL,DE
+            LD   E,(HL)
+            INC  HL
+            LD   D,(HL)
+            EX   DE,HL
+            JP   (HL)
+
+AtomExpressionReductionTable:
+            .dw AtomExpressionOr,AtomExpressionXor,AtomExpressionAnd
+            .dw AtomExpressionShiftLeft,AtomExpressionShiftRight
+            .dw AtomExpressionAdd,AtomExpressionSubtract
+            .dw AtomExpressionMultiply,AtomExpressionDivide
+            .dw AtomExpressionRemainder
 
 ; Deferred expressions are one symbol plus or minus a resolved signed byte.
 .routine out A,carry clobbers BC,DE,HL,IX,IY,zero,sign,parity,halfCarry
 AtomExpressionReduceForward:
             LD   A,(AtomExpressionLeftUnresolved)
             CP   AtomExpressionForwardLow
-            JP   NC,_AtomExpressionForwardFailure
+            JR   NC,_AtomExpressionForwardFailure
             LD   A,(AtomExpressionResultUnresolved)
             CP   AtomExpressionForwardLow
-            JP   NC,_AtomExpressionForwardFailure
+            JR   NC,_AtomExpressionForwardFailure
             LD   A,(AtomExpressionLeftUnresolved)
             OR   A
             JR   Z,_AtomExpressionForwardRight
@@ -829,14 +790,19 @@ _AtomExpressionForwardFailure:
             JP   AtomExpressionFailOperator
 
 ; Concrete 24-bit operations. Left op Result -> Result.
-.routine out A,carry clobbers BC,HL,sign,parity,halfCarry,DE,zero
-AtomExpressionAdd:
+.routine out A,BC,HL clobbers carry,zero,sign,parity,halfCarry
+AtomExpressionLoadArithmetic:
             LD   A,(AtomExpressionLeftValue+2)
             LD   B,A
             LD   A,(AtomExpressionResultValue+2)
             LD   C,A
             LD   A,(AtomExpressionLeftValue)
             LD   HL,AtomExpressionResultValue
+            RET
+
+.routine out A,carry clobbers BC,HL,sign,parity,halfCarry,DE,zero
+AtomExpressionAdd:
+            CALL AtomExpressionLoadArithmetic
             ADD  A,(HL)
             LD   (HL),A
             INC  HL
@@ -851,7 +817,7 @@ AtomExpressionAdd:
             LD   A,B
             XOR  C
             BIT  7,A
-            JP   NZ,AtomExpressionArithmeticOk
+            JR   NZ,AtomExpressionArithmeticOk
             LD   A,B
             XOR  D
             BIT  7,A
@@ -863,12 +829,7 @@ AtomExpressionArithmeticOk:
 
 .routine out A,carry clobbers BC,HL,sign,parity,halfCarry,DE,zero,IX,IY
 AtomExpressionSubtract:
-            LD   A,(AtomExpressionLeftValue+2)
-            LD   B,A
-            LD   A,(AtomExpressionResultValue+2)
-            LD   C,A
-            LD   A,(AtomExpressionLeftValue)
-            LD   HL,AtomExpressionResultValue
+            CALL AtomExpressionLoadArithmetic
             SUB  (HL)
             LD   (HL),A
             INC  HL
@@ -883,12 +844,12 @@ AtomExpressionSubtract:
             LD   A,B
             XOR  C
             BIT  7,A
-            JP   Z,AtomExpressionArithmeticOk
+            JR   Z,AtomExpressionArithmeticOk
             LD   A,B
             XOR  D
             BIT  7,A
             JP   NZ,AtomExpressionRangeOperator
-            JP   AtomExpressionArithmeticOk
+            JR   AtomExpressionArithmeticOk
 
 .routine out A,carry clobbers BC,DE,HL,sign,parity,halfCarry,zero
 AtomExpressionAnd:
@@ -935,17 +896,9 @@ _AtomExpressionOrLoop:
             XOR  A
             RET
 
-.routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE,IX,IY
-AtomExpressionShiftLeft:
-            CALL AtomExpressionShiftCount
-            RET  C
-            LD   B,A
-            OR   A
-            JR   Z,_AtomExpressionShiftLeftCopy
-_AtomExpressionShiftLeftLoop:
-            LD   A,(AtomExpressionLeftValue+2)
-            LD   C,A
-            LD   HL,AtomExpressionLeftValue
+; Shift the unsigned 24-bit word at HL left once, preserving the final carry.
+.routine in HL out A,HL,carry clobbers zero,sign,parity,halfCarry
+AtomExpressionShiftLeft24:
             LD   A,(HL)
             SLA  A
             LD   (HL),A
@@ -957,7 +910,20 @@ _AtomExpressionShiftLeftLoop:
             LD   A,(HL)
             RL   A
             LD   (HL),A
-            LD   A,(HL)
+            RET
+
+.routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE,IX,IY
+AtomExpressionShiftLeft:
+            CALL AtomExpressionShiftCount
+            RET  C
+            LD   B,A
+            OR   A
+            JR   Z,_AtomExpressionShiftLeftCopy
+_AtomExpressionShiftLeftLoop:
+            LD   A,(AtomExpressionLeftValue+2)
+            LD   C,A
+            LD   HL,AtomExpressionLeftValue
+            CALL AtomExpressionShiftLeft24
             XOR  C
             BIT  7,A
             JP   NZ,AtomExpressionRangeOperator
@@ -974,12 +940,14 @@ _AtomExpressionShiftLeftCopy:
 AtomExpressionShiftRight:
             CALL AtomExpressionShiftCount
             RET  C
-            LD   (AtomExpressionShiftCounter),A
+            LD   B,A
+            PUSH BC
             LD   HL,AtomExpressionLeftValue
             LD   DE,AtomExpressionResultValue
             LD   BC,3
             LDIR
-            LD   A,(AtomExpressionShiftCounter)
+            POP  BC
+            LD   A,B
             OR   A
             JP   Z,AtomExpressionArithmeticOk
             LD   B,A
@@ -1090,17 +1058,7 @@ AtomExpressionDivideCommon:
             LD   B,24
 _AtomExpressionDivideLoop:
             LD   HL,AtomExpressionMagnitudeLeft
-            LD   A,(HL)
-            SLA  A
-            LD   (HL),A
-            INC  HL
-            LD   A,(HL)
-            RL   A
-            LD   (HL),A
-            INC  HL
-            LD   A,(HL)
-            RL   A
-            LD   (HL),A
+            CALL AtomExpressionShiftLeft24
             LD   HL,AtomExpressionAccumulator
             LD   A,(HL)
             RL   A
@@ -1114,17 +1072,7 @@ _AtomExpressionDivideLoop:
             RL   A
             LD   (HL),A
             LD   HL,AtomExpressionQuotient
-            LD   A,(HL)
-            SLA  A
-            LD   (HL),A
-            INC  HL
-            LD   A,(HL)
-            RL   A
-            LD   (HL),A
-            INC  HL
-            LD   A,(HL)
-            RL   A
-            LD   (HL),A
+            CALL AtomExpressionShiftLeft24
             CALL AtomExpressionRemainderAtLeastDivisor
             JR   C,_AtomExpressionDivideNext
             CALL AtomExpressionRemainderSubtractDivisor
@@ -1189,11 +1137,11 @@ AtomExpressionPrepareMagnitudes:
 .routine out carry,zero clobbers HL,sign,parity,halfCarry,A,BC,DE,IX,IY
 AtomExpressionNegateResult:
             LD   HL,AtomExpressionResultValue
-            JP   AtomExpressionNegateAtHL
+            JR   AtomExpressionNegateAtHL
 .routine out carry,zero clobbers HL,sign,parity,halfCarry,A,BC,DE,IX,IY
 AtomExpressionNegateMagnitudeLeft:
             LD   HL,AtomExpressionMagnitudeLeft
-            JP   AtomExpressionNegateAtHL
+            JR   AtomExpressionNegateAtHL
 .routine out carry,zero clobbers HL,A,BC,DE,IX,IY,sign,parity,halfCarry
 AtomExpressionNegateMagnitudeRight:
             LD   HL,AtomExpressionMagnitudeRight
@@ -1252,18 +1200,7 @@ AtomExpressionAccumulatorAddLeft:
 .routine out carry,zero maybe-out BC,DE clobbers A,HL,sign,parity,halfCarry,IX,IY,BC,DE
 AtomExpressionMagnitudeLeftShift:
             LD   HL,AtomExpressionMagnitudeLeft
-            LD   A,(HL)
-            SLA  A
-            LD   (HL),A
-            INC  HL
-            LD   A,(HL)
-            RL   A
-            LD   (HL),A
-            INC  HL
-            LD   A,(HL)
-            RL   A
-            LD   (HL),A
-            RET
+            JP   AtomExpressionShiftLeft24
 .routine out carry,zero maybe-out BC,DE clobbers A,HL,sign,parity,halfCarry,IX,IY,BC,DE
 AtomExpressionMagnitudeRightShift:
             LD   HL,AtomExpressionMagnitudeRight+2
@@ -1343,7 +1280,7 @@ AtomExpressionRequireWord:
             RET  NZ
 _AtomExpressionRangeHere:
             LD   A,AtomExpressionStatusRange
-            JP   AtomExpressionFailHere
+            JR   AtomExpressionFailHere
 
 ; Deferred addend must be exactly sign-extended signed byte.
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE,IX,IY
@@ -1352,21 +1289,21 @@ AtomExpressionRequireAddend:
             OR   A
             JR   Z,_AtomExpressionAddendPositive
             INC  A
-            JP   NZ,AtomExpressionRangeOperator
+            JR   NZ,AtomExpressionRangeOperator
             LD   A,(AtomExpressionResultValue+1)
             INC  A
-            JP   NZ,AtomExpressionRangeOperator
+            JR   NZ,AtomExpressionRangeOperator
             LD   A,(AtomExpressionResultValue)
             BIT  7,A
             RET  NZ
-            JP   AtomExpressionRangeOperator
+            JR   AtomExpressionRangeOperator
 _AtomExpressionAddendPositive:
             LD   A,(AtomExpressionResultValue+1)
             OR   A
-            JP   NZ,AtomExpressionRangeOperator
+            JR   NZ,AtomExpressionRangeOperator
             LD   A,(AtomExpressionResultValue)
             BIT  7,A
-            JP   NZ,AtomExpressionRangeOperator
+            JR   NZ,AtomExpressionRangeOperator
             OR   A
             RET
 
@@ -1376,52 +1313,39 @@ AtomExpressionNextToken:
             CALL AtomTokenizerNext
             RET  NC
             LD   A,AtomExpressionStatusLexical
-            JP   AtomExpressionFailTokenizer
+            JR   AtomExpressionFailTokenizer
 
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry
 AtomExpressionRangeOperator:
             LD   A,AtomExpressionStatusRange
-            JP   AtomExpressionFailOperator
+            JR   AtomExpressionFailOperator
 
 ; Failure positions.
 .routine in A out A,carry clobbers HL,halfCarry,zero,sign,parity
 AtomExpressionFailHere:
-            LD   (AtomExpressionErrorStatus),A
-            LD   A,(AtomTokenRecord+AtomTokenPartOffset)
-            LD   (AtomExpressionErrorPart),A
-            LD   HL,(AtomTokenRecord+AtomTokenSourceOffset)
-            LD   (AtomExpressionErrorOffset),HL
-            LD   A,(AtomExpressionErrorStatus)
-            SCF
-            RET
+            LD   HL,AtomTokenRecord+AtomTokenPartOffset
+            JR   AtomExpressionFailPosition
 .routine in A out A,carry clobbers HL,halfCarry,zero,sign,parity
 AtomExpressionFailOperator:
-            LD   (AtomExpressionErrorStatus),A
-            LD   A,(AtomExpressionOperatorPart)
-            LD   (AtomExpressionErrorPart),A
-            LD   HL,(AtomExpressionOperatorOffset)
-            LD   (AtomExpressionErrorOffset),HL
-            LD   A,(AtomExpressionErrorStatus)
-            SCF
-            RET
+            LD   HL,AtomExpressionOperatorPart
+            JR   AtomExpressionFailPosition
 .routine in A out A,carry clobbers HL,halfCarry,zero,sign,parity
 AtomExpressionFailSymbol:
-            LD   (AtomExpressionErrorStatus),A
-            LD   A,(AtomExpressionSymbolPart)
-            LD   (AtomExpressionErrorPart),A
-            LD   HL,(AtomExpressionSymbolOffset)
-            LD   (AtomExpressionErrorOffset),HL
-            LD   A,(AtomExpressionErrorStatus)
-            SCF
-            RET
+            LD   HL,AtomExpressionSymbolPart
+            JR   AtomExpressionFailPosition
 .routine in A out A,carry clobbers HL,halfCarry,zero,sign,parity
 AtomExpressionFailTokenizer:
-            LD   (AtomExpressionErrorStatus),A
-            LD   A,(AtomTokenErrorPart)
-            LD   (AtomExpressionErrorPart),A
-            LD   HL,(AtomTokenErrorOffset)
-            LD   (AtomExpressionErrorOffset),HL
-            LD   A,(AtomExpressionErrorStatus)
+            LD   HL,AtomTokenErrorPart
+
+.routine in A out A,carry clobbers HL,halfCarry,zero,sign,parity
+AtomExpressionFailPosition:
+            PUSH BC
+            PUSH DE
+            LD   DE,AtomExpressionErrorPart
+            LD   BC,3
+            LDIR
+            POP  DE
+            POP  BC
             SCF
             RET
 
@@ -1447,11 +1371,7 @@ AtomExpressionIncoming:             .ds AtomExpressionOperatorBytes
 AtomExpressionSymbolPart:           .db 0
 AtomExpressionSymbolOffset:         .dw 0
 AtomExpressionSymbolStatus:         .db 0
-AtomExpressionShiftCounter:         .db 0
 AtomExpressionMultiplyCounter:      .db 0
-AtomExpressionErrorStatus:          .db 0
-AtomExpressionErrorPart:            .db 0
-AtomExpressionErrorOffset:          .dw 0
 AtomExpressionValueDepth:           .db 0
 AtomExpressionOperatorDepth:        .db 0
 AtomExpressionParenDepth:           .db 0
@@ -1459,10 +1379,12 @@ AtomExpressionExpectOperand:        .db 0
 AtomExpressionSignLeft:             .db 0
 AtomExpressionSignRight:            .db 0
 AtomExpressionSignResult:           .db 0
-AtomExpressionDivisionRemainderMode:.db 0
+AtomExpressionDivisionRemainderMode:.equ AtomExpressionMultiplyCounter
 AtomExpressionMagnitudeLeft:        .ds 3
 AtomExpressionMagnitudeRight:       .ds 3
 AtomExpressionAccumulator:          .ds 3
+AtomExpressionErrorPart:            .equ AtomExpressionAccumulator
+AtomExpressionErrorOffset:          .equ AtomExpressionAccumulator+1
 AtomExpressionQuotient:             .ds 3
 AtomExpressionValueStack:           .ds AtomExpressionValueBytes*AtomExpressionValueCapacity
 AtomExpressionOperatorStack:        .ds AtomExpressionOperatorBytes*AtomExpressionOperatorCapacity

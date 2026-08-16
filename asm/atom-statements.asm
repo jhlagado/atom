@@ -35,27 +35,22 @@ AtomDirectiveCount:.equ 9
 .routine out A,carry clobbers BC,DE,HL,IX,IY,zero,sign,parity,halfCarry
 AtomAssemblePart:
 AtomStatementNext:
-            CALL AtomTokenizerNext
+            CALL AtomStatementNextTokenKind
             JP   C,AtomStatementLexicalFailure
-            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEof
             JP   Z,AtomStatementSuccess
             CP   AtomTokenEol
-            JP   Z,AtomStatementNext
+            JR   Z,AtomStatementNext
             CP   AtomTokenName
             JP   NZ,AtomStatementExpectedHere
 
             CALL AtomStatementCapturePosition
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             LD   DE,AtomStatementKey
             CALL AtomPackSymbol
             JP   C,AtomStatementSymbolFailure
 
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             CALL AtomRecognizeMnemonic
             JR   C,AtomStatementNotMnemonic
             LD   (AtomStatementMnemonic),A
@@ -67,9 +62,7 @@ AtomStatementNext:
 AtomStatementNotMnemonic:
             XOR  A
             LD   (AtomStatementMnemonicValid),A
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             CALL AtomRecognizeDirective
             JR   C,AtomStatementNotDirective
             LD   (AtomStatementDirective),A
@@ -81,9 +74,8 @@ AtomStatementNotDirective:
             LD   (AtomStatementDirectiveValid),A
 
 AtomStatementAfterFirstName:
-            CALL AtomTokenizerNext
+            CALL AtomStatementNextTokenKind
             JP   C,AtomStatementLexicalFailure
-            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenColon
             JR   Z,AtomStatementLabel
             LD   A,(AtomStatementMnemonicValid)
@@ -98,9 +90,7 @@ AtomStatementTryEquate:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenName
             JP   NZ,AtomStatementExpectedSaved
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             CALL AtomRecognizeDirective
             JP   C,AtomStatementExpectedSaved
             CP   AtomDirectiveEqu
@@ -108,18 +98,15 @@ AtomStatementTryEquate:
             JP   AtomStatementEquate
 
 AtomStatementLabel:
-            CALL AtomTokenizerNext
+            CALL AtomStatementNextTokenKind
             JP   C,AtomStatementLexicalFailure
-            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenName
             JR   NZ,AtomStatementLabelPublish
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             CALL AtomRecognizeDirective
             JR   C,AtomStatementLabelPublish
             CP   AtomDirectiveEqu
-            JP   Z,AtomStatementEquate
+            JR   Z,AtomStatementEquate
 AtomStatementLabelPublish:
             LD   HL,AtomStatementKey+5
             BIT  7,(HL)
@@ -141,9 +128,7 @@ AtomStatementLabelDeclared:
             CP   AtomTokenName
             JP   NZ,AtomStatementExpectedHere
             CALL AtomStatementCapturePosition
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             CALL AtomRecognizeMnemonic
             JR   C,AtomStatementLabelDirective
             LD   (AtomStatementMnemonic),A
@@ -151,16 +136,14 @@ AtomStatementLabelDeclared:
             JP   C,AtomStatementLexicalFailure
             JR   AtomStatementInstructionPublished
 AtomStatementLabelDirective:
-            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
-            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
-            LD   B,A
+            CALL AtomTokenLoadLexeme
             CALL AtomRecognizeDirective
             JP   C,AtomStatementExpectedSaved
             LD   (AtomStatementDirective),A
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
             LD   A,(AtomStatementDirective)
-            JP   AtomStatementDirectivePublished
+            JR   AtomStatementDirectivePublished
 
 AtomStatementInstructionPublished:
             LD   A,(AtomStatementMnemonic)
@@ -175,8 +158,7 @@ AtomStatementInstructionPublished:
 AtomStatementEquate:
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
-            LD   BC,(AtomOutputCursor)
-            CALL AtomExpressionParseDeferred
+            CALL AtomStatementParseExpression
             JP   C,AtomStatementEquateFailure
             OR   A
             JP   NZ,AtomStatementEquateUnresolved
@@ -205,27 +187,27 @@ AtomStatementEquateResolve:
             JP   AtomStatementNext
 
 AtomStatementDirectivePublished:
-            CP   AtomDirectiveOrg
-            JR   Z,AtomStatementOrg
-            CP   AtomDirectiveDb
-            JR   Z,AtomStatementDb
-            CP   AtomDirectiveDw
-            JR   Z,AtomStatementDw
-            CP   AtomDirectiveDs
-            JP   Z,AtomStatementDs
-            CP   AtomDirectiveCstr
-            JP   Z,AtomStatementCstr
-            CP   AtomDirectivePstr
-            JP   Z,AtomStatementPstr
-            CP   AtomDirectiveIstr
-            JP   Z,AtomStatementIstr
-            CP   AtomDirectiveAlign
-            JP   Z,AtomStatementAlign
-            JP   AtomStatementExpectedSaved
+            SUB  AtomDirectiveOrg
+            CP   8
+            JP   NC,AtomStatementExpectedSaved
+            ADD  A,A
+            LD   L,A
+            LD   H,0
+            LD   DE,AtomStatementDirectiveDispatchTable
+            ADD  HL,DE
+            LD   E,(HL)
+            INC  HL
+            LD   D,(HL)
+            EX   DE,HL
+            JP   (HL)
+
+AtomStatementDirectiveDispatchTable:
+            .dw AtomStatementOrg,AtomStatementDb,AtomStatementDw,AtomStatementDs
+            .dw AtomStatementCstr,AtomStatementPstr,AtomStatementIstr
+            .dw AtomStatementAlign
 
 AtomStatementOrg:
-            LD   BC,(AtomOutputCursor)
-            CALL AtomExpressionParseDeferred
+            CALL AtomStatementParseExpression
             JP   C,AtomStatementDirectiveFailure
             OR   A
             JP   NZ,AtomStatementDirectiveUnresolved
@@ -262,8 +244,7 @@ AtomStatementDataItem:
             LD   (AtomStatementStringMode),A
             JP   AtomStatementDbString
 AtomStatementDataExpression:
-            LD   BC,(AtomOutputCursor)
-            CALL AtomExpressionParseDeferred
+            CALL AtomStatementParseExpression
             JP   C,AtomStatementDirectiveFailure
             OR   A
             JR   NZ,AtomStatementDataUnresolved
@@ -284,7 +265,7 @@ AtomStatementDataResolvedByte:
 .if AtomDriverMode
             JP   AtomStatementDataDelimiter
 .else
-            JP   AtomStatementDataDelimiter
+            JR   AtomStatementDataDelimiter
 .endif
 
 AtomStatementDataUnresolved:
@@ -371,9 +352,8 @@ AtomStatementDataDelimiter:
             JP   Z,AtomStatementNext
             CP   AtomTokenComma
             JP   NZ,AtomStatementDirectiveDelimiter
-            CALL AtomTokenizerNext
+            CALL AtomStatementNextTokenKind
             JP   C,AtomStatementLexicalFailure
-            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
             JP   Z,AtomStatementDirectiveExpected
             JP   AtomStatementDataItem
@@ -418,9 +398,8 @@ AtomStatementStringCountDone:
             LD   A,(AtomStatementStringMode)
             OR   A
             JR   Z,AtomStatementStringCapacity
-            CALL AtomTokenizerNext
+            CALL AtomStatementNextTokenKind
             JP   C,AtomStatementLexicalFailure
-            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
             JP   NZ,AtomStatementDirectiveDelimiter
 AtomStatementStringCapacity:
@@ -451,28 +430,10 @@ AtomStatementStringEmitLoop:
             CP   "\\"
             JR   NZ,AtomStatementStringEmit
             CALL AtomStatementStringTake
-            CP   "0"
-            JR   Z,AtomStatementStringZero
-            CP   "n"
-            JR   Z,AtomStatementStringNewline
-            CP   "r"
-            JR   Z,AtomStatementStringReturn
-            CP   "t"
-            JR   Z,AtomStatementStringTab
             CP   "x"
             JR   Z,AtomStatementStringHex
-            JR   AtomStatementStringEmit
-AtomStatementStringZero:
-            XOR  A
-            JR   AtomStatementStringEmit
-AtomStatementStringNewline:
-            LD   A,$0A
-            JR   AtomStatementStringEmit
-AtomStatementStringReturn:
-            LD   A,$0D
-            JR   AtomStatementStringEmit
-AtomStatementStringTab:
-            LD   A,$09
+            CALL AtomTokenDecodeEscape
+            JP   C,AtomStatementDirectiveString
             JR   AtomStatementStringEmit
 AtomStatementStringHex:
             CALL AtomStatementStringTake
@@ -535,8 +496,7 @@ AtomStatementStringDirective:
             JP   AtomStatementDbString
 
 AtomStatementDs:
-            LD   BC,(AtomOutputCursor)
-            CALL AtomExpressionParseDeferred
+            CALL AtomStatementParseExpression
             JP   C,AtomStatementDirectiveFailure
             OR   A
             JP   NZ,AtomStatementDirectiveUnresolved
@@ -548,8 +508,7 @@ AtomStatementDs:
             JP   NZ,AtomStatementDirectiveDelimiter
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
-            LD   BC,(AtomOutputCursor)
-            CALL AtomExpressionParseDeferred
+            CALL AtomStatementParseExpression
             JP   C,AtomStatementDirectiveFailure
             OR   A
             JP   NZ,AtomStatementDirectiveUnresolved
@@ -582,8 +541,7 @@ AtomStatementDsReserve:
 ; ALIGN emits the same initialized zero padding as AZM. Any positive resolved
 ; word is accepted; alignment is not restricted to powers of two.
 AtomStatementAlign:
-            LD   BC,(AtomOutputCursor)
-            CALL AtomExpressionParseDeferred
+            CALL AtomStatementParseExpression
             JP   C,AtomStatementDirectiveFailure
             OR   A
             JP   NZ,AtomStatementDirectiveUnresolved
@@ -621,7 +579,7 @@ AtomStatementAlignCountReady:
             LD   HL,(AtomStatementDataCount)
             CALL AtomOutputCheckCapacity
             JP   C,AtomStatementOutputFailure
-            JP   AtomStatementDsFillLoop
+            JR   AtomStatementDsFillLoop
 
 AtomStatementSuccess:
             XOR  A
@@ -634,52 +592,57 @@ AtomStatementSuccess:
 .routine in B,HL out A,carry clobbers BC,HL,IX,zero,sign,parity,halfCarry,DE
 AtomRecognizeDirective:
             LD   A,B
-            LD   (AtomStatementDirectiveLength),A
+            CP   6
+            JR   NC,AtomRecognizeDirectiveNotFound
             LD   DE,AtomScratch
             CALL AtomRadix40Pack
             RET  C
             LD   IX,AtomStatementDirectiveTable
             LD   B,AtomDirectiveCount
 AtomRecognizeDirectiveLoop:
-            LD   A,(AtomStatementDirectiveLength)
-            CP   (IX+2)
-            JR   NZ,AtomRecognizeDirectiveNext
             LD   A,(AtomScratch)
             CP   (IX+0)
             JR   NZ,AtomRecognizeDirectiveNext
             LD   A,(AtomScratch+1)
             CP   (IX+1)
             JR   NZ,AtomRecognizeDirectiveNext
-            LD   A,(IX+3)
+            LD   A,(AtomScratch+2)
+            CP   (IX+2)
+            JR   NZ,AtomRecognizeDirectiveNext
+            LD   A,(AtomScratch+3)
+            CP   (IX+3)
+            JR   NZ,AtomRecognizeDirectiveNext
+            LD   A,(IX+4)
             OR   A
             RET
 AtomRecognizeDirectiveNext:
-            LD   DE,4
+            LD   DE,5
             ADD  IX,DE
             DJNZ AtomRecognizeDirectiveLoop
+AtomRecognizeDirectiveNotFound:
             XOR  A
             SCF
             RET
 
 AtomStatementDirectiveTable:
-            .dw $21FD
-            .db 3,AtomDirectiveEqu
-            .dw $6097
-            .db 3,AtomDirectiveOrg
-            .dw $1950
-            .db 2,AtomDirectiveDb
-            .dw $1C98
-            .db 2,AtomDirectiveDw
-            .dw $1BF8
-            .db 2,AtomDirectiveDs
-            .dw $15CC
-            .db 4,AtomDirectiveCstr
-            .dw $670C
-            .db 4,AtomDirectivePstr
-            .dw $3B4C
-            .db 4,AtomDirectiveIstr
-            .dw $0829
-            .db 5,AtomDirectiveAlign
+            .dw $21FD,$0000
+            .db AtomDirectiveEqu
+            .dw $6097,$0000
+            .db AtomDirectiveOrg
+            .dw $1950,$0000
+            .db AtomDirectiveDb
+            .dw $1C98,$0000
+            .db AtomDirectiveDw
+            .dw $1BF8,$0000
+            .db AtomDirectiveDs
+            .dw $15CC,$7080
+            .db AtomDirectiveCstr
+            .dw $670C,$7080
+            .db AtomDirectivePstr
+            .dw $3B4C,$7080
+            .db AtomDirectiveIstr
+            .dw $0829,$2DF0
+            .db AtomDirectiveAlign
 
 .routine out A clobbers HL,zero,sign,parity,halfCarry
 AtomStatementStringTake:
@@ -690,6 +653,17 @@ AtomStatementStringTake:
             LD   HL,AtomStatementStringRemaining
             DEC  (HL)
             RET
+
+.routine out A,IX,carry clobbers BC,DE,HL,IY,zero,sign,parity,halfCarry
+AtomStatementNextTokenKind:
+            CALL AtomTokenizerNext
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            RET
+
+.routine out A,HL,IX,carry clobbers BC,DE,IY,zero,sign,parity,halfCarry
+AtomStatementParseExpression:
+            LD   BC,(AtomOutputCursor)
+            JP   AtomExpressionParseDeferred
 
 .routine out carry clobbers A,HL,zero,sign,parity,halfCarry
 AtomStatementCapturePosition:
@@ -709,66 +683,56 @@ AtomStatementLexicalFailure:
             LD   A,AtomStatementStatusLexical
             SCF
             RET
-.routine out A,carry clobbers HL,zero,sign,parity,halfCarry
+.routine out A,carry clobbers C,HL,zero,sign,parity,halfCarry
 AtomStatementExpectedHere:
             CALL AtomStatementCapturePosition
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenDirective
-            JR   Z,AtomStatementUnsupportedDirective
-            JP   AtomStatementExpectedSaved
-.routine out A,carry clobbers halfCarry,zero,sign,parity
+            JR   NZ,AtomStatementExpectedSaved
+.routine out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementUnsupportedDirective:
             LD   A,AtomTokenDirective
-            LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusDirective
-            SCF
-            RET
-.routine out A,carry clobbers halfCarry,zero,sign,parity
+            LD   C,AtomStatementStatusDirective
+            JR   AtomStatementFailure
+.routine out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementExpectedSaved:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
-            LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusExpected
-            SCF
-            RET
-.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+            LD   C,AtomStatementStatusExpected
+            JR   AtomStatementFailure
+.routine in A out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementSymbolFailure:
-            LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusSymbol
-            SCF
-            RET
+            LD   C,AtomStatementStatusSymbol
+            JR   AtomStatementFailure
 .if AtomDriverMode
 AtomStatementSymbolPartFailure:
             LD   A,AtomStatusPartCapacity
             JR   AtomStatementSymbolFailure
 .endif
-.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+.routine in A out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementInstructionFailure:
-            LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusInstruction
-            SCF
-            RET
-.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+            LD   C,AtomStatementStatusInstruction
+            JR   AtomStatementFailure
+.routine in A out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementOutputFailure:
-            LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusOutput
-            SCF
-            RET
-.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+            LD   C,AtomStatementStatusOutput
+            JR   AtomStatementFailure
+.routine in A out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementEquateFailure:
-            LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusEquate
-            SCF
-            RET
+            LD   C,AtomStatementStatusEquate
+            JR   AtomStatementFailure
 AtomStatementEquateUnresolved:
             LD   A,AtomExpressionUnresolved
             JR   AtomStatementEquateFailure
 AtomStatementEquateDelimiter:
             LD   A,AtomExpressionStatusExpectedPrimary
             JR   AtomStatementEquateFailure
-.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+.routine in A out A,carry clobbers C,halfCarry,zero,sign,parity
 AtomStatementDirectiveFailure:
+            LD   C,AtomStatementStatusDirective
+.routine in A,C out A,carry clobbers halfCarry,zero,sign,parity
+AtomStatementFailure:
             LD   (AtomStatementDetail),A
-            LD   A,AtomStatementStatusDirective
+            LD   A,C
             SCF
             RET
 AtomStatementDirectiveUnresolved:
@@ -797,7 +761,6 @@ AtomStatementMnemonicValid: .db 0
 AtomStatementDetail:        .db 0
 AtomStatementErrorPart:     .db 0
 AtomStatementErrorOffset:   .dw 0
-AtomStatementDirectiveLength:.db 0
 AtomStatementEquateValue:   .dw 0
 AtomStatementEquateSigned:  .db 0
 AtomStatementDirective:     .db 0

@@ -84,10 +84,10 @@ console.log(JSON.stringify({
   },
   components: {
     symbolCodeAndTables: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd"),
-    statementSymbolCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 723,
+    statementSymbolCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 590,
     parserCodeAndTables: extent("AtomParserCodeStart", "AtomParserCodeEnd"),
     parserWorkspace: extent("AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"),
-    statementContinuationIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 2035,
+    statementContinuationIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 1981,
     outputCode: extent("AtomOutputCodeStart", "AtomOutputCodeEnd"),
     outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
     statementDispatcherCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),

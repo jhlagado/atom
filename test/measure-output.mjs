@@ -54,8 +54,8 @@ console.log(JSON.stringify({
   components: {
     outputCode: extent("AtomOutputCodeStart", "AtomOutputCodeEnd"),
     outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
-    pendingPeekCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 659,
-    parserPreflightCodeIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 2029,
+    pendingPeekCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 590,
+    parserPreflightCodeIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 1975,
     proofAdapterCode: extent("AtomOutputProofAdapterStart", "AtomOutputProofAdapterEnd"),
     proofAdapterWorkspace: extent("AtomOutputProofAdapterWorkspaceStart", "AtomOutputProofAdapterWorkspaceEnd"),
   },

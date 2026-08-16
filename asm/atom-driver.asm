@@ -57,24 +57,18 @@ AtomAssemble:
             RET  C
 
             LD   IX,(AtomDriverDescriptor)
-            LD   L,(IX+AtomDriverDescriptorSymbolStart)
-            LD   H,(IX+AtomDriverDescriptorSymbolStart+1)
-            LD   E,(IX+AtomDriverDescriptorSymbolEnd)
-            LD   D,(IX+AtomDriverDescriptorSymbolEnd+1)
+            LD   C,AtomDriverDescriptorSymbolStart
+            CALL AtomDriverLoadRange
             CALL AtomSymbolReset
             JP   C,AtomDriverInternalFailure
             LD   IX,(AtomDriverDescriptor)
-            LD   L,(IX+AtomDriverDescriptorPendingStart)
-            LD   H,(IX+AtomDriverDescriptorPendingStart+1)
-            LD   E,(IX+AtomDriverDescriptorPendingEnd)
-            LD   D,(IX+AtomDriverDescriptorPendingEnd+1)
+            LD   C,AtomDriverDescriptorPendingStart
+            CALL AtomDriverLoadRange
             CALL AtomPendingReset
             JP   C,AtomDriverInternalFailure
             LD   IX,(AtomDriverDescriptor)
-            LD   L,(IX+AtomDriverDescriptorTargetStart)
-            LD   H,(IX+AtomDriverDescriptorTargetStart+1)
-            LD   E,(IX+AtomDriverDescriptorTargetBytes)
-            LD   D,(IX+AtomDriverDescriptorTargetBytes+1)
+            LD   C,AtomDriverDescriptorTargetStart
+            CALL AtomDriverLoadRange
             CALL AtomOutputReset
             JP   C,AtomDriverInternalFailure
 
@@ -109,7 +103,7 @@ AtomDriverPartLoop:
             POP  HL
             LD   A,(AtomDriverPartIndex)
             CALL AtomTokenizerReset
-            JP   C,AtomDriverInternalAbort
+            JR   C,AtomDriverInternalAbort
             CALL AtomAssemblePart
             JR   C,AtomDriverSourceFailure
             LD   HL,AtomDriverPartIndex
@@ -222,27 +216,39 @@ AtomDriverValidatePartLoop:
 
 AtomDriverValidateArenas:
             LD   IX,(AtomDriverDescriptor)
-            LD   L,(IX+AtomDriverDescriptorSymbolStart)
-            LD   H,(IX+AtomDriverDescriptorSymbolStart+1)
-            LD   E,(IX+AtomDriverDescriptorSymbolEnd)
-            LD   D,(IX+AtomDriverDescriptorSymbolEnd+1)
+            LD   C,AtomDriverDescriptorSymbolStart
+            CALL AtomDriverLoadRange
             CALL AtomDriverValidateRange
             JR   C,AtomDriverBadSymbolRange
             LD   IX,(AtomDriverDescriptor)
-            LD   L,(IX+AtomDriverDescriptorPendingStart)
-            LD   H,(IX+AtomDriverDescriptorPendingStart+1)
-            LD   E,(IX+AtomDriverDescriptorPendingEnd)
-            LD   D,(IX+AtomDriverDescriptorPendingEnd+1)
+            LD   C,AtomDriverDescriptorPendingStart
+            CALL AtomDriverLoadRange
             CALL AtomDriverValidateRange
             JR   C,AtomDriverBadPendingRange
             LD   IX,(AtomDriverDescriptor)
-            LD   L,(IX+AtomDriverDescriptorTargetStart)
-            LD   H,(IX+AtomDriverDescriptorTargetStart+1)
-            LD   E,(IX+AtomDriverDescriptorTargetBytes)
-            LD   D,(IX+AtomDriverDescriptorTargetBytes+1)
+            LD   C,AtomDriverDescriptorTargetStart
+            CALL AtomDriverLoadRange
             ADD  HL,DE
             JR   C,AtomDriverBadOutputRange
             XOR  A
+            RET
+
+; Load two adjacent descriptor words at IX+C into HL and DE.
+.routine in IX,C out HL,DE clobbers A,B,zero,sign,parity,halfCarry,carry
+AtomDriverLoadRange:
+            PUSH IX
+            POP  HL
+            LD   B,0
+            ADD  HL,BC
+            LD   E,(HL)
+            INC  HL
+            LD   D,(HL)
+            INC  HL
+            LD   A,(HL)
+            INC  HL
+            LD   H,(HL)
+            LD   L,A
+            EX   DE,HL
             RET
 
 ; in HL=start, DE=end; out carry clear exactly when end >= start
@@ -291,20 +297,14 @@ AtomDriverConfigurationFailure:
 AtomAssembleFinish:
             LD   IX,(AtomPendingArenaBase)
             LD   DE,(AtomPendingNext)
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,AtomFinishNoPending
 AtomFinishPendingLoop:
             BIT  7,(IX+4)
             JR   NZ,AtomFinishAnchor
             LD   BC,AtomPendingRecordBytes
             ADD  IX,BC
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   NZ,AtomFinishPendingLoop
             JR   AtomFinishInternal
 
@@ -344,10 +344,7 @@ AtomFinishNoPending:
             LD   IX,(AtomSymbolArenaBase)
             LD   DE,(AtomSymbolGlobalEnd)
 AtomFinishGlobalLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,AtomFinishSuccess
             BIT  6,(IX+5)
             JR   Z,AtomFinishInternal

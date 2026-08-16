@@ -76,31 +76,21 @@ AtomPackSymbol:
             CP   9
             JR   NC,_AtomPackSymbolInvalid
             INC  HL
-            LD   (AtomSymbolPackDestination),DE
             .expectout DE,carry
             CALL AtomRadix40Pack
-            LD   A,0
-            ADC  A,0
-            OR   A
-            JR   NZ,_AtomPackSymbolInvalid
-            LD   HL,(AtomSymbolPackDestination)
-            INC  HL
-            INC  HL
-            INC  HL
-            INC  HL
-            INC  HL
-            LD   A,(HL)
+            JR   C,_AtomPackSymbolInvalid
+            PUSH DE
+            DEC  DE
+            LD   A,(DE)
             OR   AtomSymbolFlagPrivate
-            LD   (HL),A
+            LD   (DE),A
+            POP  DE
             XOR  A
             RET
 _AtomPackSymbolGlobal:
             .expectout DE,carry
             CALL AtomRadix40Pack
-            LD   A,0
-            ADC  A,0
-            OR   A
-            JR   NZ,_AtomPackSymbolInvalid
+            JR   C,_AtomPackSymbolInvalid
             XOR  A
             RET
 _AtomPackSymbolInvalid:
@@ -133,10 +123,7 @@ _AtomSymbolFindGlobal:
             LD   IX,(AtomSymbolArenaBase)
             LD   DE,(AtomSymbolGlobalEnd)
 _AtomSymbolFindLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,_AtomSymbolNotFound
             PUSH DE
             .expectout zero
@@ -212,8 +199,7 @@ _AtomSymbolDeclareMissing:
 _AtomSymbolDeclareInsert:
             LD   A,AtomSymbolFlagDefined
             .expectout A,carry,IX
-            CALL AtomSymbolInsert
-            RET
+            JR   AtomSymbolInsert
 
 ; Reference a global or current-scope private symbol, creating an undefined
 ; exact-name record when necessary.
@@ -262,14 +248,8 @@ AtomSymbolInsert:
             LD   (AtomSymbolOperationFlags),A
             LD   HL,(AtomSymbolLocalBegin)
             LD   DE,(AtomSymbolGlobalEnd)
-            OR   A
-            SBC  HL,DE
-            JR   C,_AtomSymbolNoCapacity
-            LD   A,H
-            OR   A
-            JR   NZ,_AtomSymbolHasCapacity
-            LD   A,L
-            CP   AtomSymbolRecordBytes
+            LD   B,AtomSymbolRecordBytes
+            CALL AtomRegionHasCapacity
             JR   C,_AtomSymbolNoCapacity
 _AtomSymbolHasCapacity:
             LD   HL,(AtomSymbolOperationKey)
@@ -336,10 +316,7 @@ AtomSymbolCommitScope:
             LD   IX,(AtomSymbolLocalBegin)
             LD   DE,(AtomSymbolArenaEnd)
 _AtomSymbolScopeCheckLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,_AtomSymbolScopeCheckPending
             BIT  6,(IX+5)
             JR   Z,_AtomSymbolUndefinedPrivate
@@ -351,10 +328,7 @@ _AtomSymbolScopeCheckPending:
             LD   IX,(AtomPendingArenaBase)
             LD   DE,(AtomPendingNext)
 _AtomSymbolPendingLocalLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,_AtomSymbolCommitScope
             LD   L,(IX+0)
             LD   H,(IX+1)
@@ -421,14 +395,8 @@ AtomSymbolGlobalLabelValidate:
             JR   Z,AtomSymbolGlobalLabelCommit
             LD   HL,(AtomSymbolArenaEnd)
             LD   DE,(AtomSymbolGlobalEnd)
-            OR   A
-            SBC  HL,DE
-            JR   C,AtomSymbolGlobalLabelCapacity
-            LD   A,H
-            OR   A
-            JR   NZ,AtomSymbolGlobalLabelCommit
-            LD   A,L
-            CP   AtomSymbolRecordBytes
+            LD   B,AtomSymbolRecordBytes
+            CALL AtomRegionHasCapacity
             JR   C,AtomSymbolGlobalLabelCapacity
 AtomSymbolGlobalLabelCommit:
             LD   HL,(AtomSymbolArenaEnd)
@@ -462,10 +430,7 @@ AtomSymbolValidateScope:
             LD   IX,(AtomSymbolLocalBegin)
             LD   DE,(AtomSymbolArenaEnd)
 AtomSymbolValidateScopeLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,AtomSymbolValidatePending
             BIT  6,(IX+5)
             JR   Z,AtomSymbolValidateUndefined
@@ -476,10 +441,7 @@ AtomSymbolValidatePending:
             LD   IX,(AtomPendingArenaBase)
             LD   DE,(AtomPendingNext)
 AtomSymbolValidatePendingLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,AtomSymbolValidateOk
             LD   L,(IX+0)
             LD   H,(IX+1)
@@ -513,31 +475,17 @@ AtomSymbolValidateInvariant:
 AtomPendingAdd:
             BIT  6,(IX+5)
             JR   NZ,_AtomPendingAlreadyDefined
-            LD   (AtomPendingOperationPatch),DE
-            LD   A,B
-            LD   (AtomPendingOperationKind),A
-            LD   A,C
-            LD   (AtomPendingOperationAux),A
-            PUSH IX
-            POP  HL
-            LD   (AtomPendingOperationSymbol),HL
+            PUSH BC
+            PUSH DE
             LD   HL,(AtomPendingArenaEnd)
             LD   DE,(AtomPendingNext)
-            OR   A
-            SBC  HL,DE
-            JR   C,_AtomPendingNoCapacity
-            LD   A,H
-            OR   A
-            JR   NZ,_AtomPendingHasCapacity
-            LD   A,L
-            CP   AtomPendingRecordBytes
-            JR   C,_AtomPendingNoCapacity
+            LD   B,AtomPendingRecordBytes
+            CALL AtomRegionHasCapacity
+            JR   C,_AtomPendingNoCapacityStack
 _AtomPendingHasCapacity:
-            ; Restore call inputs saved by the ABI workspace.
-            LD   DE,(AtomPendingOperationPatch)
             LD   HL,(AtomPendingNext)
-            PUSH DE
-            LD   DE,(AtomPendingOperationSymbol)
+            PUSH IX
+            POP  DE
             LD   (HL),E
             INC  HL
             LD   (HL),D
@@ -547,15 +495,17 @@ _AtomPendingHasCapacity:
             INC  HL
             LD   (HL),D
             INC  HL
-            LD   A,(AtomPendingOperationKind)
-            LD   (HL),A
+            POP  BC
+            LD   (HL),B
             INC  HL
-            LD   A,(AtomPendingOperationAux)
-            LD   (HL),A
+            LD   (HL),C
             INC  HL
             LD   (AtomPendingNext),HL
             XOR  A
             RET
+_AtomPendingNoCapacityStack:
+            POP  DE
+            POP  BC
 _AtomPendingNoCapacity:
             LD   A,AtomStatusPendingCapacity
             SCF
@@ -571,14 +521,10 @@ _AtomPendingAlreadyDefined:
 AtomPendingCheckCapacity:
             LD   HL,(AtomPendingArenaEnd)
             LD   DE,(AtomPendingNext)
-            OR   A
-            SBC  HL,DE
-            JR   C,AtomPendingCheckNoCapacity
-            LD   A,H
-            OR   A
-            RET  NZ
-            LD   A,L
-            CP   AtomPendingRecordBytes
+            PUSH BC
+            LD   B,AtomPendingRecordBytes
+            CALL AtomRegionHasCapacity
+            POP  BC
             JR   C,AtomPendingCheckNoCapacity
             XOR  A
             RET
@@ -595,21 +541,20 @@ AtomPendingCheckNoCapacity:
 ; in IX=symbol record
 ; out DE=patch address, B=kind, C=aux, A=AtomStatusOk and carry clear;
 ;     or A=AtomStatusNotFound and carry set
-.if AtomSymbolOutputMode
 ; Inspect one pending entry without removing it. Phase 2f uses this entry to
 ; validate and submit a patch before it reclaims the record with PendingTake.
-.routine in IX out A,carry,BC,DE clobbers IX,sign,parity,halfCarry,zero,HL
+.routine in IX out A,carry,BC,DE,IX clobbers sign,parity,halfCarry,zero,HL
+.if AtomSymbolOutputMode
 AtomPendingPeek:
+.endif
+AtomPendingFind:
             PUSH IX
             POP  HL
             LD   (AtomPendingOperationSymbol),HL
             LD   IX,(AtomPendingArenaBase)
             LD   DE,(AtomPendingNext)
 _AtomPendingPeekLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
+            CALL AtomCompareIxDe
             JR   Z,_AtomPendingPeekNotFound
             LD   L,(IX+0)
             LD   H,(IX+1)
@@ -633,43 +578,13 @@ _AtomPendingPeekNotFound:
             LD   A,AtomStatusNotFound
             SCF
             RET
-.endif
 
 .routine in IX out A,carry maybe-out BC,DE clobbers HL,IX,sign,parity,halfCarry,BC,DE,zero
 AtomPendingTake:
-            PUSH IX
-            POP  HL
-            LD   (AtomPendingOperationSymbol),HL
-            LD   IX,(AtomPendingArenaBase)
-            LD   DE,(AtomPendingNext)
-_AtomPendingTakeLoop:
-            PUSH IX
-            POP  HL
-            OR   A
-            SBC  HL,DE
-            JR   Z,_AtomPendingTakeNotFound
-            LD   L,(IX+0)
-            LD   H,(IX+1)
+            CALL AtomPendingFind
+            RET  C
+            PUSH BC
             PUSH DE
-            LD   DE,(AtomPendingOperationSymbol)
-            OR   A
-            SBC  HL,DE
-            POP  DE
-            JR   Z,_AtomPendingTakeFound
-            LD   BC,AtomPendingRecordBytes
-            ADD  IX,BC
-            JR   _AtomPendingTakeLoop
-
-_AtomPendingTakeFound:
-            LD   E,(IX+2)
-            LD   D,(IX+3)
-            LD   B,(IX+4)
-            LD   C,(IX+5)
-            LD   (AtomPendingOperationPatch),DE
-            LD   A,B
-            LD   (AtomPendingOperationKind),A
-            LD   A,C
-            LD   (AtomPendingOperationAux),A
 
             LD   HL,(AtomPendingNext)
             LD   DE,AtomPendingRecordBytes
@@ -689,16 +604,30 @@ _AtomPendingTakeFound:
             LD   BC,AtomPendingRecordBytes
             LDIR
 _AtomPendingTakeReturn:
-            LD   DE,(AtomPendingOperationPatch)
-            LD   A,(AtomPendingOperationKind)
-            LD   B,A
-            LD   A,(AtomPendingOperationAux)
-            LD   C,A
+            POP  DE
+            POP  BC
             XOR  A
             RET
-_AtomPendingTakeNotFound:
-            LD   A,AtomStatusNotFound
-            SCF
+
+.routine in IX,DE out HL,carry,zero,sign,parity,halfCarry clobbers A
+AtomCompareIxDe:
+            PUSH IX
+            POP  HL
+            OR   A
+            SBC  HL,DE
+            RET
+
+; Carry clear when the unsigned region [DE,HL) contains at least B bytes.
+.routine in HL,DE,B out carry maybe-out zero clobbers A,HL,sign,parity,halfCarry
+AtomRegionHasCapacity:
+            OR   A
+            SBC  HL,DE
+            RET  C
+            LD   A,H
+            OR   A
+            RET  NZ
+            LD   A,L
+            CP   B
             RET
 
 AtomSymbolCodeEnd:
@@ -714,12 +643,8 @@ AtomSymbolScopeActive:        .db 0
 AtomSymbolOperationKey:       .dw 0
 AtomSymbolOperationValue:     .dw 0
 AtomSymbolOperationFlags:     .db 0
-AtomSymbolPackDestination:    .dw 0
 AtomPendingArenaBase:         .dw 0
 AtomPendingArenaEnd:          .dw 0
 AtomPendingNext:              .dw 0
 AtomPendingOperationSymbol:   .dw 0
-AtomPendingOperationPatch:    .dw 0
-AtomPendingOperationKind:     .db 0
-AtomPendingOperationAux:      .db 0
 AtomSymbolWorkspaceEnd:

@@ -10,10 +10,10 @@ const harness = await createHarness();
 test("assembles inside the Phase 1 review and reject gates", () => {
   const { symbols } = harness;
   const core = extent(symbols, "AtomEncoderCoreStart", "AtomEncoderCoreEnd");
-  assert.equal(core, 3_997, "resident extent drifted from the reviewed strict-contract build");
-  assert.ok(core > 3_500, `expected the measured review gate to be crossed, got ${core}`);
+  assert.equal(core, 3_348, "resident extent drifted from the reviewed strict-contract build");
+  assert.ok(core <= 3_500, `review gate crossed: ${core}`);
   assert.ok(core <= 5_000, `reject gate crossed: ${core}`);
-  assert.equal(extent(symbols, "AtomEncoderWorkspaceStart", "AtomEncoderWorkspaceEnd"), 9);
+  assert.equal(extent(symbols, "AtomEncoderWorkspaceStart", "AtomEncoderWorkspaceEnd"), 6);
 });
 
 test("RADIX-40 packing is exact, case-insensitive, bounded, and atomic", () => {

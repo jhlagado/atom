@@ -1,14 +1,14 @@
 # Native compression audit
 
-This audit freezes the AZM implementation before Atom source becomes
-authoritative. It identifies resident-byte savings in the current linked Z80
-image without changing the language, native ABI, diagnostics, capacity rules,
-or output bytes. No source optimization is applied in this checkpoint.
+This document records the compression audit and its measured implementation
+before Atom source becomes authoritative. The retained changes do not alter the
+language, native ABI, diagnostics, capacity rules, or assembled output bytes.
 
 ## Baseline and accounting boundary
 
-The reviewed source is Atom `main` at
-`66d9d52562399ac970249bc13ff29eb274ffa7cd`. The only untracked file is the
+The baseline source is Atom `main` at
+`66d9d52562399ac970249bc13ff29eb274ffa7cd`; the written audit was committed as
+`2767709fd07ff0ed78c84ae96250c3c549a5b537`. The only untracked file was the
 pre-existing `.DS_Store`. AZM 0.3.9 assembled `asm/atom-host-runtime.asm` for a
 documented Zilog Z80 with strict register contracts enabled. The pinned native
 artifact rebuilt without drift.
@@ -45,6 +45,66 @@ The component account remains:
 census fixes the arithmetic, but the proposed source has not yet been
 assembled. “Hypothesis” marks a representation that still needs an experiment
 before its byte cost is known.
+
+## Measured result
+
+All locally safe and profitable candidates survived the proof battery. The
+linked result is:
+
+| Account | Classification | Baseline bytes | Result bytes | Change |
+| --- | --- | ---: | ---: | ---: |
+| Code and immutable tables | Measured | 13,261 | 11,971 | -1,290 |
+| Fixed writable workspace | Measured | 551 | 531 | -20 |
+| Linked resident extent | Measured | 13,812 | 12,502 | -1,310 |
+| Margin below 16 KiB | Measured | 2,572 | 3,882 | +1,310 |
+
+The module split is:
+
+| Module | Result code and immutable bytes | Result workspace bytes | Resident change |
+| --- | ---: | ---: | ---: |
+| Encoder, validation, recognition, and tables | 3,348 | 6 | -652 |
+| Symbols and pending references | 730 | 22 | -150 |
+| Tokenizer | 1,360 | 30 | -22 |
+| Expression evaluator | 1,922 | 297 | -219 |
+| Patch locator | 67 | 0 | -6 |
+| Parser | 2,070 | 98 | -92 |
+| Output | 467 | 22 | -38 |
+| Statements and directives | 1,370 | 47 | -89 |
+| Driver | 619 | 9 | -36 |
+| Host-service stubs | 18 | 0 | -6 |
+
+The encoder now occupies Measured 3,348 resident bytes: 3,070 bytes of code,
+278 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,307
+bytes, rule-driven encoding uses 1,527 bytes, and the direct LD subtotal is 939
+bytes. Mnemonic recognition uses 59 bytes of code and a 207-byte exact table,
+plus the shared 177-byte RADIX-40 packer. The complete encoder is now 152 bytes
+below the 3,500-byte Phase 1 review gate.
+
+The compact mnemonic table has a measured execution cost. Its worst direct
+lookup is a rejected four-character name at 915 instructions and 9,538
+T-states. The full self-build uses 98,988,344 instructions and 1,057,105,655
+T-states, up from the baseline 95,471,840 instructions and 995,258,332
+T-states. Both values remain below the fixed 200 million instruction and two
+billion T-state limits.
+
+The implementation retained shared encoder tails, prefix and ED suffixes,
+word-copy tails, in-range relative branches, fall-through removal, flag
+idioms, shared token and symbol helpers, common diagnostic copying, local-state
+removal, arithmetic predicates, shared validation and encoding dispatch,
+RADIX-40 group sharing, and expression-workspace overlays. The mnemonic table
+uses three exact packed bytes per dense ordinal and a bounded linear scan.
+
+Experiments that did not provide a safe saving were removed. These include a
+broad register predicate that admitted an invalid index-half form, hash-only
+mnemonic recognition, a standalone 69-entry dispatch table, the one-byte
+16-bit load helper, `RST` vectors, self-modifying dispatch, alternate-register
+retention, and reduced expression-stack capacities. A generated prefix tree
+was unnecessary after the exact three-byte table brought the encoder below its
+review gate.
+
+The following sections preserve the preimplementation census and projections.
+Their numbers describe the decisions that led to the measured result above;
+they are not current size claims.
 
 ## First compression pass
 
@@ -280,7 +340,7 @@ accepted.
 
 ## Implementation order and proof gate
 
-The compression should remain in AZM source until the result stabilizes:
+The compression remained in AZM source while the result stabilized:
 
 1. merge encoder tails and the other exact repeated helpers;
 2. replace module-local workspace fields with proved live registers;
@@ -291,10 +351,10 @@ The compression should remain in AZM source until the result stabilizes:
 7. experiment with keyword representation, predicates, dispatch, and
    expression overlays one at a time.
 
-Every experiment records baseline and result bytes, workspace delta,
-self-assembly instruction and T-state deltas, and the proof commands. A losing
-experiment remains documented so it is not repeated without a changed premise.
-The `.atm` authority flip resumes only after the retained compression pass has
-passed strict contracts, all 3,445 valid instruction forms, all invalid-form
-tests, exact self-host byte comparison, stack and return-PC checks, source ROM
-guards, and the complete memory audit.
+The retained result records baseline and result bytes, workspace delta,
+self-assembly instruction and T-state deltas, and the proof commands. Losing
+experiments remain documented so they are not repeated without a changed
+premise. The `.atm` authority flip can resume after review of this checkpoint:
+strict contracts, all 3,445 valid instruction forms, all invalid-form tests,
+exact self-host byte comparison, stack and return-PC checks, source ROM guards,
+and the complete memory audit pass.
