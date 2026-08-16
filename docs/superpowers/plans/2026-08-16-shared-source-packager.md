@@ -666,3 +666,26 @@ Report branch/HEAD, host and full proof counts, measured tokenizer values and de
 ## Implementation log
 
 Execution appends one short entry per checkpoint with date, fetched base, branch, HEAD, verification commands, measurement output, and push result. Numbers are labeled **Measured**, **Projected**, or **Hypothesis**.
+
+### 2026-08-16 — Checkpoint 1 baseline
+
+- **Atom:** branch `codex/atom-host-packager`, starting HEAD
+  `ef26b819aeeda49a2f21110905aae7e700d124c8` from
+  `origin/codex/shared-source-packager-contract`.
+- **Debug80:** frozen dependency branch `main`, HEAD
+  `3f2adb669bb9e7888305c623f8c843054c3dd111`; AZM tree
+  `7889245c380334768f62805e73c13e979aa9f8c8`; runtime tree
+  `a921abc89dcbd88211dd008e705b69d646cfb9bb`.
+- **Toolchain:** Node `v24.18.0`; npm `11.16.0`; target CPU Zilog Z80;
+  AZM register contracts `strict`.
+- **Measured correctness:** `npm test` passed 80 of 80 tests with zero
+  failures in 93,058 ms.
+- **Measured tokenizer:** 1,018 rule-code bytes, 33 immutable-table bytes,
+  1,051 code-and-table bytes, 32 workspace bytes, and a 9-byte token record.
+  The integrated encoder, symbol, and tokenizer account was 5,707 resident
+  bytes and 69 fixed-workspace bytes.
+- **Measured longest tokenizer paths:** reset used 22 instructions and 248
+  T-states; the 512-space `AtomTokenizerNext` case used 24,619 instructions and
+  277,004 T-states.
+- **Working trees:** Atom and Debug80 were clean after dependency builds and
+  measurement. No Debug80 source changed.
