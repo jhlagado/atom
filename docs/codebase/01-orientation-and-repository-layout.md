@@ -151,14 +151,14 @@ The current pinned strict-contract image divides into these measured ranges:
 | Tokenizer | 1,360 | 30 |
 | Expression evaluator | 1,922 | 297 |
 | Patch-field locator | 67 | 0 |
-| Operand parser | 2,070 | 98 |
+| Operand parser | 2,067 | 98 |
 | Output and patch submission | 467 | 22 |
 | Statements and directives | 1,370 | 47 |
 | Multipart driver | 619 | 9 |
 | Fail-closed host sink stubs | 18 | 0 |
-| **Total** | **11,971** | **531** |
+| **Total** | **11,968** | **531** |
 
-The linked resident extent is measured at 12,502 bytes, leaving 3,882 bytes
+The linked resident extent is measured at 12,499 bytes, leaving 3,885 bytes
 below a 16 KiB boundary. Caller-owned source, symbol, pending, descriptor, and
 stack storage are separate accounts. The values above come from
 `assets/native-core.json` and the workspace symbols used by

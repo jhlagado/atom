@@ -12,7 +12,7 @@
   },
   "executionBudgets": {
     "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
-    "AtomParserParse": { "measuredInstructions": 4172, "maxInstructions": 4500, "measuredCycles": 40469, "maxCycles": 44000 },
+    "AtomParserParse": { "measuredInstructions": 4151, "maxInstructions": 4500, "measuredCycles": 40326, "maxCycles": 44000 },
     "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 1997, "maxCycles": 2450 }
   }
 }

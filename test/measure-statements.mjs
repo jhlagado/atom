@@ -87,7 +87,7 @@ console.log(JSON.stringify({
     statementSymbolCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 590,
     parserCodeAndTables: extent("AtomParserCodeStart", "AtomParserCodeEnd"),
     parserWorkspace: extent("AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"),
-    statementContinuationIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 1981,
+    statementContinuationIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 1978,
     outputCode: extent("AtomOutputCodeStart", "AtomOutputCodeEnd"),
     outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
     statementDispatcherCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),

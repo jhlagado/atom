@@ -55,7 +55,7 @@ console.log(JSON.stringify({
     statementCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),
     driverCode: extent("AtomDriverCodeStart", "AtomDriverCodeEnd"),
     driverWorkspace: extent("AtomDriverWorkspaceStart", "AtomDriverWorkspaceEnd"),
-    diagnosticMetadataIncrement: integratedCode - 11219 - extent("AtomDriverCodeStart", "AtomDriverCodeEnd"),
+    diagnosticMetadataIncrement: integratedCode - 11216 - extent("AtomDriverCodeStart", "AtomDriverCodeEnd"),
   },
   integrated: {
     codeAndTables: integratedCode,

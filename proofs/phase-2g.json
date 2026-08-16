@@ -21,10 +21,10 @@
     "AtomOutputEmitWord": { "measuredInstructions": 144, "maxInstructions": 180, "measuredCycles": 1357, "maxCycles": 1750 },
     "AtomOutputReserve": { "measuredInstructions": 20, "maxInstructions": 30, "measuredCycles": 211, "maxCycles": 320 },
     "AtomOutputSetOrigin": { "measuredInstructions": 3, "maxInstructions": 8, "measuredCycles": 30, "maxCycles": 80 },
-    "AtomAssemblePart": { "measuredInstructions": 33943, "maxInstructions": 42000, "measuredCycles": 338743, "maxCycles": 420000 },
+    "AtomAssemblePart": { "measuredInstructions": 33849, "maxInstructions": 42000, "measuredCycles": 338113, "maxCycles": 420000 },
     "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
     "AtomTokenizerNext": { "measuredInstructions": 240, "maxInstructions": 300, "measuredCycles": 2421, "maxCycles": 3100 },
     "AtomRecognizeMnemonic": { "measuredInstructions": 647, "maxInstructions": 850, "measuredCycles": 6666, "maxCycles": 8500 },
-    "AtomParserParsePublished": { "measuredInstructions": 1345, "maxInstructions": 1700, "measuredCycles": 13522, "maxCycles": 17000 }
+    "AtomParserParsePublished": { "measuredInstructions": 1326, "maxInstructions": 1700, "measuredCycles": 13396, "maxCycles": 17000 }
   }
 }

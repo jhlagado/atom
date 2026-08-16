@@ -53,10 +53,10 @@ linked result is:
 
 | Account | Classification | Baseline bytes | Result bytes | Change |
 | --- | --- | ---: | ---: | ---: |
-| Code and immutable tables | Measured | 13,261 | 11,971 | -1,290 |
+| Code and immutable tables | Measured | 13,261 | 11,968 | -1,293 |
 | Fixed writable workspace | Measured | 551 | 531 | -20 |
-| Linked resident extent | Measured | 13,812 | 12,502 | -1,310 |
-| Margin below 16 KiB | Measured | 2,572 | 3,882 | +1,310 |
+| Linked resident extent | Measured | 13,812 | 12,499 | -1,313 |
+| Margin below 16 KiB | Measured | 2,572 | 3,885 | +1,313 |
 
 The module split is:
 
@@ -67,7 +67,7 @@ The module split is:
 | Tokenizer | 1,360 | 30 | -22 |
 | Expression evaluator | 1,922 | 297 | -219 |
 | Patch locator | 67 | 0 | -6 |
-| Parser | 2,070 | 98 | -92 |
+| Parser | 2,067 | 98 | -95 |
 | Output | 467 | 22 | -38 |
 | Statements and directives | 1,370 | 47 | -89 |
 | Driver | 619 | 9 | -36 |
@@ -82,7 +82,7 @@ below the 3,500-byte Phase 1 review gate.
 
 The compact mnemonic table has a measured execution cost. Its worst direct
 lookup is a rejected four-character name at 915 instructions and 9,538
-T-states. The full self-build uses 98,988,344 instructions and 1,057,105,655
+T-states. The full self-build uses 98,912,641 instructions and 1,056,608,830
 T-states, up from the baseline 95,471,840 instructions and 995,258,332
 T-states. Both values remain below the fixed 200 million instruction and two
 billion T-state limits.
@@ -93,6 +93,13 @@ idioms, shared token and symbol helpers, common diagnostic copying, local-state
 removal, arithmetic predicates, shared validation and encoding dispatch,
 RADIX-40 group sharing, and expression-workspace overlays. The mnemonic table
 uses three exact packed bytes per dense ordinal and a bounded linear scan.
+
+A final current-tree census found one remaining parser loop.
+`AtomParserIndexBit` accepts only operand indices zero through two. Zero maps to
+one; either nonzero value maps to the required mask after one doubling. The
+replacement reduces that helper from 10 bytes to 7, removes 75,703 instructions
+and 496,825 T-states from the self-build, and preserves `BC` and the published
+flag contract.
 
 Experiments that did not provide a safe saving were removed. These include a
 broad register predicate that admitted an invalid index-half form, hash-only

@@ -867,15 +867,12 @@ AtomParserRequireByteValue:
 ; A=operand index, out A=1<<index.
 .routine in A out A,carry clobbers zero,sign,parity,halfCarry
 AtomParserIndexBit:
-            PUSH BC
+            OR   A
+            JR   NZ,_AtomParserIndexBitDouble
             INC  A
-            LD   B,A
-            XOR  A
-            SCF
-_AtomParserIndexBitLoop:
-            RLA
-            DJNZ _AtomParserIndexBitLoop
-            POP  BC
+            RET
+_AtomParserIndexBitDouble:
+            ADD  A,A
             RET
 
 ; Try the current classes, each C-as-condition alternative, then flexible

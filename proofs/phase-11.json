@@ -25,24 +25,24 @@
   },
   "native": {
     "growthBytes": 0,
-    "codeAndTables": 11971,
+    "codeAndTables": 11968,
     "fixedWorkspace": 531,
-    "linkedResidentExtent": 12502,
-    "codeMarginBelow16KiB": 4413,
-    "physicalMarginBelow16KiB": 3882,
+    "linkedResidentExtent": 12499,
+    "codeMarginBelow16KiB": 4416,
+    "physicalMarginBelow16KiB": 3885,
     "strictRegisterContracts": true
   },
   "selfHost": {
     "sourceParts": 5,
-    "sourceBytes": 102171,
-    "initializedBytes": 12129,
+    "sourceBytes": 102158,
+    "initializedBytes": 12126,
     "pinnedAzmCore": true,
     "translatedAzmSource": true,
     "secondAtomGeneration": true
   },
   "package": {
-    "packedBytesObserved": 352991,
-    "unpackedBytes": 1677855,
+    "packedBytesObserved": 353095,
+    "unpackedBytes": 1678234,
     "entries": 293,
     "installedSelfHostWithoutAzm": true
   },

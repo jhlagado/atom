@@ -8,9 +8,9 @@
     { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 22 },
     { "name": "tokenizer-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1360 },
     { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 30 },
-    { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 1310 },
+    { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 1307 },
     { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 40 },
-    { "name": "lower-free", "start": "AtomParserWorkspaceEnd", "end": "AtomParserProofSourceStart", "exactBytes": 17870 },
+    { "name": "lower-free", "start": "AtomParserWorkspaceEnd", "end": "AtomParserProofSourceStart", "exactBytes": 17873 },
     { "name": "proof-source", "start": "AtomParserProofSourceStart", "end": "AtomParserProofSourceEnd", "exactBytes": 514 },
     { "name": "proof-record", "start": "AtomParserProofRecordStart", "end": "AtomParserProofRecordEnd", "exactBytes": 12 },
     { "name": "proof-output", "start": "AtomParserProofOutputStart", "end": "AtomParserProofOutputEnd", "exactBytes": 6 },
@@ -19,9 +19,9 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "parser-rule-code", "start": "AtomParserCodeStart", "end": "AtomParserRuleCodeEnd", "exactBytes": 1229 },
+    { "name": "parser-rule-code", "start": "AtomParserCodeStart", "end": "AtomParserRuleCodeEnd", "exactBytes": 1226 },
     { "name": "parser-operand-table", "start": "AtomParserImmutableStart", "end": "AtomParserImmutableEnd", "exactBytes": 81 },
-    { "name": "parser-code-and-table", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 1310 },
+    { "name": "parser-code-and-table", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 1307 },
     { "name": "parser-fixed-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 40 },
     { "name": "parsed-record", "start": "AtomParserRecord", "end": "AtomParserRecordAfter", "exactBytes": 10 },
     { "name": "maximum-encoded-instruction", "start": "AtomParserOutput", "end": "AtomParserOutputAfter", "exactBytes": 4 },

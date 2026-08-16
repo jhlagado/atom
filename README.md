@@ -77,10 +77,10 @@ The measured native account is:
 
 | Item | Bytes |
 | --- | ---: |
-| Code and immutable tables | 11,971 |
+| Code and immutable tables | 11,968 |
 | Fixed workspace | 531 |
-| Linked resident extent | 12,502 |
-| Margin below 16 KiB | 3,882 |
+| Linked resident extent | 12,499 |
+| Margin below 16 KiB | 3,885 |
 
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [TEC-1 deployment design](docs/tec-1-deployment.md) separate the measured Mac

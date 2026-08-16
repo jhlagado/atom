@@ -3,14 +3,14 @@
 ## Result
 
 **Measured: pass.** The checked Atom-syntax source under `native/` assembles
-to the same 12,502-byte resident image as the AZM build. That Atom-produced
+to the same 12,499-byte resident image as the AZM build. That Atom-produced
 image then runs as the assembler and produces the same bytes again. A separate
 translation of the checked source into AZM syntax also produces the same
 image.
 
-The current native account is **Measured: 11,971 bytes** of code and immutable
+The current native account is **Measured: 11,968 bytes** of code and immutable
 tables. The linked resident image, including 531 bytes of fixed workspace, is
-**Measured: 12,502 bytes**, leaving **Measured: 3,882
+**Measured: 12,499 bytes**, leaving **Measured: 3,885
 bytes** in the 16 KiB bank.
 
 ## Source representation
@@ -27,9 +27,9 @@ project design assigns these mechanical changes to the host:
   Atom's eight-significant-character symbol format; and
 - split the stream into source parts that fit the 24 KiB input window.
 
-The generated form contains **Measured: 7,293 statements** from **Measured: 13
-input files**. Its five code-bearing parts occupy **Measured: 102,171 bytes**.
-The checked `%INCLUDE` entry adds one small masked part, for **Measured: 102,344
+The generated form contains **Measured: 7,290 statements** from **Measured: 13
+input files**. Its five code-bearing parts occupy **Measured: 102,158 bytes**.
+The checked `%INCLUDE` entry adds one small masked part, for **Measured: 102,331
 bytes across six parts** at the native boundary. The symbol map records
 **Measured: 861 global names and 422 private names**. Atom itself performs no
 renaming and still diagnoses an overlength source name.
@@ -53,15 +53,15 @@ The proof compares three complete builds:
 3. The host translates the checked Atom source into AZM syntax and invokes AZM
    in case-insensitive mode.
 
-All three produce **Measured: 12,502 identical bytes**, comprising **Measured:
-12,129 initialized bytes and 373 reserved bytes**. The native stream applies
-**Measured: 2,007 PATCH records** and reports **Measured: 1,283 declarations**.
+All three produce **Measured: 12,499 identical bytes**, comprising **Measured:
+12,126 initialized bytes and 373 reserved bytes**. The native stream applies
+**Measured: 2,008 PATCH records** and reports **Measured: 1,283 declarations**.
 The proof compares the whole resident extent, not a digest or a selected set of
 instructions.
 
-Both native generations execute **Measured: 98,988,344 Z80 instructions and
-1,057,105,655 T-states**, with **Measured: 14,138 host service calls**. At 4
-MHz, the cycle count corresponds to **Projected: at least 264.3
+Both native generations execute **Measured: 98,912,641 Z80 instructions and
+1,056,608,830 T-states**, with **Measured: 14,136 host service calls**. At 4
+MHz, the cycle count corresponds to **Projected: at least 264.2
 seconds**, before filesystem and output-service time. The Mac proof completes
 much faster because Debug80 runs the Z80 model on the host processor.
 
