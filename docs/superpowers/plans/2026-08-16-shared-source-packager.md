@@ -729,3 +729,22 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
   spelling checks, root-relative logical identities, canonical physical cache
   keys, frozen snapshot records, and owned source bytes. No resident Z80
   account changed.
+
+### 2026-08-16 — Checkpoint 5 dependency graph
+
+- **Red:** the initial 9 resolver tests failed because the resolver and
+  passthrough profile were absent. Two added discriminators then proved that
+  the first green implementation inspected a diamond dependency twice and
+  inspected a part beyond the permitted depth.
+- **Green:** `node --test test/host-resolver.test.mjs` passed 11 of 11 tests with
+  zero failures after moving visited and depth checks ahead of profile
+  inspection.
+- **Coverage:** entry-first state creation, deterministic sibling postorder,
+  one inspection and one part for a diamond, repeated-direct-edge rejection,
+  complete ordered cycles, location-bearing missing-source errors, conflicting
+  identity aliases, exact part/depth/path/retained-path capacities, and exact
+  passthrough byte identity.
+- **Implementation:** added the language-neutral profile boundary, default Node
+  limits, explicit visiting/visited/edge state, frozen resolved parts, retained
+  path accounting, and structured dependency diagnostics. No resident Z80
+  account changed.
