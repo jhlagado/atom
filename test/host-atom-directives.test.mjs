@@ -56,6 +56,35 @@ test("directives and definitions are case-insensitive and includes retain source
   assert.equal(Object.isFrozen(result.state.definitions), true);
 });
 
+test("Intel suffix conditions select the same branches as prefix spellings", () => {
+  for (const [prefix, suffix] of [
+    ["$FFFF", "0FFFFH"],
+    ["%01110111", "01110111B"],
+  ]) {
+    const inspectCondition = (value) => inspectEntry([
+      `%if ${value}`,
+      "%include \"selected.asm\"",
+      "%else",
+      "%include \"inactive.asm\"",
+      "%endif",
+      "NOP",
+      "",
+    ].join("\n"));
+    const prefixResult = inspectCondition(prefix);
+    const suffixResult = inspectCondition(suffix);
+    assert.deepEqual(
+      suffixResult.dependencies.map(({ specifier }) => specifier),
+      prefixResult.dependencies.map(({ specifier }) => specifier),
+      suffix,
+    );
+    assert.deepEqual(
+      suffixResult.dependencies.map(({ specifier }) => specifier),
+      ["selected.asm"],
+      suffix,
+    );
+  }
+});
+
 test("project definitions precede source definitions and duplicates always fail", () => {
   const accepted = inspectEntry("%if PROJECT\nNOP\n%endif\n", { project: 1 });
   assert.equal(accepted.state.definitions.PROJECT, 1);

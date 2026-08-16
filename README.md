@@ -9,11 +9,17 @@ mnemonic recognizer, and host-side differential proofs against AZM. Phase 2a
 adds the measured symbol and pending-reference core. Phase 2b adds the measured
 streaming tokenizer. Phase 2c adds the native concrete instruction parser and
 proves the complete tokenizer-to-encoder path. Phase 2d adds the measured
-constant-expression evaluator and its forward-symbol handoff. Connecting
-Phase 2e connects expressions to instruction operands and proves their pending
+constant-expression evaluator and its forward-symbol handoff. Phase 2e
+connects expressions to instruction operands and proves their pending
 patch metadata. Phase 2f submits instruction image bytes and final patch bytes
-through the Nucleus operating-adapter boundary. Directives, manifest handling,
-sink lifecycle, macros, and op expansion remain out of scope.
+through the Nucleus operating-adapter boundary.
+
+The host source packager now resolves `%include`, immutable `%define` values,
+and host-evaluated `%if`/`%else`/`%endif`; preserves source identities and
+offsets through equal-length masking; joins path-keyed placement; and emits a
+validated SP1 source plan. Native labels and directives, the multipart assembly
+driver, sink lifecycle, and final artifacts remain to be implemented. Macros
+and op expansion remain out of scope.
 
 ```sh
 npm install
@@ -42,6 +48,8 @@ layout in [`docs/symbolic-parser-abi.md`](docs/symbolic-parser-abi.md).
 The Phase 2f output contract and measurements are in
 [`docs/phase-2f-report.md`](docs/phase-2f-report.md), with its native ABI in
 [`docs/output-abi.md`](docs/output-abi.md).
+The host preparation contract, limits, and proof map are in
+[`docs/host-source-packaging.md`](docs/host-source-packaging.md).
 
 ## License
 

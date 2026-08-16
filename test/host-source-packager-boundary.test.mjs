@@ -1,8 +1,29 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { isBuiltin } from "node:module";
+import path from "node:path";
 import test from "node:test";
 
 const sourceDirectory = "src/host/source-packager";
+
+function assertNeutralImports(source, name) {
+  assert.doesNotMatch(source, /\bimport\s*\(/, `${name} uses dynamic import`);
+  const sourcePath = path.resolve(sourceDirectory, name);
+  const neutralRoot = path.resolve(sourceDirectory);
+  const pattern = /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)(["'])([^"']+)\1/g;
+  for (const match of source.matchAll(pattern)) {
+    const specifier = match[2];
+    if (isBuiltin(specifier)) continue;
+    assert.equal(specifier.startsWith("."), true, `${name} imports external package ${specifier}`);
+    const target = path.resolve(path.dirname(sourcePath), specifier);
+    const relative = path.relative(neutralRoot, target);
+    assert.equal(
+      relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative),
+      true,
+      `${name} imports outside neutral source-packager: ${specifier}`,
+    );
+  }
+}
 
 test("neutral host modules do not import Atom implementation", () => {
   assert.equal(fs.existsSync(sourceDirectory), true, "neutral source directory is missing");
@@ -10,12 +31,15 @@ test("neutral host modules do not import Atom implementation", () => {
   for (const name of fs.readdirSync(sourceDirectory)) {
     if (!name.endsWith(".mjs")) continue;
     const source = fs.readFileSync(`${sourceDirectory}/${name}`, "utf8");
-    assert.doesNotMatch(
-      source,
-      /from\s+["'][^"']*(?:\/atom\/|atom-token|atom-parser)/i,
-      `${name} imports Atom implementation`,
-    );
+    assertNeutralImports(source, name);
   }
+});
+
+test("neutral import proof rejects dynamic Atom imports", () => {
+  assert.throws(
+    () => assertNeutralImports('await import("../atom/source-profile.mjs")', "dynamic.mjs"),
+    /uses dynamic import/,
+  );
 });
 
 test("source-packager errors retain a frozen structured diagnostic", async () => {
