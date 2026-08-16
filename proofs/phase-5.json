@@ -2,12 +2,12 @@
   "name": "Atom Phase 5 Mac CLI and deterministic artifact proof",
   "nativeCore": {
     "artifact": "../assets/native-core.json",
-    "hexSha256": "30a723c7776d0fe096dfad3da7dca8f1933c6c31c5e16afadc1d0ede515a8ff1",
-    "artifactSha256": "6a8d29b274046b895daeee8fa9e87653e91dbae1686d35c7a1e6d81e768101f4",
-    "codeAndTables": 12553,
+    "hexSha256": "c4af3b26e792149e4f955eda086a4c1de18c8d21d41d282685acea1ae964f20d",
+    "artifactSha256": "afe2f2b69ad33478a1fbf5fa259e5d178e5a512a4ff780caf03f61c5b3843563",
+    "codeAndTables": 12508,
     "fixedWorkspace": 550,
-    "linkedResidentExtent": 13103,
-    "physicalMarginBelow16KiB": 3281
+    "linkedResidentExtent": 13058,
+    "physicalMarginBelow16KiB": 3326
   },
   "package": {
     "name": "atom-z80",

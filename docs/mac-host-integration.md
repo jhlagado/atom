@@ -1,7 +1,7 @@
 # Mac host and native Atom integration
 
 `assembleAtomProject` is the first complete host-to-Z80 assembly entry. The Mac
-host reads the project, resolves `%include` dependencies, evaluates host
+host reads the project, resolves `%INCLUDE` dependencies, evaluates host
 conditionals, and masks host directives. Debug80 then executes the native Atom
 tokenizer, symbol table, statements, encoder, patch resolver, and multipart
 driver.
@@ -113,8 +113,8 @@ The Debug80 integration uses this measured layout:
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
-| Linked native core, fixed workspace, and host stubs | `$0000..$332F` | 13,103 |
-| Free space below the descriptor bank boundary | `$332F..$4000` | 3,281 |
+| Linked native core, fixed workspace, and host stubs | `$0000..$3302` | 13,058 |
+| Free space below the descriptor bank boundary | `$3302..$4000` | 3,326 |
 | Build and part-descriptor allocation | `$4000..$4100` | 256 |
 | Symbol arena | `$4100..$7500` | 13,312 |
 | Pending-reference arena | `$7500..$7F00` | 2,560 |

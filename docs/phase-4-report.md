@@ -9,29 +9,29 @@ tokenization, symbol handling, directive processing, instruction encoding,
 forward-patch decisions, final undefined checks, and lifecycle control.
 
 The integration proof uses two physical source parts. Its entry defines a host
-condition, includes a dependency, selects origin `$4000`, and contains mixed-
-case instructions, a forward private branch, a string and binary `DB`, a `DW`,
-and filled `DS`. The native result contains ten IMAGE bytes, one mid-stream
-PATCH byte, and the expected final cursor. A second fresh run has identical
-operations, bytes, instruction count, cycle count, and service trace.
+condition, includes a dependency, selects origin `$4000`, and contains
+case-insensitive instructions, a forward private branch, a string and binary
+`DB`, a `DW`, and filled `DS`. The native result contains ten IMAGE bytes, one
+mid-stream PATCH byte, and the expected final cursor. A second fresh run has
+identical operations, bytes, instruction count, cycle count, and service trace.
 
 ## Resident account
 
-Phase 3 measured 12,529 code/table bytes and 550 fixed workspace bytes. The Mac
+Phase 3 measured 12,484 code/table bytes and 550 fixed workspace bytes. The Mac
 image adds six four-byte fail-closed service stubs.
 
 | Native account | Classification | Bytes |
 | --- | --- | ---: |
-| Phase 3 assembler and driver | Measured | 12,529 |
+| Phase 3 assembler and driver | Measured | 12,484 |
 | Six host service stubs | Measured | 24 |
-| **Code and immutable tables** | **Measured** | **12,553** |
+| **Code and immutable tables** | **Measured** | **12,508** |
 | Fixed workspace | Measured | 550 |
-| **Linked resident extent** | **Measured** | **13,103** |
+| **Linked resident extent** | **Measured** | **13,058** |
 
-The code/table margin below 16 KiB is **Measured: 3,831 bytes**. Because the
+The code/table margin below 16 KiB is **Measured: 3,876 bytes**. Because the
 current link places fixed workspace between code components, the physical
 linked extent is the stricter Mac-image account. Its margin below `$4000` is
-**Measured: 3,281 bytes**.
+**Measured: 3,326 bytes**.
 
 The service stubs belong to the Mac link and fail with `$FF` if Debug80 does not
 intercept them. They do not estimate the eventual TEC operating adapter.
@@ -55,8 +55,8 @@ RAM layout fits the target machine.
 
 ## Execution measurement
 
-The named two-part integration case executes **Measured: 29,239 Z80
-instructions and 288,167 T-states**, about **Measured: 72.0 ms at 4 MHz**. It
+The named two-part integration case executes **Measured: 28,092 Z80
+instructions and 278,219 T-states**, about **Measured: 69.6 ms at 4 MHz**. It
 makes thirteen intercepted service calls: begin, ten IMAGE operations, one
 PATCH, and commit. Host service work has no Z80 cycle charge in this account.
 

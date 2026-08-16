@@ -10,7 +10,7 @@ function one(source, label) {
 one("", "empty EOF");
 one(" ".repeat(512), "512-byte whitespace part");
 one(`;${"x".repeat(511)}`, "512-byte comment part");
-one("_ABCDEFGH", "longest private name");
+one(".ABCDEFGH", "longest private name");
 one(".EXPECTOUT", "long host-only directive");
 one("65535", "largest decimal");
 one("$FFFF", "largest hexadecimal");

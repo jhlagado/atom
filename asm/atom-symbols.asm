@@ -56,9 +56,9 @@ AtomPendingReset:
             RET
 
 ; Pack one source identifier into the six-byte exact key used by symbol
-; records. A leading '_' is syntax: it is removed from the RADIX-40 payload
+; records. A leading '.' is syntax: it is removed from the RADIX-40 payload
 ; and recorded in a flag bit. Thus globals have 1..8 source characters and
-; private names have '_' plus 1..8 significant characters. Failure is atomic.
+; private names have '.' plus 1..8 significant characters. Failure is atomic.
 ;
 ; in HL=text, B=source length, DE=six-byte destination
 ; out carry clear on success; carry set and A=AtomStatusNotFound on failure
@@ -68,7 +68,7 @@ AtomPackSymbol:
             OR   A
             JR   Z,_AtomPackSymbolInvalid
             LD   A,(HL)
-            CP   "_"
+            CP   "."
             JR   NZ,_AtomPackSymbolGlobal
             DEC  B
             JR   Z,_AtomPackSymbolInvalid

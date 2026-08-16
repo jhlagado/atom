@@ -21,7 +21,7 @@ map. The complete repository suite contains **Measured: 193 passing tests**.
 
 ## Resident byte account
 
-Phase 2f measured 10,314 bytes of code and immutable data and 491 bytes of
+Phase 2f measured 10,269 bytes of code and immutable data and 491 bytes of
 fixed workspace. Phase 2g adds 1,436 code/data bytes and 50 workspace bytes.
 
 | Phase 2g increment | Classification | Code/data bytes |
@@ -41,16 +41,16 @@ rule-driven code. No per-mnemonic or per-directive syntax matrix was added.
 | --- | --- | ---: |
 | Encoder, validation, RADIX-40, and mnemonic recognition | Measured | 3,997 |
 | Symbol and pending-reference core | Measured | 867 |
-| Streaming tokenizer | Measured | 1,219 |
+| Streaming tokenizer | Measured | 1,174 |
 | Expression evaluator | Measured | 1,929 |
 | Patch-field locator | Measured | 73 |
 | Symbolic instruction parser | Measured | 2,057 |
 | Nucleus-model output and resolver | Measured | 488 |
 | Statement layer | Measured | 1,120 |
-| **Integrated code and immutable data** | **Measured** | **11,750** |
+| **Integrated code and immutable data** | **Measured** | **11,705** |
 | **Integrated fixed workspace** | **Measured** | **541** |
 
-The measured code margin below 16 KiB is **Measured: 4,634 bytes**. Caller-owned
+The measured code margin below 16 KiB is **Measured: 4,679 bytes**. Caller-owned
 source, symbol records, pending records, sink spools, and stack remain outside
 the fixed-workspace account.
 
@@ -69,8 +69,8 @@ The explicit unsupported list is:
 - unresolved `DS` counts or fill values;
 - strings in `DW`;
 - string-valued equates;
-- `Name: EQU value`;
-- dotted `.equ`, `.org`, `.db`, `.dw`, and `.ds` aliases; and
+- `NAME: EQU VALUE`;
+- dotted `.EQU`, `.ORG`, `.DB`, `.DW`, and `.DS` aliases; and
 - any directive outside the five Phase 2g essentials.
 
 The final undefined-symbol check is not yet present. Part EOF therefore cannot
@@ -79,8 +79,8 @@ commit a generation.
 ## Execution measurements
 
 The longest measured `AtomAssemblePart` case executes a six-statement program
-with signed equates and three instructions in **Measured: 24,545 instructions
-and 239,929 T-states**, about **Measured: 60.0 ms at 4 MHz**. Direct output
+with signed equates and three instructions in **Measured: 24,496 instructions
+and 239,549 T-states**, about **Measured: 59.9 ms at 4 MHz**. Direct output
 entries measure 74 instructions for a byte, 141 for a word, 20 for a
 reservation, and 3 for an origin change. Named proof budgets retain margin
 above each observation.
@@ -98,9 +98,9 @@ Remaining native work is smaller than the completed statement layer:
 | Self-assembly and target initialization glue | Projected | 200–400 |
 | **Remaining subtotal** | **Projected** | **850–1,850** |
 
-Adding that range to **Measured: 11,750 bytes** gives a **Projected:
-whole-assembler total of 12,600–13,600 bytes**. The projected margin below the
-16 KiB code limit is **Projected: 2,784–3,784 bytes**. Host preprocessing,
+Adding that range to **Measured: 11,705 bytes** gives a **Projected:
+whole-assembler total of 12,555–13,555 bytes**. The projected margin below the
+16 KiB code limit is **Projected: 2,829–3,829 bytes**. Host preprocessing,
 filesystem resolution, SP1 production, Intel HEX, listing, D8 maps, and NOBJ
 serialization remain host or operating-adapter services and do not enter this
 resident account.

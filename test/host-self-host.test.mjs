@@ -85,14 +85,14 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
 
   assert.deepEqual(generated.statistics, {
     inputFiles: 13,
-    statements: 7151,
-    sourceBytes: 94088,
+    statements: 7127,
+    sourceBytes: 93760,
     parts: 5,
-    globalSymbols: 814,
-    privateSymbols: 405,
+    globalSymbols: 813,
+    privateSymbols: 402,
   });
-  assert.equal(first.generation.images.length, 12_727);
-  assert.equal(first.generation.patches.length, 2_132);
+  assert.equal(first.generation.images.length, proof.native.initializedBytes);
+  assert.equal(first.generation.patches.length, proof.native.patchRecords);
   assert.ok(first.execution.instructions <= SELF_HOST_BUDGETS.maxInstructions);
   assert.ok(first.execution.cycles <= SELF_HOST_BUDGETS.maxCycles);
   assert.equal(first.execution.instructions, proof.execution.instructions);

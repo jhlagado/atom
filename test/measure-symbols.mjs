@@ -8,7 +8,7 @@ function key(name) {
 
 // Longest spelling.
 h.reset();
-key("_ABCDEFGH");
+key(".ABCDEFGH");
 
 // Eight-record global scan and exact-capacity rejection.
 h.reset();

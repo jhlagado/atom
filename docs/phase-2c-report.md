@@ -43,9 +43,9 @@ The integrated resident account is now:
 | --- | --- | ---: |
 | Encoder, validation, RADIX-40, mnemonic recognition | Measured | 3,997 |
 | Symbol and pending-reference core | Measured | 659 |
-| Streaming tokenizer | Measured | 1,051 |
+| Streaming tokenizer | Measured | 1,174 |
 | Concrete instruction parser | Measured | 1,348 |
-| **Integrated code and immutable data** | **Measured** | **7,055** |
+| **Integrated code and immutable data** | **Measured** | **7,178** |
 | **Integrated fixed workspace** | **Measured** | **109** |
 
 Caller-owned source, parsed records, output, symbol records, pending records,
@@ -97,13 +97,13 @@ already present in that census.
 
 Phase 2c deliberately does not claim these source forms:
 
-- symbol operands, including forward references and private `_` names;
+- symbol operands, including forward references and private `.` names;
 - `$` as the current address inside an operand;
 - arithmetic, bitwise, shift, unary, or parenthesized expressions around
   numeric operands;
 - directives, labels, equates, strings, or multiple statements per line;
-- AZM's `0x`/`0b` prefixes, `H`/`B` suffixes, single-quoted bytes, dotted or
-  question-mark names, brackets, and typed-layout syntax.
+- AZM's `0x`/`0b` prefixes, `H`/`B` suffixes, single-quoted bytes,
+  question-mark names, dotted directives, brackets, and typed-layout syntax.
 
 Those are expression, symbol, directive, or lexical facilities rather than
 missing Z80 instruction forms. The tokenizer report records the deliberately
@@ -139,10 +139,10 @@ and carries the same estimation risk as the earlier combined range.
 | Control, diagnostics, and integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **2,252–4,202** |
 
-Adding that range to the **Measured 7,055-byte** resident account gives a
-**Projected whole-assembler total of 9,307–11,257 bytes**, or about
-**Projected 9.1–11.0 KiB**. The projected margin below the **Target 16 KiB
-bank** is **Projected 4.7–6.9 KiB**. Symbol and pending arenas remain RAM data,
+Adding that range to the **Measured 7,178-byte** resident account gives a
+**Projected whole-assembler total of 9,430–11,380 bytes**, or about
+**Projected 9.2–11.1 KiB**. The projected margin below the **Target 16 KiB
+bank** is **Projected 4.9–6.8 KiB**. Symbol and pending arenas remain RAM data,
 not resident code.
 
 ## Reproduction

@@ -23,7 +23,7 @@ repository suite contains **Measured: 211 passing tests**.
 
 ## Resident byte account
 
-Phase 2g measured 11,750 code/data bytes and 541 fixed workspace bytes. Phase 3
+Phase 2g measured 11,705 code/data bytes and 541 fixed workspace bytes. Phase 3
 adds 779 code/data bytes and nine workspace bytes.
 
 | Phase 3 increment | Classification | Code/data bytes |
@@ -36,17 +36,17 @@ adds 779 code/data bytes and nine workspace bytes.
 | --- | --- | ---: |
 | Encoder, validation, RADIX-40, and mnemonic recognition | Measured | 3,997 |
 | Symbol and pending-reference core | Measured | 874 |
-| Streaming tokenizer | Measured | 1,219 |
+| Streaming tokenizer | Measured | 1,174 |
 | Expression evaluator | Measured | 1,929 |
 | Patch-field locator | Measured | 73 |
 | Symbolic instruction parser | Measured | 2,126 |
 | Nucleus-model output and resolver | Measured | 490 |
 | Statement layer | Measured | 1,166 |
 | Multipart driver and finalizer | Measured | 655 |
-| **Integrated code and immutable data** | **Measured** | **12,529** |
+| **Integrated code and immutable data** | **Measured** | **12,484** |
 | **Integrated fixed workspace** | **Measured** | **550** |
 
-The measured code margin below 16 KiB is **Measured: 3,855 bytes**. The build
+The measured code margin below 16 KiB is **Measured: 3,900 bytes**. The build
 descriptor and complete 16-part descriptor array occupy 15 and 80 caller-owned
 bytes. Source, symbol records, pending records, sink spools, and stack remain
 outside fixed workspace and retain their separately reported capacities.
@@ -72,8 +72,8 @@ diagnostic.
 The 16-part descriptor validator executes in **Measured: 489 instructions and
 4,374 T-states**. Final scanning of an exactly full 32-record proof symbol arena
 executes in **Measured: 354 instructions and 4,116 T-states**. The complete
-32-definition driver case executes in **Measured: 99,132 instructions and
-981,770 T-states**, about **Measured: 245.4 ms at 4 MHz**. These are named proof
+32-definition driver case executes in **Measured: 98,940 instructions and
+980,298 T-states**, about **Measured: 245.1 ms at 4 MHz**. These are named proof
 cases rather than source-size-independent worst-case bounds.
 
 ## Remaining resident projection
@@ -87,8 +87,8 @@ generation closure. Remaining one-bank work consists of deployment support:
 | Target initialization and self-assembly glue | Projected | 200–400 |
 | **Remaining subtotal** | **Projected** | **400–900** |
 
-Adding that range to **Measured: 12,529 bytes** gives a **Projected:
-whole native total of 12,929–13,429 bytes**, with **Projected: 2,955–3,455
+Adding that range to **Measured: 12,484 bytes** gives a **Projected:
+whole native total of 12,884–13,384 bytes**, with **Projected: 3,000–3,500
 bytes** below the 16 KiB limit. Mac preprocessing, filesystem access, SP1
 parsing, NOBJ serialization, binary/HEX/listing/D8 rendering, and atomic
 artifact publication remain host or operating-adapter services.

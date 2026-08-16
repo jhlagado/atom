@@ -63,15 +63,16 @@ test("private prefix is syntax, case folding is exact, and limits are atomic", (
   h.reset();
   const globalUpper = h.pack("ABCDEFGH");
   const globalMixed = h.pack("aBcDeFgH");
-  const localUpper = h.pack("_ABCDEFGH");
-  const localMixed = h.pack("_aBcDeFgH");
+  const localUpper = h.pack(".ABCDEFGH");
+  const localMixed = h.pack(".aBcDeFgH");
   assert.deepEqual(globalUpper.key, expectedKey("ABCDEFGH"));
   assert.deepEqual(globalMixed.key, globalUpper.key);
   assert.deepEqual(localUpper.key, expectedKey("ABCDEFGH", true));
   assert.deepEqual(localMixed.key, localUpper.key);
   assert.notDeepEqual(localUpper.key, globalUpper.key);
 
-  for (const invalid of ["", "_", "ABCDEFGHI", "_ABCDEFGHI", ".LOCAL", "A-B"]) {
+  assert.deepEqual(h.pack("_GLOBAL").key, expectedKey("_GLOBAL"));
+  for (const invalid of ["", ".", "ABCDEFGHI", ".ABCDEFGHI", "A-B"]) {
     const result = h.pack(invalid);
     assert.equal(result.carry, 1, invalid);
     assert.deepEqual(result.key, Array(6).fill(0xa5), `${invalid}: destination changed`);
@@ -82,7 +83,7 @@ test("every private payload length retains all eight significant characters", ()
   h.reset();
   for (let length = 1; length <= 8; length += 1) {
     const payload = "Ab3_".repeat(2).slice(0, length);
-    const result = h.pack(`_${payload}`);
+    const result = h.pack(`.${payload}`);
     assert.equal(result.carry, 0, payload);
     assert.deepEqual(result.key, expectedKey(payload, true), payload);
   }
@@ -90,7 +91,7 @@ test("every private payload length retains all eight significant characters", ()
 
 test("private symbols require a global scope and are reused after eviction", () => {
   h.reset();
-  const local = h.pack("_loop").key;
+  const local = h.pack(".loop").key;
   let result = h.declare(local, 0x1234);
   assert.equal(result.status, STATUS.PRIVATE_NO_SCOPE);
   assert.equal(result.carry, 1);
@@ -114,7 +115,7 @@ test("private symbols require a global scope and are reused after eviction", () 
 test("globals survive scope changes while private names do not leak", () => {
   h.reset();
   const global = h.pack("Routine").key;
-  const local = h.pack("_again").key;
+  const local = h.pack(".again").key;
   const globalResult = h.declare(global, 0x4000);
   assert.equal(globalResult.status, STATUS.OK);
   assert.equal(globalResult.ix, s.AtomSymbolArena);
@@ -150,7 +151,7 @@ test("opposite-growing global and private records meet at the exact boundary", (
   h.reset({ symbolBytes: 16 });
   assert.equal(h.declare(h.pack("GLOBAL").key, 0x1000).status, STATUS.OK);
   assert.equal(h.advanceScope().status, STATUS.OK);
-  assert.equal(h.declare(h.pack("_LOCAL").key, 0x1001).status, STATUS.OK);
+  assert.equal(h.declare(h.pack(".LOCAL").key, 0x1001).status, STATUS.OK);
   const before = h.symbolArena();
   const result = h.reference(h.pack("EXTRA").key);
   assert.equal(result.status, STATUS.SYMBOL_CAPACITY);
@@ -174,7 +175,7 @@ test("symbol capacity checks one byte below, at, and above one record", () => {
 test("an unresolved private blocks scope eviction until it is defined", () => {
   h.reset();
   assert.equal(h.advanceScope().status, STATUS.OK);
-  const local = h.pack("_later").key;
+  const local = h.pack(".later").key;
   const reference = h.reference(local);
   assert.equal(reference.status, STATUS.OK);
   assert.equal(h.symbolRecord(reference.ix)[5] & 0x40, 0);
@@ -228,7 +229,7 @@ test("pending capacity checks one byte below, at, and above one record", () => {
 test("defined private symbols cannot be evicted with stale pending entries", () => {
   h.reset();
   assert.equal(h.advanceScope().status, STATUS.OK);
-  const key = h.pack("_target").key;
+  const key = h.pack(".target").key;
   const symbol = h.reference(key);
   assert.equal(h.pendingAdd(symbol.ix, 0x3333, 1, 0).status, STATUS.OK);
   assert.equal(h.declare(key, 0x4444).status, STATUS.OK);

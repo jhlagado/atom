@@ -26,7 +26,7 @@ const CONFIG = Object.freeze({
 });
 
 function packedName(name) {
-  const payload = name.startsWith("_") ? name.slice(1) : name;
+  const payload = name.startsWith(".") ? name.slice(1) : name;
   return packRadix40(payload).flatMap((value) => [value & 0xff, value >>> 8]);
 }
 
@@ -54,8 +54,8 @@ test("native driver assembles ordered parts and commits one generation", () => {
 
 test("private scope crosses a source-part boundary and closes only at a global label", () => {
   const parts = [
-    "Routine:\nJR _Later\n",
-    "_Later: NOP\n",
+    "Routine:\nJR .Later\n",
+    ".Later: NOP\n",
     "Next: LD HL,Routine\n",
   ];
   const result = h.assemble(parts);
@@ -113,11 +113,11 @@ test("a diagnostic anchor remains exact after pending-list hole filling", () => 
 });
 
 test("current-scope private undefined references report their exact token", () => {
-  const result = h.assemble(["Routine:\n", "DW _Missing\n"]);
+  const result = h.assemble(["Routine:\n", "DW .Missing\n"]);
   assert.equal(result.status, STATUS.UNDEFINED);
   assert.equal(result.part, 1);
   assert.equal(result.offset, 3);
-  assert.deepEqual(h.undefinedKey(result.undefinedSymbol), packedName("_Missing"));
+  assert.deepEqual(h.undefinedKey(result.undefinedSymbol), packedName(".Missing"));
 });
 
 test("descriptor failures are preflighted before sink begin", () => {

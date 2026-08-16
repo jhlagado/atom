@@ -13,9 +13,15 @@ const productDocuments = [
   "docs/limits.md",
   "docs/tec-1-deployment.md",
   "docs/release-checklist.md",
-  "docs/phase-7-report.md",
+  "docs/phase-8-report.md",
   "examples/hello/README.md",
 ];
+
+function assemblyCode(source) {
+  return source
+    .replace(/"(?:\\.|[^"\\])*"/g, "\"\"")
+    .replace(/;.*/g, "");
+}
 
 test("the product documentation, release gate, license, and measured account agree", async () => {
   for (const filename of productDocuments) {
@@ -26,6 +32,23 @@ test("the product documentation, release gate, license, and measured account agr
       const pathname = target.split("#", 1)[0];
       await fs.access(path.resolve(path.dirname(filename), pathname));
     }
+  }
+
+  const documentation = [
+    "README.md",
+    ...(await fs.readdir("docs", { withFileTypes: true }))
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => path.join("docs", entry.name)),
+    "examples/hello/README.md",
+  ];
+  for (const filename of documentation) {
+    const source = await fs.readFile(filename, "utf8");
+    for (const match of source.matchAll(/```asm\s*\n([\s\S]*?)```/g)) {
+      assert.doesNotMatch(assemblyCode(match[1]), /[a-z]/, `${filename} has a lowercase assembly example`);
+    }
+  }
+  for (const filename of ["examples/hello/layout.asm", "examples/hello/main.asm", "examples/hello/release-layout.asm"]) {
+    assert.doesNotMatch(assemblyCode(await fs.readFile(filename, "utf8")), /[a-z]/, `${filename} is not uppercase`);
   }
 
   const metadata = JSON.parse(await fs.readFile("package.json", "utf8"));
@@ -39,8 +62,8 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);
 
   const native = await loadNativeAtomCore();
-  const phase7 = JSON.parse(await fs.readFile("proofs/phase-7.json", "utf8"));
-  assert.equal(phase7.native.codeAndTables, native.codeBytes);
-  assert.equal(phase7.native.linkedResidentExtent, native.residentExtentBytes);
-  assert.equal(phase7.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);
+  const phase8 = JSON.parse(await fs.readFile("proofs/phase-8.json", "utf8"));
+  assert.equal(phase8.native.codeAndTables, native.codeBytes);
+  assert.equal(phase8.native.linkedResidentExtent, native.residentExtentBytes);
+  assert.equal(phase8.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);
 });

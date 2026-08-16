@@ -1,17 +1,17 @@
-%define DEBUG 1
-%if DEBUG
-%include "layout.asm"
-%else
-%include "release-layout.asm"
-%endif
+%DEFINE DEBUG 1
+%IF DEBUG
+%INCLUDE "layout.asm"
+%ELSE
+%INCLUDE "release-layout.asm"
+%ENDIF
 
-Start:
-    ld b,Count
-_Loop:
-    djnz _Loop
-    jr Done
-Buffer:
+START:
+    LD B,COUNT
+.LOOP:
+    DJNZ .LOOP
+    JR DONE
+BUFFER:
     DS 2,0AAH
     DS 2
-Done:
-    DW Start,Message
+DONE:
+    DW START,MESSAGE

@@ -19,7 +19,7 @@ arena, including the case where two fields name the same missing symbol. A
 failed form, expression, private-scope check, or capacity check leaves the
 destination unchanged and publishes zero references.
 
-Two references are required only by forms such as `LD (IX+d),n`, where both
+Two references are required only by forms such as `LD (IX+D),N`, where both
 the displacement and immediate may be forward expressions. Each public
 nine-byte reference contains:
 

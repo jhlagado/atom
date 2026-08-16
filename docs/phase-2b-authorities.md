@@ -26,7 +26,7 @@ the implementation and proof precedent.
 The target is a documented Zilog Z80. The Phase 2b resident account includes:
 
 - source reset, peek, and take routines for one memory-backed part;
-- whitespace, comment, newline, name, directive, number, string, and
+- whitespace, comment, newline, global/private name, number, string, and
   punctuation scanning;
 - failure statuses and exact source-part/offset capture;
 - immutable punctuation and escape tables.

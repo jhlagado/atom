@@ -1,6 +1,6 @@
 ; Generated Atom-syntax entry point. Do not edit by hand.
-%include "atom-00.asm"
-%include "atom-01.asm"
-%include "atom-02.asm"
-%include "atom-03.asm"
-%include "atom-04.asm"
+%INCLUDE "atom-00.asm"
+%INCLUDE "atom-01.asm"
+%INCLUDE "atom-02.asm"
+%INCLUDE "atom-03.asm"
+%INCLUDE "atom-04.asm"

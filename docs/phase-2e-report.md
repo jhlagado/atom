@@ -22,7 +22,7 @@ source manifest.
 
 ## Byte account
 
-Phase 2d established **Measured: 8,935 bytes** of integrated code and immutable
+Phase 2d established **Measured: 9,058 bytes** of integrated code and immutable
 data plus **Measured: 411 bytes** of fixed workspace. Phase 2e measures:
 
 | Component | Classification | Code/data bytes | Workspace bytes |
@@ -38,11 +38,11 @@ The current integrated account is therefore:
 | --- | --- | ---: |
 | Encoder, validation, RADIX-40, mnemonic recognition | Measured | 3,997 |
 | Symbol and pending-reference core | Measured | 659 |
-| Streaming tokenizer | Measured | 1,051 |
+| Streaming tokenizer | Measured | 1,174 |
 | Expression evaluator with deferred-key entry | Measured | 1,908 |
 | Patch-field locator | Measured | 73 |
 | Symbolic instruction parser and operand table | Measured | 2,029 |
-| **Integrated code and immutable data** | **Measured** | **9,717** |
+| **Integrated code and immutable data** | **Measured** | **9,840** |
 | **Integrated fixed workspace** | **Measured** | **470** |
 
 The symbolic parser workspace includes a **Measured: 26-byte private build
@@ -60,7 +60,7 @@ checks every referenced key and computes the exact number of unique missing
 records. One shared-arena capacity check precedes all insertions.
 
 This ordering distinguishes failures that an eager implementation would get
-wrong. `INC Forward`, `BIT Forward,A`, and `LD A,Forward*2` leave the destination,
+wrong. `INC FORWARD`, `BIT FORWARD,A`, and `LD A,FORWARD*2` leave the destination,
 symbol cursors, and public reference count unchanged. Two distinct forward
 fields with space for only one symbol also insert neither record. Two fields
 that use the same missing key insert one record and publish the same pointer in
@@ -85,7 +85,7 @@ compares every changed byte with the native locator's result. It performs this
 check at all **Measured: 2,805 patchable sites**. The other **Measured: 7,530
 operand positions** must return unpatchable.
 
-`LD (IX+Disp),Forward` exercises the maximum reference count. Its displacement
+`LD (IX+DISP),FORWARD` exercises the maximum reference count. Its displacement
 metadata is kind 4 at byte offset 2; its immediate metadata is kind 1 at byte
 offset 3. Queuing at logical address `$4000` produces patch addresses `$4002`
 and `$4003` in the existing six-byte records.
@@ -113,11 +113,11 @@ no instruction tree.
 
 | Entry | Classification | Instructions | T-states | Worst observed case |
 | --- | --- | ---: | ---: | --- |
-| `AtomParserParse` | Measured | 5,522 | 56,693 | `LD (IX+Disp*2),$10+2` |
+| `AtomParserParse` | Measured | 5,522 | 56,693 | `LD (IX+DISP*2),$10+2` |
 | `AtomPatchLocate` | Measured | 129 | 1,152 | operand 2 lookup |
 | `AtomParserQueueReferences` | Measured | 228 | 2,091 | two-reference queue |
 | `AtomEncode` | Measured | 209 | 2,040 | `LD (IY-128),$00` |
-| `AtomPackSymbol` | Measured | 435 | 3,736 | `Target` |
+| `AtomPackSymbol` | Measured | 435 | 3,736 | `TARGET` |
 | `AtomSymbolDeclare` | Measured | 120 | 1,488 | fourth declared symbol |
 
 The longest parser path is about **Measured: 14.17 ms at 4 MHz**.
@@ -136,10 +136,10 @@ implementation. The remaining resident work is:
 | Control, diagnostics, and final integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **2,200–3,750** |
 
-Adding that range to the **Measured: 9,717-byte** resident account gives a
-**Projected: whole-assembler total of 11,917–13,467 bytes**, or about
-**Projected: 11.6–13.2 KiB**. The projected margin below the **Target: 16 KiB
-bank** is **Projected: 2,917–4,467 bytes**. Symbol and pending arenas remain RAM
+Adding that range to the **Measured: 9,840-byte** resident account gives a
+**Projected: whole-assembler total of 12,040–13,590 bytes**, or about
+**Projected: 11.8–13.3 KiB**. The projected margin below the **Target: 16 KiB
+bank** is **Projected: 2,794–4,344 bytes**. Symbol and pending arenas remain RAM
 data rather than resident code.
 
 ## Reproduction

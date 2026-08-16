@@ -83,7 +83,7 @@ function buildSymbolMap(lines) {
     if (map.has(canonical)) continue;
     const isPrivate = name.startsWith("_");
     const short = isPrivate
-      ? `_${shortOrdinal("L", privates)}`
+      ? `.${shortOrdinal("L", privates)}`
       : shortOrdinal("G", globals);
     if (isPrivate) privates += 1;
     else globals += 1;

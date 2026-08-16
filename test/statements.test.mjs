@@ -72,7 +72,7 @@ test("global label declaration closes private scope atomically", () => {
   h.reset();
   const first = h.pack("First").key;
   assert.equal(h.declareGlobalLabel(first, 0x4000).status, STATUS.OK);
-  const local = h.pack("_Done").key;
+  const local = h.pack(".Done").key;
   assert.equal(h.declare(local, 0x4001).status, STATUS.OK);
   const localPointer = h.find(local).ix;
   const second = h.pack("Second").key;
@@ -88,7 +88,7 @@ test("global label transaction preserves scope and records on every preflight fa
   h.reset();
   const first = h.pack("First").key;
   assert.equal(h.declareGlobalLabel(first, 0x4000).status, STATUS.OK);
-  const local = h.pack("_Forward").key;
+  const local = h.pack(".Forward").key;
   assert.equal(h.reference(local).status, STATUS.OK);
   const second = h.pack("Second").key;
   let beforeArena = h.symbolArena();
@@ -121,7 +121,7 @@ test("global label capacity uses the post-eviction gap at exact boundaries", () 
 
   h.reset({ symbolBytes: 16 });
   assert.equal(h.declareGlobalLabel(h.pack("First").key, 0x4000).status, STATUS.OK);
-  const local = h.pack("_Local").key;
+  const local = h.pack(".Local").key;
   assert.equal(h.declare(local, 0x4001).status, STATUS.OK);
   assert.equal(h.declareGlobalLabel(h.pack("Second").key, 0x4010).status, STATUS.OK);
   assert.equal(h.find(local).status, STATUS.NOT_FOUND);
@@ -131,7 +131,7 @@ test("global label capacity uses the post-eviction gap at exact boundaries", () 
 test("stale private pending state blocks a global label without mutation", () => {
   h.reset();
   assert.equal(h.declareGlobalLabel(h.pack("First").key, 0x4000).status, STATUS.OK);
-  const local = h.pack("_Target").key;
+  const local = h.pack(".Target").key;
   const reference = h.reference(local);
   assert.equal(reference.status, STATUS.OK);
   assert.equal(h.pendingAdd(reference.ix, 0x5001).status, STATUS.OK);
@@ -149,7 +149,7 @@ test("stale private pending state blocks a global label without mutation", () =>
 test("statement-mode scope advance validates and evicts a defined private", () => {
   h.reset();
   assert.equal(h.advanceScope().status, STATUS.OK);
-  const local = h.pack("_Local").key;
+  const local = h.pack(".Local").key;
   assert.equal(h.declare(local, 0x4000).status, STATUS.OK);
   assert.equal(h.advanceScope().status, STATUS.OK);
   assert.equal(h.find(local).status, STATUS.NOT_FOUND);
@@ -160,7 +160,7 @@ test("statement path assembles blank lines, labels, and instructions", () => {
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.operations(), []);
 
-  result = h.assemble("Start:\n  LD A,$42\n_Loop: DJNZ _Loop\n");
+  result = h.assemble("Start:\n  LD A,$42\n.Loop: DJNZ .Loop\n");
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [0x3e, 0x42, 0x10, 0xfe]);
   assert.deepEqual(h.outputState(), { cursor: 0x4004, remaining: 0xfc });
@@ -191,7 +191,7 @@ test("statement integration is byte-identical to AZM for every supported instruc
 });
 
 test("a private label before the first global is rejected without output", () => {
-  const result = h.assemble("_Local: NOP\n");
+  const result = h.assemble(".Local: NOP\n");
   assert.equal(result.status, STATEMENT.SYMBOL);
   assert.equal(result.detail, STATUS.PRIVATE_NO_SCOPE);
   assert.deepEqual(h.operations(), []);
@@ -217,11 +217,11 @@ test("bare EQU is case-insensitive and byte-identical to AZM", () => {
 });
 
 test("global EQU leaves the current private scope open", () => {
-  const source = "Routine:\n_Local EQU 3\nValue EQU 4\nLD A,_local\n";
+  const source = "Routine:\n.Local EQU 3\nValue EQU 4\nLD A,.local\n";
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [0x3e, 0x03]);
-  assert.equal(h.find(h.pack("_LOCAL").key).status, STATUS.OK);
+  assert.equal(h.find(h.pack(".LOCAL").key).status, STATUS.OK);
 });
 
 test("a later EQU resolves an earlier instruction patch", () => {
@@ -265,7 +265,7 @@ test("forward-dependent and malformed EQU publish no declaration", () => {
 });
 
 test("private EQU requires a global scope and duplicate EQU is atomic", () => {
-  let result = h.assemble("_Value EQU 1\n");
+  let result = h.assemble(".Value EQU 1\n");
   assert.equal(result.status, STATEMENT.SYMBOL);
   assert.equal(result.detail, STATUS.PRIVATE_NO_SCOPE);
 
@@ -370,10 +370,10 @@ test("empty lists, trailing commas, and unresolved DS operands are rejected", ()
   }
 });
 
-test("dotted assembler directives are rejected in favor of the bare syntax", () => {
+test("dot-prefixed words are private symbols, never assembler directives", () => {
   for (const source of [".org $4000\n", ".db 1\n", ".dw 1\n", ".ds 1\n", ".equ 1\n"]) {
     const result = h.assemble(source);
-    assert.equal(result.status, STATEMENT.DIRECTIVE, source);
+    assert.equal(result.status, STATEMENT.EXPECTED, source);
     assert.deepEqual(h.operations(), []);
   }
 });

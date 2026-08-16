@@ -27,11 +27,11 @@ function splitComment(line) {
 export function translateAtomLineToAzm(line) {
   if (typeof line !== "string") fail("line", "Atom source line must be text");
   const [source, comment] = splitComment(line);
-  const equate = /^(\s*)([_A-Za-z][_A-Za-z0-9]*)(\s+)EQU\b(.*)$/i.exec(source);
+  const equate = /^(\s*)((?:\.[_A-Za-z][_A-Za-z0-9]*)|(?:[_A-Za-z][_A-Za-z0-9]*))(\s+)EQU\b(.*)$/i.exec(source);
   if (equate !== null) {
     return `${equate[1]}${equate[2]}: .equ${equate[4]}${comment}`;
   }
-  const directive = /^(\s*(?:[_A-Za-z][_A-Za-z0-9]*\s*:\s*)?)(ORG|DB|DW|DS)\b(.*)$/i.exec(source);
+  const directive = /^(\s*(?:(?:\.[_A-Za-z][_A-Za-z0-9]*|[_A-Za-z][_A-Za-z0-9]*)\s*:\s*)?)(ORG|DB|DW|DS)\b(.*)$/i.exec(source);
   if (directive !== null) {
     return `${directive[1]}.${directive[2].toLowerCase()}${directive[3]}${comment}`;
   }

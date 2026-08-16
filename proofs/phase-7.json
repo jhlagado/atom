@@ -16,10 +16,10 @@
     "npm": "11.16.0"
   },
   "native": {
-    "codeAndTables": 12553,
+    "codeAndTables": 12508,
     "fixedWorkspace": 550,
-    "linkedResidentExtent": 13103,
-    "physicalMarginBelow16KiB": 3281,
+    "linkedResidentExtent": 13058,
+    "physicalMarginBelow16KiB": 3326,
     "strictRegisterContracts": true
   },
   "example": {
@@ -43,12 +43,12 @@
   },
   "selfHost": {
     "sourceParts": 6,
-    "sourceBytes": 94261,
-    "initializedBytes": 12727,
+    "sourceBytes": 93933,
+    "initializedBytes": 12682,
     "reservedBytes": 376,
-    "patchRecords": 2132,
-    "firstGenerationInstructions": 149600757,
-    "firstGenerationCycles": 1367047684,
+    "patchRecords": 2125,
+    "firstGenerationInstructions": 148925343,
+    "firstGenerationCycles": 1360961063,
     "pinnedAzmCore": true,
     "translatedAzmSource": true,
     "secondAtomGeneration": true

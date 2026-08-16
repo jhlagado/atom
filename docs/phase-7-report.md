@@ -20,10 +20,10 @@ Phase 7 changes host files, tests, and documentation only.
 
 | Native account | Classification | Bytes |
 | --- | --- | ---: |
-| Code and immutable tables | Measured | 12,553 |
+| Code and immutable tables | Measured | 12,508 |
 | Fixed workspace | Measured | 550 |
-| Linked resident extent | Measured | 13,103 |
-| Physical margin below 16 KiB | Measured | 3,281 |
+| Linked resident extent | Measured | 13,058 |
+| Physical margin below 16 KiB | Measured | 3,326 |
 
 The native assembler remains within the one-bank target. The package archive,
 generated source, documentation, and Debug80 runtime consume host storage and
@@ -32,10 +32,11 @@ do not enter this account.
 ## End-to-end example
 
 The shipped `examples/hello` project uses **Measured: 2 source parts**. Its
-entry header exercises `%define`, `%if`/`%else`/`%endif`, and conditional
-`%include`. The selected dependency and entry then exercise mixed-case source,
+entry header exercises `%DEFINE`, `%IF`/`%ELSE`/`%ENDIF`, and conditional
+`%INCLUDE`. The selected dependency and entry then exercise uppercase source,
 `ORG`, `EQU`, `DB`, `DW`, both forms of `DS`, global and private labels, a
-forward relative patch, and ordinary instructions.
+forward relative patch, and ordinary instructions. The native suite separately
+proves case-insensitive parsing.
 
 `npm run verify:example` invokes the real CLI in a temporary project and checks
 the exact **Measured: 19-byte** binary, Intel HEX records and checksums, source
@@ -80,7 +81,7 @@ that map.
 The deployment design records three choices: separate banked source memory,
 smaller target-specific source parts, or a measured tokenizer refill service.
 No adapter-size claim is made. It remains a **Hypothesis** that the source and
-sink adapter can fit the current **Measured: 3,281-byte** resident margin.
+sink adapter can fit the current **Measured: 3,326-byte** resident margin.
 
 ## Reproduction
 

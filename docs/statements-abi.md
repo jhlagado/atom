@@ -10,16 +10,16 @@ The syntax is case-insensitive:
 ```asm
 ORG $4000
 
-BufferSize EQU 32
+BUFFERSZ EQU 32
 
-Start:
-    LD A,BufferSize
-_Loop:
+START:
+    LD A,BUFFERSZ
+.LOOP:
     DB "A\n",0
-    DW Start,_Loop
+    DW START,.LOOP
     DS 8
     DS 4,$FF
-    DJNZ _Loop
+    DJNZ .LOOP
 ```
 
 Assembler directives are bare reserved words: `EQU`, `ORG`, `DB`, `DW`, and
@@ -31,11 +31,11 @@ host preprocessor and must have been masked before native assembly.
 A global label records the current output cursor and begins a new private
 scope. The scope transition is atomic: duplicate, unresolved-private,
 pending-invariant, and capacity failures retain the preceding scope and every
-record. A `_`-prefixed private label requires an active global scope and remains
+record. A `.`-prefixed private label requires an active global scope and remains
 visible until the next global label.
 
 A label may occupy its own line or precede an instruction, `ORG`, `DB`, `DW`,
-or `DS`. `EQU` uses `Name EQU expression`; a colon before `EQU` is unsupported.
+or `DS`. `EQU` uses `NAME EQU EXPRESSION`; a colon before `EQU` is unsupported.
 Global equates do not change private scope.
 
 An equate expression must be resolved when declared. Atom rejects a
@@ -44,12 +44,12 @@ dependency. Instructions, `DB`, and `DW` may refer to an equate or label that
 appears later.
 
 Equate records preserve whether a word-domain value was negative. This makes
-later arithmetic on `Neg EQU -1` behave as arithmetic on -1 while retaining the
-same eight-byte symbol record.
+later arithmetic on `NEGATIVE EQU -1` behave as arithmetic on -1 while
+retaining the same eight-byte symbol record.
 
 ## Data and placement directives
 
-`ORG expression` requires a resolved word and sets the logical output cursor.
+`ORG EXPRESSION` requires a resolved word and sets the logical output cursor.
 It emits no IMAGE operation.
 
 `DB` accepts a comma-separated list of expressions and double-quoted byte
@@ -61,8 +61,8 @@ truncating-byte PATCH record. Strings decode `\0`, `\n`, `\r`, `\t`, `\'`,
 `DW` accepts a comma-separated expression list. Words are emitted little
 endian; a forward affine expression produces a word PATCH record.
 
-`DS count` advances over uninitialized bytes without IMAGE records.
-`DS count,fill` emits `count` copies of the low byte of a resolved fill value.
+`DS COUNT` advances over uninitialized bytes without IMAGE records.
+`DS COUNT,FILL` emits `COUNT` copies of the low byte of a resolved fill value.
 The count and optional fill must both be resolved. A trailing uninitialized
 reservation therefore advances subsequent labels but does not extend the
 loadable byte stream, matching AZM.

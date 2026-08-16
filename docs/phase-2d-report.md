@@ -45,10 +45,10 @@ The integrated resident account is now:
 | --- | --- | ---: |
 | Encoder, validation, RADIX-40, mnemonic recognition | Measured | 3,997 |
 | Symbol and pending-reference core | Measured | 659 |
-| Streaming tokenizer | Measured | 1,051 |
+| Streaming tokenizer | Measured | 1,174 |
 | Concrete instruction parser | Measured | 1,348 |
 | Expression evaluator and pending handoff | Measured | 1,880 |
-| **Integrated code and immutable data** | **Measured** | **8,935** |
+| **Integrated code and immutable data** | **Measured** | **9,058** |
 | **Integrated fixed workspace** | **Measured** | **411** |
 
 Caller-owned source, parsed records, emitted bytes, symbol records, pending
@@ -65,8 +65,8 @@ distinct status values and source positions.
 
 The six-byte pending record cannot retain an expression tree. An unresolved
 expression is therefore restricted to one exact symbol plus a signed-byte
-addend, **Measured -128 through 127**. Accepted examples include `name`,
-`name+5`, `5+name`, `name-5`, and `name+(2*3)`. Two unresolved symbols,
+addend, **Measured -128 through 127**. Accepted examples include `NAME`,
+`NAME+5`, `5+NAME`, `NAME-5`, and `NAME+(2*3)`. Two unresolved symbols,
 multiplication of a symbol, unary negation of a symbol, and an out-of-range
 addend are rejected. A missing symbol is inserted only after the complete
 expression passes, so invalid input cannot leak global or private records.
@@ -77,7 +77,7 @@ and signed-byte addend. The proof compares the resulting six bytes exactly.
 
 The tokenizer gives `%0` and `%1` binary-literal meaning when the percent sign
 is adjacent to the digit. Remainder by zero or one must therefore contain
-whitespace, as in `value % 0`. This is a lexical boundary, not an evaluator
+whitespace, as in `VALUE % 0`. This is a lexical boundary, not an evaluator
 exception.
 
 ## Differential and negative coverage
@@ -102,10 +102,10 @@ The measurement corpus produced these worst observed paths:
 | Entry | Classification | Instructions | T-states | Case |
 | --- | --- | ---: | ---: | --- |
 | `AtomExpressionParse` | Measured | 4,189 | 41,491 | instructions: `100/5/2`; cycles: `(-32768) % (-32768)` |
-| `AtomTokenizerNext` | Measured | 494 | 5,038 | first token of `Forward+(2*3)` |
-| `AtomPackSymbol` | Measured | 368 | 3,207 | `Base` |
-| `AtomSymbolDeclare` | Measured | 63 | 870 | `Base=$1234` |
-| `AtomExpressionQueue` | Measured | 45 | 442 | `Target-3` handoff |
+| `AtomTokenizerNext` | Measured | 494 | 5,038 | first token of `FORWARD+(2*3)` |
+| `AtomPackSymbol` | Measured | 368 | 3,207 | `BASE` |
+| `AtomSymbolDeclare` | Measured | 63 | 870 | `BASE=$1234` |
+| `AtomExpressionQueue` | Measured | 45 | 442 | `TARGET-3` handoff |
 
 The longest measured evaluator path is about **Measured 10.37 ms at 4 MHz**.
 Named proof budgets retain margin above every measured maximum.
@@ -130,10 +130,10 @@ not derived by subtracting from the failed estimate.
 | Control, diagnostics, and integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **2,300–4,150** |
 
-Adding that range to the **Measured 8,935-byte** resident account gives a
-**Projected whole-assembler total of 11,235–13,085 bytes**, or about
-**Projected 11.0–12.8 KiB**. The projected margin below the **Target 16 KiB
-bank** is **Projected 3,299–5,149 bytes**. Symbol and pending arenas remain RAM
+Adding that range to the **Measured 9,058-byte** resident account gives a
+**Projected whole-assembler total of 11,358–13,208 bytes**, or about
+**Projected 11.1–12.9 KiB**. The projected margin below the **Target 16 KiB
+bank** is **Projected 3,176–5,026 bytes**. Symbol and pending arenas remain RAM
 data rather than resident code.
 
 ## Reproduction

@@ -6,7 +6,7 @@ the host handles files, conditional preprocessing, and finished artifacts.
 
 Atom assembles the complete Z80 instruction set claimed by its AZM oracle,
 including CB, ED, DD, FD, index-half, and undocumented SLL/SLS forms. It also
-supports global and `_`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
+supports global and `.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
 and `DS`. The native core assembles its own checked source byte for byte and
 fits in one 16 KiB bank.
 
@@ -54,8 +54,8 @@ See [the command-line guide](docs/command-line.md) for every option and
 
 ## Build boundary
 
-The host resolves `%include`, immutable `%define` values, and
-`%if`/`%else`/`%endif`. It keeps included files as separate ordered parts and
+The host resolves `%INCLUDE`, immutable `%DEFINE` values, and
+`%IF`/`%ELSE`/`%ENDIF`. It keeps included files as separate ordered parts and
 masks removed source with spaces, preserving exact line and byte positions.
 
 The Z80 core then performs tokenization, symbol handling, expression parsing,
@@ -72,10 +72,10 @@ The measured native account is:
 
 | Item | Bytes |
 | --- | ---: |
-| Code and immutable tables | 12,553 |
+| Code and immutable tables | 12,508 |
 | Fixed workspace | 550 |
-| Linked resident extent | 13,103 |
-| Margin below 16 KiB | 3,281 |
+| Linked resident extent | 13,058 |
+| Margin below 16 KiB | 3,326 |
 
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [TEC-1 deployment design](docs/tec-1-deployment.md) separate the measured Mac
@@ -109,6 +109,7 @@ The detailed engineering record remains available in the phase reports:
 - [CLI and artifacts](docs/phase-5-report.md)
 - [native self-hosting](docs/phase-6-report.md)
 - [product and release checkpoint](docs/phase-7-report.md)
+- [source-syntax checkpoint](docs/phase-8-report.md)
 
 ## License
 

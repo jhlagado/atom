@@ -1,0 +1,53 @@
+{
+  "name": "Atom Phase 8 source-syntax and release proof",
+  "repositories": {
+    "atom": {
+      "branch": "codex/atom-dot-locals",
+      "baseHead": "a78a680a483a773bb685bae6cedbcb710c6eed86"
+    },
+    "debug80": {
+      "branch": "main",
+      "head": "3f2adb669bb9e7888305c623f8c843054c3dd111",
+      "worktree": "clean"
+    }
+  },
+  "syntax": {
+    "bareDirectives": ["EQU", "ORG", "DB", "DW", "DS"],
+    "privatePrefix": ".",
+    "underscoreIsGlobal": true,
+    "caseInsensitive": true,
+    "documentationExamplesUppercase": true
+  },
+  "native": {
+    "codeAndTables": 12508,
+    "fixedWorkspace": 550,
+    "linkedResidentExtent": 13058,
+    "physicalMarginBelow16KiB": 3326,
+    "strictRegisterContracts": true
+  },
+  "selfHost": {
+    "sourceParts": 6,
+    "sourceBytes": 93933,
+    "initializedBytes": 12682,
+    "reservedBytes": 376,
+    "patchRecords": 2125,
+    "instructions": 148925343,
+    "cycles": 1360961063,
+    "pinnedAzmCore": true,
+    "translatedAzmSource": true,
+    "secondAtomGeneration": true
+  },
+  "package": {
+    "packedBytesObserved": 277976,
+    "unpackedBytes": 1319900,
+    "entries": 275,
+    "installedOfflineWithoutAzm": true
+  },
+  "proofs": {
+    "tests": 243,
+    "passed": 243,
+    "failed": 0,
+    "releaseCheck": true,
+    "proseGateFindings": 0
+  }
+}

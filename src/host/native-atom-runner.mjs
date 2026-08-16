@@ -417,7 +417,7 @@ function unpackPackedSymbol(memory, pointer, symbols) {
   const codes = [...triplet(first), ...triplet(second), Math.floor(third / 40), third % 40];
   if (codes.some((code) => code < 0 || code >= RADIX40.length)) return undefined;
   const name = codes.map((code) => RADIX40[code]).join("").trimEnd();
-  return (memory[pointer + 5] & symbols.AtomSymbolFlagPrivate) === 0 ? name : `_${name}`;
+  return (memory[pointer + 5] & symbols.AtomSymbolFlagPrivate) === 0 ? name : `.${name}`;
 }
 
 function unpackSymbol(memory, pointer, symbols) {

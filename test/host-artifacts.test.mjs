@@ -132,12 +132,12 @@ test("D8 retains distinct identities for reused private symbols after native evi
   const { artifacts } = await render([
     "ORG 4000H",
     "FIRST:",
-    "_LOOP: NOP",
+    ".LOOP: NOP",
     "SECOND:",
-    "_LOOP: NOP",
+    ".LOOP: NOP",
     "",
   ].join("\n"));
-  const locals = artifacts.d8.symbols.filter(({ name }) => name === "_LOOP");
+  const locals = artifacts.d8.symbols.filter(({ name }) => name === ".LOOP");
   assert.deepEqual(locals.map(({ address }) => address), [0x4000, 0x4001]);
   assert.equal(new Set(locals.map(({ identity }) => identity)).size, 2);
   assert.ok(locals.every(({ scope }) => scope === "local"));

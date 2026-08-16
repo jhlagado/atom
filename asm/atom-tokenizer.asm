@@ -248,18 +248,25 @@ _AtomTokenHexNo:
             OR   A
             RET
 
-; Names are maximal. Globals are at most eight bytes; a private leading '_'
-; admits the prefix plus eight significant bytes.
+; Names are maximal. Globals are at most eight bytes. A private leading '.'
+; admits the prefix plus eight significant bytes and is published as a name.
 .routine out A,IX,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry
 AtomTokenScanName:
             LD   A,8
             LD   (AtomTokenNameLimit),A
             CALL AtomTokenSourcePeek
-            CP   "_"
-            JR   NZ,_AtomTokenScanNameLoopStart
+            CP   "."
+            JR   NZ,_AtomTokenScanNameGlobal
             LD   A,9
             LD   (AtomTokenNameLimit),A
-_AtomTokenScanNameLoopStart:
+            CALL AtomTokenSourceTake
+            CALL AtomTokenSourcePeek
+            JP   C,AtomTokenInvalidByte
+            CALL AtomTokenIsNameStart
+            JP   NC,AtomTokenInvalidByte
+            LD   B,1
+            JR   _AtomTokenScanNameLoop
+_AtomTokenScanNameGlobal:
             LD   B,0
 _AtomTokenScanNameLoop:
             CALL AtomTokenSourcePeek
@@ -274,47 +281,12 @@ _AtomTokenScanNameLoop:
             JR   _AtomTokenScanNameLoop
 _AtomTokenScanNameDone:
             LD   A,B
-            CP   1
-            JR   NZ,_AtomTokenNameReady
-            LD   HL,(AtomTokenScanPointer)
-            LD   A,(HL)
-            CP   "_"
-            JP   Z,AtomTokenInvalidByte
-_AtomTokenNameReady:
-            LD   A,B
             LD   (AtomTokenScanLength),A
             LD   A,AtomTokenName
             JP   AtomTokenFinish
 AtomTokenNameTooLong:
             LD   A,AtomTokenStatusNameTooLong
             JP   AtomTokenFail
-
-; Directives retain the name after '.', allowing the parser to compare or
-; ignore host-only annotations without copying the line.
-.routine out A,IX,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry
-AtomTokenScanDirective:
-            CALL AtomTokenSourceTake
-            LD   HL,(AtomTokenSourceCursor)
-            LD   (AtomTokenScanPointer),HL
-            CALL AtomTokenSourcePeek
-            JP   C,AtomTokenInvalidByte
-            CALL AtomTokenIsLetter
-            JP   NC,AtomTokenInvalidByte
-            LD   B,0
-_AtomTokenScanDirectiveLoop:
-            CALL AtomTokenSourcePeek
-            JR   C,_AtomTokenScanDirectiveDone
-            CALL AtomTokenIsNameByte
-            JR   NC,_AtomTokenScanDirectiveDone
-            INC  B
-            JR   Z,AtomTokenNameTooLong
-            CALL AtomTokenSourceTake
-            JR   _AtomTokenScanDirectiveLoop
-_AtomTokenScanDirectiveDone:
-            LD   A,B
-            LD   (AtomTokenScanLength),A
-            LD   A,AtomTokenDirective
-            JP   AtomTokenFinish
 
 ; Scan one maximal digit/name run, select decimal or an Intel H/B suffix, then
 ; accumulate only the selected grammar. Failure leaves the cursor unchanged.
@@ -645,7 +617,7 @@ _AtomTokenizerNextLoop:
             CP   ";"
             JR   Z,_AtomTokenizerComment
             CP   "."
-            JP   Z,AtomTokenScanDirective
+            JP   Z,AtomTokenScanName
             CP   $22
             JP   Z,AtomTokenScanString
             CP   "$"

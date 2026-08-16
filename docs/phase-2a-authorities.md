@@ -18,8 +18,8 @@ check freezes the two subtrees that Atom executes.
 
 - Symbol comparison is case-insensitive.
 - RADIX-40 stores eight significant characters exactly.
-- `_` is the private-symbol prefix and is not stored in the RADIX-40 payload.
-- `_abcdefgh` is therefore valid and occupies the same eight-byte record as an
+- `.` is the private-symbol prefix and is not stored in the RADIX-40 payload.
+- `.ABCDEFGH` is therefore valid and occupies the same eight-byte record as an
   eight-character global name.
 - Private scope is the nearest preceding global label. A new global label
   evicts the preceding private namespace after checking unresolved references.
@@ -35,4 +35,3 @@ reported per record rather than counted as resident code.
 
 The tokenizer, expressions, directives, diagnostic rendering, patch-byte
 construction, and NOBJ serialization remain outside Phase 2a.
-

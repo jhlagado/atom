@@ -7,8 +7,8 @@ module.
 ## Identifier representation
 
 `AtomPackSymbol` accepts a global name of one to eight characters or a private
-name written as `_` followed by one to eight significant characters. It folds
-ASCII letters to uppercase while packing. The leading `_` is syntax and is not
+name written as `.` followed by one to eight significant characters. It folds
+ASCII letters to uppercase while packing. The leading `.` is syntax and is not
 part of the RADIX-40 payload.
 
 The exact packed name occupies six bytes. Bits 3–7 of byte 5 remain outside the

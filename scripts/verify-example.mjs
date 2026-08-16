@@ -57,7 +57,7 @@ try {
 
   const listing = await fs.readFile(path.join(current, "main.lst"), "utf8");
   assert.match(listing, /layout\.asm:5\s+DB "ATOM",0/);
-  assert.match(listing, /main\.asm:11\s+djnz _Loop/);
+  assert.match(listing, /main\.asm:11\s+DJNZ \.LOOP/);
   assert.match(listing, /400D  <2 reserved>\s+main\.asm:15\s+DS 2/);
 
   const d8 = JSON.parse(await fs.readFile(path.join(current, "main.d8.json"), "utf8"));
@@ -65,7 +65,7 @@ try {
   assert.deepEqual(d8.segments, [{ start: 0x4000, end: 0x4013 }]);
   assert.deepEqual(
     d8.symbols.map(({ name }) => name),
-    ["BUFFER", "COUNT", "DONE", "MESSAGE", "START", "_LOOP"],
+    [".LOOP", "BUFFER", "COUNT", "DONE", "MESSAGE", "START"],
   );
 
   const manifest = JSON.parse(await fs.readFile(path.join(current, "manifest.json"), "utf8"));

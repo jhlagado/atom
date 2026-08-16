@@ -7,6 +7,6 @@
     "AtomProofDriverReset": { "measuredInstructions": 11, "maxInstructions": 20, "measuredCycles": 131, "maxCycles": 250 },
     "AtomDriverValidateDescriptor": { "measuredInstructions": 489, "maxInstructions": 700, "measuredCycles": 4374, "maxCycles": 6500 },
     "AtomAssembleFinish": { "measuredInstructions": 354, "maxInstructions": 500, "measuredCycles": 4116, "maxCycles": 6000 },
-    "AtomAssemble": { "measuredInstructions": 99132, "maxInstructions": 130000, "measuredCycles": 981770, "maxCycles": 1300000 }
+    "AtomAssemble": { "measuredInstructions": 98940, "maxInstructions": 130000, "measuredCycles": 980298, "maxCycles": 1300000 }
   }
 }

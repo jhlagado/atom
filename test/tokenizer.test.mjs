@@ -39,19 +39,19 @@ test("Phase 2b memory profile covers exactly 64 KiB without gaps or overlap", ()
 });
 
 test("mixed-case instruction source composes directly with mnemonic recognition", () => {
-  const source = "  lD a,(Ix-$80) ; note\r\n_Again: .Db \"A\\n\", %1010 << 1\n";
+  const source = "  lD a,(Ix-$80) ; note\r\n.Again: dB \"A\\n\", %1010 << 1\n";
   const result = h.tokenize(source, { part: 19 });
   assert.equal(result.error, undefined);
   const tokens = result.tokens;
   assert.deepEqual(tokens.map(({ kind }) => kind), [
     TOKEN.NAME, TOKEN.NAME, TOKEN.COMMA, TOKEN.LEFT_PAREN, TOKEN.NAME,
     TOKEN.MINUS, TOKEN.NUMBER, TOKEN.RIGHT_PAREN, TOKEN.EOL,
-    TOKEN.NAME, TOKEN.COLON, TOKEN.DIRECTIVE, TOKEN.STRING, TOKEN.COMMA,
+    TOKEN.NAME, TOKEN.COLON, TOKEN.NAME, TOKEN.STRING, TOKEN.COMMA,
     TOKEN.NUMBER, TOKEN.LEFT_SHIFT, TOKEN.NUMBER, TOKEN.EOL, TOKEN.EOF,
   ]);
   assert.deepEqual(tokens.map(({ lexeme }) => lexeme), [
     "lD", "a", ",", "(", "Ix", "-", "$80", ")", "\r\n",
-    "_Again", ":", "Db", "\"A\\n\"", ",", "%1010", "<<", "1", "\n", "",
+    ".Again", ":", "dB", "\"A\\n\"", ",", "%1010", "<<", "1", "\n", "",
   ]);
   assert.ok(tokens.every(({ part }) => part === 19));
   assert.equal(tokens[6].value, 0x80);
@@ -73,14 +73,14 @@ test("comments and blank lines disappear while a final non-empty line gets one s
 });
 
 test("global and private name limits are exact, case preserving, and failure atomic", () => {
-  for (const name of ["A", "abcdefgh", "_A", "_abcdefgh"]) {
+  for (const name of ["A", "abcdefgh", "_", "_abcdefg", ".A", ".abcdefgh"]) {
     const token = first(name);
     assert.equal(token.carry, 0, name);
     assert.equal(token.record.kind, TOKEN.NAME, name);
     assert.equal(h.lexeme(token.record), name, name);
   }
 
-  for (const name of ["abcdefghi", "_abcdefghi"]) {
+  for (const name of ["abcdefghi", "_abcdefgh", ".abcdefghi"]) {
     h.reset("NOP");
     const previous = h.next().record.bytes;
     h.reset(name);
@@ -93,7 +93,7 @@ test("global and private name limits are exact, case preserving, and failure ato
     assert.deepEqual(h.errorPosition(), { status: TOKEN_STATUS.NAME_TOO_LONG, part: 7, offset: 0 });
   }
 
-  const lonePrivate = first("_");
+  const lonePrivate = first(".");
   assert.equal(lonePrivate.carry, 1);
   assert.equal(lonePrivate.status, TOKEN_STATUS.INVALID_BYTE);
 });
@@ -294,7 +294,7 @@ test("the narrower-than-AZM lexical boundary is explicit", () => {
   result = h.tokenize("A.B");
   assert.equal(result.error, undefined);
   assert.deepEqual(result.tokens.map(({ kind, lexeme }) => [kind, lexeme]), [
-    [TOKEN.NAME, "A"], [TOKEN.DIRECTIVE, "B"], [TOKEN.EOL, ""], [TOKEN.EOF, ""],
+    [TOKEN.NAME, "A"], [TOKEN.NAME, ".B"], [TOKEN.EOL, ""], [TOKEN.EOF, ""],
   ]);
 
   for (const source of ["?A", "[0]", "<byte>A"]) {

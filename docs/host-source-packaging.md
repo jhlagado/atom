@@ -126,16 +126,16 @@ ASCII letter follows it. Directive names and definition names are
 case-insensitive. The supported directives are:
 
 ```asm
-%define DEBUG %1
-%include "lib/console.asm"
-%if DEBUG
-    CALL DebugRoutine
-%else
+%DEFINE DEBUG %1
+%INCLUDE "lib/console.asm"
+%IF DEBUG
+    CALL DEBUGRT
+%ELSE
     NOP
-%endif
+%ENDIF
 ```
 
-`%define` binds one immutable host value. It performs no textual substitution
+`%DEFINE` binds one immutable host value. It performs no textual substitution
 and does not create an Atom assembler symbol; source that needs the same value
 must also declare an `EQU`. Project definitions precede source definitions, and
 duplicate names fail even when the values match. Source definitions occur only
@@ -148,7 +148,7 @@ hexadecimal, `%`-prefixed binary, digit-led `H` hexadecimal, and `B` binary.
 Values outside 0 through 65,535, undefined names, extra tokens, and malformed
 suffixes fail preparation.
 
-An active `%include` creates an import-once dependency edge. Includes occur
+An active `%INCLUDE` creates an import-once dependency edge. Includes occur
 only in a part's leading header. A header conditional may select includes but
 must close before ordinary Atom source. Body conditionals may mask source but
 cannot include files or define names. Nesting must balance within each part.
@@ -191,7 +191,7 @@ executable observations.
 | Path-keyed placement after order changes | `path-keyed placement follows a part while unrelated order changes` |
 | Byte-preserving neutral/Nucleus profile | `passthrough profile preserves the exact original byte object` |
 | Atom length, newline, active-byte and mask preservation | `masking preserves length and every LF or CRLF byte`; `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
-| `%define DEBUG %1` and percent-expression separation | `directive recognition does not steal binary literals, remainder, or comments` |
+| `%DEFINE DEBUG %1` and percent-expression separation | `directive recognition does not steal binary literals, remainder, or comments` |
 | Intel and prefix literal equivalence | `Intel suffix conditions select the same branches as prefix spellings`; `Intel suffix literals match prefix spellings with exact 16-bit boundaries` |
 | Unknown and leaked directives | `Atom composition rejects dependency, preprocessing, and placement failures`; `leaked line-start host directives fail without stealing percent expressions` |
 | Nested branches, inactive includes and imbalance | `nested conditions mask only inactive ordinary lines`; `inactive includes create no dependency while directive structure is still checked`; `Atom composition selects only active includes` |

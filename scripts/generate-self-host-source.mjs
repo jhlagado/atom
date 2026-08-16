@@ -20,7 +20,7 @@ for (const part of source.project.parts) {
 }
 expected.set("atom.asm", [
   "; Generated Atom-syntax entry point. Do not edit by hand.",
-  ...source.project.parts.map((part) => `%include "${path.basename(part.logicalIdentity)}"`),
+  ...source.project.parts.map((part) => `%INCLUDE "${path.basename(part.logicalIdentity)}"`),
   "",
 ].join("\n"));
 expected.set("atom-symbols.json", `${JSON.stringify({

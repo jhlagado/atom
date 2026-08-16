@@ -29,7 +29,7 @@ assembles that source with the installed native core and writes
 atom --self-host
 ```
 
-The result is 13,103 bytes and must match the pinned core byte for byte.
+The result is 13,058 bytes and must match the pinned core byte for byte.
 `--self-host` accepts only `-o`/`--output`, so origin, capacity, fill, entry,
 and preprocessor overrides cannot change the proof build.
 Maintainers regenerate the checked source with
@@ -56,9 +56,9 @@ build/main.atom/current/main.d8.json
 build/main.atom/current/manifest.json
 ```
 
-The host resolves `%include` paths relative to each importing file. Included
+The host resolves `%INCLUDE` paths relative to each importing file. Included
 files remain separate source parts and appear before their importer in the
-native input order. `%define` and `%if` evaluation happens before Atom receives
+native input order. `%DEFINE` and `%IF` evaluation happens before Atom receives
 the equal-length masked source.
 
 Project definitions use `-D`:
@@ -108,7 +108,7 @@ non-wrapping half-open range whose end is no greater than `$FFFF`, so a target
 starting at zero has a maximum capacity of 65,535 bytes. Each native source
 part must fit the 24 KiB source window, with at most 16 ordered parts. The Mac
 adapter pages parts through that window at part boundaries. Atom's self-host
-build uses six parts and does not retain the whole 94,261-byte source stream in
+build uses six parts and does not retain the whole 93,933-byte source stream in
 Z80 RAM.
 
 ## Artifact publication

@@ -1,7 +1,7 @@
 # Atom language reference
 
-Atom source is case-insensitive. `start`, `Start`, and `START` name the same
-symbol; the same rule applies to instructions, registers, directives,
+Atom source is case-insensitive. Symbol spelling ignores ASCII letter case;
+the same rule applies to instructions, registers, directives,
 hexadecimal digits, and host-preprocessor names. A semicolon begins a comment.
 One source line contains at most one label, equate, directive, or instruction,
 although a label may precede an instruction or data directive on the same line.
@@ -10,15 +10,15 @@ although a label may precede an instruction or data directive on the same line.
 
 An assembler name begins with an ASCII letter or underscore and continues with
 ASCII letters, digits, or underscores. A global name contains one through eight
-characters. A private name starts with `_` and contains one through eight
+characters. A private name starts with `.` and contains one through eight
 significant characters after that prefix. Names are exact RADIX-40 values;
 Atom rejects an overlength name instead of truncating or hashing it.
 
 ```asm
-Render:
-_Loop:
-    DJNZ _Loop
-Next:
+RENDER:
+.LOOP:
+    DJNZ .LOOP
+NEXT:
 ```
 
 A global label starts a new private scope. Private symbols from the previous
@@ -26,7 +26,7 @@ scope are then evicted. Atom reports an error if one of them still has an
 unresolved reference. A private label requires a preceding global label, can
 cross a source-part boundary, and remains visible until the next global label.
 
-`Name EQU expression` declares a resolved constant without changing private
+`NAME EQU EXPRESSION` declares a resolved constant without changing private
 scope. A label colon before `EQU` is not accepted.
 
 ## Numbers and expressions
@@ -34,11 +34,11 @@ scope. A label colon before `EQU` is not accepted.
 The following spellings all represent integers:
 
 ```asm
-42          ; decimal
-$2A         ; hexadecimal
-02AH        ; Intel hexadecimal
-%101010     ; binary
-101010B     ; Intel binary
+42          ; DECIMAL
+$2A         ; HEXADECIMAL
+02AH        ; INTEL HEXADECIMAL
+%101010     ; BINARY
+101010B     ; INTEL BINARY
 ```
 
 The leading zero in `02AH` is required when an Intel hexadecimal literal would
@@ -63,8 +63,8 @@ range from 0 through 23. Concrete evaluation uses signed 24-bit intermediates
 and accepts a final word-domain value from -32,768 through 65,535.
 
 A forward reference must fit Atom's stored affine form: one symbol with a
-constant addend from -128 through 127. `target`, `target+5`, `5+target`, and
-`target-(2*3)` qualify. Two unresolved symbols, multiplication of an unresolved
+constant addend from -128 through 127. `TARGET`, `TARGET+5`, `5+TARGET`, and
+`TARGET-(2*3)` qualify. Two unresolved symbols, multiplication of an unresolved
 symbol, and unary negation of an unresolved symbol do not.
 
 ## Instructions
@@ -106,10 +106,10 @@ Assembler directives are bare reserved words. Dotted aliases are deliberately
 not accepted.
 
 ```asm
-Base EQU $4000
-ORG Base
-DB 1,"text",0
-DW Base,$+2
+BASE EQU $4000
+ORG BASE
+DB 1,"TEXT",0
+DW BASE,$+2
 DS 16
 DS 8,$FF
 ```
@@ -122,7 +122,7 @@ DS 8,$FF
   patches.
 - `DW` emits comma-separated expressions as little-endian words. Forward
   affine expressions produce word patches. Strings are not accepted.
-- `DS count` reserves uninitialized storage. `DS count,fill` emits initialized
+- `DS COUNT` reserves uninitialized storage. `DS COUNT,FILL` emits initialized
   fill bytes. Both expressions must already be resolved.
 
 In `DB` and `DW`, `$` is reevaluated at the address of each list item. Strings
@@ -133,25 +133,25 @@ decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\`, and `\xHH` to one byte.
 The Mac host consumes preprocessing directives before the Z80 assembler runs:
 
 ```asm
-%define DEBUG 1
-%if DEBUG
-%include "lib/debug.asm"
-%else
-%include "lib/release.asm"
-%endif
+%DEFINE DEBUG 1
+%IF DEBUG
+%INCLUDE "lib/debug.asm"
+%ELSE
+%INCLUDE "lib/release.asm"
+%ENDIF
 ```
 
-`%define` binds one immutable 16-bit preprocessor value. It does not substitute
+`%DEFINE` binds one immutable 16-bit preprocessor value. It does not substitute
 text and does not declare an assembler symbol. Source definitions are allowed
 only in the entry file's leading header; included files receive the frozen
 definition environment. Command-line `-DNAME[=value]` definitions behave the
 same way, and a duplicate name is an error.
 
-`%include` is import-once dependency discovery, not C-style textual inclusion.
+`%INCLUDE` is import-once dependency discovery, not C-style textual inclusion.
 It is allowed only in a part's leading header. Dependencies are assembled once,
 before their importer, while retaining their own filenames and source offsets.
 An include-selecting conditional must close before ordinary assembler source.
-Body `%if` blocks may select source lines but cannot include files.
+Body `%IF` blocks may select source lines but cannot include files.
 
 The host replaces directives and inactive lines with spaces while preserving
 every CR and LF byte. The native assembler therefore receives no `%` directive

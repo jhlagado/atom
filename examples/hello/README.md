@@ -16,6 +16,5 @@ bytes long and covers `$4000` through `$4012`. The two uninitialized bytes from
 `DS 2` appear as zero in the flat binary; the NOBJ file retains the distinction
 between initialized bytes and reserved storage.
 
-The entry file uses mixed case intentionally. Atom source, including symbols,
-mnemonics, directives, hexadecimal digits, and preprocessor names, is
-case-insensitive.
+The example uses uppercase source consistently. Atom remains case-insensitive
+for symbols, mnemonics, directives, hexadecimal digits, and preprocessor names.

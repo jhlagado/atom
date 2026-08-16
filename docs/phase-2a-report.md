@@ -1,4 +1,4 @@
-# atom Phase 2a symbol and pending-reference report
+# Atom Phase 2a symbol and pending-reference report
 
 ## Result
 
@@ -16,8 +16,8 @@ fixed workspace bytes**. No Phase 1 code or table is duplicated.
 
 ## Record and scope result
 
-The leading `_` is removed before RADIX-40 packing and stored as a flag. A
-private spelling therefore has eight useful characters after `_` without
+The leading `.` is removed before RADIX-40 packing and stored as a flag. A
+private spelling therefore has eight useful characters after `.` without
 increasing the record. Permanent globals grow upward and current-scope private
 records grow downward in one caller-owned arena. The two cursors may meet
 exactly; the next insertion fails before writing.

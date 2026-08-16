@@ -43,8 +43,8 @@ The record is nine bytes:
 | 6 | 1 | raw lexeme length |
 | 7 | 2 | decoded numeric value, otherwise zero |
 
-Directive lexemes exclude the leading period. All other lexeme pointers start
-at the first source byte of the token. A synthetic EOL and EOF have zero
+Private-name lexemes include the leading period. All lexeme pointers start at
+the first source byte of the token. A synthetic EOL and EOF have zero
 length and point at the end of the source part.
 
 Names retain their source spelling. The parser passes the pointer and length
@@ -57,8 +57,7 @@ copy or fold a name.
 The tokenizer accepts:
 
 - global names of one through eight bytes;
-- private names consisting of `_` plus one through eight significant bytes;
-- directive names beginning with `.` and an ASCII letter;
+- private names consisting of `.` plus one through eight significant bytes;
 - decimal integers, `$`-prefixed hexadecimal integers, `%`-prefixed binary
   integers, and Intel-style digit-led `H` hexadecimal and `B` binary integers
   in the range 0 through 65,535;
@@ -75,12 +74,12 @@ least one token produces exactly one EOL. Bare CR is a lexical error.
 A percent sign followed by an ASCII letter before the first token on a line
 fails with `AtomTokenStatusUnprocessedDirective` (status 9). The host masks
 Atom preprocessing directives before native assembly; this failure prevents a
-leaked `%include`, `%if`, or related directive from being interpreted as an
+leaked `%INCLUDE`, `%IF`, or related directive from being interpreted as an
 Atom expression. `%1`, `LD A,%1`, and `A % B` retain their numeric and remainder
 meanings.
 
 Phase 2b does not accept AZM's `0x`, `0b`, or single-quoted byte literal
-spellings. It also excludes dotted or question-mark symbol names, brackets,
+spellings. It also excludes question-mark symbol names, brackets,
 layout syntax, string decoding, expression precedence, directive meaning,
 operand classification, and output. These are explicit boundaries of the
 measured tokenizer, not claims about AZM's accepted source language.

@@ -206,12 +206,12 @@ test("symbol publication preflight is atomic and private scope remains exact", (
   assert.deepEqual(parsed.record, parsed.before);
 
   h.reset();
-  parsed = h.parse("JR _Later");
+  parsed = h.parse("JR .Later");
   assert.equal(parsed.carry, 1);
   assert.equal(parsed.status, STATUS.EXPRESSION);
   assert.equal(parsed.afterLocalBegin, parsed.beforeLocalBegin);
   assert.equal(h.advanceScope().carry, 0);
-  parsed = h.parse("JR _lAtEr-1");
+  parsed = h.parse("JR .lAtEr-1");
   assert.equal(parsed.carry, 0);
   assert.equal(parsed.references.length, 1);
   assert.equal(parsed.references[0].addend, -1);

@@ -19,6 +19,8 @@ test("Atom-to-AZM translation changes only concrete assembler directives", () =>
   assert.equal(translateAtomLineToAzm("ORG 4000H"), ".org 4000H");
   assert.equal(translateAtomLineToAzm("DW Target"), ".dw Target");
   assert.equal(translateAtomLineToAzm("DS 4"), ".ds 4");
+  assert.equal(translateAtomLineToAzm(".LOOP EQU 2"), ".LOOP: .equ 2");
+  assert.equal(translateAtomLineToAzm(".DATA: DB 1"), ".DATA: .db 1");
   assert.equal(translateAtomLineToAzm("LD A,%1010 ; binary"), "LD A,%1010 ; binary");
 });
 
@@ -29,8 +31,8 @@ test("a complete preprocessed multipart Atom program is byte-identical through A
     "ORG 4000H",
     "CONST EQU 2",
     "ROUTINE:",
-    "_LOOP: LD A,CONST",
-    "JR NZ,_LOOP",
+    ".LOOP: LD A,CONST",
+    "JR NZ,.LOOP",
     "RET",
     "",
   ].join("\n"));

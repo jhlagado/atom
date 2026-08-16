@@ -22,10 +22,10 @@ unchanged from Phase 4.
 
 | Native account | Classification | Bytes |
 | --- | --- | ---: |
-| Code and immutable tables | Measured | 12,553 |
+| Code and immutable tables | Measured | 12,508 |
 | Fixed workspace | Measured | 550 |
-| Linked resident extent | Measured | 13,103 |
-| Physical margin below 16 KiB | Measured | 3,281 |
+| Linked resident extent | Measured | 13,058 |
+| Physical margin below 16 KiB | Measured | 3,326 |
 
 The package archive and host files do not consume the Z80 resident bank. The
 eventual TEC operating adapter remains outside this measurement.

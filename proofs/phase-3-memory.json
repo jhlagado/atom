@@ -6,7 +6,7 @@
     { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 9 },
     { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 874 },
     { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 28 },
-    { "name": "tokenizer-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1219 },
+    { "name": "tokenizer-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1174 },
     { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 32 },
     { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1929 },
     { "name": "expression-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 303 },
@@ -19,7 +19,7 @@
     { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 47 },
     { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 655 },
     { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
-    { "name": "lower-free", "start": "AtomDriverWorkspaceEnd", "end": "AtomDriverProofAdapterStart", "exactBytes": 3305 },
+    { "name": "lower-free", "start": "AtomDriverWorkspaceEnd", "end": "AtomDriverProofAdapterStart", "exactBytes": 3350 },
     { "name": "proof-adapter", "start": "AtomDriverProofAdapterStart", "end": "AtomDriverProofAdapterEnd", "exactBytes": 297 },
     { "name": "proof-adapter-workspace", "start": "AtomDriverProofAdapterWorkspaceStart", "end": "AtomDriverProofAdapterWorkspaceEnd", "exactBytes": 24 },
     { "name": "adapter-free", "start": "AtomDriverProofAdapterWorkspaceEnd", "end": "AtomDriverProofSourceStart", "exactBytes": 7871 },
@@ -47,7 +47,7 @@
       ["AtomOutputCodeStart", "AtomOutputCodeEnd"],
       ["AtomStatementCodeStart", "AtomStatementCodeEnd"],
       ["AtomDriverCodeStart", "AtomDriverCodeEnd"]
-    ], "exactBytes": 12529 },
+    ], "exactBytes": 12484 },
     { "name": "integrated-fixed-workspace", "sum": [
       ["AtomEncoderWorkspaceStart", "AtomEncoderWorkspaceEnd"],
       ["AtomSymbolWorkspaceStart", "AtomSymbolWorkspaceEnd"],

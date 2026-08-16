@@ -63,7 +63,10 @@ function sourceLine(project, source) {
 }
 
 function imageKind(project, source) {
-  const statement = sourceLine(project, source).replace(/^\s*(?:_?[A-Za-z][A-Za-z0-9_]*\s*:\s*)?/, "");
+  const statement = sourceLine(project, source).replace(
+    /^\s*(?:(?:\.[_A-Za-z][_A-Za-z0-9]*|[_A-Za-z][_A-Za-z0-9]*)\s*:\s*)?/,
+    "",
+  );
   return /^(?:DB|DW)\b/i.test(statement) ? "data" : "code";
 }
 
@@ -168,8 +171,8 @@ export function writeAtomD8(project, generation, { entryAddress = generation.tar
     ...(symbol.source === undefined ? {} : {
       file: symbol.source.logicalIdentity,
       line: symbol.source.line,
-      scope: symbol.name.startsWith("_") ? "local" : "global",
-      visibility: symbol.name.startsWith("_") ? "local" : "source",
+      scope: symbol.name.startsWith(".") ? "local" : "global",
+      visibility: symbol.name.startsWith(".") ? "local" : "source",
       sourceUnit: symbol.source.logicalIdentity,
     }),
   }));

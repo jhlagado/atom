@@ -1,5 +1,5 @@
 ORG 4000H
 
-Count EQU 3
-Message:
+COUNT EQU 3
+MESSAGE:
     DB "ATOM",0

@@ -140,8 +140,8 @@ test("defined global and private symbols resolve case-insensitively", () => {
   assert.equal(result.hl, 0x1236);
 
   assert.equal(h.advanceScope().carry, 0);
-  assert.equal(h.declare("_Local", 0x2345).carry, 0);
-  result = h.evaluate("_lOcAl-1");
+  assert.equal(h.declare(".Local", 0x2345).carry, 0);
+  result = h.evaluate(".lOcAl-1");
   assert.equal(result.carry, 0);
   assert.equal(result.hl, 0x2344);
 });
@@ -194,14 +194,14 @@ test("affine forward symbols publish only after a complete valid expression", ()
 
 test("private forward references require an active global scope", () => {
   h.reset();
-  let result = h.evaluate("_Later");
+  let result = h.evaluate(".Later");
   assert.equal(result.carry, 1);
   assert.equal(result.status, EXPRESSION.SYMBOL);
   assert.equal(result.error.symbolStatus, 4);
   assert.equal(result.afterLocalBegin, result.beforeLocalBegin);
 
   assert.equal(h.advanceScope().carry, 0);
-  result = h.evaluate("_Later-1");
+  result = h.evaluate(".Later-1");
   assert.equal(result.carry, 0);
   assert.equal(result.status, EXPRESSION.UNRESOLVED);
   assert.equal((result.hl << 16) >> 16, -1);

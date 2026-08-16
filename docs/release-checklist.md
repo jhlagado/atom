@@ -37,7 +37,7 @@ must be `PUBLIC`, and both repository and package metadata must say
 are frozen. Compressed archive size is observational because gzip output can
 vary with the npm toolchain.
 
-Release evidence belongs in the phase report and `proofs/phase-7.json`. Every
+Release evidence belongs in the phase report and `proofs/phase-8.json`. Every
 number must be labelled Measured, Projected, or Hypothesis. A green test count
 alone is insufficient; record native size, fixed workspace, linked extent,
 self-host equivalence, package census, and the exact dependency commits.
