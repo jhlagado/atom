@@ -1,4 +1,5 @@
 import { SourcePackagerError } from "./errors.mjs";
+import { joinSourcePlacement } from "./placement.mjs";
 
 const encoder = new TextEncoder();
 
@@ -22,6 +23,10 @@ function positiveLimit(value, name, maximum = Number.MAX_SAFE_INTEGER) {
 }
 
 function normalizeLimits(limits = NODE_SOURCE_LIMITS) {
+  const maxBank = limits.maxBank ?? NODE_SOURCE_LIMITS.maxBank;
+  if (!Number.isInteger(maxBank) || maxBank < 0 || maxBank > 255) {
+    fail("invalid-limit", "maxBank must be an integer from 0 through 255");
+  }
   return Object.freeze({
     maxParts: positiveLimit(limits.maxParts ?? NODE_SOURCE_LIMITS.maxParts, "maxParts", 255),
     maxDepth: positiveLimit(limits.maxDepth ?? NODE_SOURCE_LIMITS.maxDepth, "maxDepth", 255),
@@ -34,7 +39,7 @@ function normalizeLimits(limits = NODE_SOURCE_LIMITS) {
       limits.maxRetainedPathBytes ?? NODE_SOURCE_LIMITS.maxRetainedPathBytes,
       "maxRetainedPathBytes",
     ),
-    maxBank: limits.maxBank ?? NODE_SOURCE_LIMITS.maxBank,
+    maxBank,
   });
 }
 
@@ -84,7 +89,7 @@ function withLocation(error, location) {
   return error;
 }
 
-function frozenPart(snapshot, inspection) {
+function frozenPart(snapshot, inspection, includeStack) {
   return Object.freeze({
     physicalPath: snapshot.physicalPath,
     dependencyIdentity: snapshot.dependencyIdentity,
@@ -96,6 +101,11 @@ function frozenPart(snapshot, inspection) {
       location: Object.freeze({ ...dependency.location }),
     }))),
     maskedRanges: Object.freeze(inspection.maskedRanges.map((range) => Object.freeze({ ...range }))),
+    includeStack: Object.freeze(includeStack.map((edge) => Object.freeze({
+      from: edge.from,
+      to: edge.to,
+      location: Object.freeze({ ...edge.location }),
+    }))),
   });
 }
 
@@ -104,6 +114,7 @@ export async function resolveSourceProject({
   entry,
   profile,
   configuration,
+  placement = { defaultBank: 0, banks: {} },
   limits: requestedLimits,
 }) {
   const limits = normalizeLimits(requestedLimits);
@@ -190,6 +201,19 @@ export async function resolveSourceProject({
     visiting.set(snapshot.dependencyIdentity, nodeStack.length);
     nodeStack.push(snapshot);
     if (incomingEdge !== undefined) edgeStack.push(incomingEdge);
+    const includeStack = edgeStack.map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      location: { ...edge.location },
+    }));
+
+    if (inspection.compilerBytes.length !== snapshot.originalBytes.length) {
+      fail(
+        "source-length-changed",
+        "source profile changed the byte length of a source part",
+        incomingEdge?.location,
+      );
+    }
 
     const directDependencies = new Set();
     for (const reference of inspection.dependencies) {
@@ -236,7 +260,7 @@ export async function resolveSourceProject({
     nodeStack.pop();
     visiting.delete(snapshot.dependencyIdentity);
     visited.add(snapshot.dependencyIdentity);
-    parts.push(frozenPart(snapshot, inspection));
+    parts.push(frozenPart(snapshot, inspection, includeStack));
   }
 
   let entrySnapshot;
@@ -252,8 +276,9 @@ export async function resolveSourceProject({
   );
   await visit(entrySnapshot, entryInspection, entryInspection.state, 1);
 
+  const placed = await joinSourcePlacement({ parts, reader, placement, limits });
   return Object.freeze({
-    parts: Object.freeze(parts),
+    ...placed,
     state: entryInspection.state,
     retainedPathBytes,
   });
