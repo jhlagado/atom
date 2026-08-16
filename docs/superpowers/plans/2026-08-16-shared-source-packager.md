@@ -713,3 +713,19 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
 - **Implementation:** added byte-strict parsing, canonical serialization,
   frozen parsed records, structured plan diagnostics, and parse-back validation
   of serialized bytes. No resident Z80 account changed.
+
+### 2026-08-16 — Checkpoint 4 source identities
+
+- **Red:** all 8 focused reader tests failed because
+  `createNodeSourceReader` was absent.
+- **Green:** `node --test test/host-node-source-reader.test.mjs` passed 8 of 8
+  tests with zero failures.
+- **Coverage:** three source identities, importer-relative resolution, absolute
+  and lexical escape rejection, symlink confinement after `realpath`, physical
+  case verification, canonical in-root aliases, relocated roots, missing
+  sources, read-once caching, and persistence of the scanned byte snapshot
+  after a disk mutation.
+- **Implementation:** added an injectable Node filesystem boundary, component
+  spelling checks, root-relative logical identities, canonical physical cache
+  keys, frozen snapshot records, and owned source bytes. No resident Z80
+  account changed.
