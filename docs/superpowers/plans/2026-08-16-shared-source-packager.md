@@ -689,3 +689,13 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
   277,004 T-states.
 - **Working trees:** Atom and Debug80 were clean after dependency builds and
   measurement. No Debug80 source changed.
+
+### 2026-08-16 — Checkpoint 2 neutral boundary
+
+- **Red:** the focused boundary test failed twice: the neutral directory was
+  absent and `SourcePackagerError` was not exported.
+- **Green:** `node --test test/host-source-packager-boundary.test.mjs` and
+  `npm run test:host` each passed 2 of 2 tests with zero failures.
+- **Implementation:** added the Atom-local neutral directory, its extraction
+  rule, the structured frozen diagnostic, the public export, and the scoped
+  host-test command. No resident Z80 byte or workspace account changed.

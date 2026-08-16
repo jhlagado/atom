@@ -13,6 +13,7 @@
     "prepare:proof": "npm run generate && npm run verify:dependencies && npm run build:dependencies",
     "pretest": "npm run prepare:proof",
     "test": "node --test test/*.test.mjs",
+    "test:host": "node --test test/host-*.test.mjs",
     "premeasure": "npm run prepare:proof",
     "measure": "node test/measure.mjs",
     "measure:symbols": "node test/measure-symbols.mjs",
