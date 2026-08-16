@@ -13,33 +13,47 @@
     { "name": "patch-locator", "start": "AtomPatchCodeStart", "end": "AtomPatchCodeEnd", "exactBytes": 73 },
     { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2057 },
     { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 98 },
-    { "name": "lower-free", "start": "AtomParserWorkspaceEnd", "end": "AtomStatementProofSourceStart", "exactBytes": 14011 },
+    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 359 },
+    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 21 },
+    { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 263 },
+    { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 22 },
+    { "name": "lower-free", "start": "AtomStatementWorkspaceEnd", "end": "AtomStatementProofAdapterStart", "exactBytes": 5154 },
+    { "name": "proof-adapter", "start": "AtomStatementProofAdapterStart", "end": "AtomStatementProofAdapterEnd", "exactBytes": 178 },
+    { "name": "proof-adapter-workspace", "start": "AtomStatementProofAdapterWorkspaceStart", "end": "AtomStatementProofAdapterWorkspaceEnd", "exactBytes": 10 },
+    { "name": "adapter-free", "start": "AtomStatementProofAdapterWorkspaceEnd", "end": "AtomStatementProofSourceStart", "exactBytes": 8004 },
     { "name": "proof-source", "start": "AtomStatementProofSourceStart", "end": "AtomStatementProofSourceEnd", "exactBytes": 130 },
     { "name": "proof-record", "start": "AtomStatementProofRecordStart", "end": "AtomStatementProofRecordEnd", "exactBytes": 12 },
     { "name": "mid-free-a", "start": "AtomStatementProofRecordEnd", "end": "AtomStatementProofSymbolStart", "exactBytes": 3954 },
     { "name": "proof-symbol-arena", "start": "AtomStatementProofSymbolStart", "end": "AtomStatementProofSymbolEnd", "exactBytes": 130 },
     { "name": "mid-free-b", "start": "AtomStatementProofSymbolEnd", "end": "AtomStatementProofPendingStart", "exactBytes": 126 },
     { "name": "proof-pending-arena", "start": "AtomStatementProofPendingStart", "end": "AtomStatementProofPendingEnd", "exactBytes": 50 },
-    { "name": "upper-free", "start": "AtomStatementProofPendingEnd", "end": 65024, "exactBytes": 27854 },
+    { "name": "mid-free-c", "start": "AtomStatementProofPendingEnd", "end": "AtomStatementProofLogStart", "exactBytes": 206 },
+    { "name": "proof-sink-log", "start": "AtomStatementProofLogStart", "end": "AtomStatementProofLogEnd", "exactBytes": 258 },
+    { "name": "upper-free", "start": "AtomStatementProofLogEnd", "end": 65024, "exactBytes": 27390 },
     { "name": "proof-stack", "start": 65024, "end": 65280, "exactBytes": 256 },
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
     { "name": "statement-parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2057 },
-    { "name": "integrated-code-through-parser", "sum": [
+    { "name": "statement-dispatcher-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 263 },
+    { "name": "integrated-code-and-tables", "sum": [
       ["AtomEncoderCoreStart", "AtomEncoderCoreEnd"],
       ["AtomSymbolCodeStart", "AtomSymbolCodeEnd"],
       ["AtomTokenizerCodeStart", "AtomTokenizerCodeEnd"],
       ["AtomExpressionCodeStart", "AtomExpressionCodeEnd"],
       ["AtomPatchCodeStart", "AtomPatchCodeEnd"],
-      ["AtomParserCodeStart", "AtomParserCodeEnd"]
-    ], "exactBytes": 10095 },
-    { "name": "integrated-fixed-workspace-through-parser", "sum": [
+      ["AtomParserCodeStart", "AtomParserCodeEnd"],
+      ["AtomOutputCodeStart", "AtomOutputCodeEnd"],
+      ["AtomStatementCodeStart", "AtomStatementCodeEnd"]
+    ], "exactBytes": 10717 },
+    { "name": "integrated-fixed-workspace", "sum": [
       ["AtomEncoderWorkspaceStart", "AtomEncoderWorkspaceEnd"],
       ["AtomSymbolWorkspaceStart", "AtomSymbolWorkspaceEnd"],
       ["AtomTokenizerWorkspaceStart", "AtomTokenizerWorkspaceEnd"],
       ["AtomExpressionWorkspaceStart", "AtomExpressionWorkspaceEnd"],
-      ["AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"]
-    ], "exactBytes": 470 }
+      ["AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"],
+      ["AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"],
+      ["AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd"]
+    ], "exactBytes": 513 }
   ]
 }

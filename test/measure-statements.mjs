@@ -35,6 +35,11 @@ h.advanceScope();
 h.declare(h.pack("_Local").key, 0x4000);
 h.advanceScope();
 
+h.assemble("Start:\n  LD A,$42\n_Loop: DJNZ _Loop\n");
+h.assemble("JR Later\nNOP\nLater:\n");
+h.assemble("Unknown thing\n");
+h.assemble("LD BC,A\n");
+
 const s = h.symbols;
 const extent = (start, end) => s[end] - s[start];
 const codeThroughParser =
@@ -50,11 +55,16 @@ const workspaceThroughParser =
   extent("AtomTokenizerWorkspaceStart", "AtomTokenizerWorkspaceEnd") +
   extent("AtomExpressionWorkspaceStart", "AtomExpressionWorkspaceEnd") +
   extent("AtomParserWorkspaceStart", "AtomParserWorkspaceEnd");
+const integratedCode = codeThroughParser +
+  extent("AtomOutputCodeStart", "AtomOutputCodeEnd") +
+  extent("AtomStatementCodeStart", "AtomStatementCodeEnd");
+const integratedWorkspace = workspaceThroughParser +
+  extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd") +
+  extent("AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd");
 
 console.log(JSON.stringify({
   labels: {
-    componentsAndExecution: "Measured in the Phase 2g proof image.",
-    currentResidentWithOutput: "Projected by adding the separately Measured 359-byte output code and 21-byte output workspace.",
+    componentsAndExecution: "Measured in the linked Phase 2g proof image.",
   },
   components: {
     symbolCodeAndTables: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd"),
@@ -62,13 +72,17 @@ console.log(JSON.stringify({
     parserCodeAndTables: extent("AtomParserCodeStart", "AtomParserCodeEnd"),
     parserWorkspace: extent("AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"),
     statementContinuationIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 2035,
+    outputCode: extent("AtomOutputCodeStart", "AtomOutputCodeEnd"),
+    outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
+    statementDispatcherCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),
+    statementDispatcherWorkspace: extent("AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd"),
   },
   integrated: {
     codeAndTablesThroughParser: codeThroughParser,
     fixedWorkspaceThroughParser: workspaceThroughParser,
-    projectedCurrentResidentCodeAndTablesWithOutput: codeThroughParser + 359,
-    projectedCurrentFixedWorkspaceWithOutput: workspaceThroughParser + 21,
-    marginTo16KiBCodeAndTables: 0x4000 - (codeThroughParser + 359),
+    codeAndTables: integratedCode,
+    fixedWorkspace: integratedWorkspace,
+    marginTo16KiBCodeAndTables: 0x4000 - integratedCode,
   },
   execution: h.statistics,
 }, null, 2));

@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { validCases } from "./cases.mjs";
 import { createStatementsHarness } from "./statements-support.mjs";
+import { azmBytes } from "./support.mjs";
 
 const h = await createStatementsHarness();
 const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2g-memory.json", "utf8"));
@@ -15,6 +16,12 @@ const STATUS = Object.freeze({
   PRIVATE_NO_SCOPE: 4,
   UNDEFINED_PRIVATE: 5,
   PENDING_INVARIANT: 7,
+});
+const STATEMENT = Object.freeze({
+  OK: 0,
+  EXPECTED: 2,
+  SYMBOL: 5,
+  INSTRUCTION: 6,
 });
 
 function resolve(value) {
@@ -143,6 +150,59 @@ test("statement-mode scope advance validates and evicts a defined private", () =
   assert.equal(h.declare(local, 0x4000).status, STATUS.OK);
   assert.equal(h.advanceScope().status, STATUS.OK);
   assert.equal(h.find(local).status, STATUS.NOT_FOUND);
+});
+
+test("statement path assembles blank lines, labels, and instructions", () => {
+  let result = h.assemble("; comment\n\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.operations(), []);
+
+  result = h.assemble("Start:\n  LD A,$42\n_Loop: DJNZ _Loop\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x3e, 0x42, 0x10, 0xfe]);
+  assert.deepEqual(h.outputState(), { cursor: 0x4004, remaining: 0xfc });
+
+  result = h.assemble("aGaIn: jR AgAiN\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x18, 0xfe]);
+});
+
+test("forward global references resolve to append-only patch bytes", () => {
+  const result = h.assemble("JR Later\nNOP\nLater:\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.operations(), [
+    { kind: 1, bank: 0, address: 0x4000, bytes: [0x18] },
+    { kind: 1, bank: 0, address: 0x4001, bytes: [0x00] },
+    { kind: 1, bank: 0, address: 0x4002, bytes: [0x00] },
+    { kind: 2, bank: 0, address: 0x4001, bytes: [0x01] },
+  ]);
+  assert.deepEqual(h.finalBytes(), [0x18, 0x01, 0x00]);
+});
+
+test("statement integration is byte-identical to AZM for every supported instruction form", () => {
+  for (const [index, item] of validCases().entries()) {
+    const result = h.assemble(`${item.source}\n`);
+    assert.equal(result.status, STATEMENT.OK, `${index}: ${item.source}`);
+    assert.deepEqual(h.finalBytes(), azmBytes(item.source), `${index}: ${item.source}`);
+  }
+});
+
+test("a private label before the first global is rejected without output", () => {
+  const result = h.assemble("_Local: NOP\n");
+  assert.equal(result.status, STATEMENT.SYMBOL);
+  assert.equal(result.detail, STATUS.PRIVATE_NO_SCOPE);
+  assert.deepEqual(h.operations(), []);
+  assert.deepEqual(h.outputState(), { cursor: 0x4000, remaining: 0x100 });
+});
+
+test("unknown statements and invalid instructions retain their nested category", () => {
+  let result = h.assemble("Unknown thing\n");
+  assert.equal(result.status, STATEMENT.EXPECTED);
+  assert.deepEqual(h.operations(), []);
+
+  result = h.assemble("LD BC,A\n");
+  assert.equal(result.status, STATEMENT.INSTRUCTION);
+  assert.deepEqual(h.operations(), []);
 });
 
 test("Phase 2g measured public-entry execution matches the pinned observations", () => {
