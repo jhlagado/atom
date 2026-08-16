@@ -1,0 +1,4 @@
+interface:
+  display_name: "Z80 Engineering"
+  short_description: "Correctness and size work for Z80 systems"
+  default_prompt: "Use $z80-engineering to review and optimize this Z80 implementation with measured correctness evidence."
