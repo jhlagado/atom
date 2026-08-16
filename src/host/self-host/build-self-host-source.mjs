@@ -59,40 +59,222 @@ function normalizeDirective(line) {
   return line.trim();
 }
 
-function shortOrdinal(prefix, ordinal) {
-  const digits = ordinal.toString(36).toUpperCase().padStart(7, "0");
-  if (digits.length !== 7) fail("symbol-count", "self-host symbol ordinal exceeds seven base-36 digits");
-  return `${prefix}${digits}`;
+const MODULES = Object.freeze([
+  [/^Atom(?:Encoder|Encode|Instr|Op|Form|Ld|Im|Rotate|Alu|Rule|Opcode|Recognition|Recognize|Pack|Radix40|Mnemonic|Search|Validation|Validate|Is|Store|Encoded|Prefix|Scratch|Core)/, "EN"],
+  [/^Atom(?:Symbol|Pending|Status)/, "SY"],
+  [/^Atom(?:Tokenizer|Token)/, "TK"],
+  [/^AtomExpression/, "EX"],
+  [/^AtomPatch/, "PT"],
+  [/^AtomParser/, "PR"],
+  [/^AtomOutput/, "OU"],
+  [/^Atom(?:Statement|Directive)/, "ST"],
+  [/^Atom(?:Driver|Assemble|Finish)/, "DR"],
+  [/^Atom(?:Host|Sink)/, "HS"],
+]);
+
+const MODULE_WORDS = Object.freeze({
+  EN: /^(?:AtomEncoder|AtomEncode|AtomInstr|AtomOp|AtomForm|AtomMnemonic)/,
+  SY: /^(?:AtomSymbol|AtomPending)/,
+  TK: /^(?:AtomTokenizer|AtomToken)/,
+  EX: /^AtomExpression/,
+  PT: /^AtomPatch/,
+  PR: /^AtomParser/,
+  OU: /^AtomOutput/,
+  ST: /^(?:AtomStatement|AtomDirective)/,
+  DR: /^AtomDriver/,
+  HS: /^(?:AtomHost|AtomSink)/,
+  AT: /^Atom/,
+});
+
+const WORD_ABBREVIATIONS = Object.freeze({
+  Address: "ADR",
+  After: "AFT",
+  Before: "BEF",
+  Begin: "BEG",
+  Build: "BLD",
+  Byte: "B",
+  Bytes: "B",
+  Capacity: "CAP",
+  Check: "CHK",
+  Classify: "CLS",
+  Character: "CHAR",
+  Code: "C",
+  Commit: "CMT",
+  Configuration: "CFG",
+  Count: "CNT",
+  Current: "CUR",
+  Declare: "DECL",
+  Deferred: "DEFR",
+  Descriptor: "DESC",
+  Destination: "DST",
+  Directive: "DIR",
+  End: "END",
+  Error: "ERR",
+  Expected: "EXP",
+  Expression: "EXPR",
+  Failure: "FAIL",
+  Finish: "FIN",
+  Global: "GLBL",
+  High: "HI",
+  Instruction: "INS",
+  Internal: "INT",
+  Length: "LEN",
+  Limit: "LIM",
+  Local: "LOC",
+  Low: "LO",
+  Mnemonic: "MNEM",
+  Next: "NEXT",
+  Offset: "OFF",
+  Operand: "OP",
+  Operator: "OPER",
+  Output: "OUT",
+  Parse: "PARSE",
+  Parser: "PARS",
+  Part: "PART",
+  Pointer: "PTR",
+  Published: "PUB",
+  Record: "REC",
+  Reference: "REF",
+  Remaining: "REM",
+  Resident: "RES",
+  Require: "REQ",
+  Reset: "RESET",
+  Resolve: "RSLV",
+  Result: "RES",
+  Source: "SRC",
+  Start: "BEG",
+  Status: "STAT",
+  Symbol: "SYM",
+  Token: "TOK",
+  Value: "VAL",
+  Workspace: "WORK",
+  Word: "W",
+});
+
+const NAME_OVERRIDES = Object.freeze({
+  AtomAssemble: "DR_ASM",
+  AtomEncoderCoreStart: "EN_COREB",
+  AtomEncoderCoreEnd: "EN_COREE",
+  AtomEncoderCodeStart: "EN_CODEB",
+  AtomEncoderCodeEnd: "EN_CODEE",
+  AtomExpressionParse: "EX_PARSE",
+  AtomHostResidentEnd: "HS_REND",
+  AtomOutputResolveSymbol: "OU_RSLV",
+  AtomParserParse: "PR_PARSE",
+  AtomParserParsePublished: "PR_PUB",
+  AtomRadix40Character: "EN_R40CH",
+  AtomRadix40Pack: "EN_R40PK",
+  AtomRecognizeMnemonic: "EN_RECOG",
+  AtomSymbolFind: "SY_FIND",
+  AtomTokenizerReset: "TK_RESET",
+});
+
+const PHRASE_ABBREVIATIONS = Object.freeze({
+  CoreStart: "CBEG",
+  CoreEnd: "CEND",
+  CodeStart: "CBEG",
+  CodeEnd: "CEND",
+  WorkspaceStart: "WBEG",
+  WorkspaceEnd: "WEND",
+});
+
+function moduleName(name) {
+  const bare = name.replace(/^_/, "");
+  for (const [pattern, module] of MODULES) {
+    if (pattern.test(bare)) return module;
+  }
+  return "AT";
 }
 
-function definitionName(line) {
+function camelWords(text) {
+  return text.match(/[A-Z]+(?=[A-Z][a-z]|[0-9]|$)|[A-Z]?[a-z]+|[0-9]+/g) ?? [];
+}
+
+function semanticStem(name, module, maximum) {
+  const bare = name.replace(/^_/, "");
+  let body = bare.replace(MODULE_WORDS[module], "");
+  if (body === bare) body = bare.replace(/^Atom/, "");
+  const phrase = PHRASE_ABBREVIATIONS[body];
+  if (phrase !== undefined) return phrase.slice(0, maximum);
+  const words = camelWords(body);
+  const pieces = words.map((word) => WORD_ABBREVIATIONS[word] ?? word.toUpperCase());
+  let compressed = pieces.join("");
+  if (compressed.length > maximum && pieces.length > 1) {
+    compressed = `${pieces.slice(0, -1).map((piece) => piece[0]).join("")}${pieces.at(-1)}`;
+  }
+  const stem = compressed.replace(/[^A-Z0-9_]/g, "").slice(0, maximum);
+  return stem === "" ? "NAME".slice(0, maximum) : stem;
+}
+
+function allocateShort(base, maximum, used) {
+  if (!used.has(base)) {
+    used.add(base);
+    return base;
+  }
+  for (let ordinal = 1; ordinal < 36 * 36; ordinal += 1) {
+    const suffix = ordinal.toString(36).toUpperCase();
+    const candidate = `${base.slice(0, maximum - suffix.length)}${suffix}`;
+    if (!used.has(candidate)) {
+      used.add(candidate);
+      return candidate;
+    }
+  }
+  fail("symbol-collision", `cannot allocate an exact short name from ${base}`);
+}
+
+function definition(line) {
   const label = /^\s*([_A-Za-z][_A-Za-z0-9]*)\s*:/.exec(line);
-  if (label !== null) return label[1];
+  if (label !== null) return { name: label[1], label: true };
   const equate = /^\s*([_A-Za-z][_A-Za-z0-9]*)\s+EQU\b/i.exec(line);
-  return equate?.[1];
+  return equate === null ? undefined : { name: equate[1], label: false };
 }
 
 function buildSymbolMap(lines) {
-  const map = new Map();
-  let globals = 0;
-  let privates = 0;
+  const globalsByName = new Map();
+  const privatesByScope = new Map();
+  const globalsUsed = new Set();
+  const privateUsed = new Map();
+  const mapping = [];
+  let currentScope;
   for (const line of lines) {
-    const name = definitionName(line);
-    if (name === undefined) continue;
+    const found = definition(line);
+    if (found === undefined) continue;
+    const { name } = found;
     const canonical = name.toUpperCase();
-    if (map.has(canonical)) continue;
     const isPrivate = name.startsWith("_");
-    const short = isPrivate
-      ? `.${shortOrdinal("L", privates)}`
-      : shortOrdinal("G", globals);
-    if (isPrivate) privates += 1;
-    else globals += 1;
-    map.set(canonical, Object.freeze({ original: name, short, private: isPrivate }));
+    if (!isPrivate && found.label) currentScope = canonical;
+    const module = moduleName(name);
+    if (isPrivate) {
+      if (currentScope === undefined) fail("private-scope", `private name ${name} has no preceding global label`);
+      const scoped = privatesByScope.get(currentScope) ?? new Map();
+      if (scoped.has(canonical)) fail("duplicate-private", `private name ${name} is defined twice in ${currentScope}`);
+      const used = privateUsed.get(currentScope) ?? new Set();
+      const short = `.${allocateShort(semanticStem(name, module, 8), 8, used)}`;
+      const record = Object.freeze({ original: name, short, private: true, module, scope: currentScope });
+      scoped.set(canonical, record);
+      privatesByScope.set(currentScope, scoped);
+      privateUsed.set(currentScope, used);
+      mapping.push(record);
+    } else {
+      if (globalsByName.has(canonical)) fail("duplicate-global", `global name ${name} is defined twice`);
+      const base = NAME_OVERRIDES[name] ?? `${module}_${semanticStem(name, module, 5)}`;
+      const short = allocateShort(base, 8, globalsUsed);
+      const record = Object.freeze({ original: name, short, private: false, module });
+      globalsByName.set(canonical, record);
+      mapping.push(record);
+    }
   }
-  return Object.freeze({ map, globals, privates });
+  return Object.freeze({
+    globalsByName,
+    privatesByScope,
+    mapping: Object.freeze(mapping),
+    globals: globalsByName.size,
+    privates: mapping.length - globalsByName.size,
+  });
 }
 
-function replaceIdentifiers(line, symbols) {
+function replaceIdentifiers(line, globalsByName, privates) {
+  if (line.trimStart().startsWith(";")) return line;
   let output = "";
   let index = 0;
   while (index < line.length) {
@@ -130,7 +312,11 @@ function replaceIdentifiers(line, symbols) {
       let end = index + 1;
       while (end < line.length && /[A-Za-z0-9_]/.test(line[end])) end += 1;
       const token = line.slice(index, end);
-      output += symbols.get(token.toUpperCase())?.short ?? token;
+      const canonical = token.toUpperCase();
+      const replacement = token.startsWith("_")
+        ? privates?.get(canonical)
+        : globalsByName.get(canonical);
+      output += replacement?.short ?? token;
       index = end;
       continue;
     }
@@ -223,7 +409,12 @@ export async function buildSelfHostSource({
         await include(match[1], physical);
         continue;
       }
-      if (/^\.(?:routine|expectout)\b/i.test(code) || /^\.end$/i.test(code)) continue;
+      match = /^\.(routine|expectout)\b(.*)$/i.exec(code);
+      if (match !== null) {
+        flattened.push(`;@${match[1].toUpperCase()}${match[2].toUpperCase()}`);
+        continue;
+      }
+      if (/^\.end$/i.test(code)) continue;
       const configEquate = /^([_A-Za-z][_A-Za-z0-9]*)\s*:\s*\.equ\b/i.exec(code);
       if (configEquate !== null && definitions.has(configEquate[1].toUpperCase())) continue;
       flattened.push(normalizeDirective(normalizeCharacterLiterals(code)));
@@ -232,8 +423,15 @@ export async function buildSelfHostSource({
   }
 
   await include(entry, undefined);
-  const { map, globals, privates } = buildSymbolMap(flattened);
-  const translated = flattened.map((line) => replaceIdentifiers(line, map));
+  const { globalsByName, privatesByScope, mapping, globals, privates } = buildSymbolMap(flattened);
+  let currentScope;
+  const translated = flattened.map((line) => {
+    const found = definition(line);
+    if (found !== undefined && !found.name.startsWith("_") && found.label) {
+      currentScope = found.name.toUpperCase();
+    }
+    return replaceIdentifiers(line, globalsByName, privatesByScope.get(currentScope));
+  });
   const chunks = chunkLines(translated, maximumPartBytes);
   if (chunks.length > 16) fail("part-count", `self-host source requires ${chunks.length} parts; native limit is 16`);
   const parts = chunks.map((text, ordinal) => {
@@ -241,12 +439,11 @@ export async function buildSelfHostSource({
     return Object.freeze({
       ordinal,
       bank: 0,
-      logicalIdentity: `self/atom-${ordinal.toString().padStart(2, "0")}.asm`,
+      logicalIdentity: `native/atom-${ordinal.toString().padStart(2, "0")}.atm`,
       originalBytes: bytes,
       compilerBytes: bytes,
     });
   });
-  const mapping = Object.freeze([...map.values()].map((value) => value));
   return Object.freeze({
     project: Object.freeze({ parts: Object.freeze(parts) }),
     mapping,

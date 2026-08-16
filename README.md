@@ -100,10 +100,11 @@ Run the maintainer gate with:
 npm run release:check
 ```
 
-The readable native implementation is under `asm/`. The checked Atom-valid
-self-host source under `self-host/` is generated deterministically from it;
-`npm run verify:self-host-source` detects drift. AZM is a development oracle
-and is not installed with the command-line package.
+The checked Atom-valid native source is under `native/` with an exact
+long-to-short symbol ledger. The AZM source under `asm/` is retained only as a
+temporary migration and bootstrap oracle; `npm run verify:self-host-source`
+detects drift during that transition. See the [self-hosting design](docs/self-hosting.md).
+AZM is a development oracle and is not installed with the command-line package.
 
 The detailed engineering record remains available in the phase reports:
 

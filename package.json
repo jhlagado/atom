@@ -32,7 +32,8 @@
     "docs/*.md",
     "docs/codebase",
     "examples",
-    "self-host/*.asm",
+    "native/*.atm",
+    "native/atom-symbols.json",
     "src/host",
     "LICENSE",
     "README.md"

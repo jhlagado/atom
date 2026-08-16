@@ -67,10 +67,10 @@ that consumes stale bytes.
 starts from the same link entry. It recursively reads the AZM include closure
 inside the `asm/` root and performs these transformations:
 
-1. remove comments and blank lines;
+1. remove ordinary comments and blank lines;
 2. evaluate the fixed link-time `.if`, `.else`, and `.endif` conditions;
 3. flatten every `.include` exactly once at its source position;
-4. remove `.routine`, `.expectout`, and `.end` lines;
+4. preserve `.routine` and `.expectout` as `;@` proof comments and remove `.end`;
 5. omit link-configuration equates already fixed by the generator;
 6. convert AZM dotted directives to Atom's bare `EQU`, `ORG`, `DB`, `DW`, and
    `DS` forms;
@@ -81,28 +81,31 @@ inside the `asm/` root and performs these transformations:
 10. split the result at line boundaries into source parts no larger than the
     selected page budget.
 
-Global generated names use `G` followed by seven base-36 digits. Private names
-use `.` followed by `L` and seven digits. This preserves exact identity within
-Atom's eight-character symbol limit. The mapping records the readable original,
-short name, and private flag.
+Global names use a two-letter module prefix and a semantic stem, such as
+`PR_PARSE` and `TK_RESET`. Private names use a dot plus a semantic stem and may
+be reused under different global labels. Allocation is case-insensitive and
+adds a deterministic base-36 suffix only when two stems collide in one scope.
+The mapping records the readable original, exact short name, module, privacy,
+and private scope. It never resolves a collision by silent truncation.
 
 The default maximum generated part size is 20 KiB, below the 24 KiB native
-source-page limit. The current source produces five generated content parts.
-`scripts/generate-self-host-source.mjs` also writes a sixth entry part:
+source-page limit. The current source produces six generated content parts.
+`scripts/generate-self-host-source.mjs` also writes a seventh entry part:
 
 ```asm
-%INCLUDE "ATOM-00.ASM"
-%INCLUDE "ATOM-01.ASM"
-%INCLUDE "ATOM-02.ASM"
-%INCLUDE "ATOM-03.ASM"
-%INCLUDE "ATOM-04.ASM"
+%INCLUDE "ATOM-00.ATM"
+%INCLUDE "ATOM-01.ATM"
+%INCLUDE "ATOM-02.ATM"
+%INCLUDE "ATOM-03.ATM"
+%INCLUDE "ATOM-04.ATM"
+%INCLUDE "ATOM-05.ATM"
 ```
 
-The host resolver orders those dependencies before `atom.asm`, so the checked
-self-host project presented to the native driver has six parts. The empty
+The host resolver orders those dependencies before `atom.atm`, so the checked
+self-host project presented to the native driver has seven parts. The empty
 entry still has its own identity and descriptor.
 
-`self-host/atom-symbols.json` retains generator statistics and the complete
+`native/atom-symbols.json` retains generator statistics and the complete
 original-to-short symbol map. It lets the proof recover the original ABI symbol
 names from the generated assembly's declarations.
 
@@ -113,16 +116,18 @@ npm run build:self-host-source
 npm run verify:self-host-source
 ```
 
-Changes belong in `asm/` or the generator. The checked files under
-`self-host/` are not edited by hand.
+During this migration checkpoint, changes belong in `asm/` or the generator.
+The checked files under `native/` are the permanent Atom representation but are
+not yet the editing authority. See `docs/self-hosting.md` for the authority
+flip and removal sequence.
 
 ## First Atom generation
 
-The self-host proof resolves `self-host/atom.asm` through the ordinary host
+The self-host proof resolves `native/atom.atm` through the ordinary host
 source packager and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 
-The pinned AZM-built native core assembles all six parts. The resulting
+The pinned AZM-built native core assembles all seven parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
 events, execution measurements, and a complete 13,812-byte materialized image.
 

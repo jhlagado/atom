@@ -59,10 +59,45 @@ function translateByteFunctions(source) {
   return output;
 }
 
+function translatePrivateIdentifiers(source) {
+  let output = "";
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < source.length;) {
+    const character = source[index];
+    if (quote !== "") {
+      output += character;
+      index += 1;
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = "";
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      output += character;
+      index += 1;
+      continue;
+    }
+    if (character === "." && /[A-Za-z_]/.test(source[index + 1] ?? "")) {
+      output += "_";
+      index += 1;
+      continue;
+    }
+    output += character;
+    index += 1;
+  }
+  return output;
+}
+
 export function translateAtomLineToAzm(line) {
   if (typeof line !== "string") fail("line", "Atom source line must be text");
+  const proofAnnotation = /^\s*;@(ROUTINE|EXPECTOUT)\b(.*)$/i.exec(line);
+  if (proofAnnotation !== null) {
+    return `.${proofAnnotation[1].toLowerCase()}${proofAnnotation[2]}`;
+  }
   const [rawSource, comment] = splitComment(line);
-  const source = translateByteFunctions(rawSource);
+  const source = translateByteFunctions(translatePrivateIdentifiers(rawSource));
   const colonEquate = /^(\s*)((?:\.[_A-Za-z][_A-Za-z0-9]*)|(?:[_A-Za-z][_A-Za-z0-9]*))(\s*:\s*)EQU\b(.*)$/i.exec(source);
   if (colonEquate !== null) {
     return `${colonEquate[1]}${colonEquate[2]}${colonEquate[3]}.equ${colonEquate[4]}${comment}`;

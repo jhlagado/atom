@@ -17,7 +17,7 @@ import {
 } from "../src/host/index.mjs";
 
 const generated = await buildSelfHostSource({ root: path.resolve("asm") });
-const project = await resolveAtomProject({ root: path.resolve("self-host"), entry: "atom.asm" });
+const project = await resolveAtomProject({ root: path.resolve("native"), entry: "atom.atm" });
 const limits = { maxInstructions: 200_000_000, maxCycles: 2_000_000_000 };
 const options = { target: { start: 0, capacity: 0x4000 }, ...limits };
 const first = await assembleResolvedAtomProject(project, options);
@@ -51,6 +51,7 @@ try {
     emitD8m: false,
     emitLst: false,
     symbolCase: "insensitive",
+    registerContracts: "strict",
   });
   assert.deepEqual(oracle.diagnostics.filter(({ severity }) => severity === "error"), []);
   const oracleHex = oracle.artifacts.find(({ kind }) => kind === "hex");

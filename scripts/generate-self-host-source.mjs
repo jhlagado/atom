@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { buildSelfHostSource } from "../src/host/self-host/build-self-host-source.mjs";
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const destination = path.join(repository, "self-host");
+const destination = path.join(repository, "native");
 const check = process.argv.includes("--check");
 
 const source = await buildSelfHostSource({ root: path.join(repository, "asm") });
@@ -18,8 +18,8 @@ for (const part of source.project.parts) {
   const name = path.basename(part.logicalIdentity);
   expected.set(name, decoder.decode(part.compilerBytes));
 }
-expected.set("atom.asm", [
-  "; Generated Atom-syntax entry point. Do not edit by hand.",
+expected.set("atom.atm", [
+  "; GENERATED ATOM-SYNTAX ENTRY POINT. DO NOT EDIT BY HAND.",
   ...source.project.parts.map((part) => `%INCLUDE "${path.basename(part.logicalIdentity)}"`),
   "",
 ].join("\n"));
@@ -34,7 +34,7 @@ const existing = await fs.readdir(destination).catch((error) => {
   throw error;
 });
 const managed = existing.filter((name) =>
-  /^atom-\d\d\.asm$/.test(name) || name === "atom.asm" || name === "atom-symbols.json");
+  /^atom-\d\d\.atm$/.test(name) || name === "atom.atm" || name === "atom-symbols.json");
 const unexpected = managed.filter((name) => !expected.has(name));
 
 if (check) {

@@ -100,7 +100,7 @@ atom/
   examples/            SHIPPED SOURCE PROJECTS
   proofs/              FROZEN CENSUSES, MEMORY MAPS, AND MEASUREMENTS
   scripts/             GENERATORS AND RELEASE CHECKS
-  self-host/           GENERATED ATOM-SYNTAX FORM OF THE NATIVE CORE
+  native/              CHECKED ATOM-SYNTAX FORM OF THE NATIVE CORE
   src/                 HOST IMPLEMENTATION AND GENERATED-TABLE INPUTS
   test/                NATIVE, HOST, DIFFERENTIAL, PACKAGE, AND SELF-HOST PROOFS
   package.json         PACKAGE EXPORT, COMMAND, DEPENDENCIES, AND TEST LANES
@@ -193,8 +193,8 @@ are generated from it or from shared JavaScript descriptions:
 | `asm/atom-mnemonics.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
 | `asm/atom-operands.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
 | `assets/native-core.json` | `scripts/generate-native-core.mjs` using strict AZM | `npm run verify:native-core` |
-| `self-host/atom-00.asm` through `atom-04.asm` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
-| `self-host/atom.asm` and `atom-symbols.json` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
+| `native/atom-00.atm` through `atom-05.atm` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
+| `native/atom.atm` and `atom-symbols.json` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
 
 Changes belong in the generator or readable source, followed by regeneration.
 Editing a generated file directly only creates drift that the release gate will

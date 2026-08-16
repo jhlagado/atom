@@ -2,36 +2,36 @@
 
 ## Result
 
-**Measured: pass.** The checked Atom-syntax source under `self-host/` assembles
-to the same 13,058-byte resident image as the AZM build. That Atom-produced
+**Measured: pass.** The checked Atom-syntax source under `native/` assembles
+to the same 13,812-byte resident image as the AZM build. That Atom-produced
 image then runs as the assembler and produces the same bytes again. A separate
 translation of the checked source into AZM syntax also produces the same
 image.
 
-The native size did not grow in this phase. Code and immutable tables remain
-**Measured: 12,508 bytes**. The linked resident image, including 550 bytes of
-fixed workspace, is **Measured: 13,058 bytes**, leaving **Measured: 3,326
+The current native account is **Measured: 13,261 bytes** of code and immutable
+tables. The linked resident image, including 551 bytes of fixed workspace, is
+**Measured: 13,812 bytes**, leaving **Measured: 2,572
 bytes** in the 16 KiB bank.
 
 ## Source representation
 
-The maintained implementation remains the readable AZM source in `asm/`.
+During the migration checkpoint, the frozen implementation oracle remains the AZM source in `asm/`.
 `npm run build:self-host-source` generates the checked Atom source. The
 project design assigns these mechanical changes to the host:
 
 - flatten the AZM include closure in deterministic order;
 - select the configured `.IF` branches;
-- remove AZM proof annotations and comments;
+- preserve AZM proof annotations as `;@` comments and remove ordinary comments;
 - remove directive periods and convert character constants to Atom syntax;
-- replace source identifiers with exact case-insensitive names that fit Atom's
-  eight-significant-character symbol format; and
+- replace source identifiers with collision-checked semantic names that fit
+  Atom's eight-significant-character symbol format; and
 - split the stream into source parts that fit the 24 KiB input window.
 
-The generated form contains **Measured: 7,127 statements** from **Measured: 13
-input files**. Its five code-bearing parts occupy **Measured: 93,760 bytes**.
-The checked `%INCLUDE` entry adds one small masked part, for **Measured: 93,933
-bytes across six parts** at the native boundary. The symbol map records
-**Measured: 813 global names and 402 private names**. Atom itself performs no
+The generated form contains **Measured: 7,753 statements** from **Measured: 13
+input files**. Its six code-bearing parts occupy **Measured: 107,457 bytes**.
+The checked `%INCLUDE` entry adds one small masked part, for **Measured: 107,653
+bytes across seven parts** at the native boundary. The symbol map records
+**Measured: 847 global names and 430 private names**. Atom itself performs no
 renaming and still diagnoses an overlength source name.
 
 `npm run verify:self-host-source` regenerates the representation in memory and
@@ -53,15 +53,15 @@ The proof compares three complete builds:
 3. The host translates the checked Atom source into AZM syntax and invokes AZM
    in case-insensitive mode.
 
-All three produce **Measured: 13,058 identical bytes**, comprising **Measured:
-12,682 initialized bytes and 376 reserved bytes**. The native stream applies
-**Measured: 2,125 PATCH records** and reports **Measured: 1,215 declarations**.
+All three produce **Measured: 13,812 identical bytes**, comprising **Measured:
+13,436 initialized bytes and 376 reserved bytes**. The native stream applies
+**Measured: 2,247 PATCH records** and reports **Measured: 1,277 declarations**.
 The proof compares the whole resident extent, not a digest or a selected set of
 instructions.
 
-Both native generations execute **Measured: 148,925,343 Z80 instructions and
-1,360,961,063 T-states**, with **Measured: 14,809 host service calls**. At 4
-MHz, the native instruction count corresponds to **Projected: at least 340.2
+Both native generations execute **Measured: 95,471,840 Z80 instructions and
+995,258,332 T-states**, with **Measured: 15,685 host service calls**. At 4
+MHz, the cycle count corresponds to **Projected: at least 248.8
 seconds**, before filesystem and output-service time. The Mac proof completes
 much faster because Debug80 runs the Z80 model on the host processor.
 
@@ -78,8 +78,8 @@ This proves the assembler and its source representation. It does not yet
 provide the TEC-1 operating adapter that reads each source part from storage.
 That adapter belongs to the next deployment phase.
 
-The complete battery passes **Measured: 241 of 241 tests**. AZM's strict
-register-contract check also passes for the linked native image.
+The complete battery passes **Measured: 266 of 266 tests**. AZM's strict
+register-contract check also passes for the translated `.atm` native image.
 
 ## Reproduction
 

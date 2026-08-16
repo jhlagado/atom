@@ -1,0 +1,8106 @@
+{
+  "format": "atom-self-host-symbol-map",
+  "version": 1,
+  "statistics": {
+    "inputFiles": 13,
+    "statements": 7753,
+    "sourceBytes": 107457,
+    "parts": 6,
+    "globalSymbols": 847,
+    "privateSymbols": 430
+  },
+  "symbols": [
+    {
+      "original": "AtomInstrMnemonic",
+      "short": "EN_MNEM",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomInstrOp0",
+      "short": "EN_OP0",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomInstrOp1",
+      "short": "EN_OP1",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomInstrOp2",
+      "short": "EN_OP2",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomInstrValue0",
+      "short": "EN_VAL0",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomInstrValue1",
+      "short": "EN_VAL1",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomInstrValue2",
+      "short": "EN_VAL2",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpB",
+      "short": "EN_B",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpC",
+      "short": "EN_C",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpD",
+      "short": "EN_D",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpE",
+      "short": "EN_E",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpH",
+      "short": "EN_H",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpL",
+      "short": "EN_L",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemHL",
+      "short": "EN_MEMHL",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpA",
+      "short": "EN_A",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpBC",
+      "short": "EN_BC",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpDE",
+      "short": "EN_DE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpHL",
+      "short": "EN_HL",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpSP",
+      "short": "EN_SP",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpAF",
+      "short": "EN_AF",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIX",
+      "short": "EN_IX",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIY",
+      "short": "EN_IY",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIXH",
+      "short": "EN_IXH",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIXL",
+      "short": "EN_IXL",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIYH",
+      "short": "EN_IYH",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIYL",
+      "short": "EN_IYL",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpI",
+      "short": "EN_I",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpR",
+      "short": "EN_R",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemBC",
+      "short": "EN_MEMBC",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemDE",
+      "short": "EN_MEMDE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIndexIX",
+      "short": "EN_IIX",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIndexIY",
+      "short": "EN_IIY",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemAbs",
+      "short": "EN_MABS",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpImm8",
+      "short": "EN_IMM8",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpImm16",
+      "short": "EN_IMM16",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpPortC",
+      "short": "EN_PORTC",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpRel8",
+      "short": "EN_REL8",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpZero",
+      "short": "EN_ZERO",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemIX",
+      "short": "EN_MEMIX",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemIY",
+      "short": "EN_MEMIY",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpMemSP",
+      "short": "EN_MEMSP",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpAFPrime",
+      "short": "EN_APRIM",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpNZ",
+      "short": "EN_NZ",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpZ",
+      "short": "EN_Z",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpNC",
+      "short": "EN_NC",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpCC",
+      "short": "EN_CC",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpPO",
+      "short": "EN_PO",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpPE",
+      "short": "EN_PE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpP",
+      "short": "EN_P",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpM",
+      "short": "EN_M",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpBit0",
+      "short": "EN_BIT0",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpBit7",
+      "short": "EN_BIT7",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpRst0",
+      "short": "EN_RST0",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpRst56",
+      "short": "EN_RST56",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIm0",
+      "short": "EN_IM0",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpIm2",
+      "short": "EN_IM2",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpNone",
+      "short": "EN_NONE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomMNop",
+      "short": "AT_MNOP",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMRet",
+      "short": "AT_MRET",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMEx",
+      "short": "AT_MEX",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMIm",
+      "short": "AT_MIM",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMRst",
+      "short": "AT_MRST",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMInc",
+      "short": "AT_MINC",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMDec",
+      "short": "AT_MDEC",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMPush",
+      "short": "AT_MPUSH",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMPop",
+      "short": "AT_MPOP",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMLd",
+      "short": "AT_MLD",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMIn",
+      "short": "AT_MIN",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMOut",
+      "short": "AT_MOUT",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMBit",
+      "short": "AT_MBIT",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMRes",
+      "short": "AT_MRES",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMSet",
+      "short": "AT_MSET",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMRlc",
+      "short": "AT_MRLC",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMSrl",
+      "short": "AT_MSRL",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMAdd",
+      "short": "AT_MADD",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMAdc",
+      "short": "AT_MADC",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMSub",
+      "short": "AT_MSUB",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMSbc",
+      "short": "AT_MSBC",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMAnd",
+      "short": "AT_MAND",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMXor",
+      "short": "AT_MXOR",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMOr",
+      "short": "AT_MOR",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMCp",
+      "short": "AT_MCP",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMJp",
+      "short": "AT_MJP",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMCall",
+      "short": "AT_MCALL",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMJr",
+      "short": "AT_MJR",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMDjnz",
+      "short": "AT_MDJNZ",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomMLast",
+      "short": "AT_MLAST",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomEncoderCoreStart",
+      "short": "EN_COREB",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderCodeStart",
+      "short": "EN_CODEB",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRadix40CodeStart",
+      "short": "EN_R4CBE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRadix40Pack",
+      "short": "EN_R40PK",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomPackValidateLoop",
+      "short": ".PVLOOP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "_AtomPackFirstShort",
+      "short": ".PFSHORT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "_AtomPackFirstReady",
+      "short": ".PFREADY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "_AtomPackSecondShort",
+      "short": ".PSSHORT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "_AtomPackSecondReady",
+      "short": ".PSREADY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "_AtomPackValidateFailed",
+      "short": ".PVFAILED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "_AtomPackInvalid",
+      "short": ".PINVALID",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40PACK"
+    },
+    {
+      "original": "AtomPackGroup",
+      "short": "EN_PGROU",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomPackGroupLoop",
+      "short": ".PGLOOP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPACKGROUP"
+    },
+    {
+      "original": "_AtomPackGroupPadding",
+      "short": ".PGPADDIN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPACKGROUP"
+    },
+    {
+      "original": "_AtomPackGroupAppend",
+      "short": ".PGAPPEND",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPACKGROUP"
+    },
+    {
+      "original": "AtomMultiplyAdd40",
+      "short": "AT_MA40",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "_AtomMultiplyAdd40NoCarry",
+      "short": ".MA4NCARR",
+      "private": true,
+      "module": "AT",
+      "scope": "ATOMMULTIPLYADD40"
+    },
+    {
+      "original": "AtomRadix40Character",
+      "short": "EN_R40CH",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomRadix40Upper",
+      "short": ".R4UPPER",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40CHARACTER"
+    },
+    {
+      "original": "_AtomRadix40Digit",
+      "short": ".R4DIGIT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40CHARACTER"
+    },
+    {
+      "original": "_AtomRadix40Underscore",
+      "short": ".R4UNDERS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40CHARACTER"
+    },
+    {
+      "original": "_AtomRadix40Bad",
+      "short": ".R4BAD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRADIX40CHARACTER"
+    },
+    {
+      "original": "AtomRadix40CodeEnd",
+      "short": "EN_R4CEN",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRecognitionCodeStart",
+      "short": "EN_RCBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRecognizeMnemonic",
+      "short": "EN_RECOG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomRecognizeLoop",
+      "short": ".RLOOP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRECOGNIZEMNEMONIC"
+    },
+    {
+      "original": "_AtomRecognizeBefore",
+      "short": ".RBEF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRECOGNIZEMNEMONIC"
+    },
+    {
+      "original": "_AtomRecognizeAfter",
+      "short": ".RAFT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRECOGNIZEMNEMONIC"
+    },
+    {
+      "original": "_AtomRecognizeNotFound",
+      "short": ".RNFOUND",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMRECOGNIZEMNEMONIC"
+    },
+    {
+      "original": "AtomRecognitionCodeEnd",
+      "short": "EN_RCEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomValidationCodeStart",
+      "short": "EN_VCBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomFormLength",
+      "short": "EN_LEN",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomValidateForm",
+      "short": "EN_VFORM",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomValidateCore",
+      "short": ".VCORE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateRet",
+      "short": ".VRET",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLength1NoOperands",
+      "short": ".VL1NOPER",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateEx",
+      "short": ".VEX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateExAf",
+      "short": ".VEAF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateExDe",
+      "short": ".VEDE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateIm",
+      "short": ".VIM",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateRst",
+      "short": ".VRST",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateIncDec",
+      "short": ".VIDEC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateStack",
+      "short": ".VSTACK",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "AtomLdValidationStart",
+      "short": "EN_LVBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomValidateLd",
+      "short": ".VLD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdReg8",
+      "short": ".VLR8",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdReg8Absolute",
+      "short": ".VLR8ABSO",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdReg8Accumulator",
+      "short": ".VLR8ACCU",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdReg8Accumulator2",
+      "short": ".VLR8A2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdHalf",
+      "short": ".VLHALF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdHalfFamily",
+      "short": ".VLHFAMIL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdReg16",
+      "short": ".VLR16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdReg16Absolute",
+      "short": ".VLR1ABSO",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdSp",
+      "short": ".VLSP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdLegacyHl",
+      "short": ".VLLHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdLegacyBc",
+      "short": ".VLLBC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdIndex16",
+      "short": ".VLI16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdSpecial",
+      "short": ".VLSPECIA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdMemAbs",
+      "short": ".VLMABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdMemAbsIndex",
+      "short": ".VLMAINDE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdMemPair",
+      "short": ".VLMPAIR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdMemHL",
+      "short": ".VLMHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLdIndexed",
+      "short": ".VLINDEXE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "AtomLdValidationEnd",
+      "short": "EN_LVEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomValidateIn",
+      "short": ".VIN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateInOne",
+      "short": ".VIONE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateOut",
+      "short": ".VOUT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateOutC",
+      "short": ".VOC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateBit",
+      "short": ".VBIT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateBitIndexedNoDestination",
+      "short": ".VBINDST",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateBitPlain",
+      "short": ".VBPLAIN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateRotate",
+      "short": ".VROTATE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateRotatePlain",
+      "short": ".VRPLAIN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAlu",
+      "short": ".VALU",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAlu16",
+      "short": ".VA16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAdcSbc16",
+      "short": ".VAS16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAdd16",
+      "short": ".VA161",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAddIndex",
+      "short": ".VAINDEX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAddHl",
+      "short": ".VAHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateJp",
+      "short": ".VJP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateJpConditional",
+      "short": ".VJCONDIT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateCall",
+      "short": ".VCALL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateCallConditional",
+      "short": ".VCCONDIT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateJr",
+      "short": ".VJR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateJrConditional",
+      "short": ".VJCONDI1",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateDjnz",
+      "short": ".VDJNZ",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLength1",
+      "short": ".VL1",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLength2",
+      "short": ".VL2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLength3",
+      "short": ".VL3",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateLength4",
+      "short": ".VL4",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "AtomInvalid",
+      "short": "AT_INVAL",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomRequireNoOperands",
+      "short": "AT_RNOPE",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomRequireOneOperand",
+      "short": "AT_ROOP",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomRequireTwoOperands",
+      "short": "AT_RTOPE",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomRequireBad",
+      "short": "AT_RBAD",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomIsReg8",
+      "short": "EN_IR8",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomIsReg16",
+      "short": "EN_IR16",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomIsHalfIndex",
+      "short": "EN_IHIND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomIsIndexed",
+      "short": "EN_IINDE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomIsCondition",
+      "short": "EN_ICOND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomIsRelativeCondition",
+      "short": "EN_IRCON",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomIsBitIndex",
+      "short": "EN_IBIND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomPredicateNo",
+      "short": "AT_PNO",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomPredicateYes",
+      "short": "AT_PYES",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomValidationCodeEnd",
+      "short": "EN_VCEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRuleEncodingCodeStart",
+      "short": "EN_RECBE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncode",
+      "short": "EN_NAME",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncodeCore",
+      "short": "EN_CORE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomEncodeCoreOpcode",
+      "short": ".COPCODE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeRet",
+      "short": ".RET",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeRetPlain",
+      "short": ".RETPLAIN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeEx",
+      "short": ".EX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeExAf",
+      "short": ".EXAF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeExDe",
+      "short": ".EXDE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeExSpHl",
+      "short": ".EXSPHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIm",
+      "short": ".IM",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeRst",
+      "short": ".RST",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDec",
+      "short": ".INCDEC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecRegister",
+      "short": ".IDREGIST",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecPair",
+      "short": ".IDPAIR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecPairBaseReady",
+      "short": ".IDPBREAD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecIndexPair",
+      "short": ".IDIPAIR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecIndexPairReady",
+      "short": ".IDIPREAD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecHalf",
+      "short": ".IDHALF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeIncDecMemHl",
+      "short": ".IDMHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeStack",
+      "short": ".STACK",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeStackBase",
+      "short": ".SBASE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeStackIndex",
+      "short": ".SINDEX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "AtomLdEncodingStart",
+      "short": "EN_LEBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomEncodeLd",
+      "short": ".LD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdReg8",
+      "short": ".LDREG8",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdRegReg",
+      "short": ".LDREGREG",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdRegImm",
+      "short": ".LDREGIMM",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdRegMemHl",
+      "short": ".LRMHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdAAbs",
+      "short": ".LDAABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdAMemPair",
+      "short": ".LAMPAIR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdASpecial",
+      "short": ".LASPECIA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdASpecialReady",
+      "short": ".LASREADY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdRegIndexed",
+      "short": ".LRINDEXE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdRegHalf",
+      "short": ".LRHALF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdHalf",
+      "short": ".LDHALF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdReg16",
+      "short": ".LDREG16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdLegacy",
+      "short": ".LDLEGACY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdReg16Imm",
+      "short": ".LR1IMM",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdReg16Abs",
+      "short": ".LR1ABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdHlAbs",
+      "short": ".LDHLABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdSp",
+      "short": ".LDSP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdIndex16",
+      "short": ".LI16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdIndex16Opcode",
+      "short": ".LI1OPCOD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdSpecialTarget",
+      "short": ".LSTARGET",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdSpecialTargetReady",
+      "short": ".LSTREADY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdMemAbs",
+      "short": ".LDMEMABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdAbsA",
+      "short": ".LDABSA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdAbsHl",
+      "short": ".LDABSHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdAbsIndex",
+      "short": ".LAINDEX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdMemPair",
+      "short": ".LMPAIR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdMemHl",
+      "short": ".LDMEMHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdMemHlImm",
+      "short": ".LMHIMM",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdIndexed",
+      "short": ".LINDEXED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdIndexedImm",
+      "short": ".LIIMM",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "AtomLdEncodingEnd",
+      "short": "EN_LEEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomEncodeIn",
+      "short": ".IN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeInBare",
+      "short": ".INBARE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeInImmediate",
+      "short": ".IIMMEDIA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeInEd",
+      "short": ".INED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeOut",
+      "short": ".OUT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeOutImmediate",
+      "short": ".OIMMEDIA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeBit",
+      "short": ".BIT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeBitIndexed",
+      "short": ".BINDEXED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeBitIndexedCode",
+      "short": ".BIC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeRotate",
+      "short": ".ROTATE",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeRotateIndexed",
+      "short": ".RINDEXED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeRotateIndexedCode",
+      "short": ".RIC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAlu",
+      "short": ".ALU",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAluImmediate",
+      "short": ".AIMMEDIA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAluHalf",
+      "short": ".ALUHALF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAluIndexed",
+      "short": ".AINDEXED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAlu16",
+      "short": ".ALU16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAdcSbc16Ready",
+      "short": ".AS1READY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAdd16",
+      "short": ".ADD16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAdd16Self",
+      "short": ".A1SELF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeAdd16SourceReady",
+      "short": ".A1SREADY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeJp",
+      "short": ".JP",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeJpConditional",
+      "short": ".JCONDITI",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeJpHl",
+      "short": ".JPHL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeJpIndex",
+      "short": ".JPINDEX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeCall",
+      "short": ".CALL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeCallConditional",
+      "short": ".CCONDITI",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeJr",
+      "short": ".JR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeJrConditional",
+      "short": ".JCONDIT1",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeDjnz",
+      "short": ".DJNZ",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomStoreEncoded1",
+      "short": ".SE1",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncoded1",
+      "short": ".D1",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncoded2",
+      "short": ".D2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncoded3",
+      "short": ".D3",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncoded4",
+      "short": ".D4",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "AtomCopyValue0ToScratch1",
+      "short": "AT_CV0TS",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomCopyValue0ToScratch2",
+      "short": "AT_CV0T1",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomCopyValue1ToScratch1",
+      "short": "AT_CV1TS",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomCopyValue1ToScratch2",
+      "short": "AT_CV1T1",
+      "private": false,
+      "module": "AT"
+    },
+    {
+      "original": "AtomPrefixFromOperand",
+      "short": "EN_PFOP",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomPrefixOrdinary",
+      "short": ".PORDINAR",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPREFIXFROMOPERAND"
+    },
+    {
+      "original": "_AtomPrefixIX",
+      "short": ".PREFIXIX",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPREFIXFROMOPERAND"
+    },
+    {
+      "original": "_AtomPrefixIY",
+      "short": ".PREFIXIY",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPREFIXFROMOPERAND"
+    },
+    {
+      "original": "AtomRuleEncodingCodeEnd",
+      "short": "EN_RECEN",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderCodeEnd",
+      "short": "EN_CODEE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderImmutableStart",
+      "short": "EN_IBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpcodeTableStart",
+      "short": "EN_CTBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomCoreOpcodes",
+      "short": "EN_COPCO",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomImOpcodes",
+      "short": "EN_IOPCO",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRotateBases",
+      "short": "EN_RBASE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomAluOrder",
+      "short": "EN_AORDE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomOpcodeTableEnd",
+      "short": "EN_CTEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomMnemonicCount",
+      "short": "EN_CNT",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomMnemonicTable",
+      "short": "EN_TABLE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomMnemonicTableEnd",
+      "short": "EN_TEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderImmutableEnd",
+      "short": "EN_IEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderCoreEnd",
+      "short": "EN_COREE",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderWorkspaceStart",
+      "short": "EN_WBEG",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomScratch",
+      "short": "EN_SCRAT",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomSearchLow",
+      "short": "EN_SLO",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomSearchHigh",
+      "short": "EN_SHI",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomSearchMid",
+      "short": "EN_SMID",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomEncoderWorkspaceEnd",
+      "short": "EN_WEND",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomSymbolCodeStart",
+      "short": "SY_CBEG",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolRecordBytes",
+      "short": "SY_RECB",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingRecordBytes",
+      "short": "SY_RECB1",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingKindMask",
+      "short": "SY_KMASK",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingPartMask",
+      "short": "SY_PMASK",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingDiagnosticAnchor",
+      "short": "SY_DANCH",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolNameBytes",
+      "short": "SY_NAMEB",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValueLow",
+      "short": "SY_VALLO",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValueHigh",
+      "short": "SY_VALHI",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolNameHighMask",
+      "short": "SY_NHMAS",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolFlagSigned",
+      "short": "SY_FSIGN",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolFlagDefined",
+      "short": "SY_FDEFI",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolFlagPrivate",
+      "short": "SY_FPRIV",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusOk",
+      "short": "SY_SOK",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusNotFound",
+      "short": "SY_SNFOU",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusDuplicate",
+      "short": "SY_SDUPL",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusSymbolCapacity",
+      "short": "SY_SSCAP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusPrivateNoScope",
+      "short": "SY_SPNSC",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusUndefinedPrivate",
+      "short": "SY_SUPRI",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusPendingCapacity",
+      "short": "SY_SPCAP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusPendingInvariant",
+      "short": "SY_SPINV",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusAlreadyDefined",
+      "short": "SY_SADEF",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomStatusPartCapacity",
+      "short": "SY_SPCA1",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolReset",
+      "short": "SY_RESET",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingReset",
+      "short": "SY_RESE1",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPackSymbol",
+      "short": "EN_PSYM",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "_AtomPackSymbolGlobal",
+      "short": ".PSGLBL",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPACKSYMBOL"
+    },
+    {
+      "original": "_AtomPackSymbolInvalid",
+      "short": ".PSINVALI",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMPACKSYMBOL"
+    },
+    {
+      "original": "AtomSymbolFind",
+      "short": "SY_FIND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomSymbolFindGlobal",
+      "short": ".FINDGLBL",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLFIND"
+    },
+    {
+      "original": "_AtomSymbolFindLoop",
+      "short": ".FINDLOOP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLFIND"
+    },
+    {
+      "original": "_AtomSymbolFound",
+      "short": ".FOUND",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLFIND"
+    },
+    {
+      "original": "_AtomSymbolNotFound",
+      "short": ".NOTFOUND",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLFIND"
+    },
+    {
+      "original": "_AtomSymbolPrivateNoScope",
+      "short": ".PNSCOPE",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLFIND"
+    },
+    {
+      "original": "AtomSymbolKeyEquals",
+      "short": "SY_KEQUA",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomSymbolKeyEqualsLoop",
+      "short": ".KELOOP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLKEYEQUALS"
+    },
+    {
+      "original": "AtomSymbolDeclare",
+      "short": "SY_DECL",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomSymbolDuplicate",
+      "short": ".DUPLICAT",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLDECLARE"
+    },
+    {
+      "original": "_AtomSymbolDeclareMissing",
+      "short": ".DMISSING",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLDECLARE"
+    },
+    {
+      "original": "_AtomSymbolDeclareInsert",
+      "short": ".DINSERT",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLDECLARE"
+    },
+    {
+      "original": "AtomSymbolReference",
+      "short": "SY_REF",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomSymbolReferenceMissing",
+      "short": ".RMISSING",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLREFERENCE"
+    },
+    {
+      "original": "_AtomSymbolReferenceInsert",
+      "short": ".RINSERT",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLREFERENCE"
+    },
+    {
+      "original": "AtomSymbolInsert",
+      "short": "SY_INSER",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomSymbolHasCapacity",
+      "short": ".HASCAP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLINSERT"
+    },
+    {
+      "original": "_AtomSymbolInsertPrivate",
+      "short": ".IPRIVATE",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLINSERT"
+    },
+    {
+      "original": "_AtomSymbolCommitInsert",
+      "short": ".CINSERT",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLINSERT"
+    },
+    {
+      "original": "_AtomSymbolNoCapacity",
+      "short": ".NOCAP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMSYMBOLINSERT"
+    },
+    {
+      "original": "AtomSymbolAdvanceScope",
+      "short": "SY_ASCOP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolCommitScope",
+      "short": "SY_CSCOP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolDeclareGlobalLabel",
+      "short": "SY_DGLAB",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalLabelMissing",
+      "short": "SY_GLMIS",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalLabelValidate",
+      "short": "SY_GLVAL",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalLabelCommit",
+      "short": "SY_GLCMT",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalLabelPrivate",
+      "short": "SY_GLPRI",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalLabelDuplicate",
+      "short": "SY_GLDUP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalLabelCapacity",
+      "short": "SY_GLCAP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidateScope",
+      "short": "SY_VSCOP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidateScopeLoop",
+      "short": "SY_VSLOO",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidatePending",
+      "short": "SY_VPEND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidatePendingLoop",
+      "short": "SY_VPLOO",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidateOk",
+      "short": "SY_VOK",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidateUndefined",
+      "short": "SY_VUNDE",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolValidateInvariant",
+      "short": "SY_VINVA",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingAdd",
+      "short": "SY_ADD",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomPendingHasCapacity",
+      "short": ".HASCAP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGADD"
+    },
+    {
+      "original": "_AtomPendingNoCapacity",
+      "short": ".NOCAP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGADD"
+    },
+    {
+      "original": "_AtomPendingAlreadyDefined",
+      "short": ".ADEFINED",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGADD"
+    },
+    {
+      "original": "AtomPendingCheckCapacity",
+      "short": "SY_CCAP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingCheckNoCapacity",
+      "short": "SY_CNCAP",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingPeek",
+      "short": "SY_PEEK",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomPendingPeekLoop",
+      "short": ".PEEKLOOP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGPEEK"
+    },
+    {
+      "original": "_AtomPendingPeekFound",
+      "short": ".PFOUND",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGPEEK"
+    },
+    {
+      "original": "_AtomPendingPeekNotFound",
+      "short": ".PNFOUND",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGPEEK"
+    },
+    {
+      "original": "AtomPendingTake",
+      "short": "SY_TAKE",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "_AtomPendingTakeLoop",
+      "short": ".TAKELOOP",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGTAKE"
+    },
+    {
+      "original": "_AtomPendingTakeFound",
+      "short": ".TFOUND",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGTAKE"
+    },
+    {
+      "original": "_AtomPendingTakeReturn",
+      "short": ".TRETURN",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGTAKE"
+    },
+    {
+      "original": "_AtomPendingTakeNotFound",
+      "short": ".TNFOUND",
+      "private": true,
+      "module": "SY",
+      "scope": "ATOMPENDINGTAKE"
+    },
+    {
+      "original": "AtomSymbolCodeEnd",
+      "short": "SY_CEND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolWorkspaceStart",
+      "short": "SY_WBEG",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolArenaBase",
+      "short": "SY_ABASE",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolArenaEnd",
+      "short": "SY_AEND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolGlobalEnd",
+      "short": "SY_GEND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolLocalBegin",
+      "short": "SY_LBEG",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolScopeActive",
+      "short": "SY_SACTI",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolOperationKey",
+      "short": "SY_OKEY",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolOperationValue",
+      "short": "SY_OVAL",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolOperationFlags",
+      "short": "SY_OFLAG",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolPackDestination",
+      "short": "SY_PDST",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingArenaBase",
+      "short": "SY_ABAS1",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingArenaEnd",
+      "short": "SY_AEND1",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingNext",
+      "short": "SY_NEXT",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingOperationSymbol",
+      "short": "SY_OSYM",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingOperationPatch",
+      "short": "SY_OPATC",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingOperationKind",
+      "short": "SY_OKIND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomPendingOperationAux",
+      "short": "SY_OAUX",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomSymbolWorkspaceEnd",
+      "short": "SY_WEND",
+      "private": false,
+      "module": "SY"
+    },
+    {
+      "original": "AtomTokenizerCodeStart",
+      "short": "TK_CBEG",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenEof",
+      "short": "TK_EOF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenEol",
+      "short": "TK_EOL",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenName",
+      "short": "TK_NAME",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenDirective",
+      "short": "TK_DIR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenNumber",
+      "short": "TK_NUMBE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenString",
+      "short": "TK_STRIN",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenComma",
+      "short": "TK_COMMA",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenColon",
+      "short": "TK_COLON",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenLeftParen",
+      "short": "TK_LPARE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenRightParen",
+      "short": "TK_RPARE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPlus",
+      "short": "TK_PLUS",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenMinus",
+      "short": "TK_MINUS",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStar",
+      "short": "TK_STAR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSlash",
+      "short": "TK_SLASH",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPercent",
+      "short": "TK_PERCE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenAmpersand",
+      "short": "TK_AMPER",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenCaret",
+      "short": "TK_CARET",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPipe",
+      "short": "TK_PIPE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenTilde",
+      "short": "TK_TILDE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenApostrophe",
+      "short": "TK_APOST",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenLeftShift",
+      "short": "TK_LSHIF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenRightShift",
+      "short": "TK_RSHIF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenCurrent",
+      "short": "TK_CUR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusInvalidByte",
+      "short": "TK_SIB",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusNameTooLong",
+      "short": "TK_SNTLO",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusInvalidNumber",
+      "short": "TK_SINUM",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusNumberOverflow",
+      "short": "TK_SNOVE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusUnterminatedString",
+      "short": "TK_SUSTR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusInvalidEscape",
+      "short": "TK_SIESC",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusStringTooLong",
+      "short": "TK_SSTLO",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusBadSourceRange",
+      "short": "TK_SBSRA",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusUnprocessedDirective",
+      "short": "TK_SUDIR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusUnterminatedCharacter",
+      "short": "TK_SUCHA",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenStatusInvalidCharacter",
+      "short": "TK_SICHA",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenKindOffset",
+      "short": "TK_KOFF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPartOffset",
+      "short": "TK_POFF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSourceOffset",
+      "short": "TK_SOFF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenLexemeOffset",
+      "short": "TK_LOFF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenLengthOffset",
+      "short": "TK_LOFF1",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenValueOffset",
+      "short": "TK_VOFF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenRecordBytes",
+      "short": "TK_RECB",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenizerReset",
+      "short": "TK_RESET",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenRestoreBadSourceRange",
+      "short": ".RBSRANGE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERRESET"
+    },
+    {
+      "original": "_AtomTokenBadSourceRange",
+      "short": ".BSRANGE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERRESET"
+    },
+    {
+      "original": "AtomTokenSourcePeek",
+      "short": "TK_SPEEK",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenSourcePeekByte",
+      "short": ".SRCPEEKB",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSOURCEPEEK"
+    },
+    {
+      "original": "_AtomTokenSourcePeekEof",
+      "short": ".SPEOF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSOURCEPEEK"
+    },
+    {
+      "original": "AtomTokenSourceTake",
+      "short": "TK_STAKE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenSourceTakeEof",
+      "short": ".STEOF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSOURCETAKE"
+    },
+    {
+      "original": "AtomTokenStart",
+      "short": "TK_BEG",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenCommit",
+      "short": "TK_CMT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenFinish",
+      "short": "TK_FIN",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenFail",
+      "short": "TK_FAIL",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenIsLetter",
+      "short": "TK_ILETT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenIsNameStart",
+      "short": "TK_INBEG",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenIsNameByte",
+      "short": "TK_INB",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenClassNo",
+      "short": "TK_CNO",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenClassYes",
+      "short": "TK_CYES",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenHexDigit",
+      "short": "TK_HDIGI",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenHexDecimal",
+      "short": ".HDECIMAL",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENHEXDIGIT"
+    },
+    {
+      "original": "_AtomTokenHexNo",
+      "short": ".HEXNO",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENHEXDIGIT"
+    },
+    {
+      "original": "AtomTokenScanName",
+      "short": "TK_SNAME",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenScanNameGlobal",
+      "short": ".SNGLBL",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANNAME"
+    },
+    {
+      "original": "_AtomTokenScanNameLoop",
+      "short": ".SNLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANNAME"
+    },
+    {
+      "original": "_AtomTokenScanNameDone",
+      "short": ".SNDONE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANNAME"
+    },
+    {
+      "original": "AtomTokenNameTooLong",
+      "short": "TK_NTLON",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenScanDigitLed",
+      "short": "TK_SDLED",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedLook",
+      "short": ".SDLLOOK",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedByte",
+      "short": ".SDLB",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedSelected",
+      "short": ".SDLSELEC",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedHex",
+      "short": ".SDLHEX",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedSuffix",
+      "short": ".SDLSUFFI",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedPrepare",
+      "short": ".SDLPREPA",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedHexLoop",
+      "short": ".SDLHLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedBinary",
+      "short": ".SDLBINAR",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedDecimal",
+      "short": ".SDLDECIM",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedDecimalAccumulate",
+      "short": ".SDLDACCU",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "_AtomTokenScanDigitLedFinish",
+      "short": ".SDLFIN",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANDIGITLED"
+    },
+    {
+      "original": "AtomTokenScanBased",
+      "short": "TK_SBASE",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenScanBasedLoop",
+      "short": ".SBLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBinaryDigit",
+      "short": ".SBDIGIT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBasedDigit",
+      "short": ".SBDIGIT1",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBinaryShift",
+      "short": ".SBSHIFT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBasedMerge",
+      "short": ".SBMERGE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBasedDone",
+      "short": ".SBDONE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBasedEof",
+      "short": ".SBEOF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "_AtomTokenScanBasedFinish",
+      "short": ".SBFIN",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "AtomTokenInvalidNumber",
+      "short": "TK_INUMB",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenNumberOverflow",
+      "short": "TK_NOVER",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenScanString",
+      "short": "TK_SSTRI",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenScanStringLoop",
+      "short": ".SSLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANSTRING"
+    },
+    {
+      "original": "_AtomTokenScanEscapeLoop",
+      "short": ".SELOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANSTRING"
+    },
+    {
+      "original": "_AtomTokenScanHexEscape",
+      "short": ".SHESCAPE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANSTRING"
+    },
+    {
+      "original": "_AtomTokenScanStringDone",
+      "short": ".SSDONE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANSTRING"
+    },
+    {
+      "original": "AtomTokenStringTake",
+      "short": "TK_STAK1",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenStringTakeEof",
+      "short": ".STEOF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSTRINGTAKE"
+    },
+    {
+      "original": "AtomTokenInvalidEscape",
+      "short": "TK_IESCA",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenUnterminatedString",
+      "short": "TK_USTRI",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenUnterminatedCharacter",
+      "short": "TK_UCHAR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenInvalidCharacter",
+      "short": "TK_ICHAR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenInvalidByte",
+      "short": "TK_IB",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSkipComment",
+      "short": "TK_SCOMM",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenSkipCommentLoop",
+      "short": ".SCLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSKIPCOMMENT"
+    },
+    {
+      "original": "AtomTokenizerNext",
+      "short": "TK_NEXT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenizerNextLoop",
+      "short": ".NEXTLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerTryName",
+      "short": ".TRYNAME",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerPunctuationLoop",
+      "short": ".PLOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerPunctuation",
+      "short": ".PUNCTUAT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerSkipByte",
+      "short": ".SKIPB",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerComment",
+      "short": ".COMMENT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerDollar",
+      "short": ".DOLLAR",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerCurrentLocation",
+      "short": ".CLOCATIO",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerDollarNumber",
+      "short": ".DNUMBER",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerPercent",
+      "short": ".PERCENT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerPercentToken",
+      "short": ".PTOK",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerPercentNumber",
+      "short": ".PNUMBER",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerLeftShift",
+      "short": ".LSHIFT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerRightShift",
+      "short": ".RSHIFT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerShift",
+      "short": ".SHIFT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerLf",
+      "short": ".LF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerCrLf",
+      "short": ".CRLF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerFinishLine",
+      "short": ".FINLINE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerAtEof",
+      "short": ".ATEOF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerEmitEof",
+      "short": ".EMITEOF",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerApostrophe",
+      "short": ".APOSTROP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "AtomTokenScanCharacter",
+      "short": "TK_SCHAR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "_AtomTokenScanCharacterEscape",
+      "short": ".SCESCAPE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANCHARACTER"
+    },
+    {
+      "original": "_AtomTokenScanCharacterEscapeLoop",
+      "short": ".SCELOOP",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANCHARACTER"
+    },
+    {
+      "original": "_AtomTokenScanCharacterEscapeFound",
+      "short": ".SCEFOUND",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANCHARACTER"
+    },
+    {
+      "original": "_AtomTokenScanCharacterHex",
+      "short": ".SCHEX",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANCHARACTER"
+    },
+    {
+      "original": "_AtomTokenScanCharacterClose",
+      "short": ".SCCLOSE",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENSCANCHARACTER"
+    },
+    {
+      "original": "AtomTokenizerRuleCodeEnd",
+      "short": "TK_RCEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenizerImmutableStart",
+      "short": "TK_IBEG",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPunctuationTable",
+      "short": "TK_PTABL",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPunctuationEnd",
+      "short": "TK_PEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPunctuationCount",
+      "short": "TK_PCNT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenEscapeTable",
+      "short": "TK_ETABL",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenEscapeCount",
+      "short": "TK_ECNT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenizerImmutableEnd",
+      "short": "TK_IEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenizerCodeEnd",
+      "short": "TK_CEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenizerWorkspaceStart",
+      "short": "TK_WBEG",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSourceCursor",
+      "short": "TK_SCURS",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSourceEnd",
+      "short": "TK_SEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSourceOffsetState",
+      "short": "TK_SOSTA",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenSourcePart",
+      "short": "TK_SPART",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenLineHasToken",
+      "short": "TK_LHTOK",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenEofPending",
+      "short": "TK_EPEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenScanPointer",
+      "short": "TK_SPTR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenScanOffset",
+      "short": "TK_SOFF1",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenScanLength",
+      "short": "TK_SLEN",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenScanValue",
+      "short": "TK_SVAL",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenDigitsSeen",
+      "short": "TK_DSEEN",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenNameLimit",
+      "short": "TK_NLIM",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPendingKind",
+      "short": "TK_PKIND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenErrorStatus",
+      "short": "TK_ESTAT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenErrorPart",
+      "short": "TK_EPART",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenErrorOffset",
+      "short": "TK_EOFF",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenRecord",
+      "short": "TK_REC",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenizerWorkspaceEnd",
+      "short": "TK_WEND",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomExpressionCodeStart",
+      "short": "EX_CBEG",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionResolved",
+      "short": "EX_RESOL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionUnresolved",
+      "short": "EX_UNRES",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusLexical",
+      "short": "EX_SLEXI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusExpectedPrimary",
+      "short": "EX_SEPRI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusExpectedRight",
+      "short": "EX_SERIG",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusDivideZero",
+      "short": "EX_SDZER",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusRange",
+      "short": "EX_SRANG",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusForwardForm",
+      "short": "EX_SFFOR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusCapacity",
+      "short": "EX_SCAP",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusSymbol",
+      "short": "EX_SSYM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionStatusInternal",
+      "short": "EX_SINT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpOr",
+      "short": "EX_OPOR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpXor",
+      "short": "EX_OPXOR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpAnd",
+      "short": "EX_OPAND",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpLeft",
+      "short": "EX_OLEFT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpRight",
+      "short": "EX_ORIGH",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpAdd",
+      "short": "EX_OPADD",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpSubtract",
+      "short": "EX_OSUBT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpMultiply",
+      "short": "EX_OMULT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpDivide",
+      "short": "EX_ODIVI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOpRemainder",
+      "short": "EX_OREMA",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionValueBytes",
+      "short": "EX_VALB",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionValueCapacity",
+      "short": "EX_VCAP",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorBytes",
+      "short": "EX_OPERB",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorCapacity",
+      "short": "EX_OCAP",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMarkerLeftParen",
+      "short": "EX_MLPAR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionUnaryPlus",
+      "short": "EX_UPLUS",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionUnaryMinus",
+      "short": "EX_UMINU",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionUnaryTilde",
+      "short": "EX_UTILD",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionUnaryLow",
+      "short": "EX_ULO",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionUnaryHigh",
+      "short": "EX_UHI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionForwardPlain",
+      "short": "EX_FPLAI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionForwardLow",
+      "short": "EX_FLO",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionForwardHigh",
+      "short": "EX_FHI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionParse",
+      "short": "EX_PARSE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionParseDeferred",
+      "short": "EX_PDEFR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionParseCommon",
+      "short": "EX_PCOMM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionParseLoop",
+      "short": ".PLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSECOMMON"
+    },
+    {
+      "original": "_AtomExpressionParseOperator",
+      "short": ".POPER",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSECOMMON"
+    },
+    {
+      "original": "_AtomExpressionFinishUnresolved",
+      "short": ".FUNRESOL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSECOMMON"
+    },
+    {
+      "original": "_AtomExpressionFinishDeferred",
+      "short": ".FINDEFR",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSECOMMON"
+    },
+    {
+      "original": "AtomExpressionSymbolFailure",
+      "short": "EX_SFAIL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionQueue",
+      "short": "EX_QUEUE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionClassifyFunction",
+      "short": "EX_CFUNC",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionClassifyLow",
+      "short": ".CLSLO",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
+    },
+    {
+      "original": "_AtomExpressionClassifyFunctionPack",
+      "short": ".CFPACK",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
+    },
+    {
+      "original": "_AtomExpressionFunctionLookahead",
+      "short": ".FLOOKAHE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
+    },
+    {
+      "original": "_AtomExpressionFunctionLookaheadByte",
+      "short": ".FLB",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
+    },
+    {
+      "original": "_AtomExpressionFunctionLookaheadSpace",
+      "short": ".FLSPACE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
+    },
+    {
+      "original": "_AtomExpressionNotFunction",
+      "short": ".NFUNCTIO",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
+    },
+    {
+      "original": "AtomExpressionParseOperand",
+      "short": "EX_POP",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionPushUnary",
+      "short": ".PUNARY",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPushParen",
+      "short": ".PPAREN",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPrimaryNumber",
+      "short": ".PNUMBER",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPrimaryCurrent",
+      "short": ".PCUR",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPrimaryName",
+      "short": ".PNAME",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPrimaryFinish",
+      "short": ".PFIN",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPrimaryPublish",
+      "short": ".PPUBLISH",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "_AtomExpressionPushFunction",
+      "short": ".PFUNCTIO",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
+    },
+    {
+      "original": "AtomExpressionParseOperator",
+      "short": "EX_POPER",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionRightParen",
+      "short": ".RPAREN",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionDelimiter",
+      "short": ".DELIMITE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionDelimiterDone",
+      "short": ".DDONE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERATOR"
+    },
+    {
+      "original": "AtomExpressionPrimaryName",
+      "short": "EX_PNAME",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionPrimaryPositiveSymbol",
+      "short": ".PPSYM",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPRIMARYNAME"
+    },
+    {
+      "original": "_AtomExpressionPrimaryMissing",
+      "short": ".PMISSING",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPRIMARYNAME"
+    },
+    {
+      "original": "_AtomExpressionPrimaryUnresolved",
+      "short": ".PUNRESOL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPRIMARYNAME"
+    },
+    {
+      "original": "AtomExpressionClassifyOperator",
+      "short": "EX_COPER",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionOperatorOr",
+      "short": ".OPEROR",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorXor",
+      "short": ".OPERXOR",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorAnd",
+      "short": ".OPERAND",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorLeft",
+      "short": ".OPERLEFT",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorRight",
+      "short": ".ORIGHT",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorAdd",
+      "short": ".OPERADD",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorSubtract",
+      "short": ".OSUBTRAC",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorMultiply",
+      "short": ".OMULTIPL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorDivide",
+      "short": ".ODIVIDE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorRemainder",
+      "short": ".OREMAIND",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "_AtomExpressionOperatorStore",
+      "short": ".OSTORE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONCLASSIFYOPERATOR"
+    },
+    {
+      "original": "AtomExpressionCaptureOperatorPosition",
+      "short": "EX_COPOS",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPushValue",
+      "short": "EX_PVAL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPopValue",
+      "short": "EX_PVAL1",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPopLeftValue",
+      "short": "EX_PLVAL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionValueAddress",
+      "short": "EX_VADR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPushOperator",
+      "short": "EX_POPE1",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPopOperator",
+      "short": "EX_POPE2",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorAddress",
+      "short": "EX_OADR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPeekOperator",
+      "short": "EX_POPE3",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionCapacityFailure",
+      "short": "EX_CFAIL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionInternalFailure",
+      "short": "EX_IFAIL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSaveIncoming",
+      "short": "EX_SINCO",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRestoreIncoming",
+      "short": "EX_RINCO",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionReduceIncoming",
+      "short": "EX_RINC1",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionReduceIncomingLoop",
+      "short": ".RILOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEINCOMING"
+    },
+    {
+      "original": "_AtomExpressionReduceIncomingNow",
+      "short": ".RINOW",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEINCOMING"
+    },
+    {
+      "original": "_AtomExpressionReduceIncomingDone",
+      "short": ".RIDONE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEINCOMING"
+    },
+    {
+      "original": "AtomExpressionReduceToParen",
+      "short": "EX_RTPAR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionReduceToParenLoop",
+      "short": ".RTPLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCETOPAREN"
+    },
+    {
+      "original": "AtomExpressionApplyUnary",
+      "short": "EX_AUNAR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryLoop",
+      "short": ".AULOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryForwardFailure",
+      "short": ".AUFFAIL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryForwardLow",
+      "short": ".AUFLO",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryForwardHigh",
+      "short": ".AUFHI",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryForwardFunction",
+      "short": ".AUFFUNCT",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryConcrete",
+      "short": ".AUCONCRE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryNegate",
+      "short": ".AUNEGATE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryComplement",
+      "short": ".AUCOMPLE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryLow",
+      "short": ".AULO",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryHigh",
+      "short": ".AUHI",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryConcreteDone",
+      "short": ".AUCDONE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryPublish",
+      "short": ".AUPUBLIS",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryDone",
+      "short": ".AUDONE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAPPLYUNARY"
+    },
+    {
+      "original": "AtomExpressionFinishStacks",
+      "short": "EX_FSTAC",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionFinishReduce",
+      "short": ".FREDUCE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONFINISHSTACKS"
+    },
+    {
+      "original": "_AtomExpressionFinishValue",
+      "short": ".FINVAL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONFINISHSTACKS"
+    },
+    {
+      "original": "AtomExpressionReduce",
+      "short": "EX_REDUC",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionReduceLoaded",
+      "short": "EX_RLOAD",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionReduceForward",
+      "short": "EX_RFORW",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionForwardLeftAdd",
+      "short": ".FLADD",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEFORWARD"
+    },
+    {
+      "original": "_AtomExpressionForwardUseLeftKey",
+      "short": ".FULKEY",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEFORWARD"
+    },
+    {
+      "original": "_AtomExpressionForwardRight",
+      "short": ".FRIGHT",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEFORWARD"
+    },
+    {
+      "original": "_AtomExpressionForwardFinish",
+      "short": ".FFIN",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEFORWARD"
+    },
+    {
+      "original": "_AtomExpressionForwardReturn",
+      "short": ".FRETURN",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEFORWARD"
+    },
+    {
+      "original": "_AtomExpressionForwardFailure",
+      "short": ".FFAIL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREDUCEFORWARD"
+    },
+    {
+      "original": "AtomExpressionAdd",
+      "short": "EX_ADD",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionArithmeticOk",
+      "short": "EX_AOK",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSubtract",
+      "short": "EX_SUBTR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionAnd",
+      "short": "EX_AND",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionAndLoop",
+      "short": ".ANDLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONAND"
+    },
+    {
+      "original": "AtomExpressionXor",
+      "short": "EX_XOR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionXorLoop",
+      "short": ".XORLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONXOR"
+    },
+    {
+      "original": "AtomExpressionOr",
+      "short": "EX_OR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionOrLoop",
+      "short": ".ORLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONOR"
+    },
+    {
+      "original": "AtomExpressionShiftLeft",
+      "short": "EX_SLEFT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionShiftLeftLoop",
+      "short": ".SLLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONSHIFTLEFT"
+    },
+    {
+      "original": "_AtomExpressionShiftLeftCopy",
+      "short": ".SLCOPY",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONSHIFTLEFT"
+    },
+    {
+      "original": "AtomExpressionShiftRight",
+      "short": "EX_SRIGH",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionShiftRightLoop",
+      "short": ".SRLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONSHIFTRIGHT"
+    },
+    {
+      "original": "AtomExpressionShiftCount",
+      "short": "EX_SCNT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMultiply",
+      "short": "EX_MULTI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionMultiplyLoop",
+      "short": ".MLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONMULTIPLY"
+    },
+    {
+      "original": "_AtomExpressionMultiplySkipAdd",
+      "short": ".MSADD",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONMULTIPLY"
+    },
+    {
+      "original": "_AtomExpressionMultiplyDone",
+      "short": ".MDONE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONMULTIPLY"
+    },
+    {
+      "original": "AtomExpressionDivide",
+      "short": "EX_DIVID",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRemainder",
+      "short": "EX_REMAI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionDivideCommon",
+      "short": "EX_DCOMM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionDivideLoop",
+      "short": ".DLOOP",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONDIVIDECOMMON"
+    },
+    {
+      "original": "_AtomExpressionDivideNext",
+      "short": ".DNEXT",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONDIVIDECOMMON"
+    },
+    {
+      "original": "_AtomExpressionUseRemainder",
+      "short": ".UREMAIND",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONDIVIDECOMMON"
+    },
+    {
+      "original": "_AtomExpressionDivisionStore",
+      "short": ".DSTORE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONDIVIDECOMMON"
+    },
+    {
+      "original": "_AtomExpressionDivideZero",
+      "short": ".DZERO",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONDIVIDECOMMON"
+    },
+    {
+      "original": "AtomExpressionPrepareMagnitudes",
+      "short": "EX_PMAGN",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionNegateResult",
+      "short": "EX_NRES",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionNegateMagnitudeLeft",
+      "short": "EX_NMLEF",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionNegateMagnitudeRight",
+      "short": "EX_NMRIG",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionNegateAtHL",
+      "short": "EX_NAHL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionComplementResult",
+      "short": "EX_CRES",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionAccumulatorAddLeft",
+      "short": "EX_AALEF",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMagnitudeLeftShift",
+      "short": "EX_MLSHI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMagnitudeRightShift",
+      "short": "EX_MRSHI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRemainderAtLeastDivisor",
+      "short": "EX_RALDI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRemainderSubtractDivisor",
+      "short": "EX_RSDIV",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSetResolvedWord",
+      "short": "EX_SRW",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRequireWord",
+      "short": "EX_REQW",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionRangeHere",
+      "short": ".RHERE",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREQUIREWORD"
+    },
+    {
+      "original": "AtomExpressionRequireAddend",
+      "short": "EX_RADDE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionAddendPositive",
+      "short": ".APOSITIV",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONREQUIREADDEND"
+    },
+    {
+      "original": "AtomExpressionNextToken",
+      "short": "EX_NTOK",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRangeOperator",
+      "short": "EX_ROPER",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionFailHere",
+      "short": "EX_FHERE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionFailOperator",
+      "short": "EX_FOPER",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionFailSymbol",
+      "short": "EX_FSYM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionFailTokenizer",
+      "short": "EX_FTOKE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionRuleCodeEnd",
+      "short": "EX_RCEND",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionCodeEnd",
+      "short": "EX_CEND",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionWorkspaceStart",
+      "short": "EX_WBEG",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionCurrentAddress",
+      "short": "EX_CADR",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionPublishSymbol",
+      "short": "EX_PSYM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionResultValue",
+      "short": "EX_RVAL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionResultUnresolved",
+      "short": "EX_RUNRE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionResultKey",
+      "short": "EX_RKEY",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionLeftValue",
+      "short": "EX_LVAL",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionLeftUnresolved",
+      "short": "EX_LUNRE",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionLeftKey",
+      "short": "EX_LKEY",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperator",
+      "short": "EX_OPER",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorPrecedence",
+      "short": "EX_OPREC",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorPart",
+      "short": "EX_OPART",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorOffset",
+      "short": "EX_OOFF",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionIncoming",
+      "short": "EX_INCOM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSymbolPart",
+      "short": "EX_SPART",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSymbolOffset",
+      "short": "EX_SOFF",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSymbolStatus",
+      "short": "EX_SSTAT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionShiftCounter",
+      "short": "EX_SCOUN",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMultiplyCounter",
+      "short": "EX_MCOUN",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionErrorStatus",
+      "short": "EX_ESTAT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionErrorPart",
+      "short": "EX_EPART",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionErrorOffset",
+      "short": "EX_EOFF",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionValueDepth",
+      "short": "EX_VDEPT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorDepth",
+      "short": "EX_ODEPT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionParenDepth",
+      "short": "EX_PDEPT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionExpectOperand",
+      "short": "EX_EOP",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSignLeft",
+      "short": "EX_SLEF1",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSignRight",
+      "short": "EX_SRIG1",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionSignResult",
+      "short": "EX_SRES",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionDivisionRemainderMode",
+      "short": "EX_DRMOD",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMagnitudeLeft",
+      "short": "EX_MLEFT",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionMagnitudeRight",
+      "short": "EX_MRIGH",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionAccumulator",
+      "short": "EX_ACCUM",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionQuotient",
+      "short": "EX_QUOTI",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionValueStack",
+      "short": "EX_VSTAC",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionOperatorStack",
+      "short": "EX_OSTAC",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomExpressionWorkspaceEnd",
+      "short": "EX_WEND",
+      "private": false,
+      "module": "EX"
+    },
+    {
+      "original": "AtomPatchCodeStart",
+      "short": "PT_CBEG",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindByte",
+      "short": "PT_KINDB",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindWord",
+      "short": "PT_KINDW",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindRelative",
+      "short": "PT_KRELA",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindDisplacement",
+      "short": "PT_KDISP",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindTruncateByte",
+      "short": "PT_KTB",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindLowByte",
+      "short": "PT_KLB",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchKindHighByte",
+      "short": "PT_KHB",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomPatchLocate",
+      "short": "PT_LOCAT",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "_AtomPatchInvalid",
+      "short": ".INVALID",
+      "private": true,
+      "module": "PT",
+      "scope": "ATOMPATCHLOCATE"
+    },
+    {
+      "original": "_AtomPatchDisplacement",
+      "short": ".DISPLACE",
+      "private": true,
+      "module": "PT",
+      "scope": "ATOMPATCHLOCATE"
+    },
+    {
+      "original": "_AtomPatchRelative",
+      "short": ".RELATIVE",
+      "private": true,
+      "module": "PT",
+      "scope": "ATOMPATCHLOCATE"
+    },
+    {
+      "original": "_AtomPatchByte",
+      "short": ".B",
+      "private": true,
+      "module": "PT",
+      "scope": "ATOMPATCHLOCATE"
+    },
+    {
+      "original": "_AtomPatchWord",
+      "short": ".W",
+      "private": true,
+      "module": "PT",
+      "scope": "ATOMPATCHLOCATE"
+    },
+    {
+      "original": "AtomPatchCodeEnd",
+      "short": "PT_CEND",
+      "private": false,
+      "module": "PT"
+    },
+    {
+      "original": "AtomParserCodeStart",
+      "short": "PR_CBEG",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusOk",
+      "short": "PR_SOK",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusEof",
+      "short": "PR_SEOF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusLexical",
+      "short": "PR_SLEXI",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusExpectedMnemonic",
+      "short": "PR_SEMNE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusUnknownMnemonic",
+      "short": "PR_SUMNE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusExpectedOperand",
+      "short": "PR_SEOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusUnknownOperand",
+      "short": "PR_SUOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusExpectedDelimiter",
+      "short": "PR_SEDEL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusTooManyOperands",
+      "short": "PR_STMOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusInvalidForm",
+      "short": "PR_SIFOR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusValueRange",
+      "short": "PR_SVRAN",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusRelativeRange",
+      "short": "PR_SRRAN",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusInternal",
+      "short": "PR_SINT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusExpression",
+      "short": "PR_SEXPR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusUnpatchable",
+      "short": "PR_SUNPA",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusSymbol",
+      "short": "PR_SSYM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusReferenceCapacity",
+      "short": "PR_SRCAP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStatusPartCapacity",
+      "short": "PR_SPCAP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceCapacity",
+      "short": "PR_RCAP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildReferenceBytes",
+      "short": "PR_BRB",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserPublicReferenceBytes",
+      "short": "PR_PRB",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildKey",
+      "short": "PR_BKEY",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildAddend",
+      "short": "PR_BADDE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildOperand",
+      "short": "PR_BLDOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildKind",
+      "short": "PR_BKIND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildPatchOffset",
+      "short": "PR_BPOFF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildPart",
+      "short": "PR_BPART",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildSourceOffset",
+      "short": "PR_BSOFF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceSymbol",
+      "short": "PR_RSYM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceAddend",
+      "short": "PR_RADDE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceOperand",
+      "short": "PR_REFOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceKind",
+      "short": "PR_RKIND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferencePatchOffset",
+      "short": "PR_RPOFF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferencePart",
+      "short": "PR_RPART",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceSourceOffset",
+      "short": "PR_RSOFF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserGenericNumber",
+      "short": "PR_GNUMB",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserGenericParenNumber",
+      "short": "PR_GPNUM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserGenericC",
+      "short": "PR_GC",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserParsePublished",
+      "short": "PR_PUB",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserParse",
+      "short": "PR_PARSE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserPublishedOperands",
+      "short": "PR_POPER",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserOperandLoop",
+      "short": "PR_OLOOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserParsedOperands",
+      "short": "PR_POPE1",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserEof",
+      "short": "PR_EOF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserInitializeScratch",
+      "short": "PR_ISCRA",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserInitializeOperands",
+      "short": ".IOPERAND",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERINITIALIZESCRATCH"
+    },
+    {
+      "original": "_AtomParserInitializeValues",
+      "short": ".IVALUES",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERINITIALIZESCRATCH"
+    },
+    {
+      "original": "AtomParserNextToken",
+      "short": "PR_NTOK",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserSelectOperand",
+      "short": "PR_SOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserParseOperand",
+      "short": "PR_POP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserOperandName",
+      "short": ".OPNAME",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEOPERAND"
+    },
+    {
+      "original": "_AtomParserOperandParsed",
+      "short": ".OPPARSED",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEOPERAND"
+    },
+    {
+      "original": "_AtomParserOperandExpression",
+      "short": ".OPEXPR",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEOPERAND"
+    },
+    {
+      "original": "AtomParserParseExpression",
+      "short": "PR_PEXPR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStoreHLValue",
+      "short": "PR_SHVAL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserAddReference",
+      "short": "PR_AREF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceCapacityFailure",
+      "short": "PR_RCFAI",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserBuildReferenceAddress",
+      "short": "PR_BRADR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserExpressionFailure",
+      "short": "PR_EFAIL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserLookupOperandWord",
+      "short": "PR_LOW",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserLookupOperandLoop",
+      "short": ".LOLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERLOOKUPOPERANDWORD"
+    },
+    {
+      "original": "_AtomParserLookupOperandSkipHigh",
+      "short": ".LOSHI",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERLOOKUPOPERANDWORD"
+    },
+    {
+      "original": "_AtomParserUnknownOperand",
+      "short": ".UOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERLOOKUPOPERANDWORD"
+    },
+    {
+      "original": "_AtomParserLookupOperandFound",
+      "short": ".LOFOUND",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERLOOKUPOPERANDWORD"
+    },
+    {
+      "original": "AtomParserParseMemory",
+      "short": "PR_PMEMO",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserMemoryExpression",
+      "short": ".MEXPR",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryPortC",
+      "short": ".MPC",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryBC",
+      "short": ".MEMORYBC",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryDE",
+      "short": ".MEMORYDE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryHL",
+      "short": ".MEMORYHL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemorySP",
+      "short": ".MEMORYSP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemorySimple",
+      "short": ".MSIMPLE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryIX",
+      "short": ".MEMORYIX",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryIY",
+      "short": ".MEMORYIY",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryIndex",
+      "short": ".MINDEX",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryIndexExpression",
+      "short": ".MIEXPR",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryIndexPlain",
+      "short": ".MIPLAIN",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "_AtomParserMemoryIndexPlainStore",
+      "short": ".MIPSTORE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPARSEMEMORY"
+    },
+    {
+      "original": "AtomParserRequireRightParen",
+      "short": "PR_RRPAR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserStoreTokenValue",
+      "short": "PR_STVAL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserNormalizeAccumulatorAlias",
+      "short": "PR_NAALI",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserRequiredAccumulator",
+      "short": ".RACCUMUL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEACCUMULATORALIAS"
+    },
+    {
+      "original": "_AtomParserMaybeAccumulatorAlias",
+      "short": ".MAALIAS",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEACCUMULATORALIAS"
+    },
+    {
+      "original": "_AtomParserAccumulatorSuccess",
+      "short": ".ASUCCESS",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEACCUMULATORALIAS"
+    },
+    {
+      "original": "AtomParserRemapAliasReference",
+      "short": "PR_RAREF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserRemapAliasLoop",
+      "short": ".RALOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERREMAPALIASREFERENCE"
+    },
+    {
+      "original": "_AtomParserRemapAliasNext",
+      "short": ".RANEXT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERREMAPALIASREFERENCE"
+    },
+    {
+      "original": "AtomParserNormalizeNumbers",
+      "short": "PR_NNUMB",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserNormalizeLoop",
+      "short": ".NLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZENUMBERS"
+    },
+    {
+      "original": "_AtomParserNormalizeC",
+      "short": ".NC",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZENUMBERS"
+    },
+    {
+      "original": "_AtomParserNormalizeParenNumber",
+      "short": ".NPNUMBER",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZENUMBERS"
+    },
+    {
+      "original": "_AtomParserNormalizeParenByte",
+      "short": ".NPB",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZENUMBERS"
+    },
+    {
+      "original": "_AtomParserNormalizeNext",
+      "short": ".NNEXT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZENUMBERS"
+    },
+    {
+      "original": "AtomParserNormalizeBareNumber",
+      "short": "PR_NBNUM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserNormalizeBranch",
+      "short": ".NBRANCH",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserNormalizeIm",
+      "short": ".NIM",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserNormalizeRst",
+      "short": ".NRST",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserNormalizeBit",
+      "short": ".NBIT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserStoreEnum",
+      "short": ".SENUM",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserNormalizeWord",
+      "short": ".NW",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserNormalizeRelative",
+      "short": ".NRELATIV",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "_AtomParserNormalizeFlexible",
+      "short": ".NFLEXIBL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERNORMALIZEBARENUMBER"
+    },
+    {
+      "original": "AtomParserSelectedValue",
+      "short": "PR_SVAL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserClearSelectedValue",
+      "short": "PR_CSVAL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserRequireByteValue",
+      "short": "PR_RBVAL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserIndexBit",
+      "short": "PR_IBIT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserIndexBitOne",
+      "short": ".IBONE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERINDEXBIT"
+    },
+    {
+      "original": "_AtomParserIndexBitReady",
+      "short": ".IBREADY",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERINDEXBIT"
+    },
+    {
+      "original": "AtomParserValidateCandidates",
+      "short": "PR_VCAND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserInvalidForm",
+      "short": ".IFORM",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERVALIDATECANDIDATES"
+    },
+    {
+      "original": "AtomParserValidateCurrent",
+      "short": "PR_VCUR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserTryConditions",
+      "short": "PR_TCOND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserTryConditionLoop",
+      "short": ".TCLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERTRYCONDITIONS"
+    },
+    {
+      "original": "_AtomParserTryConditionNext",
+      "short": ".TCNEXT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERTRYCONDITIONS"
+    },
+    {
+      "original": "_AtomParserTryConditionFailed",
+      "short": ".TCFAILED",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERTRYCONDITIONS"
+    },
+    {
+      "original": "AtomParserWidenFlexible",
+      "short": "PR_WFLEX",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserWidenLoop",
+      "short": ".WLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERWIDENFLEXIBLE"
+    },
+    {
+      "original": "_AtomParserWidenNext",
+      "short": ".WNEXT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERWIDENFLEXIBLE"
+    },
+    {
+      "original": "AtomParserCheckConcreteValues",
+      "short": "PR_CCVAL",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserCheckValueLoop",
+      "short": ".CVLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserCheckValueNext",
+      "short": ".CVNEXT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserCheckByte",
+      "short": ".CHKB",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserCheckDisplacement",
+      "short": ".CDISPLAC",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserCheckDisplacementPositive",
+      "short": ".CDPOSITI",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserCheckRelative",
+      "short": ".CRELATIV",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserRelativeBaseReady",
+      "short": ".RBREADY",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserRelativePositive",
+      "short": ".RPOSITIV",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "_AtomParserRelativeStore",
+      "short": ".RSTORE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKCONCRETEVALUES"
+    },
+    {
+      "original": "AtomParserFinalizeReferences",
+      "short": "PR_FREFE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserLocateReferenceLoop",
+      "short": ".LRLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserLocateLowReference",
+      "short": ".LLREF",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserLocateHighReference",
+      "short": ".LHREF",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserLocateByteFunction",
+      "short": ".LBFUNCTI",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserLocateStoreKind",
+      "short": ".LSKIND",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserLocateByteFunctionInvalid",
+      "short": ".LBFINVAL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserUnpatchableReference",
+      "short": ".UREF",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserPreflightReferences",
+      "short": ".PREFEREN",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserPreflightFirst",
+      "short": ".PFIRST",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserPreflightCapacity",
+      "short": ".PCAP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserPublishReferences",
+      "short": ".PREFERE1",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserPublishReferenceLoop",
+      "short": ".PRLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserReferenceDiagnosticReady",
+      "short": ".RDREADY",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "_AtomParserPublishReferenceCount",
+      "short": ".PRCNT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERFINALIZEREFERENCES"
+    },
+    {
+      "original": "AtomParserPreflightReference",
+      "short": "PR_PREF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserPreflightSymbolFailure",
+      "short": ".PSFAIL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPREFLIGHTREFERENCE"
+    },
+    {
+      "original": "_AtomParserReferencePartFailure",
+      "short": ".RPFAIL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERPREFLIGHTREFERENCE"
+    },
+    {
+      "original": "AtomParserCompareReferenceKeys",
+      "short": "PR_CRKEY",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserCompareReferenceKeyLoop",
+      "short": ".CRKLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCOMPAREREFERENCEKEYS"
+    },
+    {
+      "original": "AtomParserSymbolCapacityFailure",
+      "short": "PR_SCFAI",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserUnexpectedSymbolFailure",
+      "short": "PR_USFAI",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserPublicReferenceAddress",
+      "short": "PR_PRADR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserCheckReferences",
+      "short": "PR_CREFE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserQueueCheckSymbols",
+      "short": ".QCSYMBOL",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKREFERENCES"
+    },
+    {
+      "original": "_AtomParserQueueCheckLoop",
+      "short": ".QCLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKREFERENCES"
+    },
+    {
+      "original": "_AtomParserQueuePreflightDone",
+      "short": ".QPDONE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERCHECKREFERENCES"
+    },
+    {
+      "original": "AtomParserQueueReferences",
+      "short": "PR_QREFE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "_AtomParserQueueCommit",
+      "short": ".QUEUECMT",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERQUEUEREFERENCES"
+    },
+    {
+      "original": "_AtomParserQueueLoop",
+      "short": ".QLOOP",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERQUEUEREFERENCES"
+    },
+    {
+      "original": "_AtomParserQueueDone",
+      "short": ".QDONE",
+      "private": true,
+      "module": "PR",
+      "scope": "ATOMPARSERQUEUEREFERENCES"
+    },
+    {
+      "original": "AtomParserQueueCapacity",
+      "short": "PR_QCAP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserQueueAlreadyDefined",
+      "short": "PR_QADEF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserFailExpressionSymbol",
+      "short": "PR_FESYM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserFailReference",
+      "short": "PR_FREF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserCommit",
+      "short": "PR_CMT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserExpectedMnemonic",
+      "short": "PR_EMNEM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserUnknownMnemonic",
+      "short": "PR_UMNEM",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserExpectedOperand",
+      "short": "PR_EXPOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserUnknownOperand",
+      "short": "PR_UOP",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserExpectedDelimiter",
+      "short": "PR_EDELI",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserTooManyOperands",
+      "short": "PR_TMOPE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserValueRange",
+      "short": "PR_VRANG",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserRelativeRange",
+      "short": "PR_RRANG",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserFailHere",
+      "short": "PR_FHERE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserFailStart",
+      "short": "PR_FBEG",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserRuleCodeEnd",
+      "short": "PR_RCEND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserImmutableStart",
+      "short": "PR_IBEG",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserOperandWordCount",
+      "short": "PR_OWCNT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserOperandWordTable",
+      "short": "PR_OWTAB",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserOperandWordTableEnd",
+      "short": "PR_OWTEN",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserImmutableEnd",
+      "short": "PR_IEND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserCodeEnd",
+      "short": "PR_CEND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserWorkspaceStart",
+      "short": "PR_WBEG",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserDestination",
+      "short": "PR_DST",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserInstructionAddress",
+      "short": "PR_IADR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserInstructionPart",
+      "short": "PR_IPART",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserInstructionOffset",
+      "short": "PR_IOFF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserInstructionLength",
+      "short": "PR_ILEN",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserOperandCount",
+      "short": "PR_OPCNT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserScanIndex",
+      "short": "PR_SINDE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserFlexibleMask",
+      "short": "PR_FMASK",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserConditionMask",
+      "short": "PR_CMASK",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserClassPointer",
+      "short": "PR_CPTR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserValuePointer",
+      "short": "PR_VPTR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserLastClass",
+      "short": "PR_LCLAS",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserMemoryBase",
+      "short": "PR_MBASE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserIndexClass",
+      "short": "PR_ICLAS",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserDisplacementSign",
+      "short": "PR_DSIGN",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserNameKey",
+      "short": "PR_NKEY",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserErrorStatus",
+      "short": "PR_ESTAT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserErrorPart",
+      "short": "PR_EPART",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserErrorOffset",
+      "short": "PR_EOFF",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserScratch",
+      "short": "PR_SCRAT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserExpressionStatus",
+      "short": "PR_ESTA1",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserSymbolStatus",
+      "short": "PR_SSTAT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceCount",
+      "short": "PR_RCNT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceBuildCount",
+      "short": "PR_RBCNT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserUnresolvedMask",
+      "short": "PR_UMASK",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceScan",
+      "short": "PR_RSCAN",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceMissingCount",
+      "short": "PR_RMCNT",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceSameKey",
+      "short": "PR_RSKEY",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceKindScratch",
+      "short": "PR_RKSCR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceOffsetScratch",
+      "short": "PR_ROSCR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceAddendScratch",
+      "short": "PR_RASCR",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserQueueBase",
+      "short": "PR_QBASE",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferenceBuild",
+      "short": "PR_RBLD",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserReferences",
+      "short": "PR_REFER",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomParserWorkspaceEnd",
+      "short": "PR_WEND",
+      "private": false,
+      "module": "PR"
+    },
+    {
+      "original": "AtomOutputCodeStart",
+      "short": "OU_CBEG",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputStatusCapacity",
+      "short": "OU_SCAP",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputStatusInternal",
+      "short": "OU_SINT",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputStatusValueRange",
+      "short": "OU_SVRAN",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputStatusRelativeRange",
+      "short": "OU_SRRAN",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputReset",
+      "short": "OU_RESET",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputCheckCapacity",
+      "short": "OU_CCAP",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputEmitByte",
+      "short": "OU_EMITB",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputEmitWord",
+      "short": "OU_EMITW",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputReserve",
+      "short": "OU_RESER",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputSetOrigin",
+      "short": "OU_SORIG",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputEmitByteReady",
+      "short": "OU_EBREA",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputDataCapacityFailure",
+      "short": "OU_DCFAI",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputEmitInstruction",
+      "short": "OU_EINS",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "_AtomOutputInstructionCapacityReady",
+      "short": ".ICREADY",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTEMITINSTRUCTION"
+    },
+    {
+      "original": "_AtomOutputInstructionLoop",
+      "short": ".INSLOOP",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTEMITINSTRUCTION"
+    },
+    {
+      "original": "_AtomOutputInstructionDone",
+      "short": ".INSDONE",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTEMITINSTRUCTION"
+    },
+    {
+      "original": "_AtomOutputInstructionCapacityFailure",
+      "short": ".ICFAIL",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTEMITINSTRUCTION"
+    },
+    {
+      "original": "AtomOutputResolveSymbol",
+      "short": "OU_RSLV",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "_AtomOutputResolveLoop",
+      "short": ".RSLVLOOP",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveBaseReady",
+      "short": ".RBREADY",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveSignReady",
+      "short": ".RSREADY",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveHighByte",
+      "short": ".RSLVHIB",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveByte",
+      "short": ".RSLVB",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveDisplacement",
+      "short": ".RDISPLAC",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveDisplacementPositive",
+      "short": ".RDPOSITI",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveRelative",
+      "short": ".RRELATIV",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveRelativePositive",
+      "short": ".RRPOSITI",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveSubmitByte",
+      "short": ".RSB",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveSubmitByteA",
+      "short": ".RSBA",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveWord",
+      "short": ".RSLVW",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolveRemove",
+      "short": ".RREMOVE",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "_AtomOutputResolvePeekFailure",
+      "short": ".RPFAIL",
+      "private": true,
+      "module": "OU",
+      "scope": "ATOMOUTPUTRESOLVESYMBOL"
+    },
+    {
+      "original": "AtomOutputResolveValueRange",
+      "short": "OU_RVRAN",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveRelativeRange",
+      "short": "OU_RRRAN",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveInternal",
+      "short": "OU_RINT",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputRequireWordDomain",
+      "short": "OU_RWDOM",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputCodeEnd",
+      "short": "OU_CEND",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputWorkspaceStart",
+      "short": "OU_WBEG",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputCursor",
+      "short": "OU_CURSO",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputRemaining",
+      "short": "OU_REM",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputInstructionStart",
+      "short": "OU_IBEG",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputInstructionBytes",
+      "short": "OU_INSB",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputInstructionLength",
+      "short": "OU_ILEN",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputInstructionScan",
+      "short": "OU_ISCAN",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveSymbolPointer",
+      "short": "OU_RSPTR",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolvePatchAddress",
+      "short": "OU_RPADR",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveKind",
+      "short": "OU_RKIND",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveAddend",
+      "short": "OU_RADDE",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveValue",
+      "short": "OU_RVAL",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputDataValue",
+      "short": "OU_DVAL",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputResolveBaseHigh",
+      "short": "OU_RBHI",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputWorkspaceEnd",
+      "short": "OU_WEND",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomStatementCodeStart",
+      "short": "ST_CBEG",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusOk",
+      "short": "ST_SOK",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusLexical",
+      "short": "ST_SLEXI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusExpected",
+      "short": "ST_SEXP",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusDirective",
+      "short": "ST_SDIR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusEquate",
+      "short": "ST_SEQUA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusSymbol",
+      "short": "ST_SSYM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusInstruction",
+      "short": "ST_SINS",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusOutput",
+      "short": "ST_SOUT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusUndefined",
+      "short": "ST_SUNDE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStatusInternal",
+      "short": "ST_SINT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveEqu",
+      "short": "ST_EQU",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveOrg",
+      "short": "ST_ORG",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveDb",
+      "short": "ST_DB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveDw",
+      "short": "ST_DW",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveDs",
+      "short": "ST_DS",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveCstr",
+      "short": "ST_CSTR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectivePstr",
+      "short": "ST_PSTR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveIstr",
+      "short": "ST_ISTR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveAlign",
+      "short": "ST_ALIGN",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDirectiveCount",
+      "short": "ST_CNT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomAssemblePart",
+      "short": "DR_APART",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomStatementNext",
+      "short": "ST_NEXT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementNotMnemonic",
+      "short": "ST_NMNEM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementNotDirective",
+      "short": "ST_NDIR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementAfterFirstName",
+      "short": "ST_AFNAM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementTryEquate",
+      "short": "ST_TEQUA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementLabel",
+      "short": "ST_LABEL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementLabelPublish",
+      "short": "ST_LPUBL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementPrivateLabel",
+      "short": "ST_PLABE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementLabelDeclared",
+      "short": "ST_LDECL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementLabelDirective",
+      "short": "ST_LDIR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementInstructionPublished",
+      "short": "ST_IPUB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquate",
+      "short": "ST_EQUAT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateSignReady",
+      "short": "ST_ESREA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateResolve",
+      "short": "ST_ERSLV",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectivePublished",
+      "short": "ST_DPUB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementOrg",
+      "short": "ST_ORG1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDb",
+      "short": "ST_DB1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDw",
+      "short": "ST_DW1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataItem",
+      "short": "ST_DITEM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataExpression",
+      "short": "ST_DEXPR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataResolvedByte",
+      "short": "ST_DRB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataUnresolved",
+      "short": "ST_DUNRE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataPendingLow",
+      "short": "ST_DPLO",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataPendingHigh",
+      "short": "ST_DPHI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataPendingKindReady",
+      "short": "ST_DPKRE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataDiagnosticReady",
+      "short": "ST_DDREA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataPlaceholderByte",
+      "short": "ST_DPB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataQueue",
+      "short": "ST_DQUEU",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataDelimiter",
+      "short": "ST_DDELI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDbString",
+      "short": "ST_DSTRI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCountLoop",
+      "short": "ST_SCLOO",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCountOne",
+      "short": "ST_SCONE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCountDone",
+      "short": "ST_SCDON",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCapacity",
+      "short": "ST_SCAP",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCapacityExtra",
+      "short": "ST_SCEXT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCapacityReady",
+      "short": "ST_SCREA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringEmitLoop",
+      "short": "ST_SELOO",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringZero",
+      "short": "ST_SZERO",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringNewline",
+      "short": "ST_SNEWL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringReturn",
+      "short": "ST_SRETU",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringTab",
+      "short": "ST_STAB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringHex",
+      "short": "ST_SHEX",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringEmit",
+      "short": "ST_SEMIT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringEmitReady",
+      "short": "ST_SEREA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringDone",
+      "short": "ST_SDONE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringDbDone",
+      "short": "ST_SDDON",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementCstr",
+      "short": "ST_CSTR1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementPstr",
+      "short": "ST_PSTR1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementIstr",
+      "short": "ST_ISTR1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringDirective",
+      "short": "ST_SDIR1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDs",
+      "short": "ST_DS1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDsFillLoop",
+      "short": "ST_DFLOO",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDsReserve",
+      "short": "ST_DRESE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementAlign",
+      "short": "ST_ALIG1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementAlignCountReady",
+      "short": "ST_ACREA",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementSuccess",
+      "short": "ST_SUCCE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomRecognizeDirective",
+      "short": "EN_RDIR",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRecognizeDirectiveLoop",
+      "short": "EN_RDLOO",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomRecognizeDirectiveNext",
+      "short": "EN_RDNEX",
+      "private": false,
+      "module": "EN"
+    },
+    {
+      "original": "AtomStatementDirectiveTable",
+      "short": "ST_DTABL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringTake",
+      "short": "ST_STAKE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementCapturePosition",
+      "short": "ST_CPOSI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementLexicalFailure",
+      "short": "ST_LFAIL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementExpectedHere",
+      "short": "ST_EHERE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementUnsupportedDirective",
+      "short": "ST_UDIR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementExpectedSaved",
+      "short": "ST_ESAVE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementSymbolFailure",
+      "short": "ST_SFAIL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementSymbolPartFailure",
+      "short": "ST_SPFAI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementInstructionFailure",
+      "short": "ST_IFAIL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementOutputFailure",
+      "short": "ST_OFAIL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateFailure",
+      "short": "ST_EFAIL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateUnresolved",
+      "short": "ST_EUNRE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateDelimiter",
+      "short": "ST_EDELI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveFailure",
+      "short": "ST_DFAIL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveUnresolved",
+      "short": "ST_DUNR1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveRange",
+      "short": "ST_DRANG",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveExpected",
+      "short": "ST_DEXP",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveDelimiter",
+      "short": "ST_DDEL1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveString",
+      "short": "ST_DSTR1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementCodeEnd",
+      "short": "ST_CEND",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementWorkspaceStart",
+      "short": "ST_WBEG",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementKey",
+      "short": "ST_KEY",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementInstruction",
+      "short": "ST_INS",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementMnemonic",
+      "short": "ST_MNEM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementMnemonicValid",
+      "short": "ST_MVALI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDetail",
+      "short": "ST_DETAI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementErrorPart",
+      "short": "ST_EPART",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementErrorOffset",
+      "short": "ST_EOFF",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveLength",
+      "short": "ST_DLEN",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateValue",
+      "short": "ST_EVAL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementEquateSigned",
+      "short": "ST_ESIGN",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirective",
+      "short": "ST_DIR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveValid",
+      "short": "ST_DVALI",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataWidth",
+      "short": "ST_DWIDT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataPatchKind",
+      "short": "ST_DPKIN",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataAddend",
+      "short": "ST_DADDE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataFill",
+      "short": "ST_DFILL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataValue",
+      "short": "ST_DVAL",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataPendingKind",
+      "short": "ST_DPKI1",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataCount",
+      "short": "ST_DCNT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataKey",
+      "short": "ST_DKEY",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataSymbol",
+      "short": "ST_DSYM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataAddress",
+      "short": "ST_DADR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringPointer",
+      "short": "ST_SPTR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringRemaining",
+      "short": "ST_SREM",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringCount",
+      "short": "ST_SCNT",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringNibble",
+      "short": "ST_SNIBB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringMode",
+      "short": "ST_SMODE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementWorkspaceEnd",
+      "short": "ST_WEND",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomDriverCodeStart",
+      "short": "DR_CBEG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverStatusOk",
+      "short": "DR_SOK",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverStatusConfiguration",
+      "short": "DR_SCFG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverStatusSource",
+      "short": "DR_SSRC",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverStatusUndefined",
+      "short": "DR_SUNDE",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverStatusOutput",
+      "short": "DR_SOUT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverStatusInternal",
+      "short": "DR_SINT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigPartCount",
+      "short": "DR_CPCNT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigTableRange",
+      "short": "DR_CTRAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigPartOrdinal",
+      "short": "DR_CPORD",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigSourceRange",
+      "short": "DR_CSRAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigSymbolRange",
+      "short": "DR_CSRA1",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigPendingRange",
+      "short": "DR_CPRAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigOutputRange",
+      "short": "DR_CORAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartCapacity",
+      "short": "DR_PCAP",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartDescriptorBytes",
+      "short": "DR_PDB",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartOrdinal",
+      "short": "DR_PORDI",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartStart",
+      "short": "DR_PBEG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartEnd",
+      "short": "DR_PEND",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorPartCount",
+      "short": "DR_DPCNT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorParts",
+      "short": "DR_DPART",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorSymbolStart",
+      "short": "DR_DSBEG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorSymbolEnd",
+      "short": "DR_DSEND",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorPendingStart",
+      "short": "DR_DPBEG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorPendingEnd",
+      "short": "DR_DPEND",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorTargetStart",
+      "short": "DR_DTBEG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorTargetBytes",
+      "short": "DR_DTB",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptorBytes",
+      "short": "DR_DESCB",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomAssemble",
+      "short": "DR_ASM",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartLoop",
+      "short": "DR_PLOOP",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverFinish",
+      "short": "DR_FIN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverSourceFailure",
+      "short": "DR_SFAIL",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverFinishFailure",
+      "short": "DR_FFAIL",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverInternalAbort",
+      "short": "DR_IABOR",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverCommitFailure",
+      "short": "DR_CFAIL",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverAbort",
+      "short": "DR_ABORT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBeginFailure",
+      "short": "DR_BFAIL",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverInternalFailure",
+      "short": "DR_IFAIL",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverValidateDescriptor",
+      "short": "DR_VDESC",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverValidatePartLoop",
+      "short": "DR_VPLOO",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverValidateArenas",
+      "short": "DR_VAREN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverValidateRange",
+      "short": "DR_VRANG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadPartCount",
+      "short": "DR_BPCNT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadPartTable",
+      "short": "DR_BPTAB",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadPartOrdinal",
+      "short": "DR_BPORD",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadSourceRange",
+      "short": "DR_BSRAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadSymbolRange",
+      "short": "DR_BSRA1",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadPendingRange",
+      "short": "DR_BPRAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverBadOutputRange",
+      "short": "DR_BORAN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverConfigurationFailure",
+      "short": "DR_CFAI1",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomAssembleFinish",
+      "short": "DR_AFIN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomFinishPendingLoop",
+      "short": "DR_FPLOO",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomFinishAnchor",
+      "short": "DR_FANCH",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomFinishNoPending",
+      "short": "DR_FNPEN",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomFinishGlobalLoop",
+      "short": "DR_FGLOO",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomFinishSuccess",
+      "short": "DR_FSUCC",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomFinishInternal",
+      "short": "DR_FINT",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverValidateSymbolPointer",
+      "short": "DR_VSPTR",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverValidatePrivatePointer",
+      "short": "DR_VPPTR",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverInvalidSymbolPointer",
+      "short": "DR_ISPTR",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverCodeEnd",
+      "short": "DR_CEND",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverWorkspaceStart",
+      "short": "DR_WBEG",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDescriptor",
+      "short": "DR_DESC",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartCursor",
+      "short": "DR_PCURS",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartsRemaining",
+      "short": "DR_PREM",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverPartIndex",
+      "short": "DR_PINDE",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverDetail",
+      "short": "DR_DETAI",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverUndefinedSymbol",
+      "short": "DR_USYM",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverWorkspaceEnd",
+      "short": "DR_WEND",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomHostServiceCodeStart",
+      "short": "HS_SCBEG",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkBegin",
+      "short": "HS_BEG",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkImageByte",
+      "short": "HS_IB",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkPatchByte",
+      "short": "HS_PB",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkPatchWord",
+      "short": "HS_PW",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkCommit",
+      "short": "HS_CMT",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkAbort",
+      "short": "HS_ABORT",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostServiceCodeEnd",
+      "short": "HS_SCEND",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostResidentEnd",
+      "short": "HS_REND",
+      "private": false,
+      "module": "HS"
+    }
+  ]
+}

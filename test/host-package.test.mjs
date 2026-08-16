@@ -66,6 +66,8 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   await fs.access(path.join(installedAtom, "docs", "language-reference.md"));
   await fs.access(path.join(installedAtom, "docs", "codebase", "index.md"));
   await fs.access(path.join(installedAtom, "examples", "hello", "main.asm"));
+  await fs.access(path.join(installedAtom, "native", "atom.atm"));
+  await fs.access(path.join(installedAtom, "native", "atom-00.atm"));
 
   await fs.writeFile(path.join(projectDirectory, "main.asm"), [
     "%define DEBUG 1",
@@ -103,7 +105,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
 
   const selfHosted = await run(executable, ["--self-host"], { cwd: projectDirectory });
   assert.equal(selfHosted.status, 0, selfHosted.stderr);
-  assert.match(selfHosted.stdout, /Atom assembled 6 part\(s\), 13812 byte\(s\)/);
+  assert.match(selfHosted.stdout, /Atom assembled 7 part\(s\), 13812 byte\(s\)/);
   const selfHostBinary = await fs.readFile(path.join(projectDirectory, "build", "atom.atom", "current", "atom.bin"));
   const installedCore = JSON.parse(await fs.readFile(path.join(installedAtom, "assets", "native-core.json"), "utf8"));
   const expectedSelfHost = parseIntelHex(installedCore.hexText).memory.slice(0, installedCore.symbols.AtomHostResidentEnd);

@@ -47,8 +47,8 @@
     "installedSelfHostWithoutAzm": true
   },
   "proofs": {
-    "atomLocalTests": 264,
-    "atomLocalPassed": 264,
+    "atomLocalTests": 266,
+    "atomLocalPassed": 266,
     "atomLocalFailed": 0,
     "releaseCheckRequiresPinnedDebug80Main": true
   }

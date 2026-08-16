@@ -26,20 +26,21 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
   const proof = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
   const generated = await buildSelfHostSource({ root: path.resolve("asm") });
   const project = await resolveAtomProject({
-    root: path.resolve("self-host"),
-    entry: "atom.asm",
+    root: path.resolve("native"),
+    entry: "atom.atm",
   });
   assert.deepEqual(
     project.parts.slice(0, -1).map(({ compilerBytes }) => new TextDecoder().decode(compilerBytes)),
     generated.project.parts.map(({ compilerBytes }) => new TextDecoder().decode(compilerBytes)),
   );
   assert.deepEqual(project.parts.map(({ logicalIdentity }) => logicalIdentity), [
-    "atom-00.asm",
-    "atom-01.asm",
-    "atom-02.asm",
-    "atom-03.asm",
-    "atom-04.asm",
-    "atom.asm",
+    "atom-00.atm",
+    "atom-01.atm",
+    "atom-02.atm",
+    "atom-03.atm",
+    "atom-04.atm",
+    "atom-05.atm",
+    "atom.atm",
   ]);
 
   const options = {
@@ -71,6 +72,7 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
     emitD8m: false,
     emitLst: false,
     symbolCase: "insensitive",
+    registerContracts: "strict",
   });
   assert.deepEqual(oracle.diagnostics.filter(({ severity }) => severity === "error"), []);
   const oracleHex = oracle.artifacts.find(({ kind }) => kind === "hex");
@@ -85,9 +87,9 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
 
   assert.deepEqual(generated.statistics, {
     inputFiles: 13,
-    statements: 7529,
-    sourceBytes: 99296,
-    parts: 5,
+    statements: 7753,
+    sourceBytes: 107457,
+    parts: 6,
     globalSymbols: 847,
     privateSymbols: 430,
   });

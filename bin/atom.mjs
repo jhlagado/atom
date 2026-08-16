@@ -68,7 +68,7 @@ function parseArguments(arguments_) {
   }
   if (options.selfHost && entry !== undefined) throw new Error("--self-host does not accept an entry source");
   if (entry === undefined && !options.selfHost) throw new Error("entry source is required");
-  if (options.selfHost) entry = "atom.asm";
+  if (options.selfHost) entry = "atom.atm";
   return { ...options, entry };
 }
 
@@ -93,7 +93,7 @@ async function main() {
     return 2;
   }
   const root = options.selfHost
-    ? fileURLToPath(new URL("../self-host", import.meta.url))
+    ? fileURLToPath(new URL("../native", import.meta.url))
     : path.resolve(options.root ?? process.cwd());
   const origin = options.origin ?? 0;
   const capacity = options.capacity ?? (options.selfHost ? 0x4000 : 0xffff - origin);

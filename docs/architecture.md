@@ -100,12 +100,15 @@ does not select a partial artifact set.
 
 ## Self-hosting
 
-The readable implementation remains under `asm/` in AZM syntax. A deterministic
-development generator flattens its include closure and performs mechanical
-rewrites into the checked Atom source under `self-host/`. The proof runs three
-complete builds: the pinned AZM image assembles that source, the resulting Atom
-image assembles it again, and translated source is assembled independently by
-AZM. All initialized addresses and all 13,812 resident bytes must agree.
+The permanent Atom-syntax representation is checked under `native/`. A
+deterministic migration tool currently derives it from the frozen AZM oracle
+under `asm/`, assigns collision-checked semantic names, and records every rename
+in `native/atom-symbols.json`. The proof runs three complete builds: the pinned
+image assembles the `.atm` source, the resulting Atom image assembles it again,
+and the same `.atm` source is translated for an independent strict-AZM build.
+All initialized addresses and all 13,812 resident bytes must agree.
 
-This generated representation is not a second hand-maintained implementation.
-`npm run verify:self-host-source` fails if it drifts from the readable source.
+This transition representation is not a second hand-maintained implementation.
+`npm run verify:self-host-source` fails if it drifts from the frozen oracle.
+The next checkpoint makes `native/*.atm` authoritative before the AZM files are
+removed; [the self-hosting design](self-hosting.md) records that boundary.

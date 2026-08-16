@@ -121,23 +121,24 @@ the owner of a behavior quickly.
 | --- | --- |
 | `native-core.json` | Checked strict-AZM Intel HEX, symbol map, digests, and source identity loaded by the installed package |
 
-## `self-host/`
+## `native/`
 
 | File | Role |
 | --- | --- |
-| `atom-00.asm` through `atom-04.asm` | Generated Atom-valid content parts derived from the readable native source |
-| `atom.asm` | Generated `%INCLUDE` entry that orders the five content parts through the normal host resolver |
+| `atom-00.atm` through `atom-05.atm` | Checked Atom-valid content parts derived during the AZM-to-Atom migration |
+| `atom.atm` | `%INCLUDE` entry that orders the six content parts through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
 
-All files in this directory are generated. `scripts/generate-self-host-source.mjs`
-is their writer and drift checker.
+During the migration checkpoint, `scripts/generate-self-host-source.mjs` is the
+writer and drift checker. These `.atm` files become the editing authority at
+the next self-host checkpoint.
 
 ## `scripts/`
 
 | File | Role |
 | --- | --- |
 | `generate-native-core.mjs` | Builds the linked native image with AZM strict contracts and writes or checks `assets/native-core.json` |
-| `generate-self-host-source.mjs` | Writes or checks the complete generated `self-host/` set |
+| `generate-self-host-source.mjs` | Writes or checks the complete transitional `native/` set |
 | `verify-dependencies.mjs` | Pins the sibling Debug80 branch and exact AZM/runtime source trees used by proofs |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 

@@ -19,9 +19,12 @@ test("Atom-to-AZM translation changes only concrete assembler directives", () =>
   assert.equal(translateAtomLineToAzm("ORG 4000H"), ".org 4000H");
   assert.equal(translateAtomLineToAzm("DW Target"), ".dw Target");
   assert.equal(translateAtomLineToAzm("DS 4"), ".ds 4");
-  assert.equal(translateAtomLineToAzm(".LOOP EQU 2"), ".LOOP: .equ 2");
+  assert.equal(translateAtomLineToAzm(".LOOP EQU 2"), "_LOOP: .equ 2");
   assert.equal(translateAtomLineToAzm("VALUE: EQU 2"), "VALUE: .equ 2");
-  assert.equal(translateAtomLineToAzm(".DATA: DB 1"), ".DATA: .db 1");
+  assert.equal(translateAtomLineToAzm(".DATA: DB 1"), "_DATA: .db 1");
+  assert.equal(translateAtomLineToAzm("JR NZ,.LOOP"), "JR NZ,_LOOP");
+  assert.equal(translateAtomLineToAzm(";@ROUTINE IN A OUT HL"), ".routine IN A OUT HL");
+  assert.equal(translateAtomLineToAzm(";@EXPECTOUT DE"), ".expectout DE");
   assert.equal(translateAtomLineToAzm('TEXT: CSTR "A;B" ; data'), 'TEXT: .cstr "A;B" ; data');
   assert.equal(translateAtomLineToAzm("DB ';' ; semicolon"), ".db ';' ; semicolon");
   assert.equal(translateAtomLineToAzm("ALIGN 16"), ".align 16");
