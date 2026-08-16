@@ -5,6 +5,20 @@ import test from "node:test";
 
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 
+const codebaseDocuments = [
+  "docs/codebase/index.md",
+  "docs/codebase/01-orientation-and-repository-layout.md",
+  "docs/codebase/02-host-source-preparation.md",
+  "docs/codebase/03-native-z80-assembly-pipeline.md",
+  "docs/codebase/04-host-execution-artifacts-and-interfaces.md",
+  "docs/codebase/05-native-core-generation-and-self-hosting.md",
+  "docs/codebase/06-verification-and-maintenance.md",
+  "docs/codebase/appendices/index.md",
+  "docs/codebase/appendices/a-directory-and-file-reference.md",
+  "docs/codebase/appendices/b-build-flow-reference.md",
+  "docs/codebase/appendices/c-public-surface-and-abi-reference.md",
+];
+
 const productDocuments = [
   "README.md",
   "docs/command-line.md",
@@ -14,6 +28,7 @@ const productDocuments = [
   "docs/tec-1-deployment.md",
   "docs/release-checklist.md",
   "docs/phase-11-report.md",
+  ...codebaseDocuments,
   "examples/hello/README.md",
 ];
 
@@ -39,6 +54,7 @@ test("the product documentation, release gate, license, and measured account agr
     ...(await fs.readdir("docs", { withFileTypes: true }))
       .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
       .map((entry) => path.join("docs", entry.name)),
+    ...codebaseDocuments,
     "examples/hello/README.md",
   ];
   for (const filename of documentation) {
@@ -57,6 +73,7 @@ test("the product documentation, release gate, license, and measured account agr
   assert.equal(metadata.scripts.prepublishOnly, "npm run release:check");
   assert.match(metadata.scripts["release:check"], /npm test/);
   assert.ok(metadata.files.includes("examples"));
+  assert.ok(metadata.files.includes("docs/codebase"));
 
   const license = await fs.readFile("LICENSE", "utf8");
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);

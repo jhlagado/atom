@@ -64,6 +64,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
   await fs.access(path.join(installedAtom, "docs", "phase-11-report.md"));
   await fs.access(path.join(installedAtom, "docs", "language-reference.md"));
+  await fs.access(path.join(installedAtom, "docs", "codebase", "index.md"));
   await fs.access(path.join(installedAtom, "examples", "hello", "main.asm"));
 
   await fs.writeFile(path.join(projectDirectory, "main.asm"), [

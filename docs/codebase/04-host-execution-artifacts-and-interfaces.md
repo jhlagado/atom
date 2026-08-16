@@ -1,0 +1,350 @@
+# Chapter 4 — Host execution, artifacts, and interfaces
+
+[← Native Z80 assembly pipeline](03-native-z80-assembly-pipeline.md) | [Native core generation and self-hosting →](05-native-core-generation-and-self-hosting.md)
+
+The Mac host takes the prepared source parts, executes the pinned native core,
+captures its logical output, renders user artifacts, and publishes a complete
+generation. These operations are separate modules so tests and tool consumers
+can stop at the boundary they need.
+
+The normal high-level sequence is:
+
+```js
+const assembled = await assembleAtomProject(BUILD_OPTIONS);
+const artifacts = renderAtomArtifacts(assembled, ARTIFACT_OPTIONS);
+const publication = await publishAtomArtifacts(DESTINATION, BASENAME, artifacts);
+```
+
+Debug80 or another tool can use the first two calls in process and retain every
+artifact in memory. Filesystem publication is optional.
+
+## Pinned native core
+
+`src/host/native-atom-core.mjs` loads `assets/native-core.json`. The checked
+artifact contains:
+
+- Intel HEX for the linked native image;
+- the AZM-derived symbol map;
+- a SHA-256 of the HEX text;
+- a SHA-256 covering the HEX and symbol map together; and
+- the readable source identity used to generate it.
+
+The loader checks both digests, every required entry symbol, and the one-bank
+resident limit. It derives the immutable code ranges for the encoder, symbols,
+tokenizer, expressions, patch locator, parser, output, statements, driver, and
+host stubs. `loadNativeAtomCore()` caches the validated promise so repeated
+builds in one process do not reopen the asset.
+
+The native runner also validates a caller-supplied replacement core. That path
+is used by the second self-host generation. It parses the HEX before execution,
+checks that writes stay inside the resident extent, proves every declared code
+byte is initialized, verifies code entries and state addresses, and recomputes
+the code-byte total from the supplied ranges.
+
+## Programmatic assembly entry
+
+`assembleAtomProject()` is the complete filesystem-to-generation entry:
+
+```js
+import { assembleAtomProject } from "atom-z80";
+
+const result = await assembleAtomProject({
+  root: "/ABSOLUTE/PROJECT/ROOT",
+  entry: "SRC/MAIN.ATM",
+  definitions: { DEBUG: 1 },
+  placement: { defaultBank: 0, banks: {} },
+  target: { start: 0x4000, capacity: 0x2000 },
+});
+```
+
+The optional execution controls are `maxInstructions`, `maxCycles`, and a
+custom sink. The default budgets are 200,000,000 instructions and
+2,000,000,000 T-states. `limits` may lower source-packager capacities, but this
+entry always caps parts at 16 and banks at zero to match the native driver.
+
+The function returns the resolved `project` together with:
+
+```text
+generation   COMMITTED IMAGE, PATCH, LAYOUT, SYMBOL, AND TARGET DATA
+execution    INSTRUCTION, CYCLE, SERVICE, STACK, RETURN, AND PAGING OBSERVATIONS
+native       DRIVER STATUS AND NESTED NATIVE STATUS FIELDS
+core         CODE-BYTE AND RESIDENT-EXTENT MEASUREMENTS
+```
+
+`assembleResolvedAtomProject()` is the lower-level entry for an already
+prepared ordered project. It is used by self-host tests and can be used by an
+operating adapter that constructs the same part shape without Node filesystem
+preparation.
+
+The package currently exposes these functions directly rather than through a
+versioned `createAtomAssembler()` facade. Consumers should use the package root
+exports and avoid importing private files below `src/host/`.
+
+## Native proof memory map
+
+`native-atom-runner.mjs` uses a fixed 64 KiB Mac proof map:
+
+| Region | Address | Bytes |
+| --- | --- | ---: |
+| Linked core, workspace, and sink stubs | `$0000..$35F4` | 13,812 |
+| Free space below descriptor boundary | `$35F4..$4000` | 2,572 |
+| Build and part descriptors | `$4000..$4100` | 256 |
+| Symbol arena | `$4100..$7500` | 13,312 |
+| Pending arena | `$7500..$7F00` | 2,560 |
+| Guard gap | `$7F00..$8000` | 256 |
+| Source page | `$8000..$E000` | 24,576 |
+| Free space below proof stack | `$E000..$FE00` | 7,680 |
+| Proof stack | `$FE00..$FF00` | 256 |
+| Reserved top page | `$FF00..$10000` | 256 |
+
+This is a test and Mac execution map, not a proposed TEC-1 RAM layout. A TEC
+adapter must choose its own caller-owned source, symbol, pending, descriptor,
+and stack regions.
+
+## Source snapshot and paging
+
+The runner validates and copies every prepared part before constructing Z80
+memory. It requires:
+
+- one through 16 parts in ordinal order;
+- bank zero;
+- matching original and compiler byte lengths;
+- at most 24 KiB in each part; and
+- structurally valid `INCBIN` metadata.
+
+If all compiler bytes fit in the source page together, the runner lays the parts
+out consecutively and points each descriptor at its interval. If the total is
+larger, every descriptor points at the same source page. The runner installs the
+requested part whenever native execution reaches `AtomTokenizerReset`.
+
+The source page is read-only to CPU writes. Host paging writes the underlying
+memory array directly. Before replacing a page and after the final return, the
+runner checks the entire 24 KiB window, including `$A5` padding after the source
+bytes. It also checks nonpaged source, the complete descriptor interval, and
+every immutable native code or table range.
+
+## Calling the Z80 core
+
+The runner writes the build descriptor and part descriptors, installs stack
+canaries around a sentinel return address, sets `SP`, `PC`, and `IX`, and steps
+the Debug80 runtime until the sentinel PC is reached.
+
+The loop stops with a structured failure when:
+
+- the instruction or cycle budget is exhausted;
+- the CPU halts before returning;
+- the native core returns through the wrong PC or with an unbalanced stack;
+- either stack canary changes;
+- source, descriptors, code, or immutable tables change; or
+- the sink lifecycle cannot be closed safely.
+
+Execution statistics retain the instruction count, T-states, service count,
+service trace, final SP, return PC, and paged part order.
+
+## Host sink interception
+
+The linked core ends with six Z80 sink stubs. Each stub returns `$FF` with carry
+set when it executes normally, so missing host interception fails closed. The
+runner intercepts the entry PC before executing the stub, reads the documented
+register arguments, calls the JavaScript sink, pops the native return address,
+and resumes with status in A and carry.
+
+| Native entry | JavaScript sink method | Logical operation |
+| --- | --- | --- |
+| `AtomSinkBegin` | `begin()` | Open one tentative generation |
+| `AtomSinkImageByte` | `image()` | Append one initialized byte |
+| `AtomSinkPatchByte` | `patch()` | Append one final replacement byte |
+| `AtomSinkPatchWord` | `patch()` | Append one final little-endian replacement word |
+| `AtomSinkCommit` | `commit()` | Validate and retain the generation |
+| `AtomSinkAbort` | `abort()` | Discard tentative operations |
+
+A JavaScript exception becomes host status `$EF`, allowing the native driver to
+take its normal failure and abort path. The runner retains the original
+exception as the cause of the resulting `AtomAssemblyError`.
+
+The loop also records entry to `AtomOutputSetOrigin`, `AtomOutputReserve`, and
+the symbol declaration routines. The resulting records add layout and source
+symbol metadata without changing native control flow or output bytes.
+
+## Memory sink
+
+`createMemoryAtomSink()` implements the default append-only adapter. It
+maintains a lifecycle, tentative IMAGE and PATCH arrays, written-address sets,
+and one committed generation.
+
+The sink checks:
+
+- exactly one open generation;
+- bank zero;
+- target range for every operation;
+- monotonically increasing, non-overlapping IMAGE addresses;
+- PATCH targets that name an earlier IMAGE byte; and
+- at most one PATCH per initialized address.
+
+Commit verifies the original descriptor identity, remaining capacity, final
+cursor, and logical high-water mark. Success freezes the operation arrays and
+closes the generation. Abort clears all tentative operations.
+
+The generation retains byte payloads as frozen arrays of numbers. This avoids
+the false impression that a frozen object also freezes a contained
+`Uint8Array`. `materializeAtomGeneration()` allocates a new `Uint8Array`, fills
+the logical range, applies IMAGE records, then applies PATCH records.
+
+## `INCBIN` bridge
+
+The source-preparation phase retains one binary snapshot keyed by source part
+and line. When the native core submits an IMAGE byte from the lowered `DS` line,
+the runner substitutes the next byte from that snapshot. Native output
+capacity, label positions, and IMAGE count still come from the Z80 core.
+
+Commit fails when the native line emits too many or too few bytes. The bridge
+also retains the original `INCBIN` source location for that failure. This check
+prevents a stale lowering rule from silently shifting later addresses or
+truncating binary data.
+
+## Diagnostics
+
+Host preparation throws `SourcePackagerError` with category, code, message, and
+an optional source location. Native execution, artifact creation, and
+publication throw `AtomAssemblyError` with the same broad machine-readable
+shape plus details appropriate to the boundary.
+
+Native source failures are reconstructed from the original source part:
+
+```text
+LIB/DEVICE.ATM:14:9: UNDEFINED SYMBOL PORTBASE
+```
+
+The diagnostic carries logical identity, ordinal, exact byte offset, one-based
+line, and one-based byte column. Undefined-symbol failures also unpack the exact
+RADIX-40 name from the native symbol record.
+
+Equal-length preprocessing and `INCBIN` lowering make this mapping direct. The
+runner does not need a transformed-to-original offset table.
+
+## Artifact rendering
+
+`renderAtomArtifacts()` receives the resolved project and committed generation.
+It returns every current artifact in memory:
+
+```js
+const artifacts = renderAtomArtifacts(result, {
+  fill: 0,
+  entryAddress: 0x4000,
+});
+
+// artifacts.nobj    Uint8Array
+// artifacts.bin     Uint8Array
+// artifacts.hex     string
+// artifacts.listing string
+// artifacts.d8      object
+// artifacts.d8Text  string
+```
+
+The selected fill byte supplies gaps and uninitialized reservations in flat
+BIN and HEX output. It does not convert native `DS` into IMAGE records or alter
+the canonical logical generation.
+
+### Atom NOBJ
+
+`atom-nobj.mjs` writes Atom's flat NOBJ profile 0.2:
+
+```text
+BEGIN IMAGE* PATCH* MAP COMMIT
+```
+
+Adjacent logical operations are coalesced without changing order. The flat MAP
+records entry, used length, final cursor, part count, and part banks. COMMIT
+contains record count, entry, and CRC-16/CCITT-FALSE. `parseAtomNobj()` checks
+framing, version, record order, map revision, record count, and CRC.
+
+NOBJ is the closest artifact to the native streaming result. BIN and HEX are
+materialized launch views.
+
+### Binary and Intel HEX
+
+`materializeAtomGeneration()` selects a range from target start through the
+largest final cursor, high-water mark, or IMAGE end. It fills the range, copies
+IMAGE bytes, and overwrites patched addresses with their final bytes.
+
+`writeIntelHex()` emits 16-byte data records followed by the standard EOF
+record. It consumes the materialized contiguous image rather than the sparse
+logical operation stream.
+
+### Listing
+
+`writeAtomListing()` reads `originalBytes`, not masked compiler text. It groups
+IMAGE and layout events by source part and line, applies final patched bytes,
+and writes up to eight bytes per listing row. `DS` reservations receive an
+address and `<COUNT reserved>` gutter. The trailer contains sorted labels and
+constants with their source identities.
+
+### D8 map
+
+`writeAtomD8()` derives file segments from the same line-grouped operations.
+It records source files, line and listing positions, code/data/directive kinds,
+global or local scope, symbol visibility, entry address, and the overall target
+segment. `INCBIN` retains the original source line as a data segment.
+
+The D8 map is a host artifact. The resident assembler emits no mapping schema
+and carries no file path.
+
+## Artifact publication
+
+`publishAtomArtifacts()` writes one content-addressed immutable generation. Its
+digest covers each artifact name and byte sequence in a fixed order. A new
+temporary directory receives:
+
+```text
+BASENAME.NOBJ
+BASENAME.BIN
+BASENAME.HEX
+BASENAME.LST
+BASENAME.D8.JSON
+MANIFEST.JSON
+```
+
+Each file is synchronized before the directory is synchronized and renamed to
+its digest. If the digest directory already exists, the publisher verifies
+every byte and its manifest before reuse. It then creates a temporary symlink
+and atomically renames that link over `current`.
+
+A failed build never calls publication. A staging or promotion failure leaves
+the previous `current` generation selected. Old successful generations are
+retained; automatic pruning is not implemented.
+
+## Command-line entry
+
+`bin/atom.mjs` is a thin filesystem-facing wrapper. It:
+
+1. parses command arguments and `-D` definitions;
+2. chooses the root, target, entry, fill, and bundle path;
+3. calls `assembleAtomProject()`;
+4. renders all artifacts;
+5. publishes the generation; and
+6. prints one success summary or one positioned failure.
+
+The normal command shape is:
+
+```sh
+atom --origin 4000H SRC/MAIN.ATM
+```
+
+`--self-host` selects the checked source shipped in the package and fixes the
+proof target. It permits only an output-directory override.
+
+Command misuse returns status 2. A failed build or publication returns status
+1. A successful published build returns status 0.
+
+## Tool integration
+
+A tool such as Debug80 can import `atom-z80`, call
+`assembleAtomProject()` in process, validate `artifacts.d8` through its normal
+D8 parser, and load `artifacts.hex` or `artifacts.bin`. It does not need to run
+the CLI or parse terminal output. It should retain ownership of application
+publication and launch policy.
+
+The current package root exports both high-level and advanced functions. A
+future stable host facade can wrap these calls in a versioned assembler object
+and tagged result union without changing the native core or the logical output
+boundary described here.

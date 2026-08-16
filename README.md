@@ -52,7 +52,9 @@ atom --origin 4000H main.asm
 ```
 
 See [the command-line guide](docs/command-line.md) for every option and
-[the language reference](docs/language-reference.md) for source syntax.
+[the language reference](docs/language-reference.md) for source syntax. The
+[Atom engineering manual](docs/codebase/index.md) gives a guided tour of the
+host, native core, public interfaces, generated files, and proof system.
 
 ## Build boundary
 

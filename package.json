@@ -30,6 +30,7 @@
     "assets/native-core.json",
     "bin",
     "docs/*.md",
+    "docs/codebase",
     "examples",
     "self-host/*.asm",
     "src/host",
