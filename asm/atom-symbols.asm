@@ -13,6 +13,7 @@ AtomSymbolNameBytes:         .equ 6
 AtomSymbolValueLow:          .equ 6
 AtomSymbolValueHigh:         .equ 7
 AtomSymbolNameHighMask:      .equ $07
+AtomSymbolFlagSigned:        .equ $20
 AtomSymbolFlagDefined:       .equ $40
 AtomSymbolFlagPrivate:       .equ $80
 
@@ -541,6 +542,29 @@ _AtomPendingAlreadyDefined:
             LD   A,AtomStatusAlreadyDefined
             SCF
             RET
+
+.if AtomSymbolStatementMode
+; Check room for one pending record without publishing it.
+.routine out A,carry clobbers DE,HL,zero,sign,parity,halfCarry
+AtomPendingCheckCapacity:
+            LD   HL,(AtomPendingArenaEnd)
+            LD   DE,(AtomPendingNext)
+            OR   A
+            SBC  HL,DE
+            JR   C,AtomPendingCheckNoCapacity
+            LD   A,H
+            OR   A
+            RET  NZ
+            LD   A,L
+            CP   AtomPendingRecordBytes
+            JR   C,AtomPendingCheckNoCapacity
+            XOR  A
+            RET
+AtomPendingCheckNoCapacity:
+            LD   A,AtomStatusPendingCapacity
+            SCF
+            RET
+.endif
 
 ; Remove and return one pending entry for a symbol. Removal is O(1) after the
 ; scan: the final live record fills the hole, so the arena always measures the

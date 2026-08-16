@@ -57,10 +57,24 @@ AtomStatementNext:
             LD   (AtomStatementMnemonic),A
             LD   A,1
             LD   (AtomStatementMnemonicValid),A
+            XOR  A
+            LD   (AtomStatementDirectiveValid),A
             JR   AtomStatementAfterFirstName
 AtomStatementNotMnemonic:
             XOR  A
             LD   (AtomStatementMnemonicValid),A
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            LD   B,A
+            CALL AtomRecognizeDirective
+            JR   C,AtomStatementNotDirective
+            LD   (AtomStatementDirective),A
+            LD   A,1
+            LD   (AtomStatementDirectiveValid),A
+            JR   AtomStatementAfterFirstName
+AtomStatementNotDirective:
+            XOR  A
+            LD   (AtomStatementDirectiveValid),A
 
 AtomStatementAfterFirstName:
             CALL AtomTokenizerNext
@@ -70,7 +84,13 @@ AtomStatementAfterFirstName:
             JR   Z,AtomStatementLabel
             LD   A,(AtomStatementMnemonicValid)
             OR   A
-            JR   NZ,AtomStatementInstructionPublished
+            JP   NZ,AtomStatementInstructionPublished
+            LD   A,(AtomStatementDirectiveValid)
+            OR   A
+            JR   Z,AtomStatementTryEquate
+            LD   A,(AtomStatementDirective)
+            JP   AtomStatementDirectivePublished
+AtomStatementTryEquate:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenName
             JP   NZ,AtomStatementExpectedSaved
@@ -110,10 +130,24 @@ AtomStatementLabelDeclared:
             LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
             LD   B,A
             CALL AtomRecognizeMnemonic
-            JP   C,AtomStatementExpectedSaved
+            JR   C,AtomStatementLabelDirective
             LD   (AtomStatementMnemonic),A
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
+            JR   AtomStatementInstructionPublished
+AtomStatementLabelDirective:
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            LD   B,A
+            CALL AtomRecognizeDirective
+            JP   C,AtomStatementExpectedSaved
+            CP   AtomDirectiveEqu
+            JP   Z,AtomStatementExpectedSaved
+            LD   (AtomStatementDirective),A
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            LD   A,(AtomStatementDirective)
+            JP   AtomStatementDirectivePublished
 
 AtomStatementInstructionPublished:
             LD   A,(AtomStatementMnemonic)
@@ -134,6 +168,13 @@ AtomStatementEquate:
             OR   A
             JP   NZ,AtomStatementEquateUnresolved
             LD   (AtomStatementEquateValue),HL
+            XOR  A
+            LD   HL,AtomExpressionResultValue+2
+            CP   (HL)
+            JR   Z,AtomStatementEquateSignReady
+            INC  A
+AtomStatementEquateSignReady:
+            LD   (AtomStatementEquateSigned),A
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
             JP   NZ,AtomStatementEquateDelimiter
@@ -141,7 +182,272 @@ AtomStatementEquate:
             LD   DE,(AtomStatementEquateValue)
             CALL AtomSymbolDeclare
             JP   C,AtomStatementSymbolFailure
+            LD   A,(AtomStatementEquateSigned)
+            OR   A
+            JR   Z,AtomStatementEquateResolve
+            SET  5,(IX+5)
+AtomStatementEquateResolve:
             CALL AtomOutputResolveSymbol
+            JP   C,AtomStatementOutputFailure
+            JP   AtomStatementNext
+
+AtomStatementDirectivePublished:
+            CP   AtomDirectiveOrg
+            JR   Z,AtomStatementOrg
+            CP   AtomDirectiveDb
+            JR   Z,AtomStatementDb
+            CP   AtomDirectiveDw
+            JR   Z,AtomStatementDw
+            CP   AtomDirectiveDs
+            JP   Z,AtomStatementDs
+            JP   AtomStatementExpectedSaved
+
+AtomStatementOrg:
+            LD   BC,(AtomOutputCursor)
+            CALL AtomExpressionParseDeferred
+            JP   C,AtomStatementDirectiveFailure
+            OR   A
+            JP   NZ,AtomStatementDirectiveUnresolved
+            LD   (AtomStatementDataValue),HL
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   NZ,AtomStatementDirectiveDelimiter
+            LD   HL,(AtomStatementDataValue)
+            CALL AtomOutputSetOrigin
+            JP   C,AtomStatementOutputFailure
+            JP   AtomStatementNext
+
+AtomStatementDb:
+            LD   A,1
+            LD   (AtomStatementDataWidth),A
+            LD   A,AtomPatchKindTruncateByte
+            LD   (AtomStatementDataPatchKind),A
+            JR   AtomStatementDataItem
+AtomStatementDw:
+            LD   A,2
+            LD   (AtomStatementDataWidth),A
+            LD   A,AtomPatchKindWord
+            LD   (AtomStatementDataPatchKind),A
+AtomStatementDataItem:
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   Z,AtomStatementDirectiveExpected
+            CP   AtomTokenString
+            JR   NZ,AtomStatementDataExpression
+            LD   A,(AtomStatementDataWidth)
+            CP   1
+            JP   Z,AtomStatementDbString
+            JP   AtomStatementDirectiveString
+AtomStatementDataExpression:
+            LD   BC,(AtomOutputCursor)
+            CALL AtomExpressionParseDeferred
+            JP   C,AtomStatementDirectiveFailure
+            OR   A
+            JR   NZ,AtomStatementDataUnresolved
+            LD   A,(AtomStatementDataWidth)
+            CP   1
+            JR   Z,AtomStatementDataResolvedByte
+            CALL AtomOutputEmitWord
+            JP   C,AtomStatementOutputFailure
+            JR   AtomStatementDataDelimiter
+AtomStatementDataResolvedByte:
+            LD   A,L
+            CALL AtomOutputEmitByte
+            JP   C,AtomStatementOutputFailure
+            JR   AtomStatementDataDelimiter
+
+AtomStatementDataUnresolved:
+            LD   A,L
+            LD   (AtomStatementDataAddend),A
+            PUSH IX
+            POP  HL
+            LD   (AtomStatementDataKey),HL
+            LD   A,(AtomStatementDataWidth)
+            LD   L,A
+            LD   H,0
+            CALL AtomOutputCheckCapacity
+            JP   C,AtomStatementOutputFailure
+            CALL AtomPendingCheckCapacity
+            JP   C,AtomStatementSymbolFailure
+            LD   HL,(AtomStatementDataKey)
+            CALL AtomSymbolReference
+            JP   C,AtomStatementSymbolFailure
+            PUSH IX
+            POP  HL
+            LD   (AtomStatementDataSymbol),HL
+            LD   HL,(AtomOutputCursor)
+            LD   (AtomStatementDataAddress),HL
+            LD   A,(AtomStatementDataWidth)
+            CP   1
+            JR   Z,AtomStatementDataPlaceholderByte
+            LD   HL,0
+            CALL AtomOutputEmitWord
+            JP   C,AtomStatementOutputFailure
+            JR   AtomStatementDataQueue
+AtomStatementDataPlaceholderByte:
+            XOR  A
+            CALL AtomOutputEmitByte
+            JP   C,AtomStatementOutputFailure
+AtomStatementDataQueue:
+            LD   IX,(AtomStatementDataSymbol)
+            LD   DE,(AtomStatementDataAddress)
+            LD   A,(AtomStatementDataPatchKind)
+            LD   B,A
+            LD   A,(AtomStatementDataAddend)
+            LD   C,A
+            CALL AtomPendingAdd
+            JP   C,AtomStatementSymbolFailure
+
+AtomStatementDataDelimiter:
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   Z,AtomStatementNext
+            CP   AtomTokenComma
+            JP   NZ,AtomStatementDirectiveDelimiter
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   Z,AtomStatementDirectiveExpected
+            JP   AtomStatementDataItem
+
+AtomStatementDbString:
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            INC  HL
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            SUB  2
+            LD   B,A
+            LD   C,0
+AtomStatementStringCountLoop:
+            LD   A,B
+            OR   A
+            JR   Z,AtomStatementStringCountDone
+            LD   A,(HL)
+            INC  HL
+            DEC  B
+            CP   "\\"
+            JR   NZ,AtomStatementStringCountOne
+            LD   A,(HL)
+            INC  HL
+            DEC  B
+            CP   "x"
+            JR   NZ,AtomStatementStringCountOne
+            INC  HL
+            INC  HL
+            DEC  B
+            DEC  B
+AtomStatementStringCountOne:
+            INC  C
+            JR   AtomStatementStringCountLoop
+AtomStatementStringCountDone:
+            LD   A,C
+            LD   (AtomStatementStringCount),A
+            LD   L,A
+            LD   H,0
+            CALL AtomOutputCheckCapacity
+            JP   C,AtomStatementOutputFailure
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            INC  HL
+            LD   (AtomStatementStringPointer),HL
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            SUB  2
+            LD   (AtomStatementStringRemaining),A
+AtomStatementStringEmitLoop:
+            LD   A,(AtomStatementStringRemaining)
+            OR   A
+            JR   Z,AtomStatementStringDone
+            CALL AtomStatementStringTake
+            CP   "\\"
+            JR   NZ,AtomStatementStringEmit
+            CALL AtomStatementStringTake
+            CP   "0"
+            JR   Z,AtomStatementStringZero
+            CP   "n"
+            JR   Z,AtomStatementStringNewline
+            CP   "r"
+            JR   Z,AtomStatementStringReturn
+            CP   "t"
+            JR   Z,AtomStatementStringTab
+            CP   "x"
+            JR   Z,AtomStatementStringHex
+            JR   AtomStatementStringEmit
+AtomStatementStringZero:
+            XOR  A
+            JR   AtomStatementStringEmit
+AtomStatementStringNewline:
+            LD   A,$0A
+            JR   AtomStatementStringEmit
+AtomStatementStringReturn:
+            LD   A,$0D
+            JR   AtomStatementStringEmit
+AtomStatementStringTab:
+            LD   A,$09
+            JR   AtomStatementStringEmit
+AtomStatementStringHex:
+            CALL AtomStatementStringTake
+            CALL AtomTokenHexDigit
+            JP   NC,AtomStatementDirectiveString
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            LD   (AtomStatementStringNibble),A
+            CALL AtomStatementStringTake
+            CALL AtomTokenHexDigit
+            JP   NC,AtomStatementDirectiveString
+            LD   HL,AtomStatementStringNibble
+            OR   (HL)
+AtomStatementStringEmit:
+            CALL AtomOutputEmitByte
+            JP   C,AtomStatementOutputFailure
+            JR   AtomStatementStringEmitLoop
+AtomStatementStringDone:
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            JP   AtomStatementDataDelimiter
+
+AtomStatementDs:
+            LD   BC,(AtomOutputCursor)
+            CALL AtomExpressionParseDeferred
+            JP   C,AtomStatementDirectiveFailure
+            OR   A
+            JP   NZ,AtomStatementDirectiveUnresolved
+            LD   (AtomStatementDataCount),HL
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JR   Z,AtomStatementDsReserve
+            CP   AtomTokenComma
+            JP   NZ,AtomStatementDirectiveDelimiter
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            LD   BC,(AtomOutputCursor)
+            CALL AtomExpressionParseDeferred
+            JP   C,AtomStatementDirectiveFailure
+            OR   A
+            JP   NZ,AtomStatementDirectiveUnresolved
+            LD   A,L
+            LD   (AtomStatementDataFill),A
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   NZ,AtomStatementDirectiveDelimiter
+            LD   HL,(AtomStatementDataCount)
+            CALL AtomOutputCheckCapacity
+            JP   C,AtomStatementOutputFailure
+AtomStatementDsFillLoop:
+            LD   HL,(AtomStatementDataCount)
+            LD   A,H
+            OR   L
+            JP   Z,AtomStatementNext
+            LD   A,(AtomStatementDataFill)
+            CALL AtomOutputEmitByte
+            JP   C,AtomStatementOutputFailure
+            LD   HL,(AtomStatementDataCount)
+            DEC  HL
+            LD   (AtomStatementDataCount),HL
+            JR   AtomStatementDsFillLoop
+AtomStatementDsReserve:
+            LD   HL,(AtomStatementDataCount)
+            CALL AtomOutputReserve
             JP   C,AtomStatementOutputFailure
             JP   AtomStatementNext
 
@@ -195,6 +501,16 @@ AtomStatementDirectiveTable:
             .dw $1BF8
             .db 2,AtomDirectiveDs
 
+.routine out A clobbers HL,zero,sign,parity,halfCarry
+AtomStatementStringTake:
+            LD   HL,(AtomStatementStringPointer)
+            LD   A,(HL)
+            INC  HL
+            LD   (AtomStatementStringPointer),HL
+            LD   HL,AtomStatementStringRemaining
+            DEC  (HL)
+            RET
+
 .routine out carry clobbers A,HL,zero,sign,parity,halfCarry
 AtomStatementCapturePosition:
             LD   A,(AtomTokenRecord+AtomTokenPartOffset)
@@ -216,7 +532,17 @@ AtomStatementLexicalFailure:
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry
 AtomStatementExpectedHere:
             CALL AtomStatementCapturePosition
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenDirective
+            JR   Z,AtomStatementUnsupportedDirective
             JP   AtomStatementExpectedSaved
+.routine out A,carry clobbers halfCarry,zero,sign,parity
+AtomStatementUnsupportedDirective:
+            LD   A,AtomTokenDirective
+            LD   (AtomStatementDetail),A
+            LD   A,AtomStatementStatusDirective
+            SCF
+            RET
 .routine out A,carry clobbers halfCarry,zero,sign,parity
 AtomStatementExpectedSaved:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
@@ -254,6 +580,24 @@ AtomStatementEquateUnresolved:
 AtomStatementEquateDelimiter:
             LD   A,AtomExpressionStatusExpectedPrimary
             JR   AtomStatementEquateFailure
+.routine in A out A,carry clobbers halfCarry,zero,sign,parity
+AtomStatementDirectiveFailure:
+            LD   (AtomStatementDetail),A
+            LD   A,AtomStatementStatusDirective
+            SCF
+            RET
+AtomStatementDirectiveUnresolved:
+            LD   A,AtomExpressionUnresolved
+            JR   AtomStatementDirectiveFailure
+AtomStatementDirectiveExpected:
+            LD   A,AtomExpressionStatusExpectedPrimary
+            JR   AtomStatementDirectiveFailure
+AtomStatementDirectiveDelimiter:
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            JR   AtomStatementDirectiveFailure
+AtomStatementDirectiveString:
+            LD   A,AtomTokenString
+            JR   AtomStatementDirectiveFailure
 
 AtomStatementCodeEnd:
 
@@ -267,4 +611,20 @@ AtomStatementErrorPart:     .db 0
 AtomStatementErrorOffset:   .dw 0
 AtomStatementDirectiveLength:.db 0
 AtomStatementEquateValue:   .dw 0
+AtomStatementEquateSigned:  .db 0
+AtomStatementDirective:     .db 0
+AtomStatementDirectiveValid:.db 0
+AtomStatementDataWidth:     .db 0
+AtomStatementDataPatchKind: .db 0
+AtomStatementDataAddend:    .db 0
+AtomStatementDataFill:      .db 0
+AtomStatementDataValue:     .dw 0
+AtomStatementDataCount:     .dw 0
+AtomStatementDataKey:       .dw 0
+AtomStatementDataSymbol:    .dw 0
+AtomStatementDataAddress:   .dw 0
+AtomStatementStringPointer: .dw 0
+AtomStatementStringRemaining:.db 0
+AtomStatementStringCount:   .db 0
+AtomStatementStringNibble:  .db 0
 AtomStatementWorkspaceEnd:

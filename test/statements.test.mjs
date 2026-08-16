@@ -20,9 +20,11 @@ const STATUS = Object.freeze({
 const STATEMENT = Object.freeze({
   OK: 0,
   EXPECTED: 2,
+  DIRECTIVE: 3,
   EQUATE: 4,
   SYMBOL: 5,
   INSTRUCTION: 6,
+  OUTPUT: 7,
 });
 
 function resolve(value) {
@@ -273,6 +275,132 @@ test("private EQU requires a global scope and duplicate EQU is atomic", () => {
   const found = h.find(h.pack("Value").key);
   assert.equal(found.status, STATUS.OK);
   assert.equal(h.memory[found.ix + 6] | (h.memory[found.ix + 7] << 8), 1);
+});
+
+test("bare ORG, DB, and DW are case-insensitive and match AZM", () => {
+  const source = "oRg $5000\ndB 1,$FF,-1,256\ndW $1234,-1\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x5000), [1, 0xff, 0xff, 0, 0x34, 0x12, 0xff, 0xff]);
+  assert.deepEqual(h.finalBytes(0x5000), azmBytes("ORG $5000\nDB 1,$FF,-1,256\nDW $1234,-1\n"));
+});
+
+test("DB decodes the tokenizer's one byte-string encoding", () => {
+  const source = 'DB "A\\n\\x42",0,"\\\\\\\""\n';
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x41, 0x0a, 0x42, 0, 0x5c, 0x22]);
+  assert.deepEqual(h.finalBytes(), azmBytes("DB $41,$0A,$42,0,$5C,$22\n"));
+
+  const failed = h.assemble('DB "ABC"\n', { capacity: 2 });
+  assert.equal(failed.status, STATEMENT.OUTPUT);
+  assert.deepEqual(h.operations(), []);
+});
+
+test("labels compose with DB, DW, and uninitialized DS reservations", () => {
+  const source = [
+    "ORG $4100",
+    "Start: DB 1,2",
+    "Words: DW Start,Words",
+    "Gap: DS 2",
+    "After: DB $FF",
+    "",
+  ].join("\n");
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x4100), [1, 2, 0x00, 0x41, 0x02, 0x41, 0, 0, 0xff]);
+  assert.deepEqual(h.finalBytes(0x4100), azmBytes(source));
+  assert.deepEqual(h.outputState(), { cursor: 0x4109, remaining: 0xf7 });
+});
+
+test("each data-list expression sees its own current output address", () => {
+  const source = "ORG $4000\nDB $,$\nDW $,$\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x00, 0x01, 0x02, 0x40, 0x04, 0x40]);
+  assert.deepEqual(h.finalBytes(), azmBytes(source));
+});
+
+test("DS supports zero, trailing reservations, and an optional fill byte", () => {
+  let result = h.assemble("ORG $5000\nDB 1\nDS 3\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x5000), [1]);
+  assert.deepEqual(h.outputState(), { cursor: 0x5004, remaining: 0xfc });
+
+  result = h.assemble("ORG $5000\nDS 0,$AA\nDS 3,$AA\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x5000), [0xaa, 0xaa, 0xaa]);
+  assert.deepEqual(h.finalBytes(0x5000), azmBytes("ORG $5000\nDS 0,$AA\nDS 3,$AA\n"));
+});
+
+test("forward DB and DW expressions publish exact truncating and word patches", () => {
+  const result = h.assemble("DB Byte+1\nDW Word\nByte EQU -1\nWord:\n");
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.operations(), [
+    { kind: 1, bank: 0, address: 0x4000, bytes: [0] },
+    { kind: 1, bank: 0, address: 0x4001, bytes: [0] },
+    { kind: 1, bank: 0, address: 0x4002, bytes: [0] },
+    { kind: 2, bank: 0, address: 0x4000, bytes: [0] },
+    { kind: 2, bank: 0, address: 0x4001, bytes: [3, 0x40] },
+  ]);
+  assert.deepEqual(h.finalBytes(), [0, 3, 0x40]);
+});
+
+test("directive resolution and capacity failures preserve preflight atomicity", () => {
+  let result = h.assemble("ORG Forward\n");
+  assert.equal(result.status, STATEMENT.DIRECTIVE);
+  assert.deepEqual(h.operations(), []);
+  assert.equal(h.find(h.pack("Forward").key).status, STATUS.NOT_FOUND);
+
+  result = h.assemble("DB Forward\n", { pendingBytes: 5 });
+  assert.equal(result.status, STATEMENT.SYMBOL);
+  assert.deepEqual(h.operations(), []);
+  assert.equal(h.find(h.pack("Forward").key).status, STATUS.NOT_FOUND);
+
+  result = h.assemble("DW Forward\n", { capacity: 1 });
+  assert.equal(result.status, STATEMENT.OUTPUT);
+  assert.deepEqual(h.operations(), []);
+  assert.equal(h.find(h.pack("Forward").key).status, STATUS.NOT_FOUND);
+});
+
+test("empty lists, trailing commas, and unresolved DS operands are rejected", () => {
+  for (const source of ["DB\n", "DW 1,\n", "DS Forward\n", "DS 2,Forward\n"]) {
+    const result = h.assemble(source);
+    assert.equal(result.status, STATEMENT.DIRECTIVE, source);
+  }
+});
+
+test("dotted assembler directives are rejected in favor of the bare syntax", () => {
+  for (const source of [".org $4000\n", ".db 1\n", ".dw 1\n", ".ds 1\n", ".equ 1\n"]) {
+    const result = h.assemble(source);
+    assert.equal(result.status, STATEMENT.DIRECTIVE, source);
+    assert.deepEqual(h.operations(), []);
+  }
+});
+
+test("directive output helpers return directly and enforce exact capacities", () => {
+  h.resetAssembly({ pendingBytes: 5, capacity: 2 });
+  assert.equal(h.pendingCheckCapacity().carry, 1);
+  assert.equal(h.outputCheckCapacity(2).carry, 0);
+  assert.equal(h.outputCheckCapacity(3).carry, 1);
+  assert.deepEqual(h.outputState(), { cursor: 0x4000, remaining: 2 });
+  assert.equal(h.outputEmitWord(0x1234).carry, 0);
+  assert.deepEqual(h.operations(), [
+    { kind: 1, bank: 0, address: 0x4000, bytes: [0x34] },
+    { kind: 1, bank: 0, address: 0x4001, bytes: [0x12] },
+  ]);
+
+  h.resetAssembly({ capacity: 1 });
+  assert.equal(h.outputEmitWord(0x1234).carry, 1);
+  assert.deepEqual(h.operations(), []);
+  assert.equal(h.outputEmitByte(0x56).carry, 0);
+  assert.deepEqual(h.operations(), [{ kind: 1, bank: 0, address: 0x4000, bytes: [0x56] }]);
+
+  h.resetAssembly({ capacity: 4 });
+  assert.equal(h.outputReserve(3).carry, 0);
+  assert.deepEqual(h.outputState(), { cursor: 0x4003, remaining: 1 });
+  assert.equal(h.outputSetOrigin(0x5000).carry, 0);
+  assert.deepEqual(h.outputState(), { cursor: 0x5000, remaining: 1 });
 });
 
 test("Phase 2g measured public-entry execution matches the pinned observations", () => {

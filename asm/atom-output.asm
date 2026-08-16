@@ -20,6 +20,90 @@ AtomOutputReset:
             XOR  A
             RET
 
+.if AtomParserStatementMode
+; Check that a mathematical target span fits without changing output state.
+; in HL=byte count
+.routine in HL out A,carry clobbers DE,sign,parity,halfCarry,HL,zero
+AtomOutputCheckCapacity:
+            EX   DE,HL
+            LD   HL,(AtomOutputRemaining)
+            OR   A
+            SBC  HL,DE
+            JR   C,AtomOutputDataCapacityFailure
+            XOR  A
+            RET
+
+; Submit one initialized data byte.
+; in A=byte
+.routine in A out A,carry clobbers DE,HL,zero,sign,parity,halfCarry,BC,IX,IY
+AtomOutputEmitByte:
+            LD   (AtomOutputDataValue),A
+            LD   HL,1
+            CALL AtomOutputCheckCapacity
+            RET  C
+            LD   A,(AtomOutputDataValue)
+            JP   AtomOutputEmitByteReady
+
+; Submit one little-endian initialized data word.
+; in HL=word
+.routine in HL out A,carry clobbers DE,HL,zero,sign,parity,halfCarry,BC,IX,IY
+AtomOutputEmitWord:
+            LD   (AtomOutputDataValue),HL
+            LD   HL,2
+            CALL AtomOutputCheckCapacity
+            RET  C
+            LD   A,(AtomOutputDataValue)
+            CALL AtomOutputEmitByteReady
+            RET  C
+            LD   A,(AtomOutputDataValue+1)
+            JP   AtomOutputEmitByteReady
+
+; Advance over uninitialized reserved bytes without emitting IMAGE records.
+; in HL=count
+.routine in HL out A,carry clobbers DE,HL,zero,sign,parity,halfCarry
+AtomOutputReserve:
+            LD   (AtomOutputDataValue),HL
+            CALL AtomOutputCheckCapacity
+            RET  C
+            LD   DE,(AtomOutputDataValue)
+            LD   HL,(AtomOutputCursor)
+            ADD  HL,DE
+            LD   (AtomOutputCursor),HL
+            LD   HL,(AtomOutputRemaining)
+            OR   A
+            SBC  HL,DE
+            LD   (AtomOutputRemaining),HL
+            XOR  A
+            RET
+
+; Select a new logical target address without emitting bytes.
+; in HL=origin
+.routine in HL out A,carry clobbers sign,parity,halfCarry,zero
+AtomOutputSetOrigin:
+            LD   (AtomOutputCursor),HL
+            XOR  A
+            RET
+
+.routine in A out A,carry clobbers BC,DE,HL,IX,IY,zero,sign,parity,halfCarry
+AtomOutputEmitByteReady:
+            LD   HL,(AtomOutputCursor)
+            LD   C,0
+            CALL AtomSinkImageByte
+            RET  C
+            LD   HL,(AtomOutputCursor)
+            INC  HL
+            LD   (AtomOutputCursor),HL
+            LD   HL,(AtomOutputRemaining)
+            DEC  HL
+            LD   (AtomOutputRemaining),HL
+            XOR  A
+            RET
+AtomOutputDataCapacityFailure:
+            LD   A,AtomOutputStatusCapacity
+            SCF
+            RET
+.endif
+
 ; Encode and submit one parsed instruction through the Nucleus image-byte
 ; sink. The parser's pending references are published after all bytes succeed.
 ;
@@ -104,6 +188,14 @@ _AtomOutputResolveLoop:
             LD   IX,(AtomOutputResolveSymbolPointer)
             LD   L,(IX+AtomSymbolValueLow)
             LD   H,(IX+AtomSymbolValueHigh)
+.if AtomParserStatementMode
+            XOR  A
+            BIT  5,(IX+5)
+            JR   Z,_AtomOutputResolveBaseReady
+            DEC  A
+_AtomOutputResolveBaseReady:
+            LD   (AtomOutputResolveBaseHigh),A
+.endif
             LD   A,(AtomOutputResolveAddend)
             LD   C,A
             LD   D,0
@@ -117,7 +209,11 @@ _AtomOutputResolveSignReady:
             LD   A,H
             ADC  A,D
             LD   (AtomOutputResolveValue+1),A
+.if AtomParserStatementMode
+            LD   A,(AtomOutputResolveBaseHigh)
+.else
             LD   A,0
+.endif
             ADC  A,D
             LD   (AtomOutputResolveValue+2),A
             CALL AtomOutputRequireWordDomain
@@ -132,6 +228,10 @@ _AtomOutputResolveSignReady:
             JR   Z,_AtomOutputResolveRelative
             CP   AtomPatchKindDisplacement
             JR   Z,_AtomOutputResolveDisplacement
+.if AtomParserStatementMode
+            CP   AtomPatchKindTruncateByte
+            JR   Z,_AtomOutputResolveSubmitByte
+.endif
             JP   AtomOutputResolveInternal
 
 _AtomOutputResolveByte:
@@ -254,4 +354,8 @@ AtomOutputResolvePatchAddress: .dw 0
 AtomOutputResolveKind:         .db 0
 AtomOutputResolveAddend:       .db 0
 AtomOutputResolveValue:        .ds 3
+.if AtomParserStatementMode
+AtomOutputDataValue:           .dw 0
+AtomOutputResolveBaseHigh:     .db 0
+.endif
 AtomOutputWorkspaceEnd:

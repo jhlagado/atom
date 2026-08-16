@@ -269,6 +269,17 @@ AtomExpressionPrimaryName:
             JR   Z,_AtomExpressionPrimaryUnresolved
             LD   L,(IX+AtomSymbolValueLow)
             LD   H,(IX+AtomSymbolValueHigh)
+.if AtomSymbolStatementMode
+            BIT  5,(IX+5)
+            JR   Z,_AtomExpressionPrimaryPositiveSymbol
+            LD   (AtomExpressionResultValue),HL
+            LD   A,$FF
+            LD   (AtomExpressionResultValue+2),A
+            XOR  A
+            LD   (AtomExpressionResultUnresolved),A
+            JP   AtomExpressionNextToken
+_AtomExpressionPrimaryPositiveSymbol:
+.endif
             CALL AtomExpressionSetResolvedWord
             JP   AtomExpressionNextToken
 _AtomExpressionPrimaryMissing:

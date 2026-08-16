@@ -116,6 +116,8 @@ export async function createStatementsHarness() {
           (["AtomSymbolDeclare", "AtomSymbolReference", "AtomSymbolDeclareGlobalLabel"].includes(entry) &&
             inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
           (entry === "AtomPendingAdd" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
+          (["AtomOutputEmitByte", "AtomOutputEmitWord"].includes(entry) &&
+            inside(address, symbols.AtomStatementProofLog, symbols.AtomStatementProofLogLimit)) ||
           (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
           (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
           (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementProofLog, symbols.AtomStatementProofLogLimit)) ||
@@ -296,6 +298,38 @@ export async function createStatementsHarness() {
         cursor: word(memory, symbols.AtomOutputCursor),
         remaining: word(memory, symbols.AtomOutputRemaining),
       };
+    },
+    pendingCheckCapacity() {
+      return execute("AtomPendingCheckCapacity");
+    },
+    outputCheckCapacity(count) {
+      return execute("AtomOutputCheckCapacity", (_memory, _names, cpu) => {
+        cpu.h = count >>> 8;
+        cpu.l = count & 0xff;
+      });
+    },
+    outputEmitByte(value) {
+      return execute("AtomOutputEmitByte", (_memory, _names, cpu) => {
+        cpu.a = value;
+      });
+    },
+    outputEmitWord(value) {
+      return execute("AtomOutputEmitWord", (_memory, _names, cpu) => {
+        cpu.h = value >>> 8;
+        cpu.l = value & 0xff;
+      });
+    },
+    outputReserve(count) {
+      return execute("AtomOutputReserve", (_memory, _names, cpu) => {
+        cpu.h = count >>> 8;
+        cpu.l = count & 0xff;
+      });
+    },
+    outputSetOrigin(address) {
+      return execute("AtomOutputSetOrigin", (_memory, _names, cpu) => {
+        cpu.h = address >>> 8;
+        cpu.l = address & 0xff;
+      });
     },
     parsePublished(source, { address = 0x4000 } = {}) {
       restart();
