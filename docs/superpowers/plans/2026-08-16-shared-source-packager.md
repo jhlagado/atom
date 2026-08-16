@@ -786,3 +786,29 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
 - **Measured scope:** this checkpoint changed only host JavaScript and tests. It
   adds zero bytes to Atom's resident Z80 account. Debug80 remained at
   `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
+
+### 2026-08-16 — Checkpoint 8 native Intel literals and directive leakage
+
+- **Atom:** fetched `origin/codex/atom-host-packager` at
+  `530bea37308fd3bf98aa3529724d02795d1d6fd2`; committed and pushed
+  `0d8c0495c9fd363a08318b537bca59b749d360c7`.
+- **Red:** focused native tests first failed on every digit-led Intel `H` and
+  `B` suffix literal and accepted leaked line-start host directives as percent
+  tokens.
+- **Green:** `npm test` passed 147 of 147 tests with zero failures. Strict AZM
+  register contracts, exact return PC and SP, memory profiles, canaries,
+  failure atomicity, source preservation, and the complete historical proof
+  set all passed.
+- **Coverage:** upper- and lower-case Intel suffixes, zero and 65,535, invalid
+  digits, overflow, prefix/suffix equivalence, unchanged failure records and
+  cursors, line-start `%include`/`%if`/`%endif` leakage, and preservation of
+  `%1`, `LD A,%1`, and `A % B`.
+- **Measured size:** the tokenizer is 1,186 rule-code bytes plus 33 immutable
+  table bytes, for 1,219 bytes total and 32 workspace bytes. This is a 168-byte
+  resident increase with no workspace increase. The integrated Atom core is
+  10,314 code-and-table bytes plus 491 fixed-workspace bytes, leaving 6,070
+  code bytes below 16 KiB.
+- **Measured execution:** the longest observed tokenizer paths remain 22
+  instructions and 248 T-states for reset, and 24,619 instructions and 277,004
+  T-states for the 512-space next-token case. Debug80 remained at
+  `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
