@@ -41,6 +41,70 @@ const writeWord = (memory, address, value) => {
 const pair = (high, low) => ((high << 8) | low) & 0xffff;
 const frozenBytes = (bytes) => Object.freeze(Array.from(bytes));
 
+const RUNNER_SYMBOL_NAMES = Object.freeze([
+  "AtomAssemble",
+  "AtomDriverDescriptorParts",
+  "AtomDriverDescriptorPendingEnd",
+  "AtomDriverDescriptorPendingStart",
+  "AtomDriverDescriptorSymbolEnd",
+  "AtomDriverDescriptorSymbolStart",
+  "AtomDriverDescriptorTargetBytes",
+  "AtomDriverDescriptorTargetStart",
+  "AtomDriverDetail",
+  "AtomDriverPartDescriptorBytes",
+  "AtomDriverStatusConfiguration",
+  "AtomDriverStatusOk",
+  "AtomDriverStatusOutput",
+  "AtomDriverStatusSource",
+  "AtomDriverStatusUndefined",
+  "AtomDriverUndefinedSymbol",
+  "AtomHostResidentEnd",
+  "AtomOutputCursor",
+  "AtomOutputReserve",
+  "AtomOutputSetOrigin",
+  "AtomSinkAbort",
+  "AtomSinkBegin",
+  "AtomSinkCommit",
+  "AtomSinkImageByte",
+  "AtomSinkPatchByte",
+  "AtomSinkPatchWord",
+  "AtomStatementDetail",
+  "AtomStatementErrorOffset",
+  "AtomStatementErrorPart",
+  "AtomStatementStatusOutput",
+  "AtomSymbolDeclare",
+  "AtomSymbolDeclareGlobalLabel",
+  "AtomSymbolFlagPrivate",
+  "AtomSymbolNameBytes",
+  "AtomSymbolNameHighMask",
+  "AtomSymbolRecordBytes",
+  "AtomTokenizerReset",
+]);
+
+const RUNNER_CODE_SYMBOL_NAMES = Object.freeze([
+  "AtomAssemble",
+  "AtomOutputReserve",
+  "AtomOutputSetOrigin",
+  "AtomSinkAbort",
+  "AtomSinkBegin",
+  "AtomSinkCommit",
+  "AtomSinkImageByte",
+  "AtomSinkPatchByte",
+  "AtomSinkPatchWord",
+  "AtomSymbolDeclare",
+  "AtomSymbolDeclareGlobalLabel",
+  "AtomTokenizerReset",
+]);
+
+const RUNNER_STATE_SYMBOL_WIDTHS = Object.freeze([
+  ["AtomDriverDetail", 1],
+  ["AtomDriverUndefinedSymbol", 2],
+  ["AtomOutputCursor", 2],
+  ["AtomStatementDetail", 1],
+  ["AtomStatementErrorOffset", 2],
+  ["AtomStatementErrorPart", 1],
+]);
+
 function fail(code, message, details = {}) {
   throw new AtomAssemblyError("configuration", code, message, details);
 }
@@ -50,6 +114,92 @@ function integer(value, name, minimum, maximum) {
     fail("invalid-option", `${name} must be an integer from ${minimum} through ${maximum}`);
   }
   return value;
+}
+
+function nativeCoreOption(value) {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    typeof value.hexText !== "string" ||
+    value.symbols === null ||
+    typeof value.symbols !== "object" ||
+    !Array.isArray(value.codeRanges) ||
+    !Number.isInteger(value.codeBytes) ||
+    !Number.isInteger(value.residentExtentBytes)
+  ) {
+    fail("invalid-native-core", "supplied native Atom core is incomplete");
+  }
+  for (const name of RUNNER_SYMBOL_NAMES) {
+    if (!Number.isInteger(value.symbols[name]) || value.symbols[name] < 0 || value.symbols[name] > 0xffff) {
+      fail("invalid-native-core", `supplied native Atom core has no valid ${name}`);
+    }
+  }
+  if (
+    value.residentExtentBytes !== value.symbols.AtomHostResidentEnd ||
+    value.residentExtentBytes < 0 ||
+    value.residentExtentBytes > 0x4000
+  ) {
+    fail("invalid-native-core", "supplied native Atom core has an invalid resident extent");
+  }
+  let codeBytes = 0;
+  let previousEnd = 0;
+  for (const range of value.codeRanges) {
+    if (
+      range === null ||
+      typeof range !== "object" ||
+      !Number.isInteger(range.start) ||
+      !Number.isInteger(range.end) ||
+      range.start < previousEnd ||
+      range.end < range.start ||
+      range.end > value.residentExtentBytes
+    ) {
+      fail("invalid-native-core", "supplied native Atom core has an invalid code range");
+    }
+    codeBytes += range.end - range.start;
+    previousEnd = range.end;
+  }
+  if (codeBytes !== value.codeBytes) {
+    fail("invalid-native-core", "supplied native Atom core code-byte total does not match its ranges");
+  }
+  let program;
+  try {
+    program = parseIntelHex(value.hexText);
+  } catch (cause) {
+    fail("invalid-native-core", "supplied native Atom core has invalid Intel HEX", { cause });
+  }
+  const initialized = new Uint8Array(value.residentExtentBytes);
+  for (const range of program.writeRanges) {
+    if (range.start < 0 || range.end < range.start || range.end > value.residentExtentBytes) {
+      fail("invalid-native-core", "supplied native Atom core HEX writes outside its resident extent");
+    }
+    initialized.fill(1, range.start, range.end);
+  }
+  for (const range of value.codeRanges) {
+    for (let address = range.start; address < range.end; address += 1) {
+      if (initialized[address] === 0) {
+        fail("invalid-native-core", "supplied native Atom core HEX does not initialize every code byte");
+      }
+    }
+  }
+  const inCode = (address) => value.codeRanges.some((range) => address >= range.start && address < range.end);
+  for (const name of RUNNER_CODE_SYMBOL_NAMES) {
+    if (!inCode(value.symbols[name]) || initialized[value.symbols[name]] === 0) {
+      fail("invalid-native-core", `supplied native Atom core has an invalid code entry ${name}`);
+    }
+  }
+  for (const [name, width] of RUNNER_STATE_SYMBOL_WIDTHS) {
+    if (value.symbols[name] + width > value.residentExtentBytes) {
+      fail("invalid-native-core", `supplied native Atom core has an invalid state address ${name}`);
+    }
+  }
+  return Object.freeze({
+    ...value,
+    symbols: Object.freeze({ ...value.symbols }),
+    codeRanges: Object.freeze(value.codeRanges.map((range) => Object.freeze({
+      start: range.start,
+      end: range.end,
+    }))),
+  });
 }
 
 function snapshotProject(project) {
@@ -73,6 +223,9 @@ function snapshotProject(project) {
     ) {
       fail("invalid-part", `resolved Atom source part ${ordinal} is not a flat, equal-length native part`);
     }
+    if (part.compilerBytes.length > NATIVE_ATOM_LIMITS.sourceBytes) {
+      fail("source-capacity", `resolved Atom source part ${ordinal} exceeds the native ${NATIVE_ATOM_LIMITS.sourceBytes}-byte window`);
+    }
     totalBytes += part.compilerBytes.length;
     return Object.freeze({
       ordinal,
@@ -82,10 +235,11 @@ function snapshotProject(project) {
       compilerBytes: part.compilerBytes.slice(),
     });
   });
-  if (totalBytes > NATIVE_ATOM_LIMITS.sourceBytes) {
-    fail("source-capacity", `resolved Atom source exceeds the native ${NATIVE_ATOM_LIMITS.sourceBytes}-byte window`);
-  }
-  return Object.freeze({ parts: Object.freeze(parts), totalBytes });
+  return Object.freeze({
+    parts: Object.freeze(parts),
+    totalBytes,
+    paged: totalBytes > NATIVE_ATOM_LIMITS.sourceBytes,
+  });
 }
 
 function targetOptions(target = {}) {
@@ -358,27 +512,34 @@ function invokeService(runtime, kind, action, trace) {
 export async function assembleResolvedAtomProject(project, options = {}) {
   const snapshot = snapshotProject(project);
   const target = targetOptions(options.target);
-  const maxInstructions = integer(options.maxInstructions ?? 50_000_000, "maxInstructions", 1, Number.MAX_SAFE_INTEGER);
-  const maxCycles = integer(options.maxCycles ?? 500_000_000, "maxCycles", 1, Number.MAX_SAFE_INTEGER);
-  const core = await loadNativeAtomCore();
+  const maxInstructions = integer(options.maxInstructions ?? 200_000_000, "maxInstructions", 1, Number.MAX_SAFE_INTEGER);
+  const maxCycles = integer(options.maxCycles ?? 2_000_000_000, "maxCycles", 1, Number.MAX_SAFE_INTEGER);
+  const core = options.nativeCore === undefined
+    ? await loadNativeAtomCore()
+    : nativeCoreOption(options.nativeCore);
   const symbols = core.symbols;
   if (core.residentExtentBytes > BUILD_DESCRIPTOR) {
     fail("memory-map", "native Atom resident extent overlaps its host descriptor region");
   }
-  const romRanges = core.codeRanges.map(({ start, end }) => ({ start, end: end - 1 }));
+  const romRanges = [
+    ...core.codeRanges.map(({ start, end }) => ({ start, end: end - 1 })),
+    { start: SOURCE_START, end: SOURCE_END - 1 },
+  ];
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomAssemble, undefined, { romRanges });
   const memory = runtime.hardware.memory;
   const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: memory.slice(start, end) }));
 
   memory.fill(0xa5, BUILD_DESCRIPTOR, SYMBOL_START);
   let sourceCursor = SOURCE_START;
+  if (snapshot.paged) memory.fill(0xa5, SOURCE_START, SOURCE_END);
   for (const part of snapshot.parts) {
-    memory.set(part.compilerBytes, sourceCursor);
+    const partStart = snapshot.paged ? SOURCE_START : sourceCursor;
+    if (!snapshot.paged) memory.set(part.compilerBytes, partStart);
     const descriptor = PART_DESCRIPTORS + part.ordinal * symbols.AtomDriverPartDescriptorBytes;
     memory[descriptor] = part.ordinal;
-    writeWord(memory, descriptor + 1, sourceCursor);
-    writeWord(memory, descriptor + 3, sourceCursor + part.compilerBytes.length);
-    sourceCursor += part.compilerBytes.length;
+    writeWord(memory, descriptor + 1, partStart);
+    writeWord(memory, descriptor + 3, partStart + part.compilerBytes.length);
+    if (!snapshot.paged) sourceCursor += part.compilerBytes.length;
   }
   memory[BUILD_DESCRIPTOR] = snapshot.parts.length;
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorParts, PART_DESCRIPTORS);
@@ -388,7 +549,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorPendingEnd, PENDING_END);
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorTargetStart, target.start);
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorTargetBytes, target.capacity);
-  const sourceBefore = memory.slice(SOURCE_START, sourceCursor);
+  const sourceBefore = snapshot.paged ? undefined : memory.slice(SOURCE_START, sourceCursor);
   const descriptorsBefore = memory.slice(BUILD_DESCRIPTOR, PART_DESCRIPTORS + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes);
 
   memory[STACK_BEFORE] = 0x87;
@@ -412,6 +573,19 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let logicalHighWater = target.start;
   const layout = [];
   const declaredSymbols = [];
+  let pagedSource;
+  let pagedSourceChanged = false;
+  const sourcePages = [];
+  const verifyPagedSource = () => {
+    if (pagedSource === undefined) return;
+    for (let index = 0; index < NATIVE_ATOM_LIMITS.sourceBytes; index += 1) {
+      const expected = index < pagedSource.bytes.length ? pagedSource.bytes[index] : 0xa5;
+      if (memory[SOURCE_START + index] !== expected) {
+        pagedSourceChanged = true;
+        return;
+      }
+    }
+  };
   const currentDiagnostic = () => {
     const ordinal = memory[symbols.AtomStatementErrorPart];
     const part = snapshot.parts[ordinal];
@@ -472,6 +646,17 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   };
 
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
+    if (snapshot.paged && runtime.cpu.pc === symbols.AtomTokenizerReset) {
+      verifyPagedSource();
+      const part = snapshot.parts[runtime.cpu.a];
+      if (part === undefined) {
+        throw runtimeFailure("source-page", "native Atom requested an unknown source part");
+      }
+      memory.fill(0xa5, SOURCE_START, SOURCE_END);
+      memory.set(part.compilerBytes, SOURCE_START);
+      pagedSource = Object.freeze({ ordinal: part.ordinal, bytes: part.compilerBytes });
+      sourcePages.push(part.ordinal);
+    }
     if (runtime.cpu.pc === symbols.AtomOutputSetOrigin) {
       const address = pair(runtime.cpu.h, runtime.cpu.l);
       const source = currentDiagnostic();
@@ -513,6 +698,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   }
 
   const sinkState = sink.snapshot();
+  verifyPagedSource();
   const execution = Object.freeze({
     instructions,
     cycles,
@@ -520,12 +706,15 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     serviceTrace: Object.freeze(serviceTrace),
     finalSp: runtime.cpu.sp,
     returnPc: runtime.cpu.pc,
+    sourcePages: Object.freeze(sourcePages.slice()),
   });
   const invariants = [
     [runtime.cpu.sp === RETURN_SLOT + 2, "native Atom returned with an unbalanced stack"],
     [memory[STACK_BEFORE] === 0x87, "native Atom crossed the lower stack canary"],
     [memory[STACK_AFTER] === 0x78, "native Atom crossed the upper stack canary"],
-    [sourceBefore.every((byte, index) => memory[SOURCE_START + index] === byte), "native Atom changed source bytes"],
+    [snapshot.paged
+      ? !pagedSourceChanged
+      : sourceBefore.every((byte, index) => memory[SOURCE_START + index] === byte), "native Atom changed source bytes"],
     [descriptorsBefore.every((byte, index) => memory[BUILD_DESCRIPTOR + index] === byte), "native Atom changed descriptor bytes"],
     [immutable.every(({ start, bytes }) => bytes.every((byte, index) => memory[start + index] === byte)), "native Atom changed immutable code or tables"],
   ];

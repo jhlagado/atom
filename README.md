@@ -20,21 +20,25 @@ begin/commit/abort lifecycle. Phase 4 connects the source packager to that
 driver through Debug80, so a Mac host now runs preprocessing and dependency
 resolution before the emulated Z80 core performs the assembly. Phase 5 pins
 that core, adds the installed command, renders delivery and debugging formats,
-and publishes each artifact set atomically.
+and publishes each artifact set atomically. Phase 6 adds a deterministic
+Atom-syntax form of the complete native source and proves two generations of
+native self-assembly against AZM.
 
 The host source packager resolves `%include`, immutable `%define` values,
 and host-evaluated `%if`/`%else`/`%endif`; preserves source identities and
 offsets through equal-length masking; joins path-keyed placement; and emits a
 validated SP1 source plan. The installable Mac command now executes the pinned
 native core and publishes deterministic NOBJ, binary, Intel HEX, listing, and
-D8 artifacts. Native self-assembly and TEC-1 deployment remain to be
-implemented. Macros and op expansion remain out of scope.
+D8 artifacts. Native self-assembly is proved. The TEC-1 filesystem and output
+adapter remains to be implemented. Macros and op expansion remain out of
+scope.
 
 ```sh
 npm install
 npm pack
 npm install --global ./atom-z80-0.1.0.tgz
 atom --origin 4000H src/main.asm
+atom --self-host
 ```
 
 The command writes one atomic bundle under `build/<name>.atom/current`. See
@@ -53,6 +57,7 @@ npm run measure:output
 npm run measure:statements
 npm run measure:driver
 npm run measure:host-native
+npm run measure:self-host
 ```
 
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
@@ -85,6 +90,8 @@ The installed command, artifact publication model, and measurements are in
 [`docs/command-line.md`](docs/command-line.md) and
 [`docs/phase-5-report.md`](docs/phase-5-report.md). Atom's flat NOBJ profile is
 specified in [`docs/atom-object-format.md`](docs/atom-object-format.md).
+The generated native source and first/second-generation byte proof are
+described in [`docs/phase-6-report.md`](docs/phase-6-report.md).
 
 ## License
 

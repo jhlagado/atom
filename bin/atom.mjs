@@ -2,6 +2,7 @@
 
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 import {
   assembleAtomProject,
@@ -11,6 +12,7 @@ import {
 import { parseAtomPreprocessorValue } from "../src/host/atom/literals.mjs";
 
 const usage = `Usage: atom [options] <entry.asm>
+       atom --self-host [options]
 
 Options:
   -o, --output <dir>       Artifact bundle (default: build/<entry>.atom)
@@ -19,6 +21,7 @@ Options:
   --capacity <number>      Target byte capacity (default: to $FFFF)
   --entry <number>         Published entry address (default: origin)
   --fill <number>          Gap and reservation fill byte (default: 0)
+  --self-host              Assemble the checked Atom source shipped in this package
   -DNAME[=value]           Host preprocessor definition (default value: 1)
   -h, --help               Show this help
 
@@ -51,6 +54,7 @@ function parseArguments(arguments_) {
     else if (argument === "--capacity") options.capacity = numberValue(optionValue(arguments_, index++, argument), argument);
     else if (argument === "--entry") options.entryAddress = numberValue(optionValue(arguments_, index++, argument), argument);
     else if (argument === "--fill") options.fill = numberValue(optionValue(arguments_, index++, argument), argument);
+    else if (argument === "--self-host") options.selfHost = true;
     else if (argument.startsWith("-D")) {
       const definition = argument === "-D" ? optionValue(arguments_, index++, argument) : argument.slice(2);
       const separator = definition.indexOf("=");
@@ -62,7 +66,9 @@ function parseArguments(arguments_) {
     else if (entry === undefined) entry = argument;
     else throw new Error(`unexpected argument: ${argument}`);
   }
-  if (entry === undefined) throw new Error("entry source is required");
+  if (options.selfHost && entry !== undefined) throw new Error("--self-host does not accept an entry source");
+  if (entry === undefined && !options.selfHost) throw new Error("entry source is required");
+  if (options.selfHost) entry = "atom.asm";
   return { ...options, entry };
 }
 
@@ -78,15 +84,29 @@ async function main() {
     process.stdout.write(usage);
     return 0;
   }
-  const root = path.resolve(options.root ?? process.cwd());
+  const selfHostBuildOptions = ["root", "origin", "capacity", "entryAddress", "fill"];
+  if (
+    options.selfHost &&
+    (selfHostBuildOptions.some((name) => options[name] !== undefined) || Object.keys(options.definitions).length !== 0)
+  ) {
+    process.stderr.write("atom: --self-host accepts only -o/--output\n");
+    return 2;
+  }
+  const root = options.selfHost
+    ? fileURLToPath(new URL("../self-host", import.meta.url))
+    : path.resolve(options.root ?? process.cwd());
   const origin = options.origin ?? 0;
-  const capacity = options.capacity ?? (0xffff - origin);
+  const capacity = options.capacity ?? (options.selfHost ? 0x4000 : 0xffff - origin);
   if ((options.fill ?? 0) > 0xff) {
     process.stderr.write("atom: --fill must be a byte from 0 through 255\n");
     return 2;
   }
   const stem = path.basename(options.entry, path.extname(options.entry));
-  const destination = path.resolve(options.output ?? path.join(root, "build", `${stem}.atom`));
+  const destination = path.resolve(options.output ?? path.join(
+    options.selfHost ? process.cwd() : root,
+    "build",
+    `${stem}.atom`,
+  ));
   try {
     const result = await assembleAtomProject({
       root,

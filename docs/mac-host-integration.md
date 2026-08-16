@@ -31,8 +31,18 @@ the installed command.
 The host snapshots each prepared compiler buffer before it writes Z80 memory.
 It constructs the 15-byte native build descriptor and one five-byte descriptor
 per source part, then enters `AtomAssemble` with IX pointing at the build
-descriptor. The runner checks the return PC, final SP, stack canaries, source
-buffers, descriptors, and every immutable code/table interval after the call.
+descriptor. Projects up to 24 KiB remain resident in one source window. For a
+larger project, every part must fit that window and the Mac adapter installs
+the next part when the native driver calls `AtomTokenizerReset`. The native
+driver still processes an ordered descriptor stream and contains no filesystem
+logic.
+
+The runner checks the return PC, final SP, stack canaries, descriptors, and
+every immutable code/table interval after the call. For paged input it also
+checks the complete 24 KiB window, including the `$A5` padding after the source
+part, before installing the next page and after the final return. Debug80 marks
+the source window read-only to CPU writes. The Mac adapter installs pages by
+writing the host memory array directly.
 
 The native image contains six fail-closed sink stubs. Debug80 stops at each
 entry address and transfers the register arguments to the host memory sink:
@@ -131,6 +141,8 @@ source, symbol, pending, and stack regions.
 - NOBJ, binary, HEX, listing, and D8 renderers;
 - atomic artifact-set publication;
 - `loadNativeAtomCore` for the pinned strict-contract image; and
+- deterministic Atom-to-AZM and self-host source translation;
+- `createSelfHostedAtomCore` for second-generation proof execution; and
 - `AtomAssemblyError`, native limits, and host sink status constants.
 
 The runner reads `assets/native-core.json` and verifies its SHA-256. AZM is used
@@ -141,8 +153,10 @@ installed package.
 
 ```sh
 npm run test:host
-npm run annotate:contracts
+node node_modules/@jhlagado/azm/dist/src/cli.js --rc strict --contracts \
+  --nobin --nohex --nod8m --nolst asm/atom-host-runtime.asm
 npm run measure:host-native
+npm run measure:self-host
 ```
 
 The focused integration tests cover host preprocessing through native output,

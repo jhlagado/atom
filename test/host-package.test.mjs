@@ -5,6 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { parseIntelHex } from "@jhlagado/debug80-runtime";
+
 function run(command, arguments_, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, arguments_, { ...options, stdio: ["ignore", "pipe", "pipe"] });
@@ -28,6 +30,18 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   await fs.mkdir(packageDirectory);
   await fs.mkdir(projectDirectory);
 
+  const censusResult = await run("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { cwd: process.cwd() });
+  assert.equal(censusResult.status, 0, censusResult.stderr);
+  const [census] = JSON.parse(censusResult.stdout);
+  const phase6 = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
+  assert.deepEqual({
+    unpackedBytes: census.unpackedSize,
+    entries: census.entryCount,
+  }, {
+    unpackedBytes: phase6.package.unpackedBytes,
+    entries: phase6.package.entries,
+  });
+
   const packed = await run("npm", ["pack", "--pack-destination", packageDirectory], { cwd: process.cwd() });
   assert.equal(packed.status, 0, packed.stderr);
   const archive = path.join(packageDirectory, "atom-z80-0.1.0.tgz");
@@ -47,6 +61,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   const metadata = JSON.parse(await fs.readFile(path.join(installedAtom, "package.json"), "utf8"));
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(metadata.private, undefined);
+  await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
 
   await fs.writeFile(path.join(projectDirectory, "main.asm"), [
     "%define DEBUG 1",
@@ -72,6 +87,17 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   assert.equal(rejected.status, 1);
   assert.match(rejected.stderr, /^bad\.asm:1:1: Atom rejected a source statement/m);
   await assert.rejects(fs.access(path.join(projectDirectory, "build", "bad.atom")));
+
+  const selfHosted = await run(executable, ["--self-host"], { cwd: projectDirectory });
+  assert.equal(selfHosted.status, 0, selfHosted.stderr);
+  assert.match(selfHosted.stdout, /Atom assembled 6 part\(s\), 13103 byte\(s\)/);
+  const selfHostBinary = await fs.readFile(path.join(projectDirectory, "build", "atom.atom", "current", "atom.bin"));
+  const installedCore = JSON.parse(await fs.readFile(path.join(installedAtom, "assets", "native-core.json"), "utf8"));
+  const expectedSelfHost = parseIntelHex(installedCore.hexText).memory.slice(0, installedCore.symbols.AtomHostResidentEnd);
+  assert.deepEqual(selfHostBinary, Buffer.from(expectedSelfHost));
+  const customizedSelfHost = await run(executable, ["--self-host", "--fill", "1"], { cwd: projectDirectory });
+  assert.equal(customizedSelfHost.status, 2);
+  assert.match(customizedSelfHost.stderr, /--self-host accepts only -o\/--output/);
 
   const corePath = path.join(installedAtom, "assets", "native-core.json");
   const core = JSON.parse(await fs.readFile(corePath, "utf8"));

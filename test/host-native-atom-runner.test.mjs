@@ -13,6 +13,7 @@ import {
   loadNativeAtomCore,
   materializeAtomGeneration,
   NATIVE_ATOM_LIMITS,
+  writeIntelHex,
 } from "../src/host/index.mjs";
 import { NATIVE_HOST_FILES } from "./native-host-case.mjs";
 
@@ -310,7 +311,7 @@ test("the memory sink rejects a second patch to one IMAGE byte", () => {
   assert.equal(sink.abort(), 0);
 });
 
-test("native source capacity accepts the exact 24 KiB window and rejects one byte more", async () => {
+test("native source-part capacity accepts the exact 24 KiB window and rejects one byte more", async () => {
   const exact = new Uint8Array(NATIVE_ATOM_LIMITS.sourceBytes).fill(0x20);
   const result = await assembleResolvedAtomProject(resolvedParts([exact]), {
     target: { start: 0, capacity: 0 },
@@ -325,6 +326,34 @@ test("native source capacity accepts the exact 24 KiB window and rejects one byt
     "configuration",
     "source-capacity",
   );
+});
+
+test("the Mac adapter pages ordered source parts when their total exceeds 24 KiB", async () => {
+  const comment = `;${"x".repeat(13_000)}\n`;
+  const result = await assembleResolvedAtomProject(resolvedParts([comment, `${comment}NOP\n`]), {
+    target: { start: 0x4000, capacity: 0x100 },
+  });
+  assert.deepEqual(result.execution.sourcePages, [0, 1]);
+  assert.deepEqual(Array.from(materializeAtomGeneration(result.generation).bytes), [0]);
+});
+
+test("the emulated CPU cannot write the source window", async () => {
+  const core = await loadNativeAtomCore();
+  const resident = parseIntelHex(core.hexText).memory.slice(0, core.residentExtentBytes);
+  resident.set([0x3e, 0x2a, 0x32, 0x00, 0x80, 0xaf, 0xc9], core.symbols.AtomAssemble);
+  const writingCore = {
+    ...core,
+    hexText: writeIntelHex({ base: 0, bytes: resident }),
+  };
+  const error = await assemblyError(
+    () => assembleResolvedAtomProject(resolvedParts(["NOP\n"]), {
+      target: { start: 0, capacity: 1 },
+      nativeCore: writingCore,
+    }),
+    "output",
+    "missing-generation",
+  );
+  assert.match(error.message, /without one committed host generation/);
 });
 
 test("native part capacity accepts sixteen and rejects seventeen", async () => {
