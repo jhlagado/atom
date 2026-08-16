@@ -50,6 +50,28 @@ AtomParserGenericNumber:       .equ 240
 AtomParserGenericParenNumber:  .equ 241
 AtomParserGenericC:            .equ 242
 
+.if AtomParserStatementMode
+; Continue parsing after a statement dispatcher has recognized the mnemonic
+; and published the following token.
+;
+; in A=mnemonic ordinal, BC=current instruction address,
+;    DE=ten-byte destination, AtomTokenRecord=first token after mnemonic
+; out same success/failure contract as AtomParserParse
+.routine in A,BC,DE out A,IX,carry clobbers BC,DE,HL,IY,zero,sign,parity,halfCarry
+AtomParserParsePublished:
+            PUSH AF
+            LD   (AtomParserInstructionAddress),BC
+            LD   (AtomParserDestination),DE
+.if AtomParserExpressionMode
+            XOR  A
+            LD   (AtomParserReferenceCount),A
+.endif
+            CALL AtomParserInitializeScratch
+            POP  AF
+            LD   (AtomParserScratch+AtomInstrMnemonic),A
+            JR   AtomParserPublishedOperands
+.endif
+
 ; Parse the next instruction line.
 ;
 ; in BC=current instruction address, DE=ten-byte destination
@@ -69,7 +91,7 @@ AtomParserParse:
             RET  C
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEof
-            JR   Z,_AtomParserEof
+            JR   Z,AtomParserEof
             CP   AtomTokenName
             JP   NZ,AtomParserExpectedMnemonic
 
@@ -87,11 +109,12 @@ AtomParserParse:
 
             CALL AtomParserNextToken
             RET  C
+AtomParserPublishedOperands:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
-            JR   Z,_AtomParserParsedOperands
+            JR   Z,AtomParserParsedOperands
 
-_AtomParserOperandLoop:
+AtomParserOperandLoop:
             LD   A,(AtomParserOperandCount)
             CP   3
             JP   NC,AtomParserTooManyOperands
@@ -102,7 +125,7 @@ _AtomParserOperandLoop:
             INC  (HL)
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
-            JR   Z,_AtomParserParsedOperands
+            JR   Z,AtomParserParsedOperands
             CP   AtomTokenComma
             JP   NZ,AtomParserExpectedDelimiter
             CALL AtomParserNextToken
@@ -110,9 +133,9 @@ _AtomParserOperandLoop:
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
             JP   Z,AtomParserExpectedOperand
-            JR   _AtomParserOperandLoop
+            JR   AtomParserOperandLoop
 
-_AtomParserParsedOperands:
+AtomParserParsedOperands:
             CALL AtomParserNormalizeAccumulatorAlias
             RET  C
             CALL AtomParserNormalizeNumbers
@@ -128,7 +151,7 @@ _AtomParserParsedOperands:
 .endif
             JP   AtomParserCommit
 
-_AtomParserEof:
+AtomParserEof:
             LD   A,AtomParserStatusEof
             OR   A
             RET

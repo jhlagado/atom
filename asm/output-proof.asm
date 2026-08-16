@@ -3,6 +3,8 @@ AtomExpressionDeferredMode: .equ 1
 AtomParserExpressionMode:   .equ 1
 AtomParserOutputMode:       .equ 1
 AtomSymbolOutputMode:       .equ 1
+AtomParserStatementMode:    .equ 0
+AtomSymbolStatementMode:    .equ 0
 
             .include "atom-encoder.asm"
             .include "atom-symbols.asm"

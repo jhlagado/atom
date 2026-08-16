@@ -1,0 +1,14 @@
+{
+  "name": "Atom Phase 2g statement assembly correctness proof",
+  "source": "../asm/statements-proof.asm",
+  "contracts": "strict",
+  "targetCpu": "Zilog Z80",
+  "executionBudgets": {
+    "AtomSymbolReset": { "maxInstructions": 12, "maxCycles": 150 },
+    "AtomPendingReset": { "maxInstructions": 10, "maxCycles": 120 },
+    "AtomTokenizerReset": { "maxInstructions": 30, "maxCycles": 320 },
+    "AtomTokenizerNext": { "maxInstructions": 900, "maxCycles": 9000 },
+    "AtomRecognizeMnemonic": { "maxInstructions": 550, "maxCycles": 5000 },
+    "AtomParserParsePublished": { "maxInstructions": 8500, "maxCycles": 85000 }
+  }
+}

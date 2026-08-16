@@ -1,4 +1,6 @@
             .org $2000
+AtomParserStatementMode: .equ 0
+AtomSymbolStatementMode: .equ 0
             .include "atom-encoder.asm"
 
             .org $8000
