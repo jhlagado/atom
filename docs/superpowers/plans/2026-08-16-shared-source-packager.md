@@ -767,3 +767,22 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
 - **Measured scope:** no Z80 assembly, proof manifest, runtime, or workspace file
   changed, so this checkpoint adds zero bytes to Atom's resident account. Debug80
   remained at `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
+
+### 2026-08-16 — Checkpoint 7 Atom preprocessing profile
+
+- **Atom:** fetched `origin/codex/atom-host-packager` at
+  `448b002f39bb44eb6fb5ddd665c38fa0d08b1668`; committed and pushed
+  `0d1c6f73cc70be21273fe330d3586d4f9cdcd219`.
+- **Red:** all 13 initial tests failed before the Atom profile existed. A later
+  delimiter discriminator proved that `%if1` was incorrectly accepted as
+  `%if 1`.
+- **Green:** 19 of 19 focused preprocessing tests and 65 of 65 complete host
+  tests passed with zero failures. Module syntax checks and `git diff --check`
+  also passed.
+- **Coverage:** all settled literal spellings and boundaries, immutable project
+  and entry definitions, case-insensitive names, active and inactive imports,
+  header/body rules, malformed conditional structure, exact LF/CRLF retention,
+  nested masking, original-byte locations, and directive leakage boundaries.
+- **Measured scope:** this checkpoint changed only host JavaScript and tests. It
+  adds zero bytes to Atom's resident Z80 account. Debug80 remained at
+  `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
