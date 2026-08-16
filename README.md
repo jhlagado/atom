@@ -119,6 +119,7 @@ The detailed engineering record remains available in the phase reports:
 - [equates, characters, and strings](docs/phase-9-report.md)
 - [alignment and byte functions](docs/phase-10-report.md)
 - [host-backed binary inclusion](docs/phase-11-report.md)
+- [native compression audit](docs/native-compression-audit.md)
 
 ## License
 
