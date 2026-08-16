@@ -10,12 +10,12 @@ preservation. The byte classifiers cover all 256 inputs. Boundary tests cover
 names, 16-bit integers, raw string length, source intervals, CRLF, final-line
 EOL synthesis, and EOF.
 
-**Tokenizer code and immutable data: Measured 1,051 bytes.** Rule-driven code is
-**Measured 1,018 bytes** and the punctuation and escape tables are **Measured
+**Tokenizer code and immutable data: Measured 1,219 bytes.** Rule-driven code is
+**Measured 1,186 bytes** and the punctuation and escape tables are **Measured
 33 bytes**. Fixed non-reentrant workspace is **Measured 32 bytes**, including
 the **Measured 9-byte token record**.
 
-The encoder, symbol core, and tokenizer now total **Measured 5,707 bytes of code
+The encoder, symbol core, and tokenizer now total **Measured 5,875 bytes of code
 and immutable data**. Their fixed workspace totals **Measured 69 bytes**.
 Caller-owned symbol records, pending records, source, output, and stack remain
 separate.
@@ -54,14 +54,14 @@ stress case; ordinary tokens return as soon as one token is complete.
 
 Phase 2b accepts the syntax required by Atom's current source style: ASCII
 names, `_` private names, dotted directives, decimal, `$` hexadecimal, `%`
-binary, double-quoted strings, semicolon comments, and the Phase 2b expression
-punctuation set. Mixed-case `lD` flows directly into the existing mnemonic
-recognizer and returns the `LD` ordinal.
+binary, Intel-style digit-led `H` hexadecimal and `B` binary, double-quoted
+strings, semicolon comments, and the Phase 2b expression punctuation set.
+Mixed-case `lD` flows directly into the existing mnemonic recognizer and
+returns the `LD` ordinal.
 
 The following AZM lexical forms are **Measured unsupported** in this tokenizer:
 
 - `0x` and `0b` numeric prefixes;
-- trailing `H` and `B` numeric suffixes;
 - single-quoted byte literals;
 - dotted and question-mark symbol spellings;
 - brackets and typed-layout syntax.
@@ -72,9 +72,9 @@ encoder's complete AZM byte differential remains unchanged.
 ## Size result and whole-assembler projection
 
 The previous source-adapter and tokenizer estimate was **Projected 1,300–1,800
-bytes**. The measured memory-backed tokenizer is 249 bytes below the low end.
+bytes**. The measured memory-backed tokenizer is 81 bytes below the low end.
 A flat-manifest iterator is still **Projected 100–250 bytes**, so the complete
-source layer is **Projected 1,151–1,301 bytes** until that iterator is measured.
+source layer is **Projected 1,319–1,469 bytes** until that iterator is measured.
 
 Replacing the old tokenizer estimate with the measured result gives:
 
@@ -87,9 +87,9 @@ Replacing the old tokenizer estimate with the measured result gives:
 | Control, diagnostics, and integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **3,600–5,550** |
 
-The whole assembler is now **Projected 9,307–11,257 bytes**, or about
-**9.1–11.0 KiB**, before symbol and pending arenas. That leaves **Projected
-4.7–6.9 KiB** in a 16 KiB code bank. The range remains a projection; expression
+The whole assembler is now **Projected 9,475–11,425 bytes**, or about
+**9.3–11.2 KiB**, before symbol and pending arenas. That leaves **Projected
+4.8–6.7 KiB** in a 16 KiB code bank. The range remains a projection; expression
 and directive parsing is now the widest unmeasured resident-code component.
 
 ## Reproduction

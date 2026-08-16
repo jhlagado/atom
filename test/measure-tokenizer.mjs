@@ -15,6 +15,9 @@ one(".EXPECTOUT", "long host-only directive");
 one("65535", "largest decimal");
 one("$FFFF", "largest hexadecimal");
 one("%1111111111111111", "largest binary");
+one("0FFFFH", "largest Intel hexadecimal");
+one("01111111111111111B", "largest Intel binary");
+one("%include \"lib.asm\"", "leaked host directive");
 one(`"${"A".repeat(253)}"`, "255-byte string token");
 one("LD A,(IX-$80)\r\n", "representative indexed instruction line");
 

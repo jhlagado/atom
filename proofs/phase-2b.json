@@ -10,6 +10,10 @@
     "privateSourceBytes": 9,
     "rawStringTokenBytes": 255
   },
+  "claimedSyntax": {
+    "numericFamilies": ["decimal", "dollar-hex", "percent-binary", "intel-h-hex", "intel-b-binary"],
+    "unprocessedDirectiveStatus": 9
+  },
   "executionBudgets": {
     "AtomTokenizerReset": {
       "measuredInstructions": 22,

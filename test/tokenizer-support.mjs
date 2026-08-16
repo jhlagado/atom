@@ -47,6 +47,7 @@ export const TOKEN_STATUS = Object.freeze({
   INVALID_ESCAPE: 6,
   STRING_TOO_LONG: 7,
   BAD_SOURCE_RANGE: 8,
+  UNPROCESSED_DIRECTIVE: 9,
 });
 
 export async function createTokenizerHarness({ contracts = "strict" } = {}) {

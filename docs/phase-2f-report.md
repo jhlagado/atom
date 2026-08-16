@@ -53,12 +53,12 @@ The integrated account is:
 | --- | --- | ---: |
 | Encoder, validation, RADIX-40, mnemonic recognition | Measured | 3,997 |
 | Symbol and pending-reference core with pending peek | Measured | 723 |
-| Streaming tokenizer | Measured | 1,051 |
+| Streaming tokenizer | Measured | 1,219 |
 | Expression evaluator | Measured | 1,908 |
 | Patch-field locator | Measured | 73 |
 | Symbolic parser with output preflight | Measured | 2,035 |
 | Nucleus-model output and resolver | Measured | 359 |
-| **Integrated code and immutable data** | **Measured** | **10,146** |
+| **Integrated code and immutable data** | **Measured** | **10,314** |
 | **Integrated fixed workspace** | **Measured** | **491** |
 
 The output workspace contains the target cursor, remaining capacity, a
@@ -150,10 +150,10 @@ measured implementation. Remaining Atom-resident work is:
 | Control, diagnostics, sink lifecycle, and final integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **1,400–2,550** |
 
-Adding that range to **Measured: 10,146 bytes** gives a **Projected:
-whole-assembler total of 11,546–12,696 bytes**, or **Projected: 11.3–12.4
+Adding that range to **Measured: 10,314 bytes** gives a **Projected:
+whole-assembler total of 11,714–12,864 bytes**, or **Projected: 11.4–12.6
 KiB**. The margin below the **Target: 16 KiB bank** is **Projected:
-3,688–4,838 bytes**. Operating-adapter code and storage remain platform
+3,520–4,670 bytes**. Operating-adapter code and storage remain platform
 services, as they do in Nucleus.
 
 ## Reproduction

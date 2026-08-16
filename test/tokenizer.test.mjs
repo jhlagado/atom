@@ -143,6 +143,91 @@ test("decimal, hexadecimal, binary, current-location, and percent boundaries are
   }
 });
 
+test("Intel suffix literals match prefix spellings with exact 16-bit boundaries", () => {
+  for (const [source, value] of [
+    ["0H", 0], ["00h", 0], ["0FFFFH", 0xffff], ["0ffffh", 0xffff],
+    ["0B", 0], ["000b", 0], ["01110111B", 0x77], ["01110111b", 0x77],
+  ]) {
+    const result = first(source);
+    assert.equal(result.carry, 0, source);
+    assert.equal(result.record.kind, TOKEN.NUMBER, source);
+    assert.equal(result.record.value, value, source);
+    assert.equal(h.lexeme(result.record), source, source);
+  }
+  assert.equal(first("0FFFFH").record.value, first("$FFFF").record.value);
+  assert.equal(first("01110111B").record.value, first("%01110111").record.value);
+  assert.equal(first("FFFFH").record.kind, TOKEN.NAME);
+
+  for (const [source, status] of [
+    ["10000H", TOKEN_STATUS.NUMBER_OVERFLOW],
+    ["11111111111111111B", TOKEN_STATUS.NUMBER_OVERFLOW],
+    ["12B", TOKEN_STATUS.INVALID_NUMBER],
+    ["102B", TOKEN_STATUS.INVALID_NUMBER],
+    ["0FG", TOKEN_STATUS.INVALID_NUMBER],
+    ["0x10", TOKEN_STATUS.INVALID_NUMBER],
+  ]) {
+    h.reset("NOP");
+    const prior = h.next().record.bytes;
+    h.reset(source);
+    const before = h.record().bytes;
+    const cursorBefore = h.memory[h.symbols.AtomTokenSourceCursor] |
+      (h.memory[h.symbols.AtomTokenSourceCursor + 1] << 8);
+    const result = h.next(source);
+    assert.equal(result.carry, 1, source);
+    assert.equal(result.status, status, source);
+    assert.deepEqual(result.record.bytes, before, source);
+    assert.equal(
+      h.memory[h.symbols.AtomTokenSourceCursor] |
+        (h.memory[h.symbols.AtomTokenSourceCursor + 1] << 8),
+      cursorBefore,
+      `${source}: source cursor changed on failure`,
+    );
+    assert.notDeepEqual(prior, [], source);
+    assert.deepEqual(h.errorPosition(), { status, part: 7, offset: 0 }, source);
+  }
+});
+
+test("leaked line-start host directives fail without stealing percent expressions", () => {
+  for (const [source, offset] of [
+    ["%include \"lib.asm\"", 0],
+    ["  \t%IF DEBUG", 3],
+  ]) {
+    h.reset(source);
+    const before = h.record().bytes;
+    const result = h.next(source);
+    assert.equal(result.carry, 1, source);
+    assert.equal(result.status, TOKEN_STATUS.UNPROCESSED_DIRECTIVE, source);
+    assert.deepEqual(result.record.bytes, before, source);
+    assert.deepEqual(h.errorPosition(), {
+      status: TOKEN_STATUS.UNPROCESSED_DIRECTIVE,
+      part: 7,
+      offset,
+    });
+  }
+
+  h.reset("NOP\n%endif");
+  assert.equal(h.next().record.kind, TOKEN.NAME);
+  assert.equal(h.next().record.kind, TOKEN.EOL);
+  const leaked = h.next("directive after EOL");
+  assert.equal(leaked.carry, 1);
+  assert.equal(leaked.status, TOKEN_STATUS.UNPROCESSED_DIRECTIVE);
+  assert.deepEqual(h.errorPosition(), {
+    status: TOKEN_STATUS.UNPROCESSED_DIRECTIVE,
+    part: 7,
+    offset: 4,
+  });
+
+  let result = h.tokenize("%1\nLD A,%1\nA % B\n");
+  assert.equal(result.error, undefined);
+  assert.deepEqual(result.tokens.map(({ kind, lexeme }) => [kind, lexeme]), [
+    [TOKEN.NUMBER, "%1"], [TOKEN.EOL, "\n"],
+    [TOKEN.NAME, "LD"], [TOKEN.NAME, "A"], [TOKEN.COMMA, ","],
+    [TOKEN.NUMBER, "%1"], [TOKEN.EOL, "\n"],
+    [TOKEN.NAME, "A"], [TOKEN.PERCENT, "%"], [TOKEN.NAME, "B"],
+    [TOKEN.EOL, "\n"], [TOKEN.EOF, ""],
+  ]);
+});
+
 test("strings preserve raw payload and validate every supported escape", () => {
   for (const source of ["\"\"", "\"A\"", "\"\\n\"", "\"\\x41\"", "\"\\\"\"", "\"\\\\\""]) {
     const result = first(source);
@@ -194,7 +279,7 @@ test("punctuation is complete for the Phase 2b expression surface", () => {
 });
 
 test("the narrower-than-AZM lexical boundary is explicit", () => {
-  for (const source of ["0x10", "0b10", "0FFH", "101B"]) {
+  for (const source of ["0x10", "0b10"]) {
     const result = first(source);
     assert.equal(result.carry, 1, source);
     assert.equal(result.status, TOKEN_STATUS.INVALID_NUMBER, source);

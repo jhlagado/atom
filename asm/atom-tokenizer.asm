@@ -42,6 +42,7 @@ AtomTokenStatusUnterminatedString:.equ 5
 AtomTokenStatusInvalidEscape:     .equ 6
 AtomTokenStatusStringTooLong:     .equ 7
 AtomTokenStatusBadSourceRange:    .equ 8
+AtomTokenStatusUnprocessedDirective:.equ 9
 
 ; Nine-byte token record returned in IX.
 AtomTokenKindOffset:       .equ 0
@@ -315,33 +316,119 @@ _AtomTokenScanDirectiveDone:
             LD   A,AtomTokenDirective
             JP   AtomTokenFinish
 
-; Decimal accumulation is bounded exactly to 0..65535.
+; Scan one maximal digit/name run, select decimal or an Intel H/B suffix, then
+; accumulate only the selected grammar. Failure leaves the cursor unchanged.
 .routine out A,IX,carry clobbers BC,DE,HL,zero,sign,parity,halfCarry
-AtomTokenScanDecimal:
+AtomTokenScanDigitLed:
+            LD   HL,(AtomTokenSourceCursor)
+            LD   DE,(AtomTokenSourceEnd)
+            LD   B,0
+_AtomTokenScanDigitLedLook:
+            LD   A,H
+            CP   D
+            JR   NZ,_AtomTokenScanDigitLedByte
+            LD   A,L
+            CP   E
+            JR   Z,_AtomTokenScanDigitLedSelected
+_AtomTokenScanDigitLedByte:
+            LD   A,(HL)
+            CALL AtomTokenIsNameByte
+            JR   NC,_AtomTokenScanDigitLedSelected
+            INC  HL
+            INC  B
+            JP   Z,AtomTokenInvalidNumber
+            JR   _AtomTokenScanDigitLedLook
+
+_AtomTokenScanDigitLedSelected:
+            LD   A,B
+            LD   (AtomTokenScanLength),A
+            DEC  HL
+            LD   A,(HL)
+            AND  $DF
+            LD   C,0
+            CP   "H"
+            JR   Z,_AtomTokenScanDigitLedHex
+            CP   "B"
+            JR   NZ,_AtomTokenScanDigitLedPrepare
+            INC  C
+            JR   _AtomTokenScanDigitLedSuffix
+_AtomTokenScanDigitLedHex:
+            LD   C,4
+_AtomTokenScanDigitLedSuffix:
+            DEC  B
+_AtomTokenScanDigitLedPrepare:
+            LD   A,B
+            OR   A
+            JP   Z,AtomTokenInvalidNumber
+            LD   (AtomTokenDigitsSeen),A
+            LD   IX,(AtomTokenScanPointer)
             LD   HL,0
-_AtomTokenScanDecimalLoop:
-            PUSH HL
-            CALL AtomTokenSourcePeek
-            POP  HL
-            JR   C,_AtomTokenScanDecimalEof
-            CP   "0"
-            JR   C,_AtomTokenScanDecimalDone
-            CP   "9"+1
-            JR   NC,_AtomTokenScanDecimalDone
+            LD   A,C
+            OR   A
+            JR   Z,_AtomTokenScanDigitLedDecimal
+            CP   1
+            JR   Z,_AtomTokenScanDigitLedBinary
+
+_AtomTokenScanDigitLedHexLoop:
+            LD   A,(IX+0)
+            CALL AtomTokenHexDigit
+            JP   NC,AtomTokenInvalidNumber
+            LD   E,A
+            LD   A,H
+            AND  $F0
+            JP   NZ,AtomTokenNumberOverflow
+            ADD  HL,HL
+            ADD  HL,HL
+            ADD  HL,HL
+            ADD  HL,HL
+            LD   A,L
+            OR   E
+            LD   L,A
+            INC  IX
+            LD   A,(AtomTokenDigitsSeen)
+            DEC  A
+            LD   (AtomTokenDigitsSeen),A
+            JR   NZ,_AtomTokenScanDigitLedHexLoop
+            JR   _AtomTokenScanDigitLedFinish
+
+_AtomTokenScanDigitLedBinary:
+            LD   A,(IX+0)
             SUB  "0"
+            JP   C,AtomTokenInvalidNumber
+            CP   2
+            JP   NC,AtomTokenInvalidNumber
+            LD   E,A
+            ADD  HL,HL
+            JP   C,AtomTokenNumberOverflow
+            LD   A,L
+            OR   E
+            LD   L,A
+            INC  IX
+            LD   A,(AtomTokenDigitsSeen)
+            DEC  A
+            LD   (AtomTokenDigitsSeen),A
+            JR   NZ,_AtomTokenScanDigitLedBinary
+            JR   _AtomTokenScanDigitLedFinish
+
+_AtomTokenScanDigitLedDecimal:
+            LD   A,(IX+0)
+            SUB  "0"
+            JP   C,AtomTokenInvalidNumber
+            CP   10
+            JP   NC,AtomTokenInvalidNumber
             LD   C,A
             LD   A,H
             CP   $19
-            JR   C,_AtomTokenScanDecimalAccumulate
+            JR   C,_AtomTokenScanDigitLedDecimalAccumulate
             JP   NZ,AtomTokenNumberOverflow
             LD   A,L
             CP   $99
-            JR   C,_AtomTokenScanDecimalAccumulate
+            JR   C,_AtomTokenScanDigitLedDecimalAccumulate
             JP   NZ,AtomTokenNumberOverflow
             LD   A,C
             CP   6
             JP   NC,AtomTokenNumberOverflow
-_AtomTokenScanDecimalAccumulate:
+_AtomTokenScanDigitLedDecimalAccumulate:
             LD   D,0
             LD   E,C
             ADD  HL,HL
@@ -351,18 +438,23 @@ _AtomTokenScanDecimalAccumulate:
             ADD  HL,HL
             ADD  HL,BC
             ADD  HL,DE
-            PUSH HL
-            CALL AtomTokenSourceTake
-            POP  HL
-            LD   A,(AtomTokenScanLength)
-            INC  A
-            LD   (AtomTokenScanLength),A
-            JR   _AtomTokenScanDecimalLoop
-_AtomTokenScanDecimalDone:
-            CALL AtomTokenIsNameByte
-            JR   C,AtomTokenInvalidNumber
-_AtomTokenScanDecimalEof:
+            INC  IX
+            LD   A,(AtomTokenDigitsSeen)
+            DEC  A
+            LD   (AtomTokenDigitsSeen),A
+            JR   NZ,_AtomTokenScanDigitLedDecimal
+
+_AtomTokenScanDigitLedFinish:
             LD   (AtomTokenScanValue),HL
+            LD   A,(AtomTokenScanLength)
+            LD   C,A
+            LD   B,0
+            LD   HL,(AtomTokenScanPointer)
+            ADD  HL,BC
+            LD   (AtomTokenSourceCursor),HL
+            LD   HL,(AtomTokenScanOffset)
+            ADD  HL,BC
+            LD   (AtomTokenSourceOffsetState),HL
             LD   A,AtomTokenNumber
             JP   AtomTokenFinish
 
@@ -567,7 +659,7 @@ _AtomTokenizerNextLoop:
             CP   "0"
             JR   C,_AtomTokenizerTryName
             CP   "9"+1
-            JP   C,AtomTokenScanDecimal
+            JP   C,AtomTokenScanDigitLed
 _AtomTokenizerTryName:
             CALL AtomTokenIsNameStart
             JP   C,AtomTokenScanName
@@ -626,6 +718,13 @@ _AtomTokenizerPercent:
             JR   Z,_AtomTokenizerPercentNumber
             CP   "1"
             JR   Z,_AtomTokenizerPercentNumber
+            CALL AtomTokenIsLetter
+            JR   NC,_AtomTokenizerPercentToken
+            LD   A,(AtomTokenLineHasToken)
+            OR   A
+            JR   NZ,_AtomTokenizerPercentToken
+            LD   A,AtomTokenStatusUnprocessedDirective
+            JP   AtomTokenFail
 _AtomTokenizerPercentToken:
             LD   A,1
             LD   (AtomTokenScanLength),A
