@@ -43,6 +43,8 @@ AtomTokenStatusInvalidEscape:     .equ 6
 AtomTokenStatusStringTooLong:     .equ 7
 AtomTokenStatusBadSourceRange:    .equ 8
 AtomTokenStatusUnprocessedDirective:.equ 9
+AtomTokenStatusUnterminatedCharacter:.equ 10
+AtomTokenStatusInvalidCharacter:  .equ 11
 
 ; Nine-byte token record returned in IX.
 AtomTokenKindOffset:       .equ 0
@@ -538,6 +540,7 @@ _AtomTokenScanEscapeLoop:
             CP   (HL)
             JR   Z,_AtomTokenScanStringLoop
             INC  HL
+            INC  HL
             DEC  C
             JR   NZ,_AtomTokenScanEscapeLoop
             LD   A,AtomTokenStatusInvalidEscape
@@ -580,6 +583,12 @@ AtomTokenInvalidEscape:
 AtomTokenUnterminatedString:
             LD   A,AtomTokenStatusUnterminatedString
             JP   AtomTokenFail
+AtomTokenUnterminatedCharacter:
+            LD   A,AtomTokenStatusUnterminatedCharacter
+            JP   AtomTokenFail
+AtomTokenInvalidCharacter:
+            LD   A,AtomTokenStatusInvalidCharacter
+            JP   AtomTokenFail
 AtomTokenInvalidByte:
             LD   A,AtomTokenStatusInvalidByte
             JP   AtomTokenFail
@@ -620,6 +629,8 @@ _AtomTokenizerNextLoop:
             JP   Z,AtomTokenScanName
             CP   $22
             JP   Z,AtomTokenScanString
+            CP   $27
+            JP   Z,_AtomTokenizerApostrophe
             CP   "$"
             JP   Z,_AtomTokenizerDollar
             CP   "%"
@@ -770,6 +781,102 @@ _AtomTokenizerEmitEof:
             LD   (AtomTokenScanLength),A
             JP   AtomTokenCommit
 
+; An apostrophe adjacent to a name byte is the AF' register suffix. Every
+; other apostrophe begins a one-byte character literal.
+_AtomTokenizerApostrophe:
+            LD   HL,(AtomTokenScanOffset)
+            LD   A,H
+            OR   L
+            JP   Z,AtomTokenScanCharacter
+            LD   HL,(AtomTokenScanPointer)
+            DEC  HL
+            LD   A,(HL)
+            CALL AtomTokenIsNameByte
+            JP   NC,AtomTokenScanCharacter
+            CALL AtomTokenSourceTake
+            LD   A,1
+            LD   (AtomTokenScanLength),A
+            LD   A,AtomTokenApostrophe
+            JP   AtomTokenFinish
+
+; Single-quoted character literals are published as ordinary numeric tokens,
+; so every expression consumer receives them without another parser rule.
+.routine out A,IX,carry clobbers BC,DE,HL,IY,zero,sign,parity,halfCarry
+AtomTokenScanCharacter:
+            LD   B,1
+            CALL AtomTokenSourceTake
+            CALL AtomTokenSourceTake
+            JP   C,AtomTokenUnterminatedCharacter
+            INC  B
+            CP   $0A
+            JP   Z,AtomTokenUnterminatedCharacter
+            CP   $0D
+            JP   Z,AtomTokenUnterminatedCharacter
+            CP   $27
+            JP   Z,AtomTokenInvalidCharacter
+            CP   "\\"
+            JR   Z,_AtomTokenScanCharacterEscape
+            CP   $20
+            JP   C,AtomTokenInvalidByte
+            CP   $7F
+            JP   NC,AtomTokenInvalidByte
+            LD   (AtomTokenScanValue),A
+            JR   _AtomTokenScanCharacterClose
+_AtomTokenScanCharacterEscape:
+            CALL AtomTokenSourceTake
+            JP   C,AtomTokenUnterminatedCharacter
+            INC  B
+            CP   "x"
+            JR   Z,_AtomTokenScanCharacterHex
+            LD   HL,AtomTokenEscapeTable
+            LD   C,AtomTokenEscapeCount
+_AtomTokenScanCharacterEscapeLoop:
+            CP   (HL)
+            JR   Z,_AtomTokenScanCharacterEscapeFound
+            INC  HL
+            INC  HL
+            DEC  C
+            JR   NZ,_AtomTokenScanCharacterEscapeLoop
+            JP   AtomTokenInvalidEscape
+_AtomTokenScanCharacterEscapeFound:
+            INC  HL
+            LD   A,(HL)
+            LD   (AtomTokenScanValue),A
+            JR   _AtomTokenScanCharacterClose
+_AtomTokenScanCharacterHex:
+            CALL AtomTokenSourceTake
+            JP   C,AtomTokenUnterminatedCharacter
+            INC  B
+            CALL AtomTokenHexDigit
+            JP   NC,AtomTokenInvalidEscape
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            LD   (AtomTokenScanValue),A
+            CALL AtomTokenSourceTake
+            JP   C,AtomTokenUnterminatedCharacter
+            INC  B
+            CALL AtomTokenHexDigit
+            JP   NC,AtomTokenInvalidEscape
+            LD   HL,AtomTokenScanValue
+            OR   (HL)
+            LD   (AtomTokenScanValue),A
+_AtomTokenScanCharacterClose:
+            CALL AtomTokenSourceTake
+            JP   C,AtomTokenUnterminatedCharacter
+            INC  B
+            CP   $0A
+            JP   Z,AtomTokenUnterminatedCharacter
+            CP   $0D
+            JP   Z,AtomTokenUnterminatedCharacter
+            CP   $27
+            JP   NZ,AtomTokenInvalidCharacter
+            LD   A,B
+            LD   (AtomTokenScanLength),A
+            LD   A,AtomTokenNumber
+            JP   AtomTokenFinish
+
 AtomTokenizerRuleCodeEnd:
 AtomTokenizerImmutableStart:
 AtomTokenPunctuationTable:
@@ -789,7 +896,8 @@ AtomTokenPunctuationTable:
 AtomTokenPunctuationEnd:
 AtomTokenPunctuationCount: .equ (AtomTokenPunctuationEnd-AtomTokenPunctuationTable)/2
 
-AtomTokenEscapeTable: .db "0nrt",$27,$22,"\\"
+AtomTokenEscapeTable:
+            .db "0",0,"n",$0A,"r",$0D,"t",$09,$27,$27,$22,$22,"\\","\\"
 AtomTokenEscapeCount: .equ 7
 AtomTokenizerImmutableEnd:
 

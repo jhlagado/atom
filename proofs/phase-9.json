@@ -1,0 +1,55 @@
+{
+  "name": "Atom Phase 9 equate, character, and string checkpoint",
+  "repositories": {
+    "atom": {
+      "branch": "main",
+      "baseHead": "f5bea75770f73b7267f386fd815aab4cdfce01e2"
+    },
+    "debug80Observed": {
+      "branch": "codex/nucleus-docs-sync",
+      "head": "13ee4e8861f996c7c4e9a9278979d3e19b447571",
+      "requiredBranch": "main",
+      "requiredHead": "3f2adb669bb9e7888305c623f8c843054c3dd111"
+    }
+  },
+  "syntax": {
+    "colonEquate": true,
+    "characterLiterals": true,
+    "stringDirectives": ["CSTR", "PSTR", "ISTR"],
+    "caseInsensitive": true,
+    "documentationExamplesUppercase": true
+  },
+  "growth": {
+    "tokenizerRuleCodeBytes": 199,
+    "tokenizerTableBytes": 7,
+    "statementCodeBytes": 165,
+    "fixedWorkspaceBytes": 1,
+    "totalCodeAndTableBytes": 371
+  },
+  "native": {
+    "codeAndTables": 12879,
+    "fixedWorkspace": 551,
+    "linkedResidentExtent": 13430,
+    "codeMarginBelow16KiB": 3505,
+    "physicalMarginBelow16KiB": 2954,
+    "strictRegisterContracts": true
+  },
+  "selfHost": {
+    "sourceParts": 6,
+    "sourceBytes": 96462,
+    "initializedBytes": 13054,
+    "reservedBytes": 376,
+    "patchRecords": 2174,
+    "instructions": 156323531,
+    "cycles": 1427943875,
+    "pinnedAzmCore": true,
+    "translatedAzmSource": true,
+    "secondAtomGeneration": true
+  },
+  "proofs": {
+    "atomLocalTests": 253,
+    "atomLocalPassed": 253,
+    "atomLocalFailed": 0,
+    "releaseCheckBlockedByDebug80Branch": true
+  }
+}

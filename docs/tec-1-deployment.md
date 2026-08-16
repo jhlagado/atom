@@ -14,7 +14,7 @@ filesystem. Its public entry is `AtomAssemble`, which consumes memory-backed
 source descriptors and caller-owned symbol and pending arenas.
 
 The current checked image is linked at `$0000` for Debug80. Its linked extent is
-Measured 13,058 bytes, leaving Measured 3,326 bytes below `$4000`. A TEC target
+Measured 13,430 bytes, leaving Measured 2,954 bytes below `$4000`. A TEC target
 may keep that placement or relink the same modules at a target-specific ROM or
 bank origin. Relinking must be followed by the complete strict-contract and
 runtime proof battery; the Mac address is not a portable absolute contract.
@@ -58,16 +58,16 @@ It need not concatenate files or expose filesystem calls to the assembler.
 The current tokenizer takes a half-open memory interval and requires the part
 to remain addressable until it reaches EOF. The Mac adapter pages at whole-part
 boundaries, and each part may be as large as 24 KiB. Atom's self-host source has
-five code-bearing parts totalling Measured 93,760 bytes plus a small entry
+five code-bearing parts totalling Measured 96,289 bytes plus a small entry
 part. This proves multipart operation but does not prove that the same page
 size fits TEC RAM.
 
 ## RAM decision
 
 With less than 24 KiB of effective RAM, the Mac proof layout cannot be copied
-unchanged. Its 550-byte fixed workspace, symbol arena, pending arena, maximum
-descriptors, and 256-byte stack consume Measured 16,773 bytes before source
-buffering. Only 7,803 bytes remain in a 24 KiB budget, and the operating adapter
+unchanged. Its 551-byte fixed workspace, symbol arena, pending arena, maximum
+descriptors, and 256-byte stack consume Measured 16,774 bytes before source
+buffering. Only 7,802 bytes remain in a 24 KiB budget, and the operating adapter
 needs some of that space.
 
 There are three credible deployment choices:
@@ -82,7 +82,7 @@ There are three credible deployment choices:
 
 The first choice is preferred when TEC storage hardware exposes a usable bank
 or window. Otherwise the next project checkpoint should measure the third
-choice against the 3,326-byte resident margin. It is a Hypothesis, not a
+choice against the 2,954-byte resident margin. It is a Hypothesis, not a
 projection, that the complete source and sink adapter will fit that margin.
 
 Symbol capacity is another target choice. Use eight bytes for every permanent

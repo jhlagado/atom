@@ -20,7 +20,10 @@ test("Atom-to-AZM translation changes only concrete assembler directives", () =>
   assert.equal(translateAtomLineToAzm("DW Target"), ".dw Target");
   assert.equal(translateAtomLineToAzm("DS 4"), ".ds 4");
   assert.equal(translateAtomLineToAzm(".LOOP EQU 2"), ".LOOP: .equ 2");
+  assert.equal(translateAtomLineToAzm("VALUE: EQU 2"), "VALUE: .equ 2");
   assert.equal(translateAtomLineToAzm(".DATA: DB 1"), ".DATA: .db 1");
+  assert.equal(translateAtomLineToAzm('TEXT: CSTR "A;B" ; data'), 'TEXT: .cstr "A;B" ; data');
+  assert.equal(translateAtomLineToAzm("DB ';' ; semicolon"), ".db ';' ; semicolon");
   assert.equal(translateAtomLineToAzm("LD A,%1010 ; binary"), "LD A,%1010 ; binary");
 });
 

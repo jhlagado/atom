@@ -3,11 +3,11 @@
   "version": 1,
   "statistics": {
     "inputFiles": 13,
-    "statements": 7127,
-    "sourceBytes": 93760,
+    "statements": 7315,
+    "sourceBytes": 96289,
     "parts": 5,
-    "globalSymbols": 813,
-    "privateSymbols": 402
+    "globalSymbols": 832,
+    "privateSymbols": 408
   },
   "symbols": [
     {
@@ -2221,43 +2221,53 @@
       "private": false
     },
     {
-      "original": "AtomTokenKindOffset",
+      "original": "AtomTokenStatusUnterminatedCharacter",
       "short": "G0000070",
       "private": false
     },
     {
-      "original": "AtomTokenPartOffset",
+      "original": "AtomTokenStatusInvalidCharacter",
       "short": "G0000071",
       "private": false
     },
     {
-      "original": "AtomTokenSourceOffset",
+      "original": "AtomTokenKindOffset",
       "short": "G0000072",
       "private": false
     },
     {
-      "original": "AtomTokenLexemeOffset",
+      "original": "AtomTokenPartOffset",
       "short": "G0000073",
       "private": false
     },
     {
-      "original": "AtomTokenLengthOffset",
+      "original": "AtomTokenSourceOffset",
       "short": "G0000074",
       "private": false
     },
     {
-      "original": "AtomTokenValueOffset",
+      "original": "AtomTokenLexemeOffset",
       "short": "G0000075",
       "private": false
     },
     {
-      "original": "AtomTokenRecordBytes",
+      "original": "AtomTokenLengthOffset",
       "short": "G0000076",
       "private": false
     },
     {
-      "original": "AtomTokenizerReset",
+      "original": "AtomTokenValueOffset",
       "short": "G0000077",
+      "private": false
+    },
+    {
+      "original": "AtomTokenRecordBytes",
+      "short": "G0000078",
+      "private": false
+    },
+    {
+      "original": "AtomTokenizerReset",
+      "short": "G0000079",
       "private": false
     },
     {
@@ -2272,7 +2282,7 @@
     },
     {
       "original": "AtomTokenSourcePeek",
-      "short": "G0000078",
+      "short": "G000007A",
       "private": false
     },
     {
@@ -2287,7 +2297,7 @@
     },
     {
       "original": "AtomTokenSourceTake",
-      "short": "G0000079",
+      "short": "G000007B",
       "private": false
     },
     {
@@ -2297,52 +2307,52 @@
     },
     {
       "original": "AtomTokenStart",
-      "short": "G000007A",
-      "private": false
-    },
-    {
-      "original": "AtomTokenCommit",
-      "short": "G000007B",
-      "private": false
-    },
-    {
-      "original": "AtomTokenFinish",
       "short": "G000007C",
       "private": false
     },
     {
-      "original": "AtomTokenFail",
+      "original": "AtomTokenCommit",
       "short": "G000007D",
       "private": false
     },
     {
-      "original": "AtomTokenIsLetter",
+      "original": "AtomTokenFinish",
       "short": "G000007E",
       "private": false
     },
     {
-      "original": "AtomTokenIsNameStart",
+      "original": "AtomTokenFail",
       "short": "G000007F",
       "private": false
     },
     {
-      "original": "AtomTokenIsNameByte",
+      "original": "AtomTokenIsLetter",
       "short": "G000007G",
       "private": false
     },
     {
-      "original": "AtomTokenClassNo",
+      "original": "AtomTokenIsNameStart",
       "short": "G000007H",
       "private": false
     },
     {
-      "original": "AtomTokenClassYes",
+      "original": "AtomTokenIsNameByte",
       "short": "G000007I",
       "private": false
     },
     {
-      "original": "AtomTokenHexDigit",
+      "original": "AtomTokenClassNo",
       "short": "G000007J",
+      "private": false
+    },
+    {
+      "original": "AtomTokenClassYes",
+      "short": "G000007K",
+      "private": false
+    },
+    {
+      "original": "AtomTokenHexDigit",
+      "short": "G000007L",
       "private": false
     },
     {
@@ -2357,7 +2367,7 @@
     },
     {
       "original": "AtomTokenScanName",
-      "short": "G000007K",
+      "short": "G000007M",
       "private": false
     },
     {
@@ -2377,12 +2387,12 @@
     },
     {
       "original": "AtomTokenNameTooLong",
-      "short": "G000007L",
+      "short": "G000007N",
       "private": false
     },
     {
       "original": "AtomTokenScanDigitLed",
-      "short": "G000007M",
+      "short": "G000007O",
       "private": false
     },
     {
@@ -2442,7 +2452,7 @@
     },
     {
       "original": "AtomTokenScanBased",
-      "short": "G000007N",
+      "short": "G000007P",
       "private": false
     },
     {
@@ -2487,17 +2497,17 @@
     },
     {
       "original": "AtomTokenInvalidNumber",
-      "short": "G000007O",
+      "short": "G000007Q",
       "private": false
     },
     {
       "original": "AtomTokenNumberOverflow",
-      "short": "G000007P",
+      "short": "G000007R",
       "private": false
     },
     {
       "original": "AtomTokenScanString",
-      "short": "G000007Q",
+      "short": "G000007S",
       "private": false
     },
     {
@@ -2522,7 +2532,7 @@
     },
     {
       "original": "AtomTokenStringTake",
-      "short": "G000007R",
+      "short": "G000007T",
       "private": false
     },
     {
@@ -2532,22 +2542,32 @@
     },
     {
       "original": "AtomTokenInvalidEscape",
-      "short": "G000007S",
-      "private": false
-    },
-    {
-      "original": "AtomTokenUnterminatedString",
-      "short": "G000007T",
-      "private": false
-    },
-    {
-      "original": "AtomTokenInvalidByte",
       "short": "G000007U",
       "private": false
     },
     {
-      "original": "AtomTokenSkipComment",
+      "original": "AtomTokenUnterminatedString",
       "short": "G000007V",
+      "private": false
+    },
+    {
+      "original": "AtomTokenUnterminatedCharacter",
+      "short": "G000007W",
+      "private": false
+    },
+    {
+      "original": "AtomTokenInvalidCharacter",
+      "short": "G000007X",
+      "private": false
+    },
+    {
+      "original": "AtomTokenInvalidByte",
+      "short": "G000007Y",
+      "private": false
+    },
+    {
+      "original": "AtomTokenSkipComment",
+      "short": "G000007Z",
       "private": false
     },
     {
@@ -2557,7 +2577,7 @@
     },
     {
       "original": "AtomTokenizerNext",
-      "short": "G000007W",
+      "short": "G0000080",
       "private": false
     },
     {
@@ -2661,3428 +2681,3533 @@
       "private": true
     },
     {
-      "original": "AtomTokenizerRuleCodeEnd",
-      "short": "G000007X",
-      "private": false
-    },
-    {
-      "original": "AtomTokenizerImmutableStart",
-      "short": "G000007Y",
-      "private": false
-    },
-    {
-      "original": "AtomTokenPunctuationTable",
-      "short": "G000007Z",
-      "private": false
-    },
-    {
-      "original": "AtomTokenPunctuationEnd",
-      "short": "G0000080",
-      "private": false
-    },
-    {
-      "original": "AtomTokenPunctuationCount",
-      "short": "G0000081",
-      "private": false
-    },
-    {
-      "original": "AtomTokenEscapeTable",
-      "short": "G0000082",
-      "private": false
-    },
-    {
-      "original": "AtomTokenEscapeCount",
-      "short": "G0000083",
-      "private": false
-    },
-    {
-      "original": "AtomTokenizerImmutableEnd",
-      "short": "G0000084",
-      "private": false
-    },
-    {
-      "original": "AtomTokenizerCodeEnd",
-      "short": "G0000085",
-      "private": false
-    },
-    {
-      "original": "AtomTokenizerWorkspaceStart",
-      "short": "G0000086",
-      "private": false
-    },
-    {
-      "original": "AtomTokenSourceCursor",
-      "short": "G0000087",
-      "private": false
-    },
-    {
-      "original": "AtomTokenSourceEnd",
-      "short": "G0000088",
-      "private": false
-    },
-    {
-      "original": "AtomTokenSourceOffsetState",
-      "short": "G0000089",
-      "private": false
-    },
-    {
-      "original": "AtomTokenSourcePart",
-      "short": "G000008A",
-      "private": false
-    },
-    {
-      "original": "AtomTokenLineHasToken",
-      "short": "G000008B",
-      "private": false
-    },
-    {
-      "original": "AtomTokenEofPending",
-      "short": "G000008C",
-      "private": false
-    },
-    {
-      "original": "AtomTokenScanPointer",
-      "short": "G000008D",
-      "private": false
-    },
-    {
-      "original": "AtomTokenScanOffset",
-      "short": "G000008E",
-      "private": false
-    },
-    {
-      "original": "AtomTokenScanLength",
-      "short": "G000008F",
-      "private": false
-    },
-    {
-      "original": "AtomTokenScanValue",
-      "short": "G000008G",
-      "private": false
-    },
-    {
-      "original": "AtomTokenDigitsSeen",
-      "short": "G000008H",
-      "private": false
-    },
-    {
-      "original": "AtomTokenNameLimit",
-      "short": "G000008I",
-      "private": false
-    },
-    {
-      "original": "AtomTokenPendingKind",
-      "short": "G000008J",
-      "private": false
-    },
-    {
-      "original": "AtomTokenErrorStatus",
-      "short": "G000008K",
-      "private": false
-    },
-    {
-      "original": "AtomTokenErrorPart",
-      "short": "G000008L",
-      "private": false
-    },
-    {
-      "original": "AtomTokenErrorOffset",
-      "short": "G000008M",
-      "private": false
-    },
-    {
-      "original": "AtomTokenRecord",
-      "short": "G000008N",
-      "private": false
-    },
-    {
-      "original": "AtomTokenizerWorkspaceEnd",
-      "short": "G000008O",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionCodeStart",
-      "short": "G000008P",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionResolved",
-      "short": "G000008Q",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionUnresolved",
-      "short": "G000008R",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusLexical",
-      "short": "G000008S",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusExpectedPrimary",
-      "short": "G000008T",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusExpectedRight",
-      "short": "G000008U",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusDivideZero",
-      "short": "G000008V",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusRange",
-      "short": "G000008W",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusForwardForm",
-      "short": "G000008X",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusCapacity",
-      "short": "G000008Y",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusSymbol",
-      "short": "G000008Z",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionStatusInternal",
-      "short": "G0000090",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpOr",
-      "short": "G0000091",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpXor",
-      "short": "G0000092",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpAnd",
-      "short": "G0000093",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpLeft",
-      "short": "G0000094",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpRight",
-      "short": "G0000095",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpAdd",
-      "short": "G0000096",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpSubtract",
-      "short": "G0000097",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpMultiply",
-      "short": "G0000098",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpDivide",
-      "short": "G0000099",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOpRemainder",
-      "short": "G000009A",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionValueBytes",
-      "short": "G000009B",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionValueCapacity",
-      "short": "G000009C",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorBytes",
-      "short": "G000009D",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorCapacity",
-      "short": "G000009E",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionMarkerLeftParen",
-      "short": "G000009F",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionUnaryPlus",
-      "short": "G000009G",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionUnaryMinus",
-      "short": "G000009H",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionUnaryTilde",
-      "short": "G000009I",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionParse",
-      "short": "G000009J",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionParseDeferred",
-      "short": "G000009K",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionParseCommon",
-      "short": "G000009L",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionParseLoop",
+      "original": "_AtomTokenizerApostrophe",
       "short": ".L000006T",
       "private": true
     },
     {
-      "original": "_AtomExpressionParseOperator",
+      "original": "AtomTokenScanCharacter",
+      "short": "G0000081",
+      "private": false
+    },
+    {
+      "original": "_AtomTokenScanCharacterEscape",
       "short": ".L000006U",
       "private": true
     },
     {
-      "original": "_AtomExpressionFinishUnresolved",
+      "original": "_AtomTokenScanCharacterEscapeLoop",
       "short": ".L000006V",
       "private": true
     },
     {
-      "original": "_AtomExpressionFinishDeferred",
+      "original": "_AtomTokenScanCharacterEscapeFound",
       "short": ".L000006W",
       "private": true
     },
     {
-      "original": "AtomExpressionSymbolFailure",
-      "short": "G000009M",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionQueue",
-      "short": "G000009N",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionParseOperand",
-      "short": "G000009O",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionPushUnary",
+      "original": "_AtomTokenScanCharacterHex",
       "short": ".L000006X",
       "private": true
     },
     {
-      "original": "_AtomExpressionPushParen",
+      "original": "_AtomTokenScanCharacterClose",
       "short": ".L000006Y",
       "private": true
     },
     {
-      "original": "_AtomExpressionPrimaryNumber",
-      "short": ".L000006Z",
-      "private": true
+      "original": "AtomTokenizerRuleCodeEnd",
+      "short": "G0000082",
+      "private": false
     },
     {
-      "original": "_AtomExpressionPrimaryCurrent",
-      "short": ".L0000070",
-      "private": true
+      "original": "AtomTokenizerImmutableStart",
+      "short": "G0000083",
+      "private": false
     },
     {
-      "original": "_AtomExpressionPrimaryName",
-      "short": ".L0000071",
-      "private": true
+      "original": "AtomTokenPunctuationTable",
+      "short": "G0000084",
+      "private": false
     },
     {
-      "original": "_AtomExpressionPrimaryFinish",
-      "short": ".L0000072",
-      "private": true
+      "original": "AtomTokenPunctuationEnd",
+      "short": "G0000085",
+      "private": false
     },
     {
-      "original": "_AtomExpressionPrimaryPublish",
-      "short": ".L0000073",
-      "private": true
+      "original": "AtomTokenPunctuationCount",
+      "short": "G0000086",
+      "private": false
     },
     {
-      "original": "AtomExpressionParseOperator",
+      "original": "AtomTokenEscapeTable",
+      "short": "G0000087",
+      "private": false
+    },
+    {
+      "original": "AtomTokenEscapeCount",
+      "short": "G0000088",
+      "private": false
+    },
+    {
+      "original": "AtomTokenizerImmutableEnd",
+      "short": "G0000089",
+      "private": false
+    },
+    {
+      "original": "AtomTokenizerCodeEnd",
+      "short": "G000008A",
+      "private": false
+    },
+    {
+      "original": "AtomTokenizerWorkspaceStart",
+      "short": "G000008B",
+      "private": false
+    },
+    {
+      "original": "AtomTokenSourceCursor",
+      "short": "G000008C",
+      "private": false
+    },
+    {
+      "original": "AtomTokenSourceEnd",
+      "short": "G000008D",
+      "private": false
+    },
+    {
+      "original": "AtomTokenSourceOffsetState",
+      "short": "G000008E",
+      "private": false
+    },
+    {
+      "original": "AtomTokenSourcePart",
+      "short": "G000008F",
+      "private": false
+    },
+    {
+      "original": "AtomTokenLineHasToken",
+      "short": "G000008G",
+      "private": false
+    },
+    {
+      "original": "AtomTokenEofPending",
+      "short": "G000008H",
+      "private": false
+    },
+    {
+      "original": "AtomTokenScanPointer",
+      "short": "G000008I",
+      "private": false
+    },
+    {
+      "original": "AtomTokenScanOffset",
+      "short": "G000008J",
+      "private": false
+    },
+    {
+      "original": "AtomTokenScanLength",
+      "short": "G000008K",
+      "private": false
+    },
+    {
+      "original": "AtomTokenScanValue",
+      "short": "G000008L",
+      "private": false
+    },
+    {
+      "original": "AtomTokenDigitsSeen",
+      "short": "G000008M",
+      "private": false
+    },
+    {
+      "original": "AtomTokenNameLimit",
+      "short": "G000008N",
+      "private": false
+    },
+    {
+      "original": "AtomTokenPendingKind",
+      "short": "G000008O",
+      "private": false
+    },
+    {
+      "original": "AtomTokenErrorStatus",
+      "short": "G000008P",
+      "private": false
+    },
+    {
+      "original": "AtomTokenErrorPart",
+      "short": "G000008Q",
+      "private": false
+    },
+    {
+      "original": "AtomTokenErrorOffset",
+      "short": "G000008R",
+      "private": false
+    },
+    {
+      "original": "AtomTokenRecord",
+      "short": "G000008S",
+      "private": false
+    },
+    {
+      "original": "AtomTokenizerWorkspaceEnd",
+      "short": "G000008T",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionCodeStart",
+      "short": "G000008U",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionResolved",
+      "short": "G000008V",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionUnresolved",
+      "short": "G000008W",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusLexical",
+      "short": "G000008X",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusExpectedPrimary",
+      "short": "G000008Y",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusExpectedRight",
+      "short": "G000008Z",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusDivideZero",
+      "short": "G0000090",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusRange",
+      "short": "G0000091",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusForwardForm",
+      "short": "G0000092",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusCapacity",
+      "short": "G0000093",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusSymbol",
+      "short": "G0000094",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionStatusInternal",
+      "short": "G0000095",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpOr",
+      "short": "G0000096",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpXor",
+      "short": "G0000097",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpAnd",
+      "short": "G0000098",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpLeft",
+      "short": "G0000099",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpRight",
+      "short": "G000009A",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpAdd",
+      "short": "G000009B",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpSubtract",
+      "short": "G000009C",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpMultiply",
+      "short": "G000009D",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpDivide",
+      "short": "G000009E",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOpRemainder",
+      "short": "G000009F",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionValueBytes",
+      "short": "G000009G",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionValueCapacity",
+      "short": "G000009H",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorBytes",
+      "short": "G000009I",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorCapacity",
+      "short": "G000009J",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionMarkerLeftParen",
+      "short": "G000009K",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionUnaryPlus",
+      "short": "G000009L",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionUnaryMinus",
+      "short": "G000009M",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionUnaryTilde",
+      "short": "G000009N",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionParse",
+      "short": "G000009O",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionParseDeferred",
       "short": "G000009P",
       "private": false
     },
     {
-      "original": "_AtomExpressionRightParen",
-      "short": ".L0000074",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionDelimiter",
-      "short": ".L0000075",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionDelimiterDone",
-      "short": ".L0000076",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionPrimaryName",
+      "original": "AtomExpressionParseCommon",
       "short": "G000009Q",
       "private": false
     },
     {
-      "original": "_AtomExpressionPrimaryPositiveSymbol",
-      "short": ".L0000077",
+      "original": "_AtomExpressionParseLoop",
+      "short": ".L000006Z",
       "private": true
     },
     {
-      "original": "_AtomExpressionPrimaryMissing",
-      "short": ".L0000078",
+      "original": "_AtomExpressionParseOperator",
+      "short": ".L0000070",
       "private": true
     },
     {
-      "original": "_AtomExpressionPrimaryUnresolved",
-      "short": ".L0000079",
+      "original": "_AtomExpressionFinishUnresolved",
+      "short": ".L0000071",
       "private": true
     },
     {
-      "original": "AtomExpressionClassifyOperator",
+      "original": "_AtomExpressionFinishDeferred",
+      "short": ".L0000072",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionSymbolFailure",
       "short": "G000009R",
       "private": false
     },
     {
-      "original": "_AtomExpressionOperatorOr",
-      "short": ".L000007A",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorXor",
-      "short": ".L000007B",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorAnd",
-      "short": ".L000007C",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorLeft",
-      "short": ".L000007D",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorRight",
-      "short": ".L000007E",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorAdd",
-      "short": ".L000007F",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorSubtract",
-      "short": ".L000007G",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorMultiply",
-      "short": ".L000007H",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorDivide",
-      "short": ".L000007I",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorRemainder",
-      "short": ".L000007J",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionOperatorStore",
-      "short": ".L000007K",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionCaptureOperatorPosition",
+      "original": "AtomExpressionQueue",
       "short": "G000009S",
       "private": false
     },
     {
-      "original": "AtomExpressionPushValue",
+      "original": "AtomExpressionParseOperand",
       "short": "G000009T",
       "private": false
     },
     {
-      "original": "AtomExpressionPopValue",
+      "original": "_AtomExpressionPushUnary",
+      "short": ".L0000073",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPushParen",
+      "short": ".L0000074",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryNumber",
+      "short": ".L0000075",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryCurrent",
+      "short": ".L0000076",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryName",
+      "short": ".L0000077",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryFinish",
+      "short": ".L0000078",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryPublish",
+      "short": ".L0000079",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionParseOperator",
       "short": "G000009U",
       "private": false
     },
     {
-      "original": "AtomExpressionPopLeftValue",
+      "original": "_AtomExpressionRightParen",
+      "short": ".L000007A",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionDelimiter",
+      "short": ".L000007B",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionDelimiterDone",
+      "short": ".L000007C",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionPrimaryName",
       "short": "G000009V",
       "private": false
     },
     {
-      "original": "AtomExpressionValueAddress",
+      "original": "_AtomExpressionPrimaryPositiveSymbol",
+      "short": ".L000007D",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryMissing",
+      "short": ".L000007E",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionPrimaryUnresolved",
+      "short": ".L000007F",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionClassifyOperator",
       "short": "G000009W",
       "private": false
     },
     {
-      "original": "AtomExpressionPushOperator",
-      "short": "G000009X",
-      "private": false
+      "original": "_AtomExpressionOperatorOr",
+      "short": ".L000007G",
+      "private": true
     },
     {
-      "original": "AtomExpressionPopOperator",
-      "short": "G000009Y",
-      "private": false
+      "original": "_AtomExpressionOperatorXor",
+      "short": ".L000007H",
+      "private": true
     },
     {
-      "original": "AtomExpressionOperatorAddress",
-      "short": "G000009Z",
-      "private": false
+      "original": "_AtomExpressionOperatorAnd",
+      "short": ".L000007I",
+      "private": true
     },
     {
-      "original": "AtomExpressionPeekOperator",
-      "short": "G00000A0",
-      "private": false
+      "original": "_AtomExpressionOperatorLeft",
+      "short": ".L000007J",
+      "private": true
     },
     {
-      "original": "AtomExpressionCapacityFailure",
-      "short": "G00000A1",
-      "private": false
+      "original": "_AtomExpressionOperatorRight",
+      "short": ".L000007K",
+      "private": true
     },
     {
-      "original": "AtomExpressionInternalFailure",
-      "short": "G00000A2",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSaveIncoming",
-      "short": "G00000A3",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionRestoreIncoming",
-      "short": "G00000A4",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionReduceIncoming",
-      "short": "G00000A5",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionReduceIncomingLoop",
+      "original": "_AtomExpressionOperatorAdd",
       "short": ".L000007L",
       "private": true
     },
     {
-      "original": "_AtomExpressionReduceIncomingNow",
+      "original": "_AtomExpressionOperatorSubtract",
       "short": ".L000007M",
       "private": true
     },
     {
-      "original": "_AtomExpressionReduceIncomingDone",
+      "original": "_AtomExpressionOperatorMultiply",
       "short": ".L000007N",
       "private": true
     },
     {
-      "original": "AtomExpressionReduceToParen",
-      "short": "G00000A6",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionReduceToParenLoop",
+      "original": "_AtomExpressionOperatorDivide",
       "short": ".L000007O",
       "private": true
     },
     {
-      "original": "AtomExpressionApplyUnary",
-      "short": "G00000A7",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionApplyUnaryLoop",
+      "original": "_AtomExpressionOperatorRemainder",
       "short": ".L000007P",
       "private": true
     },
     {
-      "original": "_AtomExpressionApplyUnaryConcrete",
+      "original": "_AtomExpressionOperatorStore",
       "short": ".L000007Q",
       "private": true
     },
     {
-      "original": "_AtomExpressionApplyUnaryPublish",
-      "short": ".L000007R",
-      "private": true
+      "original": "AtomExpressionCaptureOperatorPosition",
+      "short": "G000009X",
+      "private": false
     },
     {
-      "original": "_AtomExpressionApplyUnaryDone",
-      "short": ".L000007S",
-      "private": true
+      "original": "AtomExpressionPushValue",
+      "short": "G000009Y",
+      "private": false
     },
     {
-      "original": "AtomExpressionFinishStacks",
+      "original": "AtomExpressionPopValue",
+      "short": "G000009Z",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionPopLeftValue",
+      "short": "G00000A0",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionValueAddress",
+      "short": "G00000A1",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionPushOperator",
+      "short": "G00000A2",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionPopOperator",
+      "short": "G00000A3",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorAddress",
+      "short": "G00000A4",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionPeekOperator",
+      "short": "G00000A5",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionCapacityFailure",
+      "short": "G00000A6",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionInternalFailure",
+      "short": "G00000A7",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSaveIncoming",
       "short": "G00000A8",
       "private": false
     },
     {
-      "original": "_AtomExpressionFinishReduce",
-      "short": ".L000007T",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionFinishValue",
-      "short": ".L000007U",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionReduce",
+      "original": "AtomExpressionRestoreIncoming",
       "short": "G00000A9",
       "private": false
     },
     {
-      "original": "AtomExpressionReduceLoaded",
+      "original": "AtomExpressionReduceIncoming",
       "short": "G00000AA",
       "private": false
     },
     {
-      "original": "AtomExpressionReduceForward",
+      "original": "_AtomExpressionReduceIncomingLoop",
+      "short": ".L000007R",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionReduceIncomingNow",
+      "short": ".L000007S",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionReduceIncomingDone",
+      "short": ".L000007T",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionReduceToParen",
       "short": "G00000AB",
       "private": false
     },
     {
-      "original": "_AtomExpressionForwardLeftAdd",
-      "short": ".L000007V",
+      "original": "_AtomExpressionReduceToParenLoop",
+      "short": ".L000007U",
       "private": true
     },
     {
-      "original": "_AtomExpressionForwardUseLeftKey",
-      "short": ".L000007W",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionForwardRight",
-      "short": ".L000007X",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionForwardFinish",
-      "short": ".L000007Y",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionForwardReturn",
-      "short": ".L000007Z",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionForwardFailure",
-      "short": ".L0000080",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionAdd",
+      "original": "AtomExpressionApplyUnary",
       "short": "G00000AC",
       "private": false
     },
     {
-      "original": "AtomExpressionArithmeticOk",
+      "original": "_AtomExpressionApplyUnaryLoop",
+      "short": ".L000007V",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryConcrete",
+      "short": ".L000007W",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryPublish",
+      "short": ".L000007X",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionApplyUnaryDone",
+      "short": ".L000007Y",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionFinishStacks",
       "short": "G00000AD",
       "private": false
     },
     {
-      "original": "AtomExpressionSubtract",
+      "original": "_AtomExpressionFinishReduce",
+      "short": ".L000007Z",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionFinishValue",
+      "short": ".L0000080",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionReduce",
       "short": "G00000AE",
       "private": false
     },
     {
-      "original": "AtomExpressionAnd",
+      "original": "AtomExpressionReduceLoaded",
       "short": "G00000AF",
       "private": false
     },
     {
-      "original": "_AtomExpressionAndLoop",
-      "short": ".L0000081",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionXor",
+      "original": "AtomExpressionReduceForward",
       "short": "G00000AG",
       "private": false
     },
     {
-      "original": "_AtomExpressionXorLoop",
+      "original": "_AtomExpressionForwardLeftAdd",
+      "short": ".L0000081",
+      "private": true
+    },
+    {
+      "original": "_AtomExpressionForwardUseLeftKey",
       "short": ".L0000082",
       "private": true
     },
     {
-      "original": "AtomExpressionOr",
-      "short": "G00000AH",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionOrLoop",
+      "original": "_AtomExpressionForwardRight",
       "short": ".L0000083",
       "private": true
     },
     {
-      "original": "AtomExpressionShiftLeft",
-      "short": "G00000AI",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionShiftLeftLoop",
+      "original": "_AtomExpressionForwardFinish",
       "short": ".L0000084",
       "private": true
     },
     {
-      "original": "_AtomExpressionShiftLeftCopy",
+      "original": "_AtomExpressionForwardReturn",
       "short": ".L0000085",
       "private": true
     },
     {
-      "original": "AtomExpressionShiftRight",
-      "short": "G00000AJ",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionShiftRightLoop",
+      "original": "_AtomExpressionForwardFailure",
       "short": ".L0000086",
       "private": true
     },
     {
-      "original": "AtomExpressionShiftCount",
+      "original": "AtomExpressionAdd",
+      "short": "G00000AH",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionArithmeticOk",
+      "short": "G00000AI",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSubtract",
+      "short": "G00000AJ",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionAnd",
       "short": "G00000AK",
       "private": false
     },
     {
-      "original": "AtomExpressionMultiply",
-      "short": "G00000AL",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionMultiplyLoop",
+      "original": "_AtomExpressionAndLoop",
       "short": ".L0000087",
       "private": true
     },
     {
-      "original": "_AtomExpressionMultiplySkipAdd",
+      "original": "AtomExpressionXor",
+      "short": "G00000AL",
+      "private": false
+    },
+    {
+      "original": "_AtomExpressionXorLoop",
       "short": ".L0000088",
       "private": true
     },
     {
-      "original": "_AtomExpressionMultiplyDone",
-      "short": ".L0000089",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionDivide",
+      "original": "AtomExpressionOr",
       "short": "G00000AM",
       "private": false
     },
     {
-      "original": "AtomExpressionRemainder",
+      "original": "_AtomExpressionOrLoop",
+      "short": ".L0000089",
+      "private": true
+    },
+    {
+      "original": "AtomExpressionShiftLeft",
       "short": "G00000AN",
       "private": false
     },
     {
-      "original": "AtomExpressionDivideCommon",
-      "short": "G00000AO",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionDivideLoop",
+      "original": "_AtomExpressionShiftLeftLoop",
       "short": ".L000008A",
       "private": true
     },
     {
-      "original": "_AtomExpressionDivideNext",
+      "original": "_AtomExpressionShiftLeftCopy",
       "short": ".L000008B",
       "private": true
     },
     {
-      "original": "_AtomExpressionUseRemainder",
+      "original": "AtomExpressionShiftRight",
+      "short": "G00000AO",
+      "private": false
+    },
+    {
+      "original": "_AtomExpressionShiftRightLoop",
       "short": ".L000008C",
       "private": true
     },
     {
-      "original": "_AtomExpressionDivisionStore",
-      "short": ".L000008D",
-      "private": true
-    },
-    {
-      "original": "_AtomExpressionDivideZero",
-      "short": ".L000008E",
-      "private": true
-    },
-    {
-      "original": "AtomExpressionPrepareMagnitudes",
+      "original": "AtomExpressionShiftCount",
       "short": "G00000AP",
       "private": false
     },
     {
-      "original": "AtomExpressionNegateResult",
+      "original": "AtomExpressionMultiply",
       "short": "G00000AQ",
       "private": false
     },
     {
-      "original": "AtomExpressionNegateMagnitudeLeft",
-      "short": "G00000AR",
-      "private": false
+      "original": "_AtomExpressionMultiplyLoop",
+      "short": ".L000008D",
+      "private": true
     },
     {
-      "original": "AtomExpressionNegateMagnitudeRight",
-      "short": "G00000AS",
-      "private": false
+      "original": "_AtomExpressionMultiplySkipAdd",
+      "short": ".L000008E",
+      "private": true
     },
     {
-      "original": "AtomExpressionNegateAtHL",
-      "short": "G00000AT",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionComplementResult",
-      "short": "G00000AU",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionAccumulatorAddLeft",
-      "short": "G00000AV",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionMagnitudeLeftShift",
-      "short": "G00000AW",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionMagnitudeRightShift",
-      "short": "G00000AX",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionRemainderAtLeastDivisor",
-      "short": "G00000AY",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionRemainderSubtractDivisor",
-      "short": "G00000AZ",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSetResolvedWord",
-      "short": "G00000B0",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionRequireWord",
-      "short": "G00000B1",
-      "private": false
-    },
-    {
-      "original": "_AtomExpressionRangeHere",
+      "original": "_AtomExpressionMultiplyDone",
       "short": ".L000008F",
       "private": true
     },
     {
-      "original": "AtomExpressionRequireAddend",
-      "short": "G00000B2",
+      "original": "AtomExpressionDivide",
+      "short": "G00000AR",
       "private": false
     },
     {
-      "original": "_AtomExpressionAddendPositive",
+      "original": "AtomExpressionRemainder",
+      "short": "G00000AS",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionDivideCommon",
+      "short": "G00000AT",
+      "private": false
+    },
+    {
+      "original": "_AtomExpressionDivideLoop",
       "short": ".L000008G",
       "private": true
     },
     {
-      "original": "AtomExpressionNextToken",
-      "short": "G00000B3",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionRangeOperator",
-      "short": "G00000B4",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionFailHere",
-      "short": "G00000B5",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionFailOperator",
-      "short": "G00000B6",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionFailSymbol",
-      "short": "G00000B7",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionFailTokenizer",
-      "short": "G00000B8",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionRuleCodeEnd",
-      "short": "G00000B9",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionCodeEnd",
-      "short": "G00000BA",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionWorkspaceStart",
-      "short": "G00000BB",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionCurrentAddress",
-      "short": "G00000BC",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionPublishSymbol",
-      "short": "G00000BD",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionResultValue",
-      "short": "G00000BE",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionResultUnresolved",
-      "short": "G00000BF",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionResultKey",
-      "short": "G00000BG",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionLeftValue",
-      "short": "G00000BH",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionLeftUnresolved",
-      "short": "G00000BI",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionLeftKey",
-      "short": "G00000BJ",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperator",
-      "short": "G00000BK",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorPrecedence",
-      "short": "G00000BL",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorPart",
-      "short": "G00000BM",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorOffset",
-      "short": "G00000BN",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionIncoming",
-      "short": "G00000BO",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSymbolPart",
-      "short": "G00000BP",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSymbolOffset",
-      "short": "G00000BQ",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSymbolStatus",
-      "short": "G00000BR",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionShiftCounter",
-      "short": "G00000BS",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionMultiplyCounter",
-      "short": "G00000BT",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionErrorStatus",
-      "short": "G00000BU",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionErrorPart",
-      "short": "G00000BV",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionErrorOffset",
-      "short": "G00000BW",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionValueDepth",
-      "short": "G00000BX",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorDepth",
-      "short": "G00000BY",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionParenDepth",
-      "short": "G00000BZ",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionExpectOperand",
-      "short": "G00000C0",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSignLeft",
-      "short": "G00000C1",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSignRight",
-      "short": "G00000C2",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionSignResult",
-      "short": "G00000C3",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionDivisionRemainderMode",
-      "short": "G00000C4",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionMagnitudeLeft",
-      "short": "G00000C5",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionMagnitudeRight",
-      "short": "G00000C6",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionAccumulator",
-      "short": "G00000C7",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionQuotient",
-      "short": "G00000C8",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionValueStack",
-      "short": "G00000C9",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionOperatorStack",
-      "short": "G00000CA",
-      "private": false
-    },
-    {
-      "original": "AtomExpressionWorkspaceEnd",
-      "short": "G00000CB",
-      "private": false
-    },
-    {
-      "original": "AtomPatchCodeStart",
-      "short": "G00000CC",
-      "private": false
-    },
-    {
-      "original": "AtomPatchKindByte",
-      "short": "G00000CD",
-      "private": false
-    },
-    {
-      "original": "AtomPatchKindWord",
-      "short": "G00000CE",
-      "private": false
-    },
-    {
-      "original": "AtomPatchKindRelative",
-      "short": "G00000CF",
-      "private": false
-    },
-    {
-      "original": "AtomPatchKindDisplacement",
-      "short": "G00000CG",
-      "private": false
-    },
-    {
-      "original": "AtomPatchKindTruncateByte",
-      "short": "G00000CH",
-      "private": false
-    },
-    {
-      "original": "AtomPatchLocate",
-      "short": "G00000CI",
-      "private": false
-    },
-    {
-      "original": "_AtomPatchInvalid",
+      "original": "_AtomExpressionDivideNext",
       "short": ".L000008H",
       "private": true
     },
     {
-      "original": "_AtomPatchDisplacement",
+      "original": "_AtomExpressionUseRemainder",
       "short": ".L000008I",
       "private": true
     },
     {
-      "original": "_AtomPatchRelative",
+      "original": "_AtomExpressionDivisionStore",
       "short": ".L000008J",
       "private": true
     },
     {
-      "original": "_AtomPatchByte",
+      "original": "_AtomExpressionDivideZero",
       "short": ".L000008K",
       "private": true
     },
     {
-      "original": "_AtomPatchWord",
+      "original": "AtomExpressionPrepareMagnitudes",
+      "short": "G00000AU",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionNegateResult",
+      "short": "G00000AV",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionNegateMagnitudeLeft",
+      "short": "G00000AW",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionNegateMagnitudeRight",
+      "short": "G00000AX",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionNegateAtHL",
+      "short": "G00000AY",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionComplementResult",
+      "short": "G00000AZ",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionAccumulatorAddLeft",
+      "short": "G00000B0",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionMagnitudeLeftShift",
+      "short": "G00000B1",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionMagnitudeRightShift",
+      "short": "G00000B2",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionRemainderAtLeastDivisor",
+      "short": "G00000B3",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionRemainderSubtractDivisor",
+      "short": "G00000B4",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSetResolvedWord",
+      "short": "G00000B5",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionRequireWord",
+      "short": "G00000B6",
+      "private": false
+    },
+    {
+      "original": "_AtomExpressionRangeHere",
       "short": ".L000008L",
       "private": true
     },
     {
-      "original": "AtomPatchCodeEnd",
-      "short": "G00000CJ",
+      "original": "AtomExpressionRequireAddend",
+      "short": "G00000B7",
       "private": false
     },
     {
-      "original": "AtomParserCodeStart",
-      "short": "G00000CK",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusOk",
-      "short": "G00000CL",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusEof",
-      "short": "G00000CM",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusLexical",
-      "short": "G00000CN",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusExpectedMnemonic",
-      "short": "G00000CO",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusUnknownMnemonic",
-      "short": "G00000CP",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusExpectedOperand",
-      "short": "G00000CQ",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusUnknownOperand",
-      "short": "G00000CR",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusExpectedDelimiter",
-      "short": "G00000CS",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusTooManyOperands",
-      "short": "G00000CT",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusInvalidForm",
-      "short": "G00000CU",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusValueRange",
-      "short": "G00000CV",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusRelativeRange",
-      "short": "G00000CW",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusInternal",
-      "short": "G00000CX",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusExpression",
-      "short": "G00000CY",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusUnpatchable",
-      "short": "G00000CZ",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusSymbol",
-      "short": "G00000D0",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusReferenceCapacity",
-      "short": "G00000D1",
-      "private": false
-    },
-    {
-      "original": "AtomParserStatusPartCapacity",
-      "short": "G00000D2",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceCapacity",
-      "short": "G00000D3",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildReferenceBytes",
-      "short": "G00000D4",
-      "private": false
-    },
-    {
-      "original": "AtomParserPublicReferenceBytes",
-      "short": "G00000D5",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildKey",
-      "short": "G00000D6",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildAddend",
-      "short": "G00000D7",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildOperand",
-      "short": "G00000D8",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildKind",
-      "short": "G00000D9",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildPatchOffset",
-      "short": "G00000DA",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildPart",
-      "short": "G00000DB",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildSourceOffset",
-      "short": "G00000DC",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceSymbol",
-      "short": "G00000DD",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceAddend",
-      "short": "G00000DE",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceOperand",
-      "short": "G00000DF",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceKind",
-      "short": "G00000DG",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferencePatchOffset",
-      "short": "G00000DH",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferencePart",
-      "short": "G00000DI",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceSourceOffset",
-      "short": "G00000DJ",
-      "private": false
-    },
-    {
-      "original": "AtomParserGenericNumber",
-      "short": "G00000DK",
-      "private": false
-    },
-    {
-      "original": "AtomParserGenericParenNumber",
-      "short": "G00000DL",
-      "private": false
-    },
-    {
-      "original": "AtomParserGenericC",
-      "short": "G00000DM",
-      "private": false
-    },
-    {
-      "original": "AtomParserParsePublished",
-      "short": "G00000DN",
-      "private": false
-    },
-    {
-      "original": "AtomParserParse",
-      "short": "G00000DO",
-      "private": false
-    },
-    {
-      "original": "AtomParserPublishedOperands",
-      "short": "G00000DP",
-      "private": false
-    },
-    {
-      "original": "AtomParserOperandLoop",
-      "short": "G00000DQ",
-      "private": false
-    },
-    {
-      "original": "AtomParserParsedOperands",
-      "short": "G00000DR",
-      "private": false
-    },
-    {
-      "original": "AtomParserEof",
-      "short": "G00000DS",
-      "private": false
-    },
-    {
-      "original": "AtomParserInitializeScratch",
-      "short": "G00000DT",
-      "private": false
-    },
-    {
-      "original": "_AtomParserInitializeOperands",
+      "original": "_AtomExpressionAddendPositive",
       "short": ".L000008M",
       "private": true
     },
     {
-      "original": "_AtomParserInitializeValues",
+      "original": "AtomExpressionNextToken",
+      "short": "G00000B8",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionRangeOperator",
+      "short": "G00000B9",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionFailHere",
+      "short": "G00000BA",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionFailOperator",
+      "short": "G00000BB",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionFailSymbol",
+      "short": "G00000BC",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionFailTokenizer",
+      "short": "G00000BD",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionRuleCodeEnd",
+      "short": "G00000BE",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionCodeEnd",
+      "short": "G00000BF",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionWorkspaceStart",
+      "short": "G00000BG",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionCurrentAddress",
+      "short": "G00000BH",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionPublishSymbol",
+      "short": "G00000BI",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionResultValue",
+      "short": "G00000BJ",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionResultUnresolved",
+      "short": "G00000BK",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionResultKey",
+      "short": "G00000BL",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionLeftValue",
+      "short": "G00000BM",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionLeftUnresolved",
+      "short": "G00000BN",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionLeftKey",
+      "short": "G00000BO",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperator",
+      "short": "G00000BP",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorPrecedence",
+      "short": "G00000BQ",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorPart",
+      "short": "G00000BR",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorOffset",
+      "short": "G00000BS",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionIncoming",
+      "short": "G00000BT",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSymbolPart",
+      "short": "G00000BU",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSymbolOffset",
+      "short": "G00000BV",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSymbolStatus",
+      "short": "G00000BW",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionShiftCounter",
+      "short": "G00000BX",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionMultiplyCounter",
+      "short": "G00000BY",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionErrorStatus",
+      "short": "G00000BZ",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionErrorPart",
+      "short": "G00000C0",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionErrorOffset",
+      "short": "G00000C1",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionValueDepth",
+      "short": "G00000C2",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorDepth",
+      "short": "G00000C3",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionParenDepth",
+      "short": "G00000C4",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionExpectOperand",
+      "short": "G00000C5",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSignLeft",
+      "short": "G00000C6",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSignRight",
+      "short": "G00000C7",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionSignResult",
+      "short": "G00000C8",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionDivisionRemainderMode",
+      "short": "G00000C9",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionMagnitudeLeft",
+      "short": "G00000CA",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionMagnitudeRight",
+      "short": "G00000CB",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionAccumulator",
+      "short": "G00000CC",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionQuotient",
+      "short": "G00000CD",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionValueStack",
+      "short": "G00000CE",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionOperatorStack",
+      "short": "G00000CF",
+      "private": false
+    },
+    {
+      "original": "AtomExpressionWorkspaceEnd",
+      "short": "G00000CG",
+      "private": false
+    },
+    {
+      "original": "AtomPatchCodeStart",
+      "short": "G00000CH",
+      "private": false
+    },
+    {
+      "original": "AtomPatchKindByte",
+      "short": "G00000CI",
+      "private": false
+    },
+    {
+      "original": "AtomPatchKindWord",
+      "short": "G00000CJ",
+      "private": false
+    },
+    {
+      "original": "AtomPatchKindRelative",
+      "short": "G00000CK",
+      "private": false
+    },
+    {
+      "original": "AtomPatchKindDisplacement",
+      "short": "G00000CL",
+      "private": false
+    },
+    {
+      "original": "AtomPatchKindTruncateByte",
+      "short": "G00000CM",
+      "private": false
+    },
+    {
+      "original": "AtomPatchLocate",
+      "short": "G00000CN",
+      "private": false
+    },
+    {
+      "original": "_AtomPatchInvalid",
       "short": ".L000008N",
       "private": true
     },
     {
-      "original": "AtomParserNextToken",
-      "short": "G00000DU",
-      "private": false
-    },
-    {
-      "original": "AtomParserSelectOperand",
-      "short": "G00000DV",
-      "private": false
-    },
-    {
-      "original": "AtomParserParseOperand",
-      "short": "G00000DW",
-      "private": false
-    },
-    {
-      "original": "_AtomParserOperandName",
+      "original": "_AtomPatchDisplacement",
       "short": ".L000008O",
       "private": true
     },
     {
-      "original": "_AtomParserOperandParsed",
+      "original": "_AtomPatchRelative",
       "short": ".L000008P",
       "private": true
     },
     {
-      "original": "_AtomParserOperandExpression",
+      "original": "_AtomPatchByte",
       "short": ".L000008Q",
       "private": true
     },
     {
-      "original": "AtomParserParseExpression",
-      "short": "G00000DX",
-      "private": false
-    },
-    {
-      "original": "AtomParserStoreHLValue",
-      "short": "G00000DY",
-      "private": false
-    },
-    {
-      "original": "AtomParserAddReference",
-      "short": "G00000DZ",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceCapacityFailure",
-      "short": "G00000E0",
-      "private": false
-    },
-    {
-      "original": "AtomParserBuildReferenceAddress",
-      "short": "G00000E1",
-      "private": false
-    },
-    {
-      "original": "AtomParserExpressionFailure",
-      "short": "G00000E2",
-      "private": false
-    },
-    {
-      "original": "AtomParserLookupOperandWord",
-      "short": "G00000E3",
-      "private": false
-    },
-    {
-      "original": "_AtomParserLookupOperandLoop",
+      "original": "_AtomPatchWord",
       "short": ".L000008R",
       "private": true
     },
     {
-      "original": "_AtomParserLookupOperandSkipHigh",
+      "original": "AtomPatchCodeEnd",
+      "short": "G00000CO",
+      "private": false
+    },
+    {
+      "original": "AtomParserCodeStart",
+      "short": "G00000CP",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusOk",
+      "short": "G00000CQ",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusEof",
+      "short": "G00000CR",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusLexical",
+      "short": "G00000CS",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusExpectedMnemonic",
+      "short": "G00000CT",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusUnknownMnemonic",
+      "short": "G00000CU",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusExpectedOperand",
+      "short": "G00000CV",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusUnknownOperand",
+      "short": "G00000CW",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusExpectedDelimiter",
+      "short": "G00000CX",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusTooManyOperands",
+      "short": "G00000CY",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusInvalidForm",
+      "short": "G00000CZ",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusValueRange",
+      "short": "G00000D0",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusRelativeRange",
+      "short": "G00000D1",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusInternal",
+      "short": "G00000D2",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusExpression",
+      "short": "G00000D3",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusUnpatchable",
+      "short": "G00000D4",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusSymbol",
+      "short": "G00000D5",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusReferenceCapacity",
+      "short": "G00000D6",
+      "private": false
+    },
+    {
+      "original": "AtomParserStatusPartCapacity",
+      "short": "G00000D7",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceCapacity",
+      "short": "G00000D8",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildReferenceBytes",
+      "short": "G00000D9",
+      "private": false
+    },
+    {
+      "original": "AtomParserPublicReferenceBytes",
+      "short": "G00000DA",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildKey",
+      "short": "G00000DB",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildAddend",
+      "short": "G00000DC",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildOperand",
+      "short": "G00000DD",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildKind",
+      "short": "G00000DE",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildPatchOffset",
+      "short": "G00000DF",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildPart",
+      "short": "G00000DG",
+      "private": false
+    },
+    {
+      "original": "AtomParserBuildSourceOffset",
+      "short": "G00000DH",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceSymbol",
+      "short": "G00000DI",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceAddend",
+      "short": "G00000DJ",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceOperand",
+      "short": "G00000DK",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceKind",
+      "short": "G00000DL",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferencePatchOffset",
+      "short": "G00000DM",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferencePart",
+      "short": "G00000DN",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceSourceOffset",
+      "short": "G00000DO",
+      "private": false
+    },
+    {
+      "original": "AtomParserGenericNumber",
+      "short": "G00000DP",
+      "private": false
+    },
+    {
+      "original": "AtomParserGenericParenNumber",
+      "short": "G00000DQ",
+      "private": false
+    },
+    {
+      "original": "AtomParserGenericC",
+      "short": "G00000DR",
+      "private": false
+    },
+    {
+      "original": "AtomParserParsePublished",
+      "short": "G00000DS",
+      "private": false
+    },
+    {
+      "original": "AtomParserParse",
+      "short": "G00000DT",
+      "private": false
+    },
+    {
+      "original": "AtomParserPublishedOperands",
+      "short": "G00000DU",
+      "private": false
+    },
+    {
+      "original": "AtomParserOperandLoop",
+      "short": "G00000DV",
+      "private": false
+    },
+    {
+      "original": "AtomParserParsedOperands",
+      "short": "G00000DW",
+      "private": false
+    },
+    {
+      "original": "AtomParserEof",
+      "short": "G00000DX",
+      "private": false
+    },
+    {
+      "original": "AtomParserInitializeScratch",
+      "short": "G00000DY",
+      "private": false
+    },
+    {
+      "original": "_AtomParserInitializeOperands",
       "short": ".L000008S",
       "private": true
     },
     {
-      "original": "_AtomParserUnknownOperand",
+      "original": "_AtomParserInitializeValues",
       "short": ".L000008T",
       "private": true
     },
     {
-      "original": "_AtomParserLookupOperandFound",
+      "original": "AtomParserNextToken",
+      "short": "G00000DZ",
+      "private": false
+    },
+    {
+      "original": "AtomParserSelectOperand",
+      "short": "G00000E0",
+      "private": false
+    },
+    {
+      "original": "AtomParserParseOperand",
+      "short": "G00000E1",
+      "private": false
+    },
+    {
+      "original": "_AtomParserOperandName",
       "short": ".L000008U",
       "private": true
     },
     {
-      "original": "AtomParserParseMemory",
-      "short": "G00000E4",
-      "private": false
-    },
-    {
-      "original": "_AtomParserMemoryExpression",
+      "original": "_AtomParserOperandParsed",
       "short": ".L000008V",
       "private": true
     },
     {
-      "original": "_AtomParserMemoryPortC",
+      "original": "_AtomParserOperandExpression",
       "short": ".L000008W",
       "private": true
     },
     {
-      "original": "_AtomParserMemoryBC",
-      "short": ".L000008X",
-      "private": true
+      "original": "AtomParserParseExpression",
+      "short": "G00000E2",
+      "private": false
     },
     {
-      "original": "_AtomParserMemoryDE",
-      "short": ".L000008Y",
-      "private": true
+      "original": "AtomParserStoreHLValue",
+      "short": "G00000E3",
+      "private": false
     },
     {
-      "original": "_AtomParserMemoryHL",
-      "short": ".L000008Z",
-      "private": true
+      "original": "AtomParserAddReference",
+      "short": "G00000E4",
+      "private": false
     },
     {
-      "original": "_AtomParserMemorySP",
-      "short": ".L0000090",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemorySimple",
-      "short": ".L0000091",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemoryIX",
-      "short": ".L0000092",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemoryIY",
-      "short": ".L0000093",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemoryIndex",
-      "short": ".L0000094",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemoryIndexExpression",
-      "short": ".L0000095",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemoryIndexPlain",
-      "short": ".L0000096",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMemoryIndexPlainStore",
-      "short": ".L0000097",
-      "private": true
-    },
-    {
-      "original": "AtomParserRequireRightParen",
+      "original": "AtomParserReferenceCapacityFailure",
       "short": "G00000E5",
       "private": false
     },
     {
-      "original": "AtomParserStoreTokenValue",
+      "original": "AtomParserBuildReferenceAddress",
       "short": "G00000E6",
       "private": false
     },
     {
-      "original": "AtomParserNormalizeAccumulatorAlias",
+      "original": "AtomParserExpressionFailure",
       "short": "G00000E7",
       "private": false
     },
     {
-      "original": "_AtomParserRequiredAccumulator",
-      "short": ".L0000098",
-      "private": true
-    },
-    {
-      "original": "_AtomParserMaybeAccumulatorAlias",
-      "short": ".L0000099",
-      "private": true
-    },
-    {
-      "original": "_AtomParserAccumulatorSuccess",
-      "short": ".L000009A",
-      "private": true
-    },
-    {
-      "original": "AtomParserRemapAliasReference",
+      "original": "AtomParserLookupOperandWord",
       "short": "G00000E8",
       "private": false
     },
     {
-      "original": "_AtomParserRemapAliasLoop",
-      "short": ".L000009B",
+      "original": "_AtomParserLookupOperandLoop",
+      "short": ".L000008X",
       "private": true
     },
     {
-      "original": "_AtomParserRemapAliasNext",
-      "short": ".L000009C",
+      "original": "_AtomParserLookupOperandSkipHigh",
+      "short": ".L000008Y",
       "private": true
     },
     {
-      "original": "AtomParserNormalizeNumbers",
+      "original": "_AtomParserUnknownOperand",
+      "short": ".L000008Z",
+      "private": true
+    },
+    {
+      "original": "_AtomParserLookupOperandFound",
+      "short": ".L0000090",
+      "private": true
+    },
+    {
+      "original": "AtomParserParseMemory",
       "short": "G00000E9",
       "private": false
     },
     {
-      "original": "_AtomParserNormalizeLoop",
+      "original": "_AtomParserMemoryExpression",
+      "short": ".L0000091",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryPortC",
+      "short": ".L0000092",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryBC",
+      "short": ".L0000093",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryDE",
+      "short": ".L0000094",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryHL",
+      "short": ".L0000095",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemorySP",
+      "short": ".L0000096",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemorySimple",
+      "short": ".L0000097",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryIX",
+      "short": ".L0000098",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryIY",
+      "short": ".L0000099",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryIndex",
+      "short": ".L000009A",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryIndexExpression",
+      "short": ".L000009B",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryIndexPlain",
+      "short": ".L000009C",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMemoryIndexPlainStore",
       "short": ".L000009D",
       "private": true
     },
     {
-      "original": "_AtomParserNormalizeC",
-      "short": ".L000009E",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeParenNumber",
-      "short": ".L000009F",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeParenByte",
-      "short": ".L000009G",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeNext",
-      "short": ".L000009H",
-      "private": true
-    },
-    {
-      "original": "AtomParserNormalizeBareNumber",
+      "original": "AtomParserRequireRightParen",
       "short": "G00000EA",
       "private": false
     },
     {
-      "original": "_AtomParserNormalizeBranch",
-      "short": ".L000009I",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeIm",
-      "short": ".L000009J",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeRst",
-      "short": ".L000009K",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeBit",
-      "short": ".L000009L",
-      "private": true
-    },
-    {
-      "original": "_AtomParserStoreEnum",
-      "short": ".L000009M",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeWord",
-      "short": ".L000009N",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeRelative",
-      "short": ".L000009O",
-      "private": true
-    },
-    {
-      "original": "_AtomParserNormalizeFlexible",
-      "short": ".L000009P",
-      "private": true
-    },
-    {
-      "original": "AtomParserSelectedValue",
+      "original": "AtomParserStoreTokenValue",
       "short": "G00000EB",
       "private": false
     },
     {
-      "original": "AtomParserClearSelectedValue",
+      "original": "AtomParserNormalizeAccumulatorAlias",
       "short": "G00000EC",
       "private": false
     },
     {
-      "original": "AtomParserRequireByteValue",
+      "original": "_AtomParserRequiredAccumulator",
+      "short": ".L000009E",
+      "private": true
+    },
+    {
+      "original": "_AtomParserMaybeAccumulatorAlias",
+      "short": ".L000009F",
+      "private": true
+    },
+    {
+      "original": "_AtomParserAccumulatorSuccess",
+      "short": ".L000009G",
+      "private": true
+    },
+    {
+      "original": "AtomParserRemapAliasReference",
       "short": "G00000ED",
       "private": false
     },
     {
-      "original": "AtomParserIndexBit",
+      "original": "_AtomParserRemapAliasLoop",
+      "short": ".L000009H",
+      "private": true
+    },
+    {
+      "original": "_AtomParserRemapAliasNext",
+      "short": ".L000009I",
+      "private": true
+    },
+    {
+      "original": "AtomParserNormalizeNumbers",
       "short": "G00000EE",
       "private": false
     },
     {
-      "original": "_AtomParserIndexBitOne",
-      "short": ".L000009Q",
+      "original": "_AtomParserNormalizeLoop",
+      "short": ".L000009J",
       "private": true
     },
     {
-      "original": "_AtomParserIndexBitReady",
-      "short": ".L000009R",
+      "original": "_AtomParserNormalizeC",
+      "short": ".L000009K",
       "private": true
     },
     {
-      "original": "AtomParserValidateCandidates",
+      "original": "_AtomParserNormalizeParenNumber",
+      "short": ".L000009L",
+      "private": true
+    },
+    {
+      "original": "_AtomParserNormalizeParenByte",
+      "short": ".L000009M",
+      "private": true
+    },
+    {
+      "original": "_AtomParserNormalizeNext",
+      "short": ".L000009N",
+      "private": true
+    },
+    {
+      "original": "AtomParserNormalizeBareNumber",
       "short": "G00000EF",
       "private": false
     },
     {
-      "original": "_AtomParserInvalidForm",
+      "original": "_AtomParserNormalizeBranch",
+      "short": ".L000009O",
+      "private": true
+    },
+    {
+      "original": "_AtomParserNormalizeIm",
+      "short": ".L000009P",
+      "private": true
+    },
+    {
+      "original": "_AtomParserNormalizeRst",
+      "short": ".L000009Q",
+      "private": true
+    },
+    {
+      "original": "_AtomParserNormalizeBit",
+      "short": ".L000009R",
+      "private": true
+    },
+    {
+      "original": "_AtomParserStoreEnum",
       "short": ".L000009S",
       "private": true
     },
     {
-      "original": "AtomParserValidateCurrent",
-      "short": "G00000EG",
-      "private": false
-    },
-    {
-      "original": "AtomParserTryConditions",
-      "short": "G00000EH",
-      "private": false
-    },
-    {
-      "original": "_AtomParserTryConditionLoop",
+      "original": "_AtomParserNormalizeWord",
       "short": ".L000009T",
       "private": true
     },
     {
-      "original": "_AtomParserTryConditionNext",
+      "original": "_AtomParserNormalizeRelative",
       "short": ".L000009U",
       "private": true
     },
     {
-      "original": "_AtomParserTryConditionFailed",
+      "original": "_AtomParserNormalizeFlexible",
       "short": ".L000009V",
       "private": true
     },
     {
-      "original": "AtomParserWidenFlexible",
+      "original": "AtomParserSelectedValue",
+      "short": "G00000EG",
+      "private": false
+    },
+    {
+      "original": "AtomParserClearSelectedValue",
+      "short": "G00000EH",
+      "private": false
+    },
+    {
+      "original": "AtomParserRequireByteValue",
       "short": "G00000EI",
       "private": false
     },
     {
-      "original": "_AtomParserWidenLoop",
-      "short": ".L000009W",
-      "private": true
-    },
-    {
-      "original": "_AtomParserWidenNext",
-      "short": ".L000009X",
-      "private": true
-    },
-    {
-      "original": "AtomParserCheckConcreteValues",
+      "original": "AtomParserIndexBit",
       "short": "G00000EJ",
       "private": false
     },
     {
-      "original": "_AtomParserCheckValueLoop",
-      "short": ".L000009Y",
+      "original": "_AtomParserIndexBitOne",
+      "short": ".L000009W",
       "private": true
     },
     {
-      "original": "_AtomParserCheckValueNext",
-      "short": ".L000009Z",
+      "original": "_AtomParserIndexBitReady",
+      "short": ".L000009X",
       "private": true
     },
     {
-      "original": "_AtomParserCheckByte",
-      "short": ".L00000A0",
-      "private": true
-    },
-    {
-      "original": "_AtomParserCheckDisplacement",
-      "short": ".L00000A1",
-      "private": true
-    },
-    {
-      "original": "_AtomParserCheckDisplacementPositive",
-      "short": ".L00000A2",
-      "private": true
-    },
-    {
-      "original": "_AtomParserCheckRelative",
-      "short": ".L00000A3",
-      "private": true
-    },
-    {
-      "original": "_AtomParserRelativeBaseReady",
-      "short": ".L00000A4",
-      "private": true
-    },
-    {
-      "original": "_AtomParserRelativePositive",
-      "short": ".L00000A5",
-      "private": true
-    },
-    {
-      "original": "_AtomParserRelativeStore",
-      "short": ".L00000A6",
-      "private": true
-    },
-    {
-      "original": "AtomParserFinalizeReferences",
+      "original": "AtomParserValidateCandidates",
       "short": "G00000EK",
       "private": false
     },
     {
-      "original": "_AtomParserLocateReferenceLoop",
-      "short": ".L00000A7",
+      "original": "_AtomParserInvalidForm",
+      "short": ".L000009Y",
       "private": true
     },
     {
-      "original": "_AtomParserUnpatchableReference",
-      "short": ".L00000A8",
-      "private": true
-    },
-    {
-      "original": "_AtomParserPreflightReferences",
-      "short": ".L00000A9",
-      "private": true
-    },
-    {
-      "original": "_AtomParserPreflightFirst",
-      "short": ".L00000AA",
-      "private": true
-    },
-    {
-      "original": "_AtomParserPreflightCapacity",
-      "short": ".L00000AB",
-      "private": true
-    },
-    {
-      "original": "_AtomParserPublishReferences",
-      "short": ".L00000AC",
-      "private": true
-    },
-    {
-      "original": "_AtomParserPublishReferenceLoop",
-      "short": ".L00000AD",
-      "private": true
-    },
-    {
-      "original": "_AtomParserReferenceDiagnosticReady",
-      "short": ".L00000AE",
-      "private": true
-    },
-    {
-      "original": "_AtomParserPublishReferenceCount",
-      "short": ".L00000AF",
-      "private": true
-    },
-    {
-      "original": "AtomParserPreflightReference",
+      "original": "AtomParserValidateCurrent",
       "short": "G00000EL",
       "private": false
     },
     {
-      "original": "_AtomParserPreflightSymbolFailure",
-      "short": ".L00000AG",
-      "private": true
-    },
-    {
-      "original": "_AtomParserReferencePartFailure",
-      "short": ".L00000AH",
-      "private": true
-    },
-    {
-      "original": "AtomParserCompareReferenceKeys",
+      "original": "AtomParserTryConditions",
       "short": "G00000EM",
       "private": false
     },
     {
-      "original": "_AtomParserCompareReferenceKeyLoop",
-      "short": ".L00000AI",
+      "original": "_AtomParserTryConditionLoop",
+      "short": ".L000009Z",
       "private": true
     },
     {
-      "original": "AtomParserSymbolCapacityFailure",
+      "original": "_AtomParserTryConditionNext",
+      "short": ".L00000A0",
+      "private": true
+    },
+    {
+      "original": "_AtomParserTryConditionFailed",
+      "short": ".L00000A1",
+      "private": true
+    },
+    {
+      "original": "AtomParserWidenFlexible",
       "short": "G00000EN",
       "private": false
     },
     {
-      "original": "AtomParserUnexpectedSymbolFailure",
+      "original": "_AtomParserWidenLoop",
+      "short": ".L00000A2",
+      "private": true
+    },
+    {
+      "original": "_AtomParserWidenNext",
+      "short": ".L00000A3",
+      "private": true
+    },
+    {
+      "original": "AtomParserCheckConcreteValues",
       "short": "G00000EO",
       "private": false
     },
     {
-      "original": "AtomParserPublicReferenceAddress",
+      "original": "_AtomParserCheckValueLoop",
+      "short": ".L00000A4",
+      "private": true
+    },
+    {
+      "original": "_AtomParserCheckValueNext",
+      "short": ".L00000A5",
+      "private": true
+    },
+    {
+      "original": "_AtomParserCheckByte",
+      "short": ".L00000A6",
+      "private": true
+    },
+    {
+      "original": "_AtomParserCheckDisplacement",
+      "short": ".L00000A7",
+      "private": true
+    },
+    {
+      "original": "_AtomParserCheckDisplacementPositive",
+      "short": ".L00000A8",
+      "private": true
+    },
+    {
+      "original": "_AtomParserCheckRelative",
+      "short": ".L00000A9",
+      "private": true
+    },
+    {
+      "original": "_AtomParserRelativeBaseReady",
+      "short": ".L00000AA",
+      "private": true
+    },
+    {
+      "original": "_AtomParserRelativePositive",
+      "short": ".L00000AB",
+      "private": true
+    },
+    {
+      "original": "_AtomParserRelativeStore",
+      "short": ".L00000AC",
+      "private": true
+    },
+    {
+      "original": "AtomParserFinalizeReferences",
       "short": "G00000EP",
       "private": false
     },
     {
-      "original": "AtomParserCheckReferences",
-      "short": "G00000EQ",
-      "private": false
+      "original": "_AtomParserLocateReferenceLoop",
+      "short": ".L00000AD",
+      "private": true
     },
     {
-      "original": "_AtomParserQueueCheckSymbols",
+      "original": "_AtomParserUnpatchableReference",
+      "short": ".L00000AE",
+      "private": true
+    },
+    {
+      "original": "_AtomParserPreflightReferences",
+      "short": ".L00000AF",
+      "private": true
+    },
+    {
+      "original": "_AtomParserPreflightFirst",
+      "short": ".L00000AG",
+      "private": true
+    },
+    {
+      "original": "_AtomParserPreflightCapacity",
+      "short": ".L00000AH",
+      "private": true
+    },
+    {
+      "original": "_AtomParserPublishReferences",
+      "short": ".L00000AI",
+      "private": true
+    },
+    {
+      "original": "_AtomParserPublishReferenceLoop",
       "short": ".L00000AJ",
       "private": true
     },
     {
-      "original": "_AtomParserQueueCheckLoop",
+      "original": "_AtomParserReferenceDiagnosticReady",
       "short": ".L00000AK",
       "private": true
     },
     {
-      "original": "_AtomParserQueuePreflightDone",
+      "original": "_AtomParserPublishReferenceCount",
       "short": ".L00000AL",
       "private": true
     },
     {
-      "original": "AtomParserQueueReferences",
-      "short": "G00000ER",
+      "original": "AtomParserPreflightReference",
+      "short": "G00000EQ",
       "private": false
     },
     {
-      "original": "_AtomParserQueueCommit",
+      "original": "_AtomParserPreflightSymbolFailure",
       "short": ".L00000AM",
       "private": true
     },
     {
-      "original": "_AtomParserQueueLoop",
+      "original": "_AtomParserReferencePartFailure",
       "short": ".L00000AN",
       "private": true
     },
     {
-      "original": "_AtomParserQueueDone",
+      "original": "AtomParserCompareReferenceKeys",
+      "short": "G00000ER",
+      "private": false
+    },
+    {
+      "original": "_AtomParserCompareReferenceKeyLoop",
       "short": ".L00000AO",
       "private": true
     },
     {
-      "original": "AtomParserQueueCapacity",
+      "original": "AtomParserSymbolCapacityFailure",
       "short": "G00000ES",
       "private": false
     },
     {
-      "original": "AtomParserQueueAlreadyDefined",
+      "original": "AtomParserUnexpectedSymbolFailure",
       "short": "G00000ET",
       "private": false
     },
     {
-      "original": "AtomParserFailExpressionSymbol",
+      "original": "AtomParserPublicReferenceAddress",
       "short": "G00000EU",
       "private": false
     },
     {
-      "original": "AtomParserFailReference",
+      "original": "AtomParserCheckReferences",
       "short": "G00000EV",
       "private": false
     },
     {
-      "original": "AtomParserCommit",
-      "short": "G00000EW",
-      "private": false
-    },
-    {
-      "original": "AtomParserExpectedMnemonic",
-      "short": "G00000EX",
-      "private": false
-    },
-    {
-      "original": "AtomParserUnknownMnemonic",
-      "short": "G00000EY",
-      "private": false
-    },
-    {
-      "original": "AtomParserExpectedOperand",
-      "short": "G00000EZ",
-      "private": false
-    },
-    {
-      "original": "AtomParserUnknownOperand",
-      "short": "G00000F0",
-      "private": false
-    },
-    {
-      "original": "AtomParserExpectedDelimiter",
-      "short": "G00000F1",
-      "private": false
-    },
-    {
-      "original": "AtomParserTooManyOperands",
-      "short": "G00000F2",
-      "private": false
-    },
-    {
-      "original": "AtomParserValueRange",
-      "short": "G00000F3",
-      "private": false
-    },
-    {
-      "original": "AtomParserRelativeRange",
-      "short": "G00000F4",
-      "private": false
-    },
-    {
-      "original": "AtomParserFailHere",
-      "short": "G00000F5",
-      "private": false
-    },
-    {
-      "original": "AtomParserFailStart",
-      "short": "G00000F6",
-      "private": false
-    },
-    {
-      "original": "AtomParserRuleCodeEnd",
-      "short": "G00000F7",
-      "private": false
-    },
-    {
-      "original": "AtomParserImmutableStart",
-      "short": "G00000F8",
-      "private": false
-    },
-    {
-      "original": "AtomParserOperandWordCount",
-      "short": "G00000F9",
-      "private": false
-    },
-    {
-      "original": "AtomParserOperandWordTable",
-      "short": "G00000FA",
-      "private": false
-    },
-    {
-      "original": "AtomParserOperandWordTableEnd",
-      "short": "G00000FB",
-      "private": false
-    },
-    {
-      "original": "AtomParserImmutableEnd",
-      "short": "G00000FC",
-      "private": false
-    },
-    {
-      "original": "AtomParserCodeEnd",
-      "short": "G00000FD",
-      "private": false
-    },
-    {
-      "original": "AtomParserWorkspaceStart",
-      "short": "G00000FE",
-      "private": false
-    },
-    {
-      "original": "AtomParserDestination",
-      "short": "G00000FF",
-      "private": false
-    },
-    {
-      "original": "AtomParserInstructionAddress",
-      "short": "G00000FG",
-      "private": false
-    },
-    {
-      "original": "AtomParserInstructionPart",
-      "short": "G00000FH",
-      "private": false
-    },
-    {
-      "original": "AtomParserInstructionOffset",
-      "short": "G00000FI",
-      "private": false
-    },
-    {
-      "original": "AtomParserInstructionLength",
-      "short": "G00000FJ",
-      "private": false
-    },
-    {
-      "original": "AtomParserOperandCount",
-      "short": "G00000FK",
-      "private": false
-    },
-    {
-      "original": "AtomParserScanIndex",
-      "short": "G00000FL",
-      "private": false
-    },
-    {
-      "original": "AtomParserFlexibleMask",
-      "short": "G00000FM",
-      "private": false
-    },
-    {
-      "original": "AtomParserConditionMask",
-      "short": "G00000FN",
-      "private": false
-    },
-    {
-      "original": "AtomParserClassPointer",
-      "short": "G00000FO",
-      "private": false
-    },
-    {
-      "original": "AtomParserValuePointer",
-      "short": "G00000FP",
-      "private": false
-    },
-    {
-      "original": "AtomParserLastClass",
-      "short": "G00000FQ",
-      "private": false
-    },
-    {
-      "original": "AtomParserMemoryBase",
-      "short": "G00000FR",
-      "private": false
-    },
-    {
-      "original": "AtomParserIndexClass",
-      "short": "G00000FS",
-      "private": false
-    },
-    {
-      "original": "AtomParserDisplacementSign",
-      "short": "G00000FT",
-      "private": false
-    },
-    {
-      "original": "AtomParserNameKey",
-      "short": "G00000FU",
-      "private": false
-    },
-    {
-      "original": "AtomParserErrorStatus",
-      "short": "G00000FV",
-      "private": false
-    },
-    {
-      "original": "AtomParserErrorPart",
-      "short": "G00000FW",
-      "private": false
-    },
-    {
-      "original": "AtomParserErrorOffset",
-      "short": "G00000FX",
-      "private": false
-    },
-    {
-      "original": "AtomParserScratch",
-      "short": "G00000FY",
-      "private": false
-    },
-    {
-      "original": "AtomParserExpressionStatus",
-      "short": "G00000FZ",
-      "private": false
-    },
-    {
-      "original": "AtomParserSymbolStatus",
-      "short": "G00000G0",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceCount",
-      "short": "G00000G1",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceBuildCount",
-      "short": "G00000G2",
-      "private": false
-    },
-    {
-      "original": "AtomParserUnresolvedMask",
-      "short": "G00000G3",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceScan",
-      "short": "G00000G4",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceMissingCount",
-      "short": "G00000G5",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceSameKey",
-      "short": "G00000G6",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceKindScratch",
-      "short": "G00000G7",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceOffsetScratch",
-      "short": "G00000G8",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceAddendScratch",
-      "short": "G00000G9",
-      "private": false
-    },
-    {
-      "original": "AtomParserQueueBase",
-      "short": "G00000GA",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferenceBuild",
-      "short": "G00000GB",
-      "private": false
-    },
-    {
-      "original": "AtomParserReferences",
-      "short": "G00000GC",
-      "private": false
-    },
-    {
-      "original": "AtomParserWorkspaceEnd",
-      "short": "G00000GD",
-      "private": false
-    },
-    {
-      "original": "AtomOutputCodeStart",
-      "short": "G00000GE",
-      "private": false
-    },
-    {
-      "original": "AtomOutputStatusCapacity",
-      "short": "G00000GF",
-      "private": false
-    },
-    {
-      "original": "AtomOutputStatusInternal",
-      "short": "G00000GG",
-      "private": false
-    },
-    {
-      "original": "AtomOutputStatusValueRange",
-      "short": "G00000GH",
-      "private": false
-    },
-    {
-      "original": "AtomOutputStatusRelativeRange",
-      "short": "G00000GI",
-      "private": false
-    },
-    {
-      "original": "AtomOutputReset",
-      "short": "G00000GJ",
-      "private": false
-    },
-    {
-      "original": "AtomOutputCheckCapacity",
-      "short": "G00000GK",
-      "private": false
-    },
-    {
-      "original": "AtomOutputEmitByte",
-      "short": "G00000GL",
-      "private": false
-    },
-    {
-      "original": "AtomOutputEmitWord",
-      "short": "G00000GM",
-      "private": false
-    },
-    {
-      "original": "AtomOutputReserve",
-      "short": "G00000GN",
-      "private": false
-    },
-    {
-      "original": "AtomOutputSetOrigin",
-      "short": "G00000GO",
-      "private": false
-    },
-    {
-      "original": "AtomOutputEmitByteReady",
-      "short": "G00000GP",
-      "private": false
-    },
-    {
-      "original": "AtomOutputDataCapacityFailure",
-      "short": "G00000GQ",
-      "private": false
-    },
-    {
-      "original": "AtomOutputEmitInstruction",
-      "short": "G00000GR",
-      "private": false
-    },
-    {
-      "original": "_AtomOutputInstructionCapacityReady",
+      "original": "_AtomParserQueueCheckSymbols",
       "short": ".L00000AP",
       "private": true
     },
     {
-      "original": "_AtomOutputInstructionLoop",
+      "original": "_AtomParserQueueCheckLoop",
       "short": ".L00000AQ",
       "private": true
     },
     {
-      "original": "_AtomOutputInstructionDone",
+      "original": "_AtomParserQueuePreflightDone",
       "short": ".L00000AR",
       "private": true
     },
     {
-      "original": "_AtomOutputInstructionCapacityFailure",
+      "original": "AtomParserQueueReferences",
+      "short": "G00000EW",
+      "private": false
+    },
+    {
+      "original": "_AtomParserQueueCommit",
       "short": ".L00000AS",
       "private": true
     },
     {
-      "original": "AtomOutputResolveSymbol",
-      "short": "G00000GS",
-      "private": false
-    },
-    {
-      "original": "_AtomOutputResolveLoop",
+      "original": "_AtomParserQueueLoop",
       "short": ".L00000AT",
       "private": true
     },
     {
-      "original": "_AtomOutputResolveBaseReady",
+      "original": "_AtomParserQueueDone",
       "short": ".L00000AU",
       "private": true
     },
     {
-      "original": "_AtomOutputResolveSignReady",
-      "short": ".L00000AV",
-      "private": true
+      "original": "AtomParserQueueCapacity",
+      "short": "G00000EX",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveByte",
-      "short": ".L00000AW",
-      "private": true
+      "original": "AtomParserQueueAlreadyDefined",
+      "short": "G00000EY",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveDisplacement",
-      "short": ".L00000AX",
-      "private": true
+      "original": "AtomParserFailExpressionSymbol",
+      "short": "G00000EZ",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveDisplacementPositive",
-      "short": ".L00000AY",
-      "private": true
+      "original": "AtomParserFailReference",
+      "short": "G00000F0",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveRelative",
-      "short": ".L00000AZ",
-      "private": true
+      "original": "AtomParserCommit",
+      "short": "G00000F1",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveRelativePositive",
-      "short": ".L00000B0",
-      "private": true
+      "original": "AtomParserExpectedMnemonic",
+      "short": "G00000F2",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveSubmitByte",
-      "short": ".L00000B1",
-      "private": true
+      "original": "AtomParserUnknownMnemonic",
+      "short": "G00000F3",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveSubmitByteA",
-      "short": ".L00000B2",
-      "private": true
+      "original": "AtomParserExpectedOperand",
+      "short": "G00000F4",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveWord",
-      "short": ".L00000B3",
-      "private": true
+      "original": "AtomParserUnknownOperand",
+      "short": "G00000F5",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolveRemove",
-      "short": ".L00000B4",
-      "private": true
+      "original": "AtomParserExpectedDelimiter",
+      "short": "G00000F6",
+      "private": false
     },
     {
-      "original": "_AtomOutputResolvePeekFailure",
-      "short": ".L00000B5",
-      "private": true
+      "original": "AtomParserTooManyOperands",
+      "short": "G00000F7",
+      "private": false
     },
     {
-      "original": "AtomOutputResolveValueRange",
+      "original": "AtomParserValueRange",
+      "short": "G00000F8",
+      "private": false
+    },
+    {
+      "original": "AtomParserRelativeRange",
+      "short": "G00000F9",
+      "private": false
+    },
+    {
+      "original": "AtomParserFailHere",
+      "short": "G00000FA",
+      "private": false
+    },
+    {
+      "original": "AtomParserFailStart",
+      "short": "G00000FB",
+      "private": false
+    },
+    {
+      "original": "AtomParserRuleCodeEnd",
+      "short": "G00000FC",
+      "private": false
+    },
+    {
+      "original": "AtomParserImmutableStart",
+      "short": "G00000FD",
+      "private": false
+    },
+    {
+      "original": "AtomParserOperandWordCount",
+      "short": "G00000FE",
+      "private": false
+    },
+    {
+      "original": "AtomParserOperandWordTable",
+      "short": "G00000FF",
+      "private": false
+    },
+    {
+      "original": "AtomParserOperandWordTableEnd",
+      "short": "G00000FG",
+      "private": false
+    },
+    {
+      "original": "AtomParserImmutableEnd",
+      "short": "G00000FH",
+      "private": false
+    },
+    {
+      "original": "AtomParserCodeEnd",
+      "short": "G00000FI",
+      "private": false
+    },
+    {
+      "original": "AtomParserWorkspaceStart",
+      "short": "G00000FJ",
+      "private": false
+    },
+    {
+      "original": "AtomParserDestination",
+      "short": "G00000FK",
+      "private": false
+    },
+    {
+      "original": "AtomParserInstructionAddress",
+      "short": "G00000FL",
+      "private": false
+    },
+    {
+      "original": "AtomParserInstructionPart",
+      "short": "G00000FM",
+      "private": false
+    },
+    {
+      "original": "AtomParserInstructionOffset",
+      "short": "G00000FN",
+      "private": false
+    },
+    {
+      "original": "AtomParserInstructionLength",
+      "short": "G00000FO",
+      "private": false
+    },
+    {
+      "original": "AtomParserOperandCount",
+      "short": "G00000FP",
+      "private": false
+    },
+    {
+      "original": "AtomParserScanIndex",
+      "short": "G00000FQ",
+      "private": false
+    },
+    {
+      "original": "AtomParserFlexibleMask",
+      "short": "G00000FR",
+      "private": false
+    },
+    {
+      "original": "AtomParserConditionMask",
+      "short": "G00000FS",
+      "private": false
+    },
+    {
+      "original": "AtomParserClassPointer",
+      "short": "G00000FT",
+      "private": false
+    },
+    {
+      "original": "AtomParserValuePointer",
+      "short": "G00000FU",
+      "private": false
+    },
+    {
+      "original": "AtomParserLastClass",
+      "short": "G00000FV",
+      "private": false
+    },
+    {
+      "original": "AtomParserMemoryBase",
+      "short": "G00000FW",
+      "private": false
+    },
+    {
+      "original": "AtomParserIndexClass",
+      "short": "G00000FX",
+      "private": false
+    },
+    {
+      "original": "AtomParserDisplacementSign",
+      "short": "G00000FY",
+      "private": false
+    },
+    {
+      "original": "AtomParserNameKey",
+      "short": "G00000FZ",
+      "private": false
+    },
+    {
+      "original": "AtomParserErrorStatus",
+      "short": "G00000G0",
+      "private": false
+    },
+    {
+      "original": "AtomParserErrorPart",
+      "short": "G00000G1",
+      "private": false
+    },
+    {
+      "original": "AtomParserErrorOffset",
+      "short": "G00000G2",
+      "private": false
+    },
+    {
+      "original": "AtomParserScratch",
+      "short": "G00000G3",
+      "private": false
+    },
+    {
+      "original": "AtomParserExpressionStatus",
+      "short": "G00000G4",
+      "private": false
+    },
+    {
+      "original": "AtomParserSymbolStatus",
+      "short": "G00000G5",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceCount",
+      "short": "G00000G6",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceBuildCount",
+      "short": "G00000G7",
+      "private": false
+    },
+    {
+      "original": "AtomParserUnresolvedMask",
+      "short": "G00000G8",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceScan",
+      "short": "G00000G9",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceMissingCount",
+      "short": "G00000GA",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceSameKey",
+      "short": "G00000GB",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceKindScratch",
+      "short": "G00000GC",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceOffsetScratch",
+      "short": "G00000GD",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceAddendScratch",
+      "short": "G00000GE",
+      "private": false
+    },
+    {
+      "original": "AtomParserQueueBase",
+      "short": "G00000GF",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferenceBuild",
+      "short": "G00000GG",
+      "private": false
+    },
+    {
+      "original": "AtomParserReferences",
+      "short": "G00000GH",
+      "private": false
+    },
+    {
+      "original": "AtomParserWorkspaceEnd",
+      "short": "G00000GI",
+      "private": false
+    },
+    {
+      "original": "AtomOutputCodeStart",
+      "short": "G00000GJ",
+      "private": false
+    },
+    {
+      "original": "AtomOutputStatusCapacity",
+      "short": "G00000GK",
+      "private": false
+    },
+    {
+      "original": "AtomOutputStatusInternal",
+      "short": "G00000GL",
+      "private": false
+    },
+    {
+      "original": "AtomOutputStatusValueRange",
+      "short": "G00000GM",
+      "private": false
+    },
+    {
+      "original": "AtomOutputStatusRelativeRange",
+      "short": "G00000GN",
+      "private": false
+    },
+    {
+      "original": "AtomOutputReset",
+      "short": "G00000GO",
+      "private": false
+    },
+    {
+      "original": "AtomOutputCheckCapacity",
+      "short": "G00000GP",
+      "private": false
+    },
+    {
+      "original": "AtomOutputEmitByte",
+      "short": "G00000GQ",
+      "private": false
+    },
+    {
+      "original": "AtomOutputEmitWord",
+      "short": "G00000GR",
+      "private": false
+    },
+    {
+      "original": "AtomOutputReserve",
+      "short": "G00000GS",
+      "private": false
+    },
+    {
+      "original": "AtomOutputSetOrigin",
       "short": "G00000GT",
       "private": false
     },
     {
-      "original": "AtomOutputResolveRelativeRange",
+      "original": "AtomOutputEmitByteReady",
       "short": "G00000GU",
       "private": false
     },
     {
-      "original": "AtomOutputResolveInternal",
+      "original": "AtomOutputDataCapacityFailure",
       "short": "G00000GV",
       "private": false
     },
     {
-      "original": "AtomOutputRequireWordDomain",
+      "original": "AtomOutputEmitInstruction",
       "short": "G00000GW",
       "private": false
     },
     {
-      "original": "AtomOutputCodeEnd",
+      "original": "_AtomOutputInstructionCapacityReady",
+      "short": ".L00000AV",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputInstructionLoop",
+      "short": ".L00000AW",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputInstructionDone",
+      "short": ".L00000AX",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputInstructionCapacityFailure",
+      "short": ".L00000AY",
+      "private": true
+    },
+    {
+      "original": "AtomOutputResolveSymbol",
       "short": "G00000GX",
       "private": false
     },
     {
-      "original": "AtomOutputWorkspaceStart",
+      "original": "_AtomOutputResolveLoop",
+      "short": ".L00000AZ",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveBaseReady",
+      "short": ".L00000B0",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveSignReady",
+      "short": ".L00000B1",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveByte",
+      "short": ".L00000B2",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveDisplacement",
+      "short": ".L00000B3",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveDisplacementPositive",
+      "short": ".L00000B4",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveRelative",
+      "short": ".L00000B5",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveRelativePositive",
+      "short": ".L00000B6",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveSubmitByte",
+      "short": ".L00000B7",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveSubmitByteA",
+      "short": ".L00000B8",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveWord",
+      "short": ".L00000B9",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolveRemove",
+      "short": ".L00000BA",
+      "private": true
+    },
+    {
+      "original": "_AtomOutputResolvePeekFailure",
+      "short": ".L00000BB",
+      "private": true
+    },
+    {
+      "original": "AtomOutputResolveValueRange",
       "short": "G00000GY",
       "private": false
     },
     {
-      "original": "AtomOutputCursor",
+      "original": "AtomOutputResolveRelativeRange",
       "short": "G00000GZ",
       "private": false
     },
     {
-      "original": "AtomOutputRemaining",
+      "original": "AtomOutputResolveInternal",
       "short": "G00000H0",
       "private": false
     },
     {
-      "original": "AtomOutputInstructionStart",
+      "original": "AtomOutputRequireWordDomain",
       "short": "G00000H1",
       "private": false
     },
     {
-      "original": "AtomOutputInstructionBytes",
+      "original": "AtomOutputCodeEnd",
       "short": "G00000H2",
       "private": false
     },
     {
-      "original": "AtomOutputInstructionLength",
+      "original": "AtomOutputWorkspaceStart",
       "short": "G00000H3",
       "private": false
     },
     {
-      "original": "AtomOutputInstructionScan",
+      "original": "AtomOutputCursor",
       "short": "G00000H4",
       "private": false
     },
     {
-      "original": "AtomOutputResolveSymbolPointer",
+      "original": "AtomOutputRemaining",
       "short": "G00000H5",
       "private": false
     },
     {
-      "original": "AtomOutputResolvePatchAddress",
+      "original": "AtomOutputInstructionStart",
       "short": "G00000H6",
       "private": false
     },
     {
-      "original": "AtomOutputResolveKind",
+      "original": "AtomOutputInstructionBytes",
       "short": "G00000H7",
       "private": false
     },
     {
-      "original": "AtomOutputResolveAddend",
+      "original": "AtomOutputInstructionLength",
       "short": "G00000H8",
       "private": false
     },
     {
-      "original": "AtomOutputResolveValue",
+      "original": "AtomOutputInstructionScan",
       "short": "G00000H9",
       "private": false
     },
     {
-      "original": "AtomOutputDataValue",
+      "original": "AtomOutputResolveSymbolPointer",
       "short": "G00000HA",
       "private": false
     },
     {
-      "original": "AtomOutputResolveBaseHigh",
+      "original": "AtomOutputResolvePatchAddress",
       "short": "G00000HB",
       "private": false
     },
     {
-      "original": "AtomOutputWorkspaceEnd",
+      "original": "AtomOutputResolveKind",
       "short": "G00000HC",
       "private": false
     },
     {
-      "original": "AtomStatementCodeStart",
+      "original": "AtomOutputResolveAddend",
       "short": "G00000HD",
       "private": false
     },
     {
-      "original": "AtomStatementStatusOk",
+      "original": "AtomOutputResolveValue",
       "short": "G00000HE",
       "private": false
     },
     {
-      "original": "AtomStatementStatusLexical",
+      "original": "AtomOutputDataValue",
       "short": "G00000HF",
       "private": false
     },
     {
-      "original": "AtomStatementStatusExpected",
+      "original": "AtomOutputResolveBaseHigh",
       "short": "G00000HG",
       "private": false
     },
     {
-      "original": "AtomStatementStatusDirective",
+      "original": "AtomOutputWorkspaceEnd",
       "short": "G00000HH",
       "private": false
     },
     {
-      "original": "AtomStatementStatusEquate",
+      "original": "AtomStatementCodeStart",
       "short": "G00000HI",
       "private": false
     },
     {
-      "original": "AtomStatementStatusSymbol",
+      "original": "AtomStatementStatusOk",
       "short": "G00000HJ",
       "private": false
     },
     {
-      "original": "AtomStatementStatusInstruction",
+      "original": "AtomStatementStatusLexical",
       "short": "G00000HK",
       "private": false
     },
     {
-      "original": "AtomStatementStatusOutput",
+      "original": "AtomStatementStatusExpected",
       "short": "G00000HL",
       "private": false
     },
     {
-      "original": "AtomStatementStatusUndefined",
+      "original": "AtomStatementStatusDirective",
       "short": "G00000HM",
       "private": false
     },
     {
-      "original": "AtomStatementStatusInternal",
+      "original": "AtomStatementStatusEquate",
       "short": "G00000HN",
       "private": false
     },
     {
-      "original": "AtomDirectiveEqu",
+      "original": "AtomStatementStatusSymbol",
       "short": "G00000HO",
       "private": false
     },
     {
-      "original": "AtomDirectiveOrg",
+      "original": "AtomStatementStatusInstruction",
       "short": "G00000HP",
       "private": false
     },
     {
-      "original": "AtomDirectiveDb",
+      "original": "AtomStatementStatusOutput",
       "short": "G00000HQ",
       "private": false
     },
     {
-      "original": "AtomDirectiveDw",
+      "original": "AtomStatementStatusUndefined",
       "short": "G00000HR",
       "private": false
     },
     {
-      "original": "AtomDirectiveDs",
+      "original": "AtomStatementStatusInternal",
       "short": "G00000HS",
       "private": false
     },
     {
-      "original": "AtomDirectiveCount",
+      "original": "AtomDirectiveEqu",
       "short": "G00000HT",
       "private": false
     },
     {
-      "original": "AtomAssemblePart",
+      "original": "AtomDirectiveOrg",
       "short": "G00000HU",
       "private": false
     },
     {
-      "original": "AtomStatementNext",
+      "original": "AtomDirectiveDb",
       "short": "G00000HV",
       "private": false
     },
     {
-      "original": "AtomStatementNotMnemonic",
+      "original": "AtomDirectiveDw",
       "short": "G00000HW",
       "private": false
     },
     {
-      "original": "AtomStatementNotDirective",
+      "original": "AtomDirectiveDs",
       "short": "G00000HX",
       "private": false
     },
     {
-      "original": "AtomStatementAfterFirstName",
+      "original": "AtomDirectiveCstr",
       "short": "G00000HY",
       "private": false
     },
     {
-      "original": "AtomStatementTryEquate",
+      "original": "AtomDirectivePstr",
       "short": "G00000HZ",
       "private": false
     },
     {
-      "original": "AtomStatementLabel",
+      "original": "AtomDirectiveIstr",
       "short": "G00000I0",
       "private": false
     },
     {
-      "original": "AtomStatementPrivateLabel",
+      "original": "AtomDirectiveCount",
       "short": "G00000I1",
       "private": false
     },
     {
-      "original": "AtomStatementLabelDeclared",
+      "original": "AtomAssemblePart",
       "short": "G00000I2",
       "private": false
     },
     {
-      "original": "AtomStatementLabelDirective",
+      "original": "AtomStatementNext",
       "short": "G00000I3",
       "private": false
     },
     {
-      "original": "AtomStatementInstructionPublished",
+      "original": "AtomStatementNotMnemonic",
       "short": "G00000I4",
       "private": false
     },
     {
-      "original": "AtomStatementEquate",
+      "original": "AtomStatementNotDirective",
       "short": "G00000I5",
       "private": false
     },
     {
-      "original": "AtomStatementEquateSignReady",
+      "original": "AtomStatementAfterFirstName",
       "short": "G00000I6",
       "private": false
     },
     {
-      "original": "AtomStatementEquateResolve",
+      "original": "AtomStatementTryEquate",
       "short": "G00000I7",
       "private": false
     },
     {
-      "original": "AtomStatementDirectivePublished",
+      "original": "AtomStatementLabel",
       "short": "G00000I8",
       "private": false
     },
     {
-      "original": "AtomStatementOrg",
+      "original": "AtomStatementLabelPublish",
       "short": "G00000I9",
       "private": false
     },
     {
-      "original": "AtomStatementDb",
+      "original": "AtomStatementPrivateLabel",
       "short": "G00000IA",
       "private": false
     },
     {
-      "original": "AtomStatementDw",
+      "original": "AtomStatementLabelDeclared",
       "short": "G00000IB",
       "private": false
     },
     {
-      "original": "AtomStatementDataItem",
+      "original": "AtomStatementLabelDirective",
       "short": "G00000IC",
       "private": false
     },
     {
-      "original": "AtomStatementDataExpression",
+      "original": "AtomStatementInstructionPublished",
       "short": "G00000ID",
       "private": false
     },
     {
-      "original": "AtomStatementDataResolvedByte",
+      "original": "AtomStatementEquate",
       "short": "G00000IE",
       "private": false
     },
     {
-      "original": "AtomStatementDataUnresolved",
+      "original": "AtomStatementEquateSignReady",
       "short": "G00000IF",
       "private": false
     },
     {
-      "original": "AtomStatementDataDiagnosticReady",
+      "original": "AtomStatementEquateResolve",
       "short": "G00000IG",
       "private": false
     },
     {
-      "original": "AtomStatementDataPlaceholderByte",
+      "original": "AtomStatementDirectivePublished",
       "short": "G00000IH",
       "private": false
     },
     {
-      "original": "AtomStatementDataQueue",
+      "original": "AtomStatementOrg",
       "short": "G00000II",
       "private": false
     },
     {
-      "original": "AtomStatementDataDelimiter",
+      "original": "AtomStatementDb",
       "short": "G00000IJ",
       "private": false
     },
     {
-      "original": "AtomStatementDbString",
+      "original": "AtomStatementDw",
       "short": "G00000IK",
       "private": false
     },
     {
-      "original": "AtomStatementStringCountLoop",
+      "original": "AtomStatementDataItem",
       "short": "G00000IL",
       "private": false
     },
     {
-      "original": "AtomStatementStringCountOne",
+      "original": "AtomStatementDataExpression",
       "short": "G00000IM",
       "private": false
     },
     {
-      "original": "AtomStatementStringCountDone",
+      "original": "AtomStatementDataResolvedByte",
       "short": "G00000IN",
       "private": false
     },
     {
-      "original": "AtomStatementStringEmitLoop",
+      "original": "AtomStatementDataUnresolved",
       "short": "G00000IO",
       "private": false
     },
     {
-      "original": "AtomStatementStringZero",
+      "original": "AtomStatementDataDiagnosticReady",
       "short": "G00000IP",
       "private": false
     },
     {
-      "original": "AtomStatementStringNewline",
+      "original": "AtomStatementDataPlaceholderByte",
       "short": "G00000IQ",
       "private": false
     },
     {
-      "original": "AtomStatementStringReturn",
+      "original": "AtomStatementDataQueue",
       "short": "G00000IR",
       "private": false
     },
     {
-      "original": "AtomStatementStringTab",
+      "original": "AtomStatementDataDelimiter",
       "short": "G00000IS",
       "private": false
     },
     {
-      "original": "AtomStatementStringHex",
+      "original": "AtomStatementDbString",
       "short": "G00000IT",
       "private": false
     },
     {
-      "original": "AtomStatementStringEmit",
+      "original": "AtomStatementStringCountLoop",
       "short": "G00000IU",
       "private": false
     },
     {
-      "original": "AtomStatementStringDone",
+      "original": "AtomStatementStringCountOne",
       "short": "G00000IV",
       "private": false
     },
     {
-      "original": "AtomStatementDs",
+      "original": "AtomStatementStringCountDone",
       "short": "G00000IW",
       "private": false
     },
     {
-      "original": "AtomStatementDsFillLoop",
+      "original": "AtomStatementStringCapacity",
       "short": "G00000IX",
       "private": false
     },
     {
-      "original": "AtomStatementDsReserve",
+      "original": "AtomStatementStringCapacityExtra",
       "short": "G00000IY",
       "private": false
     },
     {
-      "original": "AtomStatementSuccess",
+      "original": "AtomStatementStringCapacityReady",
       "short": "G00000IZ",
       "private": false
     },
     {
-      "original": "AtomRecognizeDirective",
+      "original": "AtomStatementStringEmitLoop",
       "short": "G00000J0",
       "private": false
     },
     {
-      "original": "AtomRecognizeDirectiveLoop",
+      "original": "AtomStatementStringZero",
       "short": "G00000J1",
       "private": false
     },
     {
-      "original": "AtomRecognizeDirectiveNext",
+      "original": "AtomStatementStringNewline",
       "short": "G00000J2",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveTable",
+      "original": "AtomStatementStringReturn",
       "short": "G00000J3",
       "private": false
     },
     {
-      "original": "AtomStatementStringTake",
+      "original": "AtomStatementStringTab",
       "short": "G00000J4",
       "private": false
     },
     {
-      "original": "AtomStatementCapturePosition",
+      "original": "AtomStatementStringHex",
       "short": "G00000J5",
       "private": false
     },
     {
-      "original": "AtomStatementLexicalFailure",
+      "original": "AtomStatementStringEmit",
       "short": "G00000J6",
       "private": false
     },
     {
-      "original": "AtomStatementExpectedHere",
+      "original": "AtomStatementStringEmitReady",
       "short": "G00000J7",
       "private": false
     },
     {
-      "original": "AtomStatementUnsupportedDirective",
+      "original": "AtomStatementStringDone",
       "short": "G00000J8",
       "private": false
     },
     {
-      "original": "AtomStatementExpectedSaved",
+      "original": "AtomStatementStringDbDone",
       "short": "G00000J9",
       "private": false
     },
     {
-      "original": "AtomStatementSymbolFailure",
+      "original": "AtomStatementCstr",
       "short": "G00000JA",
       "private": false
     },
     {
-      "original": "AtomStatementSymbolPartFailure",
+      "original": "AtomStatementPstr",
       "short": "G00000JB",
       "private": false
     },
     {
-      "original": "AtomStatementInstructionFailure",
+      "original": "AtomStatementIstr",
       "short": "G00000JC",
       "private": false
     },
     {
-      "original": "AtomStatementOutputFailure",
+      "original": "AtomStatementStringDirective",
       "short": "G00000JD",
       "private": false
     },
     {
-      "original": "AtomStatementEquateFailure",
+      "original": "AtomStatementDs",
       "short": "G00000JE",
       "private": false
     },
     {
-      "original": "AtomStatementEquateUnresolved",
+      "original": "AtomStatementDsFillLoop",
       "short": "G00000JF",
       "private": false
     },
     {
-      "original": "AtomStatementEquateDelimiter",
+      "original": "AtomStatementDsReserve",
       "short": "G00000JG",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveFailure",
+      "original": "AtomStatementSuccess",
       "short": "G00000JH",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveUnresolved",
+      "original": "AtomRecognizeDirective",
       "short": "G00000JI",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveExpected",
+      "original": "AtomRecognizeDirectiveLoop",
       "short": "G00000JJ",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveDelimiter",
+      "original": "AtomRecognizeDirectiveNext",
       "short": "G00000JK",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveString",
+      "original": "AtomStatementDirectiveTable",
       "short": "G00000JL",
       "private": false
     },
     {
-      "original": "AtomStatementCodeEnd",
+      "original": "AtomStatementStringTake",
       "short": "G00000JM",
       "private": false
     },
     {
-      "original": "AtomStatementWorkspaceStart",
+      "original": "AtomStatementCapturePosition",
       "short": "G00000JN",
       "private": false
     },
     {
-      "original": "AtomStatementKey",
+      "original": "AtomStatementLexicalFailure",
       "short": "G00000JO",
       "private": false
     },
     {
-      "original": "AtomStatementInstruction",
+      "original": "AtomStatementExpectedHere",
       "short": "G00000JP",
       "private": false
     },
     {
-      "original": "AtomStatementMnemonic",
+      "original": "AtomStatementUnsupportedDirective",
       "short": "G00000JQ",
       "private": false
     },
     {
-      "original": "AtomStatementMnemonicValid",
+      "original": "AtomStatementExpectedSaved",
       "short": "G00000JR",
       "private": false
     },
     {
-      "original": "AtomStatementDetail",
+      "original": "AtomStatementSymbolFailure",
       "short": "G00000JS",
       "private": false
     },
     {
-      "original": "AtomStatementErrorPart",
+      "original": "AtomStatementSymbolPartFailure",
       "short": "G00000JT",
       "private": false
     },
     {
-      "original": "AtomStatementErrorOffset",
+      "original": "AtomStatementInstructionFailure",
       "short": "G00000JU",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveLength",
+      "original": "AtomStatementOutputFailure",
       "short": "G00000JV",
       "private": false
     },
     {
-      "original": "AtomStatementEquateValue",
+      "original": "AtomStatementEquateFailure",
       "short": "G00000JW",
       "private": false
     },
     {
-      "original": "AtomStatementEquateSigned",
+      "original": "AtomStatementEquateUnresolved",
       "short": "G00000JX",
       "private": false
     },
     {
-      "original": "AtomStatementDirective",
+      "original": "AtomStatementEquateDelimiter",
       "short": "G00000JY",
       "private": false
     },
     {
-      "original": "AtomStatementDirectiveValid",
+      "original": "AtomStatementDirectiveFailure",
       "short": "G00000JZ",
       "private": false
     },
     {
-      "original": "AtomStatementDataWidth",
+      "original": "AtomStatementDirectiveUnresolved",
       "short": "G00000K0",
       "private": false
     },
     {
-      "original": "AtomStatementDataPatchKind",
+      "original": "AtomStatementDirectiveExpected",
       "short": "G00000K1",
       "private": false
     },
     {
-      "original": "AtomStatementDataAddend",
+      "original": "AtomStatementDirectiveDelimiter",
       "short": "G00000K2",
       "private": false
     },
     {
-      "original": "AtomStatementDataFill",
+      "original": "AtomStatementDirectiveString",
       "short": "G00000K3",
       "private": false
     },
     {
-      "original": "AtomStatementDataValue",
+      "original": "AtomStatementCodeEnd",
       "short": "G00000K4",
       "private": false
     },
     {
-      "original": "AtomStatementDataPendingKind",
+      "original": "AtomStatementWorkspaceStart",
       "short": "G00000K5",
       "private": false
     },
     {
-      "original": "AtomStatementDataCount",
+      "original": "AtomStatementKey",
       "short": "G00000K6",
       "private": false
     },
     {
-      "original": "AtomStatementDataKey",
+      "original": "AtomStatementInstruction",
       "short": "G00000K7",
       "private": false
     },
     {
-      "original": "AtomStatementDataSymbol",
+      "original": "AtomStatementMnemonic",
       "short": "G00000K8",
       "private": false
     },
     {
-      "original": "AtomStatementDataAddress",
+      "original": "AtomStatementMnemonicValid",
       "short": "G00000K9",
       "private": false
     },
     {
-      "original": "AtomStatementStringPointer",
+      "original": "AtomStatementDetail",
       "short": "G00000KA",
       "private": false
     },
     {
-      "original": "AtomStatementStringRemaining",
+      "original": "AtomStatementErrorPart",
       "short": "G00000KB",
       "private": false
     },
     {
-      "original": "AtomStatementStringCount",
+      "original": "AtomStatementErrorOffset",
       "short": "G00000KC",
       "private": false
     },
     {
-      "original": "AtomStatementStringNibble",
+      "original": "AtomStatementDirectiveLength",
       "short": "G00000KD",
       "private": false
     },
     {
-      "original": "AtomStatementWorkspaceEnd",
+      "original": "AtomStatementEquateValue",
       "short": "G00000KE",
       "private": false
     },
     {
-      "original": "AtomDriverCodeStart",
+      "original": "AtomStatementEquateSigned",
       "short": "G00000KF",
       "private": false
     },
     {
-      "original": "AtomDriverStatusOk",
+      "original": "AtomStatementDirective",
       "short": "G00000KG",
       "private": false
     },
     {
-      "original": "AtomDriverStatusConfiguration",
+      "original": "AtomStatementDirectiveValid",
       "short": "G00000KH",
       "private": false
     },
     {
-      "original": "AtomDriverStatusSource",
+      "original": "AtomStatementDataWidth",
       "short": "G00000KI",
       "private": false
     },
     {
-      "original": "AtomDriverStatusUndefined",
+      "original": "AtomStatementDataPatchKind",
       "short": "G00000KJ",
       "private": false
     },
     {
-      "original": "AtomDriverStatusOutput",
+      "original": "AtomStatementDataAddend",
       "short": "G00000KK",
       "private": false
     },
     {
-      "original": "AtomDriverStatusInternal",
+      "original": "AtomStatementDataFill",
       "short": "G00000KL",
       "private": false
     },
     {
-      "original": "AtomDriverConfigPartCount",
+      "original": "AtomStatementDataValue",
       "short": "G00000KM",
       "private": false
     },
     {
-      "original": "AtomDriverConfigTableRange",
+      "original": "AtomStatementDataPendingKind",
       "short": "G00000KN",
       "private": false
     },
     {
-      "original": "AtomDriverConfigPartOrdinal",
+      "original": "AtomStatementDataCount",
       "short": "G00000KO",
       "private": false
     },
     {
-      "original": "AtomDriverConfigSourceRange",
+      "original": "AtomStatementDataKey",
       "short": "G00000KP",
       "private": false
     },
     {
-      "original": "AtomDriverConfigSymbolRange",
+      "original": "AtomStatementDataSymbol",
       "short": "G00000KQ",
       "private": false
     },
     {
-      "original": "AtomDriverConfigPendingRange",
+      "original": "AtomStatementDataAddress",
       "short": "G00000KR",
       "private": false
     },
     {
-      "original": "AtomDriverConfigOutputRange",
+      "original": "AtomStatementStringPointer",
       "short": "G00000KS",
       "private": false
     },
     {
-      "original": "AtomDriverPartCapacity",
+      "original": "AtomStatementStringRemaining",
       "short": "G00000KT",
       "private": false
     },
     {
-      "original": "AtomDriverPartDescriptorBytes",
+      "original": "AtomStatementStringCount",
       "short": "G00000KU",
       "private": false
     },
     {
-      "original": "AtomDriverPartOrdinal",
+      "original": "AtomStatementStringNibble",
       "short": "G00000KV",
       "private": false
     },
     {
-      "original": "AtomDriverPartStart",
+      "original": "AtomStatementStringMode",
       "short": "G00000KW",
       "private": false
     },
     {
-      "original": "AtomDriverPartEnd",
+      "original": "AtomStatementWorkspaceEnd",
       "short": "G00000KX",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorPartCount",
+      "original": "AtomDriverCodeStart",
       "short": "G00000KY",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorParts",
+      "original": "AtomDriverStatusOk",
       "short": "G00000KZ",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorSymbolStart",
+      "original": "AtomDriverStatusConfiguration",
       "short": "G00000L0",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorSymbolEnd",
+      "original": "AtomDriverStatusSource",
       "short": "G00000L1",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorPendingStart",
+      "original": "AtomDriverStatusUndefined",
       "short": "G00000L2",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorPendingEnd",
+      "original": "AtomDriverStatusOutput",
       "short": "G00000L3",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorTargetStart",
+      "original": "AtomDriverStatusInternal",
       "short": "G00000L4",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorTargetBytes",
+      "original": "AtomDriverConfigPartCount",
       "short": "G00000L5",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptorBytes",
+      "original": "AtomDriverConfigTableRange",
       "short": "G00000L6",
       "private": false
     },
     {
-      "original": "AtomAssemble",
+      "original": "AtomDriverConfigPartOrdinal",
       "short": "G00000L7",
       "private": false
     },
     {
-      "original": "AtomDriverPartLoop",
+      "original": "AtomDriverConfigSourceRange",
       "short": "G00000L8",
       "private": false
     },
     {
-      "original": "AtomDriverFinish",
+      "original": "AtomDriverConfigSymbolRange",
       "short": "G00000L9",
       "private": false
     },
     {
-      "original": "AtomDriverSourceFailure",
+      "original": "AtomDriverConfigPendingRange",
       "short": "G00000LA",
       "private": false
     },
     {
-      "original": "AtomDriverFinishFailure",
+      "original": "AtomDriverConfigOutputRange",
       "short": "G00000LB",
       "private": false
     },
     {
-      "original": "AtomDriverInternalAbort",
+      "original": "AtomDriverPartCapacity",
       "short": "G00000LC",
       "private": false
     },
     {
-      "original": "AtomDriverCommitFailure",
+      "original": "AtomDriverPartDescriptorBytes",
       "short": "G00000LD",
       "private": false
     },
     {
-      "original": "AtomDriverAbort",
+      "original": "AtomDriverPartOrdinal",
       "short": "G00000LE",
       "private": false
     },
     {
-      "original": "AtomDriverBeginFailure",
+      "original": "AtomDriverPartStart",
       "short": "G00000LF",
       "private": false
     },
     {
-      "original": "AtomDriverInternalFailure",
+      "original": "AtomDriverPartEnd",
       "short": "G00000LG",
       "private": false
     },
     {
-      "original": "AtomDriverValidateDescriptor",
+      "original": "AtomDriverDescriptorPartCount",
       "short": "G00000LH",
       "private": false
     },
     {
-      "original": "AtomDriverValidatePartLoop",
+      "original": "AtomDriverDescriptorParts",
       "short": "G00000LI",
       "private": false
     },
     {
-      "original": "AtomDriverValidateArenas",
+      "original": "AtomDriverDescriptorSymbolStart",
       "short": "G00000LJ",
       "private": false
     },
     {
-      "original": "AtomDriverValidateRange",
+      "original": "AtomDriverDescriptorSymbolEnd",
       "short": "G00000LK",
       "private": false
     },
     {
-      "original": "AtomDriverBadPartCount",
+      "original": "AtomDriverDescriptorPendingStart",
       "short": "G00000LL",
       "private": false
     },
     {
-      "original": "AtomDriverBadPartTable",
+      "original": "AtomDriverDescriptorPendingEnd",
       "short": "G00000LM",
       "private": false
     },
     {
-      "original": "AtomDriverBadPartOrdinal",
+      "original": "AtomDriverDescriptorTargetStart",
       "short": "G00000LN",
       "private": false
     },
     {
-      "original": "AtomDriverBadSourceRange",
+      "original": "AtomDriverDescriptorTargetBytes",
       "short": "G00000LO",
       "private": false
     },
     {
-      "original": "AtomDriverBadSymbolRange",
+      "original": "AtomDriverDescriptorBytes",
       "short": "G00000LP",
       "private": false
     },
     {
-      "original": "AtomDriverBadPendingRange",
+      "original": "AtomAssemble",
       "short": "G00000LQ",
       "private": false
     },
     {
-      "original": "AtomDriverBadOutputRange",
+      "original": "AtomDriverPartLoop",
       "short": "G00000LR",
       "private": false
     },
     {
-      "original": "AtomDriverConfigurationFailure",
+      "original": "AtomDriverFinish",
       "short": "G00000LS",
       "private": false
     },
     {
-      "original": "AtomAssembleFinish",
+      "original": "AtomDriverSourceFailure",
       "short": "G00000LT",
       "private": false
     },
     {
-      "original": "AtomFinishPendingLoop",
+      "original": "AtomDriverFinishFailure",
       "short": "G00000LU",
       "private": false
     },
     {
-      "original": "AtomFinishAnchor",
+      "original": "AtomDriverInternalAbort",
       "short": "G00000LV",
       "private": false
     },
     {
-      "original": "AtomFinishNoPending",
+      "original": "AtomDriverCommitFailure",
       "short": "G00000LW",
       "private": false
     },
     {
-      "original": "AtomFinishGlobalLoop",
+      "original": "AtomDriverAbort",
       "short": "G00000LX",
       "private": false
     },
     {
-      "original": "AtomFinishSuccess",
+      "original": "AtomDriverBeginFailure",
       "short": "G00000LY",
       "private": false
     },
     {
-      "original": "AtomFinishInternal",
+      "original": "AtomDriverInternalFailure",
       "short": "G00000LZ",
       "private": false
     },
     {
-      "original": "AtomDriverValidateSymbolPointer",
+      "original": "AtomDriverValidateDescriptor",
       "short": "G00000M0",
       "private": false
     },
     {
-      "original": "AtomDriverValidatePrivatePointer",
+      "original": "AtomDriverValidatePartLoop",
       "short": "G00000M1",
       "private": false
     },
     {
-      "original": "AtomDriverInvalidSymbolPointer",
+      "original": "AtomDriverValidateArenas",
       "short": "G00000M2",
       "private": false
     },
     {
-      "original": "AtomDriverCodeEnd",
+      "original": "AtomDriverValidateRange",
       "short": "G00000M3",
       "private": false
     },
     {
-      "original": "AtomDriverWorkspaceStart",
+      "original": "AtomDriverBadPartCount",
       "short": "G00000M4",
       "private": false
     },
     {
-      "original": "AtomDriverDescriptor",
+      "original": "AtomDriverBadPartTable",
       "short": "G00000M5",
       "private": false
     },
     {
-      "original": "AtomDriverPartCursor",
+      "original": "AtomDriverBadPartOrdinal",
       "short": "G00000M6",
       "private": false
     },
     {
-      "original": "AtomDriverPartsRemaining",
+      "original": "AtomDriverBadSourceRange",
       "short": "G00000M7",
       "private": false
     },
     {
-      "original": "AtomDriverPartIndex",
+      "original": "AtomDriverBadSymbolRange",
       "short": "G00000M8",
       "private": false
     },
     {
-      "original": "AtomDriverDetail",
+      "original": "AtomDriverBadPendingRange",
       "short": "G00000M9",
       "private": false
     },
     {
-      "original": "AtomDriverUndefinedSymbol",
+      "original": "AtomDriverBadOutputRange",
       "short": "G00000MA",
       "private": false
     },
     {
-      "original": "AtomDriverWorkspaceEnd",
+      "original": "AtomDriverConfigurationFailure",
       "short": "G00000MB",
       "private": false
     },
     {
-      "original": "AtomHostServiceCodeStart",
+      "original": "AtomAssembleFinish",
       "short": "G00000MC",
       "private": false
     },
     {
-      "original": "AtomSinkBegin",
+      "original": "AtomFinishPendingLoop",
       "short": "G00000MD",
       "private": false
     },
     {
-      "original": "AtomSinkImageByte",
+      "original": "AtomFinishAnchor",
       "short": "G00000ME",
       "private": false
     },
     {
-      "original": "AtomSinkPatchByte",
+      "original": "AtomFinishNoPending",
       "short": "G00000MF",
       "private": false
     },
     {
-      "original": "AtomSinkPatchWord",
+      "original": "AtomFinishGlobalLoop",
       "short": "G00000MG",
       "private": false
     },
     {
-      "original": "AtomSinkCommit",
+      "original": "AtomFinishSuccess",
       "short": "G00000MH",
       "private": false
     },
     {
-      "original": "AtomSinkAbort",
+      "original": "AtomFinishInternal",
       "short": "G00000MI",
       "private": false
     },
     {
-      "original": "AtomHostServiceCodeEnd",
+      "original": "AtomDriverValidateSymbolPointer",
       "short": "G00000MJ",
       "private": false
     },
     {
-      "original": "AtomHostResidentEnd",
+      "original": "AtomDriverValidatePrivatePointer",
       "short": "G00000MK",
+      "private": false
+    },
+    {
+      "original": "AtomDriverInvalidSymbolPointer",
+      "short": "G00000ML",
+      "private": false
+    },
+    {
+      "original": "AtomDriverCodeEnd",
+      "short": "G00000MM",
+      "private": false
+    },
+    {
+      "original": "AtomDriverWorkspaceStart",
+      "short": "G00000MN",
+      "private": false
+    },
+    {
+      "original": "AtomDriverDescriptor",
+      "short": "G00000MO",
+      "private": false
+    },
+    {
+      "original": "AtomDriverPartCursor",
+      "short": "G00000MP",
+      "private": false
+    },
+    {
+      "original": "AtomDriverPartsRemaining",
+      "short": "G00000MQ",
+      "private": false
+    },
+    {
+      "original": "AtomDriverPartIndex",
+      "short": "G00000MR",
+      "private": false
+    },
+    {
+      "original": "AtomDriverDetail",
+      "short": "G00000MS",
+      "private": false
+    },
+    {
+      "original": "AtomDriverUndefinedSymbol",
+      "short": "G00000MT",
+      "private": false
+    },
+    {
+      "original": "AtomDriverWorkspaceEnd",
+      "short": "G00000MU",
+      "private": false
+    },
+    {
+      "original": "AtomHostServiceCodeStart",
+      "short": "G00000MV",
+      "private": false
+    },
+    {
+      "original": "AtomSinkBegin",
+      "short": "G00000MW",
+      "private": false
+    },
+    {
+      "original": "AtomSinkImageByte",
+      "short": "G00000MX",
+      "private": false
+    },
+    {
+      "original": "AtomSinkPatchByte",
+      "short": "G00000MY",
+      "private": false
+    },
+    {
+      "original": "AtomSinkPatchWord",
+      "short": "G00000MZ",
+      "private": false
+    },
+    {
+      "original": "AtomSinkCommit",
+      "short": "G00000N0",
+      "private": false
+    },
+    {
+      "original": "AtomSinkAbort",
+      "short": "G00000N1",
+      "private": false
+    },
+    {
+      "original": "AtomHostServiceCodeEnd",
+      "short": "G00000N2",
+      "private": false
+    },
+    {
+      "original": "AtomHostResidentEnd",
+      "short": "G00000N3",
       "private": false
     }
   ]

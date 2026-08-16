@@ -142,3 +142,25 @@ test("D8 retains distinct identities for reused private symbols after native evi
   assert.equal(new Set(locals.map(({ identity }) => identity)).size, 2);
   assert.ok(locals.every(({ scope }) => scope === "local"));
 });
+
+test("D8 classifies string directives as data and colon equates as constants", async () => {
+  const { artifacts } = await render([
+    "ORG 4000H",
+    'TEXT: CSTR "OK"',
+    "LENGTH: EQU 2",
+    "",
+  ].join("\n"));
+  assert.deepEqual(artifacts.d8.files["main.asm"].segments, [{
+    start: 0x4000,
+    end: 0x4003,
+    lstLine: 2,
+    line: 2,
+    column: 1,
+    kind: "data",
+    confidence: "high",
+  }]);
+  assert.deepEqual(
+    artifacts.d8.symbols.map(({ name, kind }) => [name, kind]),
+    [["LENGTH", "constant"], ["TEXT", "label"]],
+  );
+});

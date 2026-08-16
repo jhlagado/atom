@@ -12,7 +12,10 @@
   },
   "claimedSyntax": {
     "numericFamilies": ["decimal", "dollar-hex", "percent-binary", "intel-h-hex", "intel-b-binary"],
-    "unprocessedDirectiveStatus": 9
+    "characterLiterals": true,
+    "unprocessedDirectiveStatus": 9,
+    "unterminatedCharacterStatus": 10,
+    "invalidCharacterStatus": 11
   },
   "executionBudgets": {
     "AtomTokenizerReset": {

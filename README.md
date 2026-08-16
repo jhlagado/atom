@@ -7,8 +7,8 @@ files, conditional preprocessing, and finished artifacts.
 Atom assembles the complete Z80 instruction set claimed by its AZM oracle,
 including CB, ED, DD, FD, index-half, and undocumented SLL/SLS forms. It also
 supports global and `.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
-and `DS`. The native core assembles its own checked source byte for byte and
-fits in one 16 KiB bank.
+`DS`, `CSTR`, `PSTR`, `ISTR`, and character literals. The native core assembles
+its own checked source byte for byte and fits in one 16 KiB bank.
 
 The Mac command is usable now. The TEC-1 filesystem, source-window, and output
 adapter is designed but not yet implemented.
@@ -72,10 +72,10 @@ The measured native account is:
 
 | Item | Bytes |
 | --- | ---: |
-| Code and immutable tables | 12,508 |
-| Fixed workspace | 550 |
-| Linked resident extent | 13,058 |
-| Margin below 16 KiB | 3,326 |
+| Code and immutable tables | 12,879 |
+| Fixed workspace | 551 |
+| Linked resident extent | 13,430 |
+| Margin below 16 KiB | 2,954 |
 
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [TEC-1 deployment design](docs/tec-1-deployment.md) separate the measured Mac
@@ -110,6 +110,7 @@ The detailed engineering record remains available in the phase reports:
 - [native self-hosting](docs/phase-6-report.md)
 - [product and release checkpoint](docs/phase-7-report.md)
 - [source-syntax checkpoint](docs/phase-8-report.md)
+- [equates, characters, and strings](docs/phase-9-report.md)
 
 ## License
 

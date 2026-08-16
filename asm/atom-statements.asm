@@ -22,7 +22,10 @@ AtomDirectiveOrg: .equ 2
 AtomDirectiveDb:  .equ 3
 AtomDirectiveDw:  .equ 4
 AtomDirectiveDs:  .equ 5
-AtomDirectiveCount:.equ 5
+AtomDirectiveCstr:.equ 6
+AtomDirectivePstr:.equ 7
+AtomDirectiveIstr:.equ 8
+AtomDirectiveCount:.equ 8
 
 ; Assemble the source part already installed in the tokenizer. Part EOF is not
 ; final assembly EOF: a later source part may still define a global reference.
@@ -104,6 +107,19 @@ AtomStatementTryEquate:
             JP   AtomStatementEquate
 
 AtomStatementLabel:
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenName
+            JR   NZ,AtomStatementLabelPublish
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            LD   B,A
+            CALL AtomRecognizeDirective
+            JR   C,AtomStatementLabelPublish
+            CP   AtomDirectiveEqu
+            JP   Z,AtomStatementEquate
+AtomStatementLabelPublish:
             LD   HL,AtomStatementKey+5
             BIT  7,(HL)
             LD   HL,AtomStatementKey
@@ -118,8 +134,6 @@ AtomStatementLabelDeclared:
             CALL AtomOutputResolveSymbol
             JP   C,AtomStatementOutputFailure
 
-            CALL AtomTokenizerNext
-            JP   C,AtomStatementLexicalFailure
             LD   A,(AtomTokenRecord+AtomTokenKindOffset)
             CP   AtomTokenEol
             JP   Z,AtomStatementNext
@@ -141,8 +155,6 @@ AtomStatementLabelDirective:
             LD   B,A
             CALL AtomRecognizeDirective
             JP   C,AtomStatementExpectedSaved
-            CP   AtomDirectiveEqu
-            JP   Z,AtomStatementExpectedSaved
             LD   (AtomStatementDirective),A
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
@@ -200,6 +212,12 @@ AtomStatementDirectivePublished:
             JR   Z,AtomStatementDw
             CP   AtomDirectiveDs
             JP   Z,AtomStatementDs
+            CP   AtomDirectiveCstr
+            JP   Z,AtomStatementCstr
+            CP   AtomDirectivePstr
+            JP   Z,AtomStatementPstr
+            CP   AtomDirectiveIstr
+            JP   Z,AtomStatementIstr
             JP   AtomStatementExpectedSaved
 
 AtomStatementOrg:
@@ -236,8 +254,10 @@ AtomStatementDataItem:
             JR   NZ,AtomStatementDataExpression
             LD   A,(AtomStatementDataWidth)
             CP   1
-            JP   Z,AtomStatementDbString
-            JP   AtomStatementDirectiveString
+            JP   NZ,AtomStatementDirectiveString
+            XOR  A
+            LD   (AtomStatementStringMode),A
+            JP   AtomStatementDbString
 AtomStatementDataExpression:
             LD   BC,(AtomOutputCursor)
             CALL AtomExpressionParseDeferred
@@ -378,16 +398,40 @@ AtomStatementStringCountOne:
 AtomStatementStringCountDone:
             LD   A,C
             LD   (AtomStatementStringCount),A
-            LD   L,A
-            LD   H,0
-            CALL AtomOutputCheckCapacity
-            JP   C,AtomStatementOutputFailure
             LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
             INC  HL
             LD   (AtomStatementStringPointer),HL
             LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
             SUB  2
             LD   (AtomStatementStringRemaining),A
+            LD   A,(AtomStatementStringMode)
+            OR   A
+            JR   Z,AtomStatementStringCapacity
+            CALL AtomTokenizerNext
+            JP   C,AtomStatementLexicalFailure
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   NZ,AtomStatementDirectiveDelimiter
+AtomStatementStringCapacity:
+            LD   A,(AtomStatementStringCount)
+            LD   L,A
+            LD   H,0
+            LD   A,(AtomStatementStringMode)
+            CP   1
+            JR   Z,AtomStatementStringCapacityExtra
+            CP   2
+            JR   NZ,AtomStatementStringCapacityReady
+AtomStatementStringCapacityExtra:
+            INC  HL
+AtomStatementStringCapacityReady:
+            CALL AtomOutputCheckCapacity
+            JP   C,AtomStatementOutputFailure
+            LD   A,(AtomStatementStringMode)
+            CP   2
+            JR   NZ,AtomStatementStringEmitLoop
+            LD   A,(AtomStatementStringCount)
+            CALL AtomOutputEmitByte
+            JP   C,AtomStatementOutputFailure
 AtomStatementStringEmitLoop:
             LD   A,(AtomStatementStringRemaining)
             OR   A
@@ -434,13 +478,50 @@ AtomStatementStringHex:
             LD   HL,AtomStatementStringNibble
             OR   (HL)
 AtomStatementStringEmit:
+            LD   C,A
+            LD   A,(AtomStatementStringMode)
+            CP   3
+            LD   A,C
+            JR   NZ,AtomStatementStringEmitReady
+            LD   HL,AtomStatementStringRemaining
+            LD   A,(HL)
+            OR   A
+            LD   A,C
+            JR   NZ,AtomStatementStringEmitReady
+            OR   $80
+AtomStatementStringEmitReady:
             CALL AtomOutputEmitByte
             JP   C,AtomStatementOutputFailure
             JR   AtomStatementStringEmitLoop
 AtomStatementStringDone:
+            LD   A,(AtomStatementStringMode)
+            OR   A
+            JR   Z,AtomStatementStringDbDone
+            CP   1
+            JP   NZ,AtomStatementNext
+            XOR  A
+            CALL AtomOutputEmitByte
+            JP   C,AtomStatementOutputFailure
+            JP   AtomStatementNext
+AtomStatementStringDbDone:
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
             JP   AtomStatementDataDelimiter
+
+AtomStatementCstr:
+            LD   A,1
+            JR   AtomStatementStringDirective
+AtomStatementPstr:
+            LD   A,2
+            JR   AtomStatementStringDirective
+AtomStatementIstr:
+            LD   A,3
+AtomStatementStringDirective:
+            LD   (AtomStatementStringMode),A
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenString
+            JP   NZ,AtomStatementDirectiveString
+            JP   AtomStatementDbString
 
 AtomStatementDs:
             LD   BC,(AtomOutputCursor)
@@ -491,7 +572,7 @@ AtomStatementSuccess:
             XOR  A
             RET
 
-; Recognize the five reserved bare assembler directives through the same
+; Recognize the reserved bare assembler directives through the same
 ; case-insensitive RADIX-40 packing used by mnemonics and symbols.
 ;
 ; in HL=text, B=length; out A=directive ordinal and carry clear, or carry set
@@ -536,6 +617,12 @@ AtomStatementDirectiveTable:
             .db 2,AtomDirectiveDw
             .dw $1BF8
             .db 2,AtomDirectiveDs
+            .dw $15CC
+            .db 4,AtomDirectiveCstr
+            .dw $670C
+            .db 4,AtomDirectivePstr
+            .dw $3B4C
+            .db 4,AtomDirectiveIstr
 
 .routine out A clobbers HL,zero,sign,parity,halfCarry
 AtomStatementStringTake:
@@ -671,4 +758,5 @@ AtomStatementStringPointer: .dw 0
 AtomStatementStringRemaining:.db 0
 AtomStatementStringCount:   .db 0
 AtomStatementStringNibble:  .db 0
+AtomStatementStringMode:    .db 0
 AtomStatementWorkspaceEnd:

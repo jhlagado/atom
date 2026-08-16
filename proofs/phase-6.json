@@ -2,28 +2,28 @@
   "name": "Atom Phase 6 native self-hosting proof",
   "source": {
     "inputFiles": 13,
-    "statements": 7127,
+    "statements": 7315,
     "generatedParts": 5,
-    "generatedBytes": 93760,
+    "generatedBytes": 96289,
     "checkedParts": 6,
-    "checkedBytes": 93933,
-    "globalSymbols": 813,
-    "privateSymbols": 402
+    "checkedBytes": 96462,
+    "globalSymbols": 832,
+    "privateSymbols": 408
   },
   "native": {
-    "codeAndTables": 12508,
-    "fixedWorkspace": 550,
-    "linkedResidentExtent": 13058,
-    "physicalMarginBelow16KiB": 3326,
-    "initializedBytes": 12682,
+    "codeAndTables": 12879,
+    "fixedWorkspace": 551,
+    "linkedResidentExtent": 13430,
+    "physicalMarginBelow16KiB": 2954,
+    "initializedBytes": 13054,
     "reservedBytes": 376,
-    "patchRecords": 2125,
-    "declaredSymbols": 1215
+    "patchRecords": 2174,
+    "declaredSymbols": 1240
   },
   "execution": {
-    "instructions": 148925343,
-    "cycles": 1360961063,
-    "serviceCalls": 14809,
+    "instructions": 156323531,
+    "cycles": 1427943875,
+    "serviceCalls": 15230,
     "sourcePages": [0, 1, 2, 3, 4, 5],
     "maxInstructions": 200000000,
     "maxCycles": 2000000000

@@ -8,14 +8,14 @@ below are Measured from the checked image or executable tests.
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Z80 code and immutable tables | Measured | 12,508 |
-| Fixed non-reentrant workspace | Measured | 550 |
-| Linked resident extent at origin zero | Measured | 13,058 |
-| Margin below one 16 KiB bank | Measured | 3,326 |
+| Z80 code and immutable tables | Measured | 12,879 |
+| Fixed non-reentrant workspace | Measured | 551 |
+| Linked resident extent at origin zero | Measured | 13,430 |
+| Margin below one 16 KiB bank | Measured | 2,954 |
 
 The package, generated self-host source, Debug80 runtime, renderer, and Mac CLI
 do not consume this Z80 bank. A TEC-specific source/output adapter is not part
-of the 13,058-byte image and must be measured separately.
+of the 13,430-byte image and must be measured separately.
 
 ## Native source and output
 
@@ -30,7 +30,7 @@ of the 13,058-byte image and must be measured separately.
 
 Every source part must fit one 24 KiB page. Total source may exceed that size
 because the Mac adapter replaces the page at part boundaries. The checked
-self-host input is Measured 93,933 bytes in six parts; its largest individual
+self-host input is Measured 96,462 bytes in six parts; its largest individual
 part fits the page.
 
 The native target uses a non-wrapping half-open 16-bit range whose mathematical
@@ -89,14 +89,14 @@ driver. `assembleAtomProject` lowers the relevant capacities before execution.
 | SP1 bank ordinal | 0–255; zero for native Atom |
 
 The Mac runner's default execution budgets are 200,000,000 Z80 instructions
-and 2,000,000,000 T-states. Atom's measured self-build uses 148,925,343
-instructions and 1,360,961,063 T-states.
+and 2,000,000,000 T-states. Atom's measured self-build uses 156,323,531
+instructions and 1,427,943,875 T-states.
 
 ## A realistic 24 KiB TEC workspace
 
 The current Mac capacities are not a TEC memory map. Fixed workspace, symbols,
 pending records, descriptors, and a 256-byte stack already total Measured
-16,773 bytes at those capacities, leaving 7,803 bytes in a 24 KiB RAM budget
+16,774 bytes at those capacities, leaving 7,802 bytes in a 24 KiB RAM budget
 before any source buffer or operating-adapter state. A 24,576-byte source page
 cannot coexist there.
 

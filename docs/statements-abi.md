@@ -22,9 +22,10 @@ START:
     DJNZ .LOOP
 ```
 
-Assembler directives are bare reserved words: `EQU`, `ORG`, `DB`, `DW`, and
-`DS`. Dotted spellings are rejected. Lines beginning with `%` belong to the
-host preprocessor and must have been masked before native assembly.
+Assembler directives are bare reserved words: `EQU`, `ORG`, `DB`, `DW`, `DS`,
+`CSTR`, `PSTR`, and `ISTR`. Dotted spellings are rejected. Lines beginning with
+`%` belong to the host preprocessor and must have been masked before native
+assembly.
 
 ## Labels and equates
 
@@ -34,9 +35,10 @@ pending-invariant, and capacity failures retain the preceding scope and every
 record. A `.`-prefixed private label requires an active global scope and remains
 visible until the next global label.
 
-A label may occupy its own line or precede an instruction, `ORG`, `DB`, `DW`,
-or `DS`. `EQU` uses `NAME EQU EXPRESSION`; a colon before `EQU` is unsupported.
-Global equates do not change private scope.
+A label may occupy its own line or precede an instruction or directive. `EQU`
+accepts both `NAME EQU EXPRESSION` and `NAME: EQU EXPRESSION`; the optional
+colon does not publish an address label. Global equates do not change private
+scope.
 
 An equate expression must be resolved when declared. Atom rejects a
 forward-dependent equate without inserting either the equate or its missing
@@ -60,6 +62,10 @@ truncating-byte PATCH record. Strings decode `\0`, `\n`, `\r`, `\t`, `\'`,
 
 `DW` accepts a comma-separated expression list. Words are emitted little
 endian; a forward affine expression produces a word PATCH record.
+
+`CSTR`, `PSTR`, and `ISTR` each accept one double-quoted byte string. `CSTR`
+adds a zero terminator, `PSTR` adds a leading decoded-byte count, and `ISTR`
+sets bit 7 on the final decoded byte. An empty `ISTR` emits no bytes.
 
 `DS COUNT` advances over uninitialized bytes without IMAGE records.
 `DS COUNT,FILL` emits `COUNT` copies of the low byte of a resolved fill value.
@@ -91,17 +97,20 @@ category in A:
 
 `AtomStatementDetail` contains the nested component status.
 `AtomStatementErrorPart` and `AtomStatementErrorOffset` identify the captured
-source position when one exists. The statement module uses 47 bytes of fixed
+source position when one exists. The statement module uses 48 bytes of fixed
 workspace, including its ten-byte parsed-instruction record and six-byte
 packed symbol key.
 
 ## Current limits
 
-Phase 2g intentionally rejects forward-dependent `EQU`, unresolved `ORG`,
-unresolved `DS` count or fill, strings in `DW`, string-valued equates,
-colon-prefixed equates, and dotted directive aliases. The host AZM translator
+Atom intentionally rejects forward-dependent `EQU`, unresolved `ORG`,
+unresolved `DS` count or fill, strings in `DW`, string-valued equates, and
+dotted directive aliases. The host AZM translator
 must rewrite Atom's decoded string escapes as explicit byte values because
 AZM's quoted data syntax has different escape semantics.
+
+Single-quoted character literals enter expressions as numeric byte values and
+use the same escapes as strings.
 
 `AtomAssembleFinish` performs the final undefined-symbol and private-scope
 checks after the last part. An undefined result sets the exact part and offset

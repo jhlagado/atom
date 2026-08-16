@@ -249,6 +249,48 @@ test("strings preserve raw payload and validate every supported escape", () => {
   }
 });
 
+test("character literals are numeric tokens and preserve byte values", () => {
+  for (const [source, value] of [
+    ["'A'", 0x41], ["'a'", 0x61], ["';'", 0x3b], ["'\\0'", 0],
+    ["'\\n'", 0x0a], ["'\\r'", 0x0d], ["'\\t'", 0x09],
+    ["'\\''", 0x27], ["'\\\"'", 0x22], ["'\\\\'", 0x5c],
+    ["'\\x00'", 0], ["'\\xFF'", 0xff],
+  ]) {
+    const result = first(source);
+    assert.equal(result.carry, 0, source);
+    assert.equal(result.record.kind, TOKEN.NUMBER, source);
+    assert.equal(result.record.value, value, source);
+    assert.equal(h.lexeme(result.record), source, source);
+  }
+
+  const prime = h.tokenize("EX AF,AF'");
+  assert.equal(prime.error, undefined);
+  assert.deepEqual(prime.tokens.map(({ kind }) => kind), [
+    TOKEN.NAME, TOKEN.NAME, TOKEN.COMMA, TOKEN.NAME, TOKEN.APOSTROPHE,
+    TOKEN.EOL, TOKEN.EOF,
+  ]);
+});
+
+test("malformed character literals fail atomically with exact categories", () => {
+  for (const [source, status] of [
+    ["''", TOKEN_STATUS.INVALID_CHARACTER],
+    ["'AB'", TOKEN_STATUS.INVALID_CHARACTER],
+    ["'\\q'", TOKEN_STATUS.INVALID_ESCAPE],
+    ["'A", TOKEN_STATUS.UNTERMINATED_CHARACTER],
+    ["'A\n'", TOKEN_STATUS.UNTERMINATED_CHARACTER],
+  ]) {
+    h.reset("NOP");
+    h.next();
+    h.reset(source);
+    const before = h.record().bytes;
+    const result = h.next(source);
+    assert.equal(result.carry, 1, source);
+    assert.equal(result.status, status, source);
+    assert.deepEqual(result.record.bytes, before, source);
+    assert.deepEqual(h.errorPosition(), { status, part: 7, offset: 0 }, source);
+  }
+});
+
 test("raw string length accepts 254 and 255 bytes and rejects 256 atomically", () => {
   for (const rawLength of [254, 255]) {
     const source = `"${"A".repeat(rawLength - 2)}"`;
@@ -266,32 +308,26 @@ test("raw string length accepts 254 and 255 bytes and rejects 256 atomically", (
 });
 
 test("punctuation is complete for the Phase 2b expression surface", () => {
-  const source = ", : ( ) + - * / & ^ | ~ ' << >> $ %\n";
+  const source = ", : ( ) + - * / & ^ | ~ << >> $ %\n";
   const { tokens, error } = h.tokenize(source);
   assert.equal(error, undefined);
   assert.deepEqual(tokens.map(({ kind }) => kind), [
     TOKEN.COMMA, TOKEN.COLON, TOKEN.LEFT_PAREN, TOKEN.RIGHT_PAREN,
     TOKEN.PLUS, TOKEN.MINUS, TOKEN.STAR, TOKEN.SLASH, TOKEN.AMPERSAND,
-    TOKEN.CARET, TOKEN.PIPE, TOKEN.TILDE, TOKEN.APOSTROPHE,
+    TOKEN.CARET, TOKEN.PIPE, TOKEN.TILDE,
     TOKEN.LEFT_SHIFT, TOKEN.RIGHT_SHIFT, TOKEN.CURRENT, TOKEN.PERCENT,
     TOKEN.EOL, TOKEN.EOF,
   ]);
 });
 
-test("the narrower-than-AZM lexical boundary is explicit", () => {
+test("the remaining narrower-than-AZM lexical boundary is explicit", () => {
   for (const source of ["0x10", "0b10"]) {
     const result = first(source);
     assert.equal(result.carry, 1, source);
     assert.equal(result.status, TOKEN_STATUS.INVALID_NUMBER, source);
   }
 
-  let result = h.tokenize("'A'");
-  assert.equal(result.error, undefined);
-  assert.deepEqual(result.tokens.map(({ kind }) => kind), [
-    TOKEN.APOSTROPHE, TOKEN.NAME, TOKEN.APOSTROPHE, TOKEN.EOL, TOKEN.EOF,
-  ]);
-
-  result = h.tokenize("A.B");
+  const result = h.tokenize("A.B");
   assert.equal(result.error, undefined);
   assert.deepEqual(result.tokens.map(({ kind, lexeme }) => [kind, lexeme]), [
     [TOKEN.NAME, "A"], [TOKEN.NAME, ".B"], [TOKEN.EOL, ""], [TOKEN.EOF, ""],

@@ -26,8 +26,8 @@ scope are then evicted. Atom reports an error if one of them still has an
 unresolved reference. A private label requires a preceding global label, can
 cross a source-part boundary, and remains visible until the next global label.
 
-`NAME EQU EXPRESSION` declares a resolved constant without changing private
-scope. A label colon before `EQU` is not accepted.
+`NAME EQU EXPRESSION` and `NAME: EQU EXPRESSION` declare a resolved constant
+without changing private scope. The colon is optional and has no label effect.
 
 ## Numbers and expressions
 
@@ -44,6 +44,16 @@ $2A         ; HEXADECIMAL
 The leading zero in `02AH` is required when an Intel hexadecimal literal would
 otherwise begin with a letter. Literal values range from 0 through 65,535.
 `$` by itself is the current output address.
+
+A single-quoted character literal is also a numeric value:
+
+```asm
+LD A,'A'
+DB 'A','Z'
+```
+
+It must decode to exactly one byte. Character literals use the same escape
+set as byte strings.
 
 Expression precedence, from lowest to highest, is:
 
@@ -107,11 +117,15 @@ not accepted.
 
 ```asm
 BASE EQU $4000
+LIMIT: EQU 32
 ORG BASE
 DB 1,"TEXT",0
 DW BASE,$+2
 DS 16
 DS 8,$FF
+CSTR "READY"
+PSTR "NAME"
+ISTR "TOKEN"
 ```
 
 - `EQU` declares a constant. Its expression must already be resolved.
@@ -124,6 +138,10 @@ DS 8,$FF
   affine expressions produce word patches. Strings are not accepted.
 - `DS COUNT` reserves uninitialized storage. `DS COUNT,FILL` emits initialized
   fill bytes. Both expressions must already be resolved.
+- `CSTR "TEXT"` emits the decoded bytes followed by zero.
+- `PSTR "TEXT"` emits the decoded byte count followed by the bytes.
+- `ISTR "TEXT"` sets bit 7 on the final decoded byte. An empty `ISTR` emits
+  no bytes.
 
 In `DB` and `DW`, `$` is reevaluated at the address of each list item. Strings
 decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\`, and `\xHH` to one byte.
@@ -160,9 +178,10 @@ for a binary literal when followed by `0` or `1`, and as remainder otherwise.
 
 ## Deliberate boundaries
 
-Atom does not currently implement macros, op expansion, automatic branch
-promotion, dotted directives, typed layout, modules or imports with namespace
-semantics, repeated textual inclusion, string-valued equates, forward equates,
-or banked output. Filesystem work, dependency resolution, conditional assembly,
-listing generation, D8 maps, Intel HEX, and artifact publication are host or
-operating-adapter services rather than resident assembler features.
+Atom does not currently implement macros, op expansion, `ALIGN`, `INCBIN`,
+`LOW()` or `HIGH()`, automatic branch promotion, dotted directives, typed
+layout, modules or imports with namespace semantics, repeated textual
+inclusion, string-valued equates, forward equates, or banked output. Filesystem
+work, dependency resolution, conditional assembly, listing generation, D8
+maps, Intel HEX, and artifact publication are host or operating-adapter
+services rather than resident assembler features.

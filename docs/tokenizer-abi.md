@@ -61,6 +61,8 @@ The tokenizer accepts:
 - decimal integers, `$`-prefixed hexadecimal integers, `%`-prefixed binary
   integers, and Intel-style digit-led `H` hexadecimal and `B` binary integers
   in the range 0 through 65,535;
+- single-quoted character literals containing exactly one decoded byte, with
+  the same escape set as strings;
 - `$` as the current-location token and `%` as the remainder operator when the
   next byte does not begin a binary literal;
 - double-quoted strings with `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\`, and
@@ -78,11 +80,16 @@ leaked `%INCLUDE`, `%IF`, or related directive from being interpreted as an
 Atom expression. `%1`, `LD A,%1`, and `A % B` retain their numeric and remainder
 meanings.
 
-Phase 2b does not accept AZM's `0x`, `0b`, or single-quoted byte literal
-spellings. It also excludes question-mark symbol names, brackets,
-layout syntax, string decoding, expression precedence, directive meaning,
-operand classification, and output. These are explicit boundaries of the
-measured tokenizer, not claims about AZM's accepted source language.
+`AF'` remains a name followed by apostrophe punctuation rather than a
+character literal. An unterminated character reports status 10. A character
+with zero decoded bytes, more than one decoded byte, or an invalid escape
+reports status 11.
+
+Phase 2b does not accept AZM's `0x` or `0b` spellings. It also excludes
+question-mark symbol names, brackets, layout syntax, expression precedence,
+directive meaning, operand classification, and output. These are explicit
+boundaries of the measured tokenizer, not claims about AZM's accepted source
+language.
 
 ## Parsed-instruction handoff
 

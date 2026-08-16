@@ -216,6 +216,33 @@ test("bare EQU is case-insensitive and byte-identical to AZM", () => {
   assert.deepEqual(h.finalBytes(), [0x3e, 0x42]);
 });
 
+test("colon EQU is an equate, not an address label, and matches AZM", () => {
+  const source = "Value: eQu 100\nLD A,VALUE\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), azmBytes("Value: .equ 100\nLD A,Value\n"));
+  assert.equal(h.find(h.pack("Value").key).status, STATUS.OK);
+});
+
+test("colon EQU preserves private scope and resolves earlier references", () => {
+  const source = "Routine:\n.Local: EQU 3\nLD A,Forward\nValue: EQU 4\nForward: EQU $42\nLD B,.LOCAL\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x3e, 0x42, 0x06, 3]);
+});
+
+test("malformed and duplicate colon EQU forms publish nothing new", () => {
+  let result = h.assemble("Value: EQU Missing+1\n");
+  assert.equal(result.status, STATEMENT.EQUATE);
+  assert.equal(h.find(h.pack("Value").key).status, STATUS.NOT_FOUND);
+
+  result = h.assemble("Value EQU 1\nValue: EQU 2\n");
+  assert.equal(result.status, STATEMENT.SYMBOL);
+  const found = h.find(h.pack("Value").key);
+  assert.equal(found.status, STATUS.OK);
+  assert.equal(h.memory[found.ix + 6] | (h.memory[found.ix + 7] << 8), 1);
+});
+
 test("global EQU leaves the current private scope open", () => {
   const source = "Routine:\n.Local EQU 3\nValue EQU 4\nLD A,.local\n";
   const result = h.assemble(source);
@@ -295,6 +322,54 @@ test("DB decodes the tokenizer's one byte-string encoding", () => {
   const failed = h.assemble('DB "ABC"\n', { capacity: 2 });
   assert.equal(failed.status, STATEMENT.OUTPUT);
   assert.deepEqual(h.operations(), []);
+});
+
+test("character literals compose with expressions and instruction operands", () => {
+  const source = "DB 'A','a'+1,';'\nLD A,'A'\nEX AF,AF'\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x41, 0x62, 0x3b, 0x3e, 0x41, 0x08]);
+  assert.deepEqual(h.finalBytes().slice(0, 2), azmBytes("DB 'A','a'+1"));
+  assert.deepEqual(h.finalBytes().slice(3, 5), azmBytes("LD A,'A'"));
+  assert.deepEqual(h.finalBytes().slice(5), azmBytes("EX AF,AF'"));
+});
+
+test("CSTR, PSTR, and ISTR are case-insensitive and byte-identical to AZM", () => {
+  const source = 'cStR "OK"\nPsTr "AB"\nISTR "OK"\nISTR ""\n';
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x4f, 0x4b, 0, 2, 0x41, 0x42, 0x4f, 0xcb]);
+  assert.deepEqual(h.finalBytes(), azmBytes('.cstr "OK"\n.pstr "AB"\n.istr "OK"\n.istr ""\n'));
+
+  assert.equal(h.assemble('PSTR "A\\n"\n').status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [2, 0x41, 0x0a]);
+});
+
+test("string directives preflight exact capacity and reject extra operands atomically", () => {
+  for (const [source, capacity, status, bytes] of [
+    ['CSTR "A"\n', 1, STATEMENT.OUTPUT, []],
+    ['CSTR "A"\n', 2, STATEMENT.OK, [0x41, 0]],
+    ['PSTR "AB"\n', 2, STATEMENT.OUTPUT, []],
+    ['PSTR "AB"\n', 3, STATEMENT.OK, [2, 0x41, 0x42]],
+    ['ISTR "A"\n', 0, STATEMENT.OUTPUT, []],
+    ['ISTR "A"\n', 1, STATEMENT.OK, [0xc1]],
+    ['ISTR ""\n', 0, STATEMENT.OK, []],
+    ['CSTR "A",1\n', 16, STATEMENT.DIRECTIVE, []],
+    ['PSTR "A" "B"\n', 16, STATEMENT.DIRECTIVE, []],
+  ]) {
+    const result = h.assemble(source, { capacity });
+    assert.equal(result.status, status, source);
+    assert.deepEqual(h.operations(), bytes.map((byte, index) => ({
+      kind: 1, bank: 0, address: 0x4000 + index, bytes: [byte],
+    })), source);
+  }
+});
+
+test("labels compose with all three string directives", () => {
+  const source = 'C: CSTR "A"\nP: PSTR "BC"\nI: ISTR "D"\nDW C,P,I\n';
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [0x41, 0, 2, 0x42, 0x43, 0xc4, 0x00, 0x40, 0x02, 0x40, 0x05, 0x40]);
 });
 
 test("labels compose with DB, DW, and uninitialized DS reservations", () => {
