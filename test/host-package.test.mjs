@@ -33,13 +33,13 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   const censusResult = await run("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { cwd: process.cwd() });
   assert.equal(censusResult.status, 0, censusResult.stderr);
   const [census] = JSON.parse(censusResult.stdout);
-  const phase6 = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
+  const packageCensus = JSON.parse(await fs.readFile("proofs/package-census.json", "utf8"));
   assert.deepEqual({
     unpackedBytes: census.unpackedSize,
     entries: census.entryCount,
   }, {
-    unpackedBytes: phase6.package.unpackedBytes,
-    entries: phase6.package.entries,
+    unpackedBytes: packageCensus.unpackedBytes,
+    entries: packageCensus.entries,
   });
 
   const packed = await run("npm", ["pack", "--pack-destination", packageDirectory], { cwd: process.cwd() });
@@ -62,6 +62,8 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(metadata.private, undefined);
   await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
+  await fs.access(path.join(installedAtom, "docs", "language-reference.md"));
+  await fs.access(path.join(installedAtom, "examples", "hello", "main.asm"));
 
   await fs.writeFile(path.join(projectDirectory, "main.asm"), [
     "%define DEBUG 1",

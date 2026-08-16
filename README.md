@@ -1,99 +1,116 @@
-# atom
+# Atom
 
-`atom` is a single-pass streaming assembler for the Z80, written in Z80
-assembly. It targets a TEC-1 and is intended to assemble its own source in less
-than 16 KiB of resident code and immutable data.
+Atom is a case-insensitive, single-pass Z80 assembler whose assembler core is
+written in Z80 assembly. The Mac command runs that core through Debug80, while
+the host handles files, conditional preprocessing, and finished artifacts.
 
-Phase 1 contains the parsed-instruction encoder, its case-insensitive RADIX-40
-mnemonic recognizer, and host-side differential proofs against AZM. Phase 2a
-adds the measured symbol and pending-reference core. Phase 2b adds the measured
-streaming tokenizer. Phase 2c adds the native concrete instruction parser and
-proves the complete tokenizer-to-encoder path. Phase 2d adds the measured
-constant-expression evaluator and its forward-symbol handoff. Phase 2e
-connects expressions to instruction operands and proves their pending
-patch metadata. Phase 2f submits instruction image bytes and final patch bytes
-through the Nucleus operating-adapter boundary. Phase 2g adds the native
-statement layer: global and `_`-private labels, bare `EQU`, `ORG`, `DB`, `DW`,
-and `DS`, data strings, and append-only forward patches. Phase 3 adds the
-native multipart driver, exact final undefined-symbol diagnostics, and sink
-begin/commit/abort lifecycle. Phase 4 connects the source packager to that
-driver through Debug80, so a Mac host now runs preprocessing and dependency
-resolution before the emulated Z80 core performs the assembly. Phase 5 pins
-that core, adds the installed command, renders delivery and debugging formats,
-and publishes each artifact set atomically. Phase 6 adds a deterministic
-Atom-syntax form of the complete native source and proves two generations of
-native self-assembly against AZM.
+Atom assembles the complete Z80 instruction set claimed by its AZM oracle,
+including CB, ED, DD, FD, index-half, and undocumented SLL/SLS forms. It also
+supports global and `_`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
+and `DS`. The native core assembles its own checked source byte for byte and
+fits in one 16 KiB bank.
 
-The host source packager resolves `%include`, immutable `%define` values,
-and host-evaluated `%if`/`%else`/`%endif`; preserves source identities and
-offsets through equal-length masking; joins path-keyed placement; and emits a
-validated SP1 source plan. The installable Mac command now executes the pinned
-native core and publishes deterministic NOBJ, binary, Intel HEX, listing, and
-D8 artifacts. Native self-assembly is proved. The TEC-1 filesystem and output
-adapter remains to be implemented. Macros and op expansion remain out of
-scope.
+The Mac command is usable now. The TEC-1 filesystem, source-window, and output
+adapter is designed but not yet implemented.
+
+## Install and assemble
+
+Node.js 20 or later is required.
 
 ```sh
 npm install
 npm pack
 npm install --global ./atom-z80-0.1.0.tgz
-atom --origin 4000H src/main.asm
-atom --self-host
 ```
 
-The command writes one atomic bundle under `build/<name>.atom/current`. See
-[`docs/command-line.md`](docs/command-line.md) for options and output paths.
+Assemble an entry file from its project root:
 
 ```sh
-npm install
-npm test
-npm run measure
-npm run measure:symbols
-npm run measure:tokenizer
-npm run measure:parser
-npm run measure:expression
-npm run measure:integration
-npm run measure:output
-npm run measure:statements
-npm run measure:driver
-npm run measure:host-native
-npm run measure:self-host
+atom --origin 4000H src/main.asm
 ```
 
-The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
-The Phase 2a decisions and measurements are in
-[`docs/phase-2a-report.md`](docs/phase-2a-report.md).
-The Phase 2b tokenizer contract and measurements are in
-[`docs/phase-2b-report.md`](docs/phase-2b-report.md).
-The Phase 2c parser contract and measurements are in
-[`docs/phase-2c-report.md`](docs/phase-2c-report.md).
-The Phase 2d expression contract and measurements are in
-[`docs/phase-2d-report.md`](docs/phase-2d-report.md).
-The Phase 2e symbolic-parser contract and measurements are in
-[`docs/phase-2e-report.md`](docs/phase-2e-report.md), with its public metadata
-layout in [`docs/symbolic-parser-abi.md`](docs/symbolic-parser-abi.md).
-The Phase 2f output contract and measurements are in
-[`docs/phase-2f-report.md`](docs/phase-2f-report.md), with its native ABI in
-[`docs/output-abi.md`](docs/output-abi.md).
-The Phase 2g statement syntax, ABI, proof coverage, and measurements are in
-[`docs/statements-abi.md`](docs/statements-abi.md) and
-[`docs/phase-2g-report.md`](docs/phase-2g-report.md).
-The native multipart and lifecycle ABI and its measurements are in
-[`docs/native-driver-abi.md`](docs/native-driver-abi.md) and
-[`docs/phase-3-report.md`](docs/phase-3-report.md).
-The host preparation contract, limits, and proof map are in
-[`docs/host-source-packaging.md`](docs/host-source-packaging.md).
-The Mac host/native API, memory layout, diagnostics, and measurements are in
-[`docs/mac-host-integration.md`](docs/mac-host-integration.md) and
-[`docs/phase-4-report.md`](docs/phase-4-report.md).
-The installed command, artifact publication model, and measurements are in
-[`docs/command-line.md`](docs/command-line.md) and
-[`docs/phase-5-report.md`](docs/phase-5-report.md). Atom's flat NOBJ profile is
-specified in [`docs/atom-object-format.md`](docs/atom-object-format.md).
-The generated native source and first/second-generation byte proof are
-described in [`docs/phase-6-report.md`](docs/phase-6-report.md).
+Atom publishes one immutable bundle under
+`build/main.atom/current` containing:
+
+```text
+main.nobj
+main.bin
+main.hex
+main.lst
+main.d8.json
+manifest.json
+```
+
+The shipped example exercises host conditionals and dependency resolution,
+then native labels, instructions, data, reservations, and a forward patch:
+
+```sh
+cd examples/hello
+atom --origin 4000H main.asm
+```
+
+See [the command-line guide](docs/command-line.md) for every option and
+[the language reference](docs/language-reference.md) for source syntax.
+
+## Build boundary
+
+The host resolves `%include`, immutable `%define` values, and
+`%if`/`%else`/`%endif`. It keeps included files as separate ordered parts and
+masks removed source with spaces, preserving exact line and byte positions.
+
+The Z80 core then performs tokenization, symbol handling, expression parsing,
+directive processing, instruction encoding, forward-patch decisions, final
+undefined checks, and output lifecycle control. Filesystem access, dependency
+graphs, listings, D8 maps, Intel HEX, and atomic publication stay outside the
+resident assembler.
+
+This is a two-stage build, not a two-pass assembler. The native core reads the
+prepared source once. Forward references become append-only PATCH records when
+their final values are known.
+
+The measured native account is:
+
+| Item | Bytes |
+| --- | ---: |
+| Code and immutable tables | 12,553 |
+| Fixed workspace | 550 |
+| Linked resident extent | 13,103 |
+| Margin below 16 KiB | 3,281 |
+
+[Architecture](docs/architecture.md), [limits](docs/limits.md), and the
+[TEC-1 deployment design](docs/tec-1-deployment.md) separate the measured Mac
+configuration from the remaining hardware-adapter work.
+
+## Correctness
+
+Atom's test suite uses AZM as an independent oracle. The proof covers all 3,445
+claimed instruction forms, invalid forms, register contracts, exact stack and
+memory effects, directive and symbol programs, host preprocessing, artifact
+publication, offline package installation, and two native self-assembly
+generations.
+
+Run the maintainer gate with:
+
+```sh
+npm run release:check
+```
+
+The readable native implementation is under `asm/`. The checked Atom-valid
+self-host source under `self-host/` is generated deterministically from it;
+`npm run verify:self-host-source` detects drift. AZM is a development oracle
+and is not installed with the command-line package.
+
+The detailed engineering record remains available in the phase reports:
+
+- [encoder measurement](docs/phase-1-report.md)
+- [symbols through statements](docs/phase-2g-report.md)
+- [native multipart driver](docs/phase-3-report.md)
+- [Mac host integration](docs/phase-4-report.md)
+- [CLI and artifacts](docs/phase-5-report.md)
+- [native self-hosting](docs/phase-6-report.md)
+- [product and release checkpoint](docs/phase-7-report.md)
 
 ## License
 
-Atom is licensed under the GNU General Public License, version 3 only
-(`GPL-3.0-only`).
+Atom is public software licensed under the GNU General Public License, version
+3 only (`GPL-3.0-only`).

@@ -71,6 +71,24 @@ Shells normally expand `$4000`; quote or escape that spelling when necessary,
 or use `4000H`. Command-line numbers accept decimal, `$` hexadecimal, `%`
 binary, and Intel `H` and `B` suffixes.
 
+## Shipped example
+
+The package includes `examples/hello`. From that directory:
+
+```sh
+atom --origin 4000H main.asm
+```
+
+The host selects and resolves `layout.asm` from the preprocessing header. The
+native core then emits an exact 19-byte image beginning at `$4000`, including a
+forward branch patch and both initialized and uninitialized `DS` storage.
+Maintainers can reproduce the checked result without publishing files into the
+checkout:
+
+```sh
+npm run verify:example
+```
+
 ## Options
 
 ```text
@@ -116,3 +134,15 @@ lib/device.asm:14:9: undefined symbol PORTBASE
 Dependency and preprocessing failures also occur before artifact publication.
 No `current` directory is created for a failed first build, and a failed later
 build leaves the previously selected generation unchanged.
+
+## Maintainer release gate
+
+```sh
+npm run release:check
+```
+
+This runs the complete native and host tests, strict register-contract build,
+offline package/install proof, example proof, and two-generation self-host
+measurement. `npm publish` invokes the same command through `prepublishOnly`.
+See [`release-checklist.md`](release-checklist.md) for the repository and
+licensing checks that require network or publishing authority.

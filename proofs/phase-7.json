@@ -1,0 +1,71 @@
+{
+  "name": "Atom Phase 7 product and release proof",
+  "repositories": {
+    "atom": {
+      "branch": "codex/atom-release",
+      "baseHead": "819134d8ecb9eb4b4cbe1f6cae496d76402dc093"
+    },
+    "debug80": {
+      "branch": "main",
+      "head": "3f2adb669bb9e7888305c623f8c843054c3dd111",
+      "worktree": "clean"
+    }
+  },
+  "toolchain": {
+    "node": "v24.18.0",
+    "npm": "11.16.0"
+  },
+  "native": {
+    "codeAndTables": 12553,
+    "fixedWorkspace": 550,
+    "linkedResidentExtent": 13103,
+    "physicalMarginBelow16KiB": 3281,
+    "strictRegisterContracts": true
+  },
+  "example": {
+    "parts": 2,
+    "bytes": 19,
+    "start": 16384,
+    "end": 16403,
+    "exactBinary": true,
+    "exactIntelHex": true,
+    "listingAndD8": true
+  },
+  "tecRamProjection": {
+    "effectiveRamHypothesis": 24576,
+    "fixedWorkspace": 550,
+    "symbolArena": 13312,
+    "pendingArena": 2560,
+    "maximumDescriptors": 95,
+    "stack": 256,
+    "committedBeforeSourceAndAdapter": 16773,
+    "remainingBeforeSourceAndAdapter": 7803
+  },
+  "selfHost": {
+    "sourceParts": 6,
+    "sourceBytes": 94261,
+    "initializedBytes": 12727,
+    "reservedBytes": 376,
+    "patchRecords": 2132,
+    "firstGenerationInstructions": 149600757,
+    "firstGenerationCycles": 1367047684,
+    "pinnedAzmCore": true,
+    "translatedAzmSource": true,
+    "secondAtomGeneration": true
+  },
+  "package": {
+    "packedBytesObserved": 277347,
+    "unpackedBytes": 1317871,
+    "entries": 274,
+    "installedOfflineWithoutAzm": true,
+    "shippedExample": true,
+    "shippedProductDocumentation": true
+  },
+  "proofs": {
+    "tests": 243,
+    "passed": 243,
+    "failed": 0,
+    "releaseCheck": true,
+    "proseGateFindings": 0
+  }
+}
