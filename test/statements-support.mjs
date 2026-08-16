@@ -9,6 +9,7 @@ const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
 const addressOf = (symbol) => symbol.address ?? symbol.value;
+const word = (memory, address) => memory[address] | (memory[address + 1] << 8);
 const manifest = JSON.parse(fs.readFileSync("proofs/phase-2g.json", "utf8"));
 
 export async function createStatementsHarness() {
@@ -93,6 +94,10 @@ export async function createStatementsHarness() {
         inside(address, symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd) ||
         inside(address, symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd) ||
         inside(address, symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd) ||
+        (entry === "AtomPackSymbol" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 6)) ||
+        (["AtomSymbolDeclare", "AtomSymbolReference", "AtomSymbolDeclareGlobalLabel"].includes(entry) &&
+          inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
+        (entry === "AtomPendingAdd" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
         (entry === "AtomParserParsePublished" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 10)) ||
         (address > STACK_BEFORE && address < STACK_AFTER);
       if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
@@ -130,6 +135,93 @@ export async function createStatementsHarness() {
     symbols,
     memory,
     statistics,
+    reset({ symbolBytes = 128, pendingBytes = 48 } = {}) {
+      restart();
+      let result = execute("AtomSymbolReset", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementSymbolArena >>> 8;
+        cpu.l = names.AtomStatementSymbolArena & 0xff;
+        const end = names.AtomStatementSymbolArena + symbolBytes;
+        cpu.d = end >>> 8;
+        cpu.e = end & 0xff;
+      });
+      assert.equal(result.carry, 0);
+      result = execute("AtomPendingReset", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementPendingArena >>> 8;
+        cpu.l = names.AtomStatementPendingArena & 0xff;
+        const end = names.AtomStatementPendingArena + pendingBytes;
+        cpu.d = end >>> 8;
+        cpu.e = end & 0xff;
+      });
+      assert.equal(result.carry, 0);
+    },
+    pack(name) {
+      const bytes = new TextEncoder().encode(name);
+      memory.fill(0xa5, symbols.AtomStatementSource, symbols.AtomStatementSourceLimit);
+      memory.set(bytes, symbols.AtomStatementSource);
+      sourceBytes = bytes.slice();
+      memory.fill(0xa5, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 6);
+      const result = execute("AtomPackSymbol", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementSource >>> 8;
+        cpu.l = names.AtomStatementSource & 0xff;
+        cpu.b = bytes.length;
+        cpu.d = names.AtomStatementRecord >>> 8;
+        cpu.e = names.AtomStatementRecord & 0xff;
+      }, `AtomPackSymbol ${name}`);
+      return { ...result, key: Array.from(memory.slice(symbols.AtomStatementRecord, symbols.AtomStatementRecord + 6)) };
+    },
+    find(key) {
+      memory.set(key, symbols.AtomStatementRecord);
+      return execute("AtomSymbolFind", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementRecord >>> 8;
+        cpu.l = names.AtomStatementRecord & 0xff;
+      });
+    },
+    declare(key, value) {
+      memory.set(key, symbols.AtomStatementRecord);
+      return execute("AtomSymbolDeclare", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementRecord >>> 8;
+        cpu.l = names.AtomStatementRecord & 0xff;
+        cpu.d = value >>> 8;
+        cpu.e = value & 0xff;
+      });
+    },
+    reference(key) {
+      memory.set(key, symbols.AtomStatementRecord);
+      return execute("AtomSymbolReference", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementRecord >>> 8;
+        cpu.l = names.AtomStatementRecord & 0xff;
+      });
+    },
+    declareGlobalLabel(key, value) {
+      memory.set(key, symbols.AtomStatementRecord);
+      return execute("AtomSymbolDeclareGlobalLabel", (_memory, names, cpu) => {
+        cpu.h = names.AtomStatementRecord >>> 8;
+        cpu.l = names.AtomStatementRecord & 0xff;
+        cpu.d = value >>> 8;
+        cpu.e = value & 0xff;
+      });
+    },
+    advanceScope() {
+      return execute("AtomSymbolAdvanceScope");
+    },
+    pendingAdd(symbol, patch, kind = 1, aux = 0) {
+      return execute("AtomPendingAdd", (_memory, _names, cpu) => {
+        cpu.ix = symbol;
+        cpu.d = patch >>> 8;
+        cpu.e = patch & 0xff;
+        cpu.b = kind;
+        cpu.c = aux;
+      });
+    },
+    stateWord(name) {
+      return word(memory, symbols[name]);
+    },
+    symbolArena() {
+      return Array.from(memory.slice(symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit));
+    },
+    pendingArena() {
+      return Array.from(memory.slice(symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit));
+    },
     parsePublished(source, { address = 0x4000 } = {}) {
       restart();
       installSource(source);

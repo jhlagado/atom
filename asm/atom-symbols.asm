@@ -297,8 +297,19 @@ _AtomSymbolNoCapacity:
 ; failure: the output layer should have consumed it at definition time.
 ;
 ; out A=AtomStatusOk and carry clear; or A=status and carry set, state unchanged
-.routine out A,carry clobbers BC,DE,IX,zero,sign,parity,halfCarry,HL
+.routine out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry
 AtomSymbolAdvanceScope:
+.if AtomSymbolStatementMode
+            CALL AtomSymbolValidateScope
+            RET  C
+AtomSymbolCommitScope:
+            LD   HL,(AtomSymbolArenaEnd)
+            LD   (AtomSymbolLocalBegin),HL
+            LD   A,1
+            LD   (AtomSymbolScopeActive),A
+            XOR  A
+            RET
+.else
             LD   IX,(AtomSymbolLocalBegin)
             LD   DE,(AtomSymbolArenaEnd)
 _AtomSymbolScopeCheckLoop:
@@ -349,6 +360,127 @@ _AtomSymbolPendingInvariant:
             LD   A,AtomStatusPendingInvariant
             SCF
             RET
+.endif
+
+.if AtomSymbolStatementMode
+; Close the current private scope and declare one global address label as one
+; transaction. Capacity is checked after the validated private eviction, so a
+; reusable private record cannot cause a false global-capacity failure.
+;
+; in HL=six-byte global key, DE=address
+; out IX=defined record, A=AtomStatusOk and carry clear; or status and carry set
+.routine in HL,DE out A,carry,IX clobbers BC,DE,HL,IY,zero,sign,parity,halfCarry
+AtomSymbolDeclareGlobalLabel:
+            LD   (AtomSymbolOperationKey),HL
+            LD   (AtomSymbolOperationValue),DE
+            LD   DE,5
+            ADD  HL,DE
+            BIT  7,(HL)
+            JR   NZ,AtomSymbolGlobalLabelPrivate
+            LD   HL,(AtomSymbolOperationKey)
+            CALL AtomSymbolFind
+            JR   C,AtomSymbolGlobalLabelMissing
+            BIT  6,(IX+5)
+            JR   NZ,AtomSymbolGlobalLabelDuplicate
+            XOR  A
+            LD   (AtomSymbolOperationFlags),A
+            JR   AtomSymbolGlobalLabelValidate
+AtomSymbolGlobalLabelMissing:
+            CP   AtomStatusNotFound
+            RET  NZ
+            LD   A,1
+            LD   (AtomSymbolOperationFlags),A
+AtomSymbolGlobalLabelValidate:
+            CALL AtomSymbolValidateScope
+            RET  C
+            LD   A,(AtomSymbolOperationFlags)
+            OR   A
+            JR   Z,AtomSymbolGlobalLabelCommit
+            LD   HL,(AtomSymbolArenaEnd)
+            LD   DE,(AtomSymbolGlobalEnd)
+            OR   A
+            SBC  HL,DE
+            JR   C,AtomSymbolGlobalLabelCapacity
+            LD   A,H
+            OR   A
+            JR   NZ,AtomSymbolGlobalLabelCommit
+            LD   A,L
+            CP   AtomSymbolRecordBytes
+            JR   C,AtomSymbolGlobalLabelCapacity
+AtomSymbolGlobalLabelCommit:
+            LD   HL,(AtomSymbolArenaEnd)
+            LD   (AtomSymbolLocalBegin),HL
+            LD   A,1
+            LD   (AtomSymbolScopeActive),A
+            LD   HL,(AtomSymbolOperationKey)
+            LD   DE,(AtomSymbolOperationValue)
+            CALL AtomSymbolDeclare
+            RET  NC
+            LD   A,AtomStatusPendingInvariant
+            SCF
+            RET
+AtomSymbolGlobalLabelPrivate:
+            LD   A,AtomStatusPrivateNoScope
+            SCF
+            RET
+AtomSymbolGlobalLabelDuplicate:
+            LD   A,AtomStatusDuplicate
+            SCF
+            RET
+AtomSymbolGlobalLabelCapacity:
+            LD   A,AtomStatusSymbolCapacity
+            SCF
+            RET
+
+; Read-only validation shared by scope advance and the atomic global-label
+; transaction. No cursor or record is changed on failure.
+.routine out A,carry clobbers IX,DE,BC,zero,sign,parity,halfCarry,HL
+AtomSymbolValidateScope:
+            LD   IX,(AtomSymbolLocalBegin)
+            LD   DE,(AtomSymbolArenaEnd)
+AtomSymbolValidateScopeLoop:
+            PUSH IX
+            POP  HL
+            OR   A
+            SBC  HL,DE
+            JR   Z,AtomSymbolValidatePending
+            BIT  6,(IX+5)
+            JR   Z,AtomSymbolValidateUndefined
+            LD   BC,AtomSymbolRecordBytes
+            ADD  IX,BC
+            JR   AtomSymbolValidateScopeLoop
+AtomSymbolValidatePending:
+            LD   IX,(AtomPendingArenaBase)
+            LD   DE,(AtomPendingNext)
+AtomSymbolValidatePendingLoop:
+            PUSH IX
+            POP  HL
+            OR   A
+            SBC  HL,DE
+            JR   Z,AtomSymbolValidateOk
+            LD   L,(IX+0)
+            LD   H,(IX+1)
+            PUSH DE
+            LD   DE,5
+            ADD  HL,DE
+            BIT  7,(HL)
+            POP  DE
+            JR   NZ,AtomSymbolValidateInvariant
+            LD   BC,AtomPendingRecordBytes
+            ADD  IX,BC
+            JR   AtomSymbolValidatePendingLoop
+AtomSymbolValidateOk:
+            XOR  A
+            RET
+AtomSymbolValidateUndefined:
+            LD   A,AtomStatusUndefinedPrivate
+            SCF
+            RET
+AtomSymbolValidateInvariant:
+            LD   A,AtomStatusPendingInvariant
+            SCF
+            RET
+.endif
 
 ; Add a six-byte pending reference. The symbol must still be undefined.
 ;
