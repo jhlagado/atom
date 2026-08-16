@@ -2,8 +2,9 @@
 
 Atom separates filesystem work from resident assembly. The Mac host resolves
 source dependencies, evaluates host conditionals, masks preprocessing syntax,
-and produces an ordered set of source parts. The native Z80 assembler receives
-those parts as a stream and has no filesystem or dependency-graph interface.
+resolves Atom binary inputs, and produces an ordered set of source parts. The
+native Z80 assembler receives those parts as a stream and has no filesystem or
+dependency-graph interface.
 
 The source packager does not compile or publish an Atom object. It returns a
 fully validated ordered set of source parts. `assembleAtomProject` passes those
@@ -36,7 +37,8 @@ The result contains:
 - the retained logical-path byte count.
 
 Each part records its ordinal, bank, three source identities, original bytes,
-equal-length compiler bytes, dependencies, masked ranges, and provenance. The
+equal-length compiler bytes, dependencies, masked or transformed ranges,
+binary snapshots, and provenance. The
 composition snapshots definitions, placement, and limits before its first
 filesystem wait. The source reader reads each selected physical file once, so
 later filesystem changes cannot alter the bytes prepared for that build.
@@ -160,6 +162,26 @@ offset maps directly to the same offset in the original part. `%` followed by
 operator. The native tokenizer reports an explicit unprocessed-directive error
 if a line-start host directive reaches it.
 
+## Binary inclusion
+
+`INCBIN "PATH"` is assembler syntax with host-owned filesystem semantics. After
+dependency ordering and placement, the Atom composition layer resolves the
+path relative to its containing source, applies the source reader's root,
+symlink, and exact-case checks, and snapshots the complete binary. Inactive
+conditional lines create no binary read.
+
+The host replaces the active directive with an equal-length `DS COUNT,0`
+compiler line. Original bytes, line endings, offsets, and the source identity
+remain unchanged. Native labels, branches, capacity checks, and the streaming
+output cursor therefore account for the binary without filesystem code in the
+Z80 core. The Mac output bridge replaces the attributed zero IMAGE bytes with
+the snapshot and rejects any count mismatch before commit.
+
+The path is not an SP1 source part and does not enter the dependency graph.
+Provenance records its logical binary identity, source line, transformed range,
+and byte length. Listings and D8 ranges remain attached to the original
+`INCBIN` line.
+
 ## Extraction boundary
 
 The language-neutral modules under `src/host/source-packager/` contain path
@@ -196,6 +218,9 @@ executable observations.
 | Unknown and leaked directives | `Atom composition rejects dependency, preprocessing, and placement failures`; `leaked line-start host directives fail without stealing percent expressions` |
 | Nested branches, inactive includes and imbalance | `nested conditions mask only inactive ordinary lines`; `inactive includes create no dependency while directive structure is still checked`; `Atom composition selects only active includes` |
 | Original identity and offset attribution | `masked ranges and dependency locations use original byte offsets`; `resolved parts expose complete immutable provenance and identity offsets` |
+| Confined binary snapshot and equal-length lowering | `INCBIN snapshots one confined binary and preserves native addresses` |
+| Binary listing and D8 attribution | `INCBIN bytes retain their source line in listings and D8` |
+| Binary syntax, path, size, and bridge failures | `INCBIN rejects malformed, escaping, missing, and oversized inputs`; `the native bridge fails closed when supplied INCBIN metadata disagrees with DS` |
 | Explicit and resolved compiler inputs | `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | Snapshot stability after filesystem mutation | `reader snapshots each dependency once and ignores later filesystem mutation`; `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | Failure before publication | `preprocessing failure returns no project and preserves a prior SP1 artifact`; `write failure preserves the prior plan and removes only its temp`; `rename failure preserves the prior plan and removes only its temp` |
@@ -203,12 +228,12 @@ executable observations.
 | Resident compiler diagnostics | `undefined global reports its exact source part, offset, and packed name`; existing tokenizer, expression, parser, and statement diagnostic proofs |
 | Packager-to-native composition | `the Mac host resolves, masks, and executes one project through native Atom` |
 | Included-part diagnostics | `an error in an included part is attributed to that physical source identity` |
-| Listing lines and D8 ranges | Deferred to the Mac artifact pipeline; prepared identity and offsets are covered by the two attribution proofs above |
+| Listing lines and D8 ranges | `INCBIN bytes retain their source line in listings and D8`; the general artifact proofs cover ordinary source |
 
 Prepared compiler bytes and provenance are proved at this boundary. The native
 host runner copies those bytes before execution and checks them again when the
-Z80 routine returns. Generated listing and D8 equivalence await the Mac
-artifact pipeline.
+Z80 routine returns. The artifact pipeline proves listing and D8 attribution
+for both ordinary source and binary inclusion.
 
 ## Verification
 

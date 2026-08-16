@@ -61,6 +61,17 @@ files remain separate source parts and appear before their importer in the
 native input order. `%DEFINE` and `%IF` evaluation happens before Atom receives
 the equal-length masked source.
 
+Binary data uses a project-relative path resolved from the containing source
+file:
+
+```asm
+FONT: INCBIN "assets/font.bin"
+```
+
+The same root-confinement, exact-case, symlink, and snapshot rules used for
+source dependencies apply to the binary. Atom emits the entire file; it does
+not accept offset or length operands.
+
 Project definitions use `-D`:
 
 ```sh

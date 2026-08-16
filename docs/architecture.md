@@ -28,7 +28,7 @@ their final bytes are emitted as PATCH records when the symbol becomes known.
 
 | Host or operating adapter | Native Z80 core |
 | --- | --- |
-| Filesystem access and path confinement | Streaming tokenization |
+| Filesystem access, path confinement, and `INCBIN` snapshots | Streaming tokenization |
 | `%INCLUDE`, `%DEFINE`, and conditional masking | Case-insensitive symbols and private scope |
 | Dependency graph, ordering, and SP1 plan | Expression parsing and validation |
 | Loading each ordered source part | Labels, equates, data, placement, alignment, and string directives |
@@ -48,7 +48,11 @@ the project root, detects diamonds and cycles, and emits dependencies before
 their importer in deterministic depth-first postorder. Every selected file is
 a distinct source part. Atom preprocessing produces a compiler buffer of the
 same byte length as the original buffer, so native offsets map directly back to
-the original filename, line, and byte column.
+the original filename, line, and byte column. The Atom composition layer lowers
+an active `INCBIN` line to an equal-length initialized reservation and retains
+the snapshotted binary beside that source part. The Mac output bridge
+substitutes the binary bytes while the native cursor and labels advance by the
+same measured length.
 
 SP1 is the portable, line-oriented source-plan format. It records only ordered
 logical paths and bank ordinals. The compiler does not parse SP1; an operating
@@ -80,6 +84,10 @@ used only in development to regenerate the image and to provide the independent
 oracle. The package loader checks the core digest and structural coverage before
 execution. Debug80 marks native code and the source window read-only to Z80
 writes and intercepts six fail-closed sink entry points.
+
+For `INCBIN`, the bridge replaces only IMAGE bytes attributed to the lowered
+source line. It checks that the native byte count and snapshotted binary length
+match before commit. Any mismatch aborts the tentative generation.
 
 Small projects share one 24 KiB source window. Larger projects are paged one
 part at a time when the native driver enters `AtomTokenizerReset`; each part

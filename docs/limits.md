@@ -27,6 +27,7 @@ of the 13,812-byte image and must be measured separately.
 | Encoded instruction length | 1–4 bytes |
 | Build descriptor | 15 bytes |
 | Complete 16-part descriptor array | 80 bytes |
+| One `INCBIN` input | 0–65,535 bytes |
 
 Every source part must fit one 24 KiB page. Total source may exceed that size
 because the Mac adapter replaces the page at part boundaries. The checked
@@ -37,6 +38,11 @@ The native target uses a non-wrapping half-open 16-bit range whose mathematical
 end is at most `$FFFF`. It cannot currently represent `$10000` as an exclusive
 end. Starting at zero therefore permits a maximum capacity of 65,535 bytes,
 covering `$0000` through `$FFFE`.
+
+`INCBIN` bytes count as initialized output and consume the target capacity.
+The Mac bridge submits one IMAGE operation per byte through the existing native
+`DS` emission path. Large binaries therefore consume native execution budget
+even though their filesystem storage is host-owned.
 
 ## Symbols and pending references
 

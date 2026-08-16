@@ -51,9 +51,11 @@ entry source
     -> AtomAssemble
 ```
 
-The preprocessor masks directives and inactive source with spaces. The loader
-must retain each part's logical ordinal and original identity for diagnostics.
-It need not concatenate files or expose filesystem calls to the assembler.
+The preprocessor masks directives and inactive source with spaces and lowers
+`INCBIN` to an equal-length initialized reservation. The loader must retain
+each part's logical ordinal, original identity, and binary snapshots for
+diagnostics and output substitution. It need not concatenate files or expose
+filesystem calls to the assembler.
 
 The current tokenizer takes a half-open memory interval and requires the part
 to remain addressable until it reaches EOF. The Mac adapter pages at whole-part
@@ -84,6 +86,11 @@ The first choice is preferred when TEC storage hardware exposes a usable bank
 or window. Otherwise the next project checkpoint should measure the third
 choice against the 2,572-byte resident margin. It is a Hypothesis, not a
 projection, that the complete source and sink adapter will fit that margin.
+
+A TEC filesystem adapter must also implement the measured Mac `INCBIN`
+contract: confined snapshot reads relative to the containing source, whole-file
+length validation, and exact IMAGE-byte substitution before commit. Its code,
+metadata, and buffering cost remain unmeasured for TEC hardware.
 
 Symbol capacity is another target choice. Use eight bytes for every permanent
 global plus the peak private scope, and six bytes for the peak concurrent

@@ -1,4 +1,5 @@
 import { createAtomSourceProfile } from "./atom/source-profile.mjs";
+import { lowerAtomBinaryIncludes } from "./atom/incbin.mjs";
 import {
   createNodeSourceReader,
   resolveSourceProject,
@@ -33,7 +34,7 @@ export async function resolveAtomProject({
   const frozenPlacement = snapshotPlacement(placement);
   const frozenLimits = snapshotRecord(limits);
   const reader = await createNodeSourceReader(root);
-  return resolveSourceProject({
+  const project = await resolveSourceProject({
     reader,
     entry,
     profile: createAtomSourceProfile(),
@@ -41,4 +42,5 @@ export async function resolveAtomProject({
     placement: frozenPlacement,
     limits: frozenLimits,
   });
+  return lowerAtomBinaryIncludes(project, reader);
 }

@@ -67,7 +67,7 @@ function imageKind(project, source) {
     /^\s*(?:(?:\.[_A-Za-z][_A-Za-z0-9]*|[_A-Za-z][_A-Za-z0-9]*)\s*:\s*)?/,
     "",
   );
-  return /^(?:DB|DW|CSTR|PSTR|ISTR|ALIGN)\b/i.test(statement) ? "data" : "code";
+  return /^(?:DB|DW|CSTR|PSTR|ISTR|ALIGN|INCBIN)\b/i.test(statement) ? "data" : "code";
 }
 
 function sourceRanges(project, generation, fill) {

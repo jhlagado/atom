@@ -8,8 +8,9 @@ Atom assembles the complete Z80 instruction set claimed by its AZM oracle,
 including CB, ED, DD, FD, index-half, and undocumented SLL/SLS forms. It also
 supports global and `.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
 `DS`, `ALIGN`, `CSTR`, `PSTR`, `ISTR`, character literals, and `LOW()` and
-`HIGH()` byte functions. The native core assembles its own checked source byte
-for byte and fits in one 16 KiB bank.
+`HIGH()` byte functions. The Mac host also supplies confined `INCBIN` input.
+The native core assembles its own checked source byte for byte and fits in one
+16 KiB bank.
 
 The Mac command is usable now. The TEC-1 filesystem, source-window, and output
 adapter is designed but not yet implemented.
@@ -55,9 +56,10 @@ See [the command-line guide](docs/command-line.md) for every option and
 
 ## Build boundary
 
-The host resolves `%INCLUDE`, immutable `%DEFINE` values, and
-`%IF`/`%ELSE`/`%ENDIF`. It keeps included files as separate ordered parts and
-masks removed source with spaces, preserving exact line and byte positions.
+The host resolves `%INCLUDE`, immutable `%DEFINE` values,
+`%IF`/`%ELSE`/`%ENDIF`, and `INCBIN` paths. It keeps included files as separate
+ordered parts and preserves exact line and byte positions while masking or
+lowering host-owned syntax.
 
 The Z80 core then performs tokenization, symbol handling, expression parsing,
 directive processing, instruction encoding, forward-patch decisions, final
@@ -113,6 +115,7 @@ The detailed engineering record remains available in the phase reports:
 - [source-syntax checkpoint](docs/phase-8-report.md)
 - [equates, characters, and strings](docs/phase-9-report.md)
 - [alignment and byte functions](docs/phase-10-report.md)
+- [host-backed binary inclusion](docs/phase-11-report.md)
 
 ## License
 

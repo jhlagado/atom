@@ -34,14 +34,14 @@
     "secondAtomGeneration": true
   },
   "package": {
-    "packedBytesObserved": 282974,
-    "unpackedBytes": 1340800,
-    "entries": 277,
+    "packedBytesObserved": 286585,
+    "unpackedBytes": 1354876,
+    "entries": 279,
     "installedSelfHostWithoutAzm": true
   },
   "proofs": {
-    "tests": 260,
-    "passed": 260,
+    "tests": 264,
+    "passed": 264,
     "failed": 0,
     "strictRegisterContracts": true
   }

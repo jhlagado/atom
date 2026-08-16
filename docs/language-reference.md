@@ -133,6 +133,7 @@ DW BASE,$+2
 DS 16
 DS 8,$FF
 ALIGN 16
+INCBIN "assets/font.bin"
 CSTR "READY"
 PSTR "NAME"
 ISTR "TOKEN"
@@ -151,6 +152,11 @@ ISTR "TOKEN"
 - `ALIGN BOUNDARY` emits initialized zero bytes up to the next address divisible
   by a resolved positive boundary. An already aligned address emits nothing;
   the boundary need not be a power of two.
+- `INCBIN "PATH"` emits the complete binary file as initialized bytes. The path
+  is relative to the source file containing the directive and must remain
+  inside the project root. Paths use ASCII. The Mac host snapshots the file
+  before native assembly. One binary may contain from zero through 65,535
+  bytes. Offset and length operands are not accepted.
 - `CSTR "TEXT"` emits the decoded bytes followed by zero.
 - `PSTR "TEXT"` emits the decoded byte count followed by the bytes.
 - `ISTR "TEXT"` sets bit 7 on the final decoded byte. An empty `ISTR` emits
@@ -191,8 +197,8 @@ for a binary literal when followed by `0` or `1`, and as remainder otherwise.
 
 ## Deliberate boundaries
 
-Atom does not currently implement macros, op expansion, `INCBIN`, automatic
-branch promotion, dotted directives, typed layout, modules or imports with
+Atom does not currently implement macros, op expansion, automatic branch
+promotion, dotted directives, typed layout, modules or imports with
 namespace semantics, repeated textual inclusion, string-valued equates,
 forward equates, or banked output. Filesystem work, dependency resolution,
 conditional assembly, listing generation, D8 maps, Intel HEX, and artifact

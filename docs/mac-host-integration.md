@@ -1,10 +1,10 @@
 # Mac host and native Atom integration
 
 `assembleAtomProject` is the first complete host-to-Z80 assembly entry. The Mac
-host reads the project, resolves `%INCLUDE` dependencies, evaluates host
-conditionals, and masks host directives. Debug80 then executes the native Atom
-tokenizer, symbol table, statements, encoder, patch resolver, and multipart
-driver.
+host reads the project, resolves `%INCLUDE` dependencies and `INCBIN` inputs,
+evaluates host conditionals, and masks or lowers host-owned syntax. Debug80
+then executes the native Atom tokenizer, symbol table, statements, encoder,
+patch resolver, and multipart driver.
 
 ```js
 import {
@@ -71,6 +71,11 @@ payloads are frozen number arrays.
 `materializeAtomGeneration` returns a new `Uint8Array`, so changing that copy
 cannot alter the committed generation.
 
+An active `INCBIN` line reaches the native core as an equal-length initialized
+`DS` statement. The runner retains the binary snapshot keyed by source part and
+line, substitutes those bytes in `AtomSinkImageByte`, and checks the exact byte
+count before commit. The six-call native sink ABI does not change.
+
 ## Current target rules
 
 Native Atom currently emits flat bank-zero output. The integrated resolver
@@ -103,9 +108,9 @@ diagnostic includes:
 - native driver, statement, and nested status values; and
 - the unpacked case-folded name for a final undefined symbol.
 
-Equal-length preprocessing masks preserve the offset relation. An error in an
-included file therefore names that file rather than the entry file or an
-anonymous concatenated stream.
+Equal-length preprocessing masks and `INCBIN` lowering preserve the offset
+relation. An error in an included file therefore names that file rather than
+the entry file or an anonymous concatenated stream.
 
 ## Host proof memory layout
 
@@ -165,3 +170,6 @@ nonzero bank rejection, sink status and exception failures, append-only `ORG`
 behavior, target commit bounds, exact source and part capacities, deterministic
 fresh runs, `DS` high-water retention, intermediate `ORG` and `DS` range
 failures, fail-closed stubs, the complete 64 KiB map, and runtime-budget cleanup.
+The binary-inclusion proofs additionally cover snapshot stability, path and
+size failures, exact initialized bytes, native address calculation, bridge
+count mismatches, listing text, and D8 data ranges.

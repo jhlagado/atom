@@ -62,6 +62,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(metadata.private, undefined);
   await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
+  await fs.access(path.join(installedAtom, "docs", "phase-11-report.md"));
   await fs.access(path.join(installedAtom, "docs", "language-reference.md"));
   await fs.access(path.join(installedAtom, "examples", "hello", "main.asm"));
 
@@ -83,6 +84,15 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   for (const suffix of ["nobj", "bin", "hex", "lst", "d8.json"]) {
     await fs.access(path.join(current, `main.${suffix}`));
   }
+
+  await fs.writeFile(path.join(projectDirectory, "payload.bin"), Buffer.from([0xde, 0xad, 0xbe, 0xef]));
+  await fs.writeFile(path.join(projectDirectory, "binary.asm"), 'ORG 4100H\nPAYLOAD: INCBIN "payload.bin"\n');
+  const included = await run(executable, ["--origin", "4100H", "binary.asm"], { cwd: projectDirectory });
+  assert.equal(included.status, 0, included.stderr);
+  assert.deepEqual(
+    await fs.readFile(path.join(projectDirectory, "build", "binary.atom", "current", "binary.bin")),
+    Buffer.from([0xde, 0xad, 0xbe, 0xef]),
+  );
 
   await fs.writeFile(path.join(projectDirectory, "bad.asm"), "LD BC,A\n");
   const rejected = await run(executable, ["--origin", "4000H", "bad.asm"], { cwd: projectDirectory });

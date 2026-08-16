@@ -1,0 +1,55 @@
+{
+  "name": "Atom Phase 11 host-backed binary inclusion checkpoint",
+  "repositories": {
+    "atom": {
+      "branch": "main",
+      "baseHead": "55896fdcf17024e9192bf1b38f58bbbef3e1fb1c"
+    },
+    "debug80Observed": {
+      "branch": "codex/nucleus-docs-sync",
+      "head": "13ee4e8861f996c7c4e9a9278979d3e19b447571",
+      "requiredBranch": "main",
+      "requiredHead": "3f2adb669bb9e7888305c623f8c843054c3dd111"
+    }
+  },
+  "incbin": {
+    "hostBacked": true,
+    "wholeFile": true,
+    "minimumBytes": 0,
+    "maximumBytes": 65535,
+    "projectRootConfined": true,
+    "snapshotBeforeAssembly": true,
+    "equalLengthLowering": true,
+    "listingProvenance": true,
+    "d8Provenance": true
+  },
+  "native": {
+    "growthBytes": 0,
+    "codeAndTables": 13261,
+    "fixedWorkspace": 551,
+    "linkedResidentExtent": 13812,
+    "codeMarginBelow16KiB": 3123,
+    "physicalMarginBelow16KiB": 2572,
+    "strictRegisterContracts": true
+  },
+  "selfHost": {
+    "sourceParts": 6,
+    "sourceBytes": 99469,
+    "initializedBytes": 13436,
+    "pinnedAzmCore": true,
+    "translatedAzmSource": true,
+    "secondAtomGeneration": true
+  },
+  "package": {
+    "packedBytesObserved": 286585,
+    "unpackedBytes": 1354876,
+    "entries": 279,
+    "installedSelfHostWithoutAzm": true
+  },
+  "proofs": {
+    "atomLocalTests": 264,
+    "atomLocalPassed": 264,
+    "atomLocalFailed": 0,
+    "releaseCheckRequiresPinnedDebug80Main": true
+  }
+}

@@ -13,7 +13,7 @@ const productDocuments = [
   "docs/limits.md",
   "docs/tec-1-deployment.md",
   "docs/release-checklist.md",
-  "docs/phase-10-report.md",
+  "docs/phase-11-report.md",
   "examples/hello/README.md",
 ];
 
@@ -62,8 +62,8 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);
 
   const native = await loadNativeAtomCore();
-  const phase10 = JSON.parse(await fs.readFile("proofs/phase-10.json", "utf8"));
-  assert.equal(phase10.native.codeAndTables, native.codeBytes);
-  assert.equal(phase10.native.linkedResidentExtent, native.residentExtentBytes);
-  assert.equal(phase10.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);
+  const phase11 = JSON.parse(await fs.readFile("proofs/phase-11.json", "utf8"));
+  assert.equal(phase11.native.codeAndTables, native.codeBytes);
+  assert.equal(phase11.native.linkedResidentExtent, native.residentExtentBytes);
+  assert.equal(phase11.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);
 });

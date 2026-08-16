@@ -30,6 +30,7 @@ export const ATOM_HOST_SINK_STATUS = Object.freeze({
   IMAGE_ORDER: 0xe2,
   PATCH_TARGET: 0xe3,
   TARGET_RANGE: 0xe4,
+  BINARY_INCLUDE: 0xe5,
   HOST_EXCEPTION: 0xef,
 });
 
@@ -226,6 +227,33 @@ function snapshotProject(project) {
     if (part.compilerBytes.length > NATIVE_ATOM_LIMITS.sourceBytes) {
       fail("source-capacity", `resolved Atom source part ${ordinal} exceeds the native ${NATIVE_ATOM_LIMITS.sourceBytes}-byte window`);
     }
+    const binaryIncludes = part.binaryIncludes ?? [];
+    if (!Array.isArray(binaryIncludes)) {
+      fail("invalid-part", `resolved Atom source part ${ordinal} has invalid binary includes`);
+    }
+    const sourceLines = new Set();
+    const frozenIncludes = binaryIncludes.map((include) => {
+      if (
+        include === null ||
+        typeof include !== "object" ||
+        !Number.isInteger(include.offset) ||
+        include.offset < 0 ||
+        include.offset >= part.originalBytes.length ||
+        !Number.isInteger(include.line) ||
+        include.line < 1 ||
+        !(include.bytes instanceof Uint8Array) ||
+        include.bytes.length > 0xffff ||
+        sourceLines.has(include.line)
+      ) {
+        fail("invalid-part", `resolved Atom source part ${ordinal} has an invalid binary include`);
+      }
+      sourceLines.add(include.line);
+      return Object.freeze({
+        offset: include.offset,
+        line: include.line,
+        bytes: include.bytes.slice(),
+      });
+    });
     totalBytes += part.compilerBytes.length;
     return Object.freeze({
       ordinal,
@@ -233,6 +261,7 @@ function snapshotProject(project) {
       logicalIdentity: part.logicalIdentity,
       originalBytes: part.originalBytes.slice(),
       compilerBytes: part.compilerBytes.slice(),
+      binaryIncludes: Object.freeze(frozenIncludes),
     });
   });
   return Object.freeze({
@@ -573,6 +602,16 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let logicalHighWater = target.start;
   const layout = [];
   const declaredSymbols = [];
+  const binaryIncludes = new Map();
+  for (const part of snapshot.parts) {
+    for (const include of part.binaryIncludes) {
+      binaryIncludes.set(`${part.ordinal}:${include.line}`, {
+        bytes: include.bytes,
+        index: 0,
+        diagnostic: sourcePosition(part, include.offset),
+      });
+    }
+  }
   let pagedSource;
   let pagedSourceChanged = false;
   const sourcePages = [];
@@ -603,17 +642,35 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     [symbols.AtomSinkBegin, Object.freeze({ kind: "begin", action: () => sink.begin(Object.freeze({ descriptor: runtime.cpu.ix, target })) })],
     [symbols.AtomSinkImageByte, Object.freeze({ kind: "image", action: () => {
       const address = pair(runtime.cpu.h, runtime.cpu.l);
+      const source = currentDiagnostic();
+      const binary = binaryIncludes.get(`${source?.ordinal}:${source?.line}`);
+      if (binary !== undefined && binary.index >= binary.bytes.length) {
+        bridgeFailure ??= Object.freeze({
+          message: "INCBIN emitted more bytes than its resolved binary input",
+          diagnostic: binary.diagnostic,
+        });
+        return ATOM_HOST_SINK_STATUS.BINARY_INCLUDE;
+      }
+      const byte = binary === undefined ? runtime.cpu.a : binary.bytes[binary.index++];
       recordExtent(address + 1, "IMAGE lies outside the target range");
       return sink.image(Object.freeze({
         bank: runtime.cpu.c,
         address,
-        bytes: Object.freeze([runtime.cpu.a]),
-        source: currentDiagnostic(),
+        bytes: Object.freeze([byte]),
+        source,
       }));
     } })],
     [symbols.AtomSinkPatchByte, Object.freeze({ kind: "patch-byte", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.h, runtime.cpu.l), bytes: Object.freeze([runtime.cpu.a]), source: currentDiagnostic() })) })],
     [symbols.AtomSinkPatchWord, Object.freeze({ kind: "patch-word", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.d, runtime.cpu.e), bytes: Object.freeze([runtime.cpu.l, runtime.cpu.h]), source: currentDiagnostic() })) })],
     [symbols.AtomSinkCommit, Object.freeze({ kind: "commit", action: () => {
+      const incompleteBinary = [...binaryIncludes.values()].find(({ bytes, index }) => index !== bytes.length);
+      if (incompleteBinary !== undefined) {
+        bridgeFailure ??= Object.freeze({
+          message: "INCBIN emitted fewer bytes than its resolved binary input",
+          diagnostic: incompleteBinary.diagnostic,
+        });
+        return ATOM_HOST_SINK_STATUS.BINARY_INCLUDE;
+      }
       if (bridgeFailure !== undefined) return ATOM_HOST_SINK_STATUS.TARGET_RANGE;
       return sink.commit(Object.freeze({
         descriptor: runtime.cpu.ix,
