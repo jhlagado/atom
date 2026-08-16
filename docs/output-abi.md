@@ -35,6 +35,22 @@ map from its retained descriptor and logical operation spools.
 The proof adapter records the same logical operation shape used by the Nucleus
 Z80 proofs: kind, bank, target address, byte count, and final bytes.
 
+The Mac adapter intercepts these six entry addresses in Debug80 before their
+stub instructions execute. It reads the documented Z80 registers, performs the
+host operation, pops the native return address, and supplies A and carry as the
+routine result. Each linked stub returns `$FF` with carry set when interception
+is absent, so a missing host service fails at `AtomSinkBegin`.
+
+The current memory sink accepts only bank zero. IMAGE addresses may advance or
+leave gaps but may not descend or overlap. Each PATCH byte must name an earlier
+IMAGE byte and may be patched once. COMMIT verifies the original descriptor,
+remaining capacity, and final cursor before exposing the generation to its
+caller. A forward `ORG` may leave a gap; a backward `ORG` followed by output is
+rejected when its next IMAGE address descends below an earlier IMAGE end. The
+Mac runner also observes native `ORG` and uninitialized `DS` entries. It retains
+their highest logical extent and reports an intermediate out-of-range directive
+at its original source position.
+
 ## Atom entries
 
 `AtomOutputReset` accepts `HL=target start` and `DE=byte capacity`. It selects

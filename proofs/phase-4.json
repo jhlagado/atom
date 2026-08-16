@@ -1,0 +1,21 @@
+{
+  "name": "Atom Phase 4 Mac host/native integration proof",
+  "source": "../asm/atom-host-runtime.asm",
+  "contracts": "strict",
+  "targetCpu": "Zilog Z80",
+  "measurements": {
+    "codeAndTables": 12553,
+    "fixedWorkspace": 550,
+    "linkedResidentExtent": 13103,
+    "hostServiceStubs": 24
+  },
+  "integrationExecution": {
+    "measuredInstructions": 29239,
+    "maxInstructions": 50000,
+    "measuredCycles": 288167,
+    "maxCycles": 500000,
+    "serviceCalls": 13,
+    "imageRecords": 10,
+    "patchRecords": 1
+  }
+}

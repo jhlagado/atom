@@ -84,7 +84,7 @@ AtomOutputSetOrigin:
             XOR  A
             RET
 
-.routine in A out A,carry clobbers BC,DE,HL,IX,IY,zero,sign,parity,halfCarry
+.routine in A out A,carry clobbers BC,HL,zero,sign,parity,halfCarry,DE,IX,IY
 AtomOutputEmitByteReady:
             LD   HL,(AtomOutputCursor)
             LD   C,0

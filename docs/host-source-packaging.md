@@ -6,7 +6,8 @@ and produces an ordered set of source parts. The native Z80 assembler receives
 those parts as a stream and has no filesystem or dependency-graph interface.
 
 The source packager does not compile or publish an Atom object. It returns a
-fully validated ordered set of source parts for the native streaming adapter.
+fully validated ordered set of source parts. `assembleAtomProject` passes those
+parts to the native streaming adapter after preparation succeeds.
 
 ## Public preparation API
 
@@ -80,6 +81,11 @@ The Phase 3 native Atom driver accepts 1 through 16 parts. A host invoking that
 driver therefore resolves and validates the project with `maxParts: 16`. The
 SP1 wire format retains its 255-part limit for other consumers and future
 targets.
+
+The current Atom output ABI is flat bank zero. `assembleAtomProject` sets the
+resolver's maximum bank to zero, so a nonzero placement fails before the Z80
+runtime starts. The general source-plan format keeps its bank field for shared
+packager consumers and later target work.
 
 ## Placement and SP1
 
@@ -195,11 +201,14 @@ executable observations.
 | Failure before publication | `preprocessing failure returns no project and preserves a prior SP1 artifact`; `write failure preserves the prior plan and removes only its temp`; `rename failure preserves the prior plan and removes only its temp` |
 | Neutral static and dynamic import boundary | `neutral host modules do not import Atom implementation`; `neutral import proof rejects dynamic Atom imports` |
 | Resident compiler diagnostics | `undefined global reports its exact source part, offset, and packed name`; existing tokenizer, expression, parser, and statement diagnostic proofs |
+| Packager-to-native composition | `the Mac host resolves, masks, and executes one project through native Atom` |
+| Included-part diagnostics | `an error in an included part is attributed to that physical source identity` |
 | Listing lines and D8 ranges | Deferred to the Mac artifact pipeline; prepared identity and offsets are covered by the two attribution proofs above |
 
 Prepared compiler bytes and provenance are proved at this boundary. The native
-driver now returns exact compiler diagnostic part and offset values. Generated
-listing and D8 equivalence await the Mac artifact pipeline.
+host runner copies those bytes before execution and checks them again when the
+Z80 routine returns. Generated listing and D8 equivalence await the Mac
+artifact pipeline.
 
 ## Verification
 
@@ -207,6 +216,7 @@ listing and D8 equivalence await the Mac artifact pipeline.
 npm run test:host
 npm test
 npm run measure:tokenizer
+npm run measure:host-native
 ```
 
 `npm test` rebuilds the frozen AZM and Debug80 runtime dependencies, assembles

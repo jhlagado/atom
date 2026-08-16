@@ -16,14 +16,16 @@ through the Nucleus operating-adapter boundary. Phase 2g adds the native
 statement layer: global and `_`-private labels, bare `EQU`, `ORG`, `DB`, `DW`,
 and `DS`, data strings, and append-only forward patches. Phase 3 adds the
 native multipart driver, exact final undefined-symbol diagnostics, and sink
-begin/commit/abort lifecycle.
+begin/commit/abort lifecycle. Phase 4 connects the source packager to that
+driver through Debug80, so a Mac host now runs preprocessing and dependency
+resolution before the emulated Z80 core performs the assembly.
 
 The host source packager now resolves `%include`, immutable `%define` values,
 and host-evaluated `%if`/`%else`/`%endif`; preserves source identities and
 offsets through equal-length masking; joins path-keyed placement; and emits a
-validated SP1 source plan. Mac host integration, artifact rendering, native
-self-assembly, and TEC-1 deployment remain to be implemented. Macros and op
-expansion remain out of scope.
+validated SP1 source plan. Deterministic artifact rendering, the installable
+command-line interface, native self-assembly, and TEC-1 deployment remain to be
+implemented. Macros and op expansion remain out of scope.
 
 ```sh
 npm install
@@ -37,6 +39,7 @@ npm run measure:integration
 npm run measure:output
 npm run measure:statements
 npm run measure:driver
+npm run measure:host-native
 ```
 
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
@@ -62,6 +65,9 @@ The native multipart and lifecycle ABI and its measurements are in
 [`docs/phase-3-report.md`](docs/phase-3-report.md).
 The host preparation contract, limits, and proof map are in
 [`docs/host-source-packaging.md`](docs/host-source-packaging.md).
+The Mac host/native API, memory layout, diagnostics, and measurements are in
+[`docs/mac-host-integration.md`](docs/mac-host-integration.md) and
+[`docs/phase-4-report.md`](docs/phase-4-report.md).
 
 ## License
 
