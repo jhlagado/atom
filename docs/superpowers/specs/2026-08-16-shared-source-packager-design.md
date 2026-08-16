@@ -16,6 +16,14 @@ This design does not place a filesystem, dependency graph, preprocessor, or
 source-plan reader in either resident compiler. Those facilities belong to a
 filesystem-aware Node or Z80 host.
 
+The first Node implementation lives in the Atom repository. Its language-neutral
+resolver, identity, placement, provenance, and SP1 modules keep a deliberate
+extraction boundary, but they are not yet a shared Debug80 package or app.
+Atom and Nucleus will synchronize the contract periodically while Nucleus is
+rewritten. Once both consumers have measured requirements, the common host
+services may move into the Debug80 monorepo without changing the resident
+compiler boundary or the SP1 interchange.
+
 ## Architectural boundary
 
 The build has two stages, not two compiler passes:
