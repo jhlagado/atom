@@ -1,0 +1,42 @@
+{
+  "name": "Atom Phase 5 Mac CLI and deterministic artifact proof",
+  "nativeCore": {
+    "artifact": "../assets/native-core.json",
+    "hexSha256": "30a723c7776d0fe096dfad3da7dca8f1933c6c31c5e16afadc1d0ede515a8ff1",
+    "artifactSha256": "6a8d29b274046b895daeee8fa9e87653e91dbae1686d35c7a1e6d81e768101f4",
+    "codeAndTables": 12553,
+    "fixedWorkspace": 550,
+    "linkedResidentExtent": 13103,
+    "physicalMarginBelow16KiB": 3281
+  },
+  "package": {
+    "name": "atom-z80",
+    "version": "0.1.0",
+    "packedBytes": 206272,
+    "unpackedBytes": 1046940,
+    "entries": 231,
+    "bundledDependencies": [
+      "@jhlagado/debug80-runtime"
+    ],
+    "azmInstalled": false,
+    "offlineInstall": true
+  },
+  "artifacts": [
+    "nobj",
+    "bin",
+    "hex",
+    "lst",
+    "d8.json",
+    "manifest.json"
+  ],
+  "proofs": {
+    "tests": 235,
+    "passed": 235,
+    "failed": 0,
+    "packedInstallRunsOutsideCheckout": true,
+    "deterministicFreshRuns": true,
+    "atomicPointerFailurePreservesPreviousGeneration": true,
+    "nobjCrcChecked": true,
+    "logicalSourceDiagnostics": true
+  }
+}

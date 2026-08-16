@@ -22,8 +22,9 @@ const result = await assembleAtomProject({
 const { base, bytes } = materializeAtomGeneration(result.generation);
 ```
 
-This is a Node API rather than the final command-line interface. Artifact
-serialization and atomic file publication belong to Phase 5.
+The `atom` executable wraps this API with deterministic artifact rendering and
+atomic generation publication. [`command-line.md`](command-line.md) documents
+the installed command.
 
 ## Execution boundary
 
@@ -51,9 +52,12 @@ which lets the native driver take its ordinary failure path and call abort.
 Runtime budget or halt failures also abort an open host generation.
 
 `generation.images` and `generation.patches` are frozen append-only logical
-records. `generation.highWater` retains the greatest address reached by output,
-`ORG`, or an uninitialized `DS` reservation even when the final cursor later
-moves backward. The byte payloads are frozen number arrays.
+records with source positions. `generation.layout` records `ORG` and
+uninitialized `DS` extents, and `generation.symbols` records successful label
+and `EQU` definitions before private-scope eviction. `generation.highWater`
+retains the greatest address reached by output, `ORG`, or an uninitialized
+`DS` reservation even when the final cursor later moves backward. The byte
+payloads are frozen number arrays.
 `materializeAtomGeneration` returns a new `Uint8Array`, so changing that copy
 cannot alter the committed generation.
 
@@ -124,12 +128,14 @@ source, symbol, pending, and stack regions.
 - `assembleResolvedAtomProject` for an already prepared ordered project;
 - `resolveAtomProject` for preparation alone;
 - `createMemoryAtomSink` and `materializeAtomGeneration` for logical output;
-- `loadNativeAtomCore` for the strict-contract bootstrap image; and
+- NOBJ, binary, HEX, listing, and D8 renderers;
+- atomic artifact-set publication;
+- `loadNativeAtomCore` for the pinned strict-contract image; and
 - `AtomAssemblyError`, native limits, and host sink status constants.
 
-The runner currently invokes AZM to build the native core. Phase 5 will package
-a pinned core artifact so an installed Atom command does not require a source
-checkout or a bootstrap assembly on every new process.
+The runner reads `assets/native-core.json` and verifies its SHA-256. AZM is used
+only by the development generator and stale-asset check; it is absent from the
+installed package.
 
 ## Verification
 

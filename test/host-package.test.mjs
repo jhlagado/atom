@@ -1,0 +1,83 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+
+function run(command, arguments_, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, arguments_, { ...options, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (status, signal) => resolve({ status, signal, stdout, stderr }));
+  });
+}
+
+test("the packed Mac CLI installs offline and assembles without AZM or an Atom checkout", async (t) => {
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "atom-package-"));
+  t.after(() => fs.rm(temporary, { recursive: true, force: true }));
+  const packageDirectory = path.join(temporary, "package");
+  const installDirectory = path.join(temporary, "install");
+  const projectDirectory = path.join(temporary, "project");
+  await fs.mkdir(packageDirectory);
+  await fs.mkdir(projectDirectory);
+
+  const packed = await run("npm", ["pack", "--pack-destination", packageDirectory], { cwd: process.cwd() });
+  assert.equal(packed.status, 0, packed.stderr);
+  const archive = path.join(packageDirectory, "atom-z80-0.1.0.tgz");
+  const installed = await run("npm", [
+    "install",
+    "--offline",
+    "--ignore-scripts",
+    "--prefix",
+    installDirectory,
+    archive,
+  ], { cwd: temporary });
+  assert.equal(installed.status, 0, installed.stderr);
+  const installedAtom = path.join(installDirectory, "node_modules", "atom-z80");
+  await assert.rejects(fs.access(path.join(installDirectory, "node_modules", "@jhlagado", "azm")));
+  await assert.rejects(fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "azm")));
+  await fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "debug80-runtime"));
+  const metadata = JSON.parse(await fs.readFile(path.join(installedAtom, "package.json"), "utf8"));
+  assert.equal(metadata.license, "GPL-3.0-only");
+  assert.equal(metadata.private, undefined);
+
+  await fs.writeFile(path.join(projectDirectory, "main.asm"), [
+    "%define DEBUG 1",
+    "ORG 4000H",
+    "%if DEBUG",
+    "START: LD A,42",
+    "%endif",
+    "JR START",
+    "",
+  ].join("\n"));
+  const executable = path.join(installDirectory, "node_modules", ".bin", "atom");
+  const assembled = await run(executable, ["--origin", "4000H", "main.asm"], { cwd: projectDirectory });
+  assert.equal(assembled.status, 0, assembled.stderr);
+  assert.match(assembled.stdout, /Atom assembled 1 part\(s\), 4 byte\(s\)/);
+  const current = path.join(projectDirectory, "build", "main.atom", "current");
+  assert.deepEqual(await fs.readFile(path.join(current, "main.bin")), Buffer.from([0x3e, 42, 0x18, 0xfc]));
+  for (const suffix of ["nobj", "bin", "hex", "lst", "d8.json"]) {
+    await fs.access(path.join(current, `main.${suffix}`));
+  }
+
+  await fs.writeFile(path.join(projectDirectory, "bad.asm"), "LD BC,A\n");
+  const rejected = await run(executable, ["--origin", "4000H", "bad.asm"], { cwd: projectDirectory });
+  assert.equal(rejected.status, 1);
+  assert.match(rejected.stderr, /^bad\.asm:1:1: Atom rejected a source statement/m);
+  await assert.rejects(fs.access(path.join(projectDirectory, "build", "bad.atom")));
+
+  const corePath = path.join(installedAtom, "assets", "native-core.json");
+  const core = JSON.parse(await fs.readFile(corePath, "utf8"));
+  core.symbols.AtomAssemble ^= 1;
+  await fs.writeFile(corePath, `${JSON.stringify(core, null, 2)}\n`);
+  const corrupted = await run(executable, ["--origin", "4000H", "main.asm"], { cwd: projectDirectory });
+  assert.equal(corrupted.status, 1);
+  assert.match(corrupted.stderr, /native Atom core symbol map failed its SHA-256 check/);
+});

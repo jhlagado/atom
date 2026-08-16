@@ -1,44 +1,43 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-
-import { compile } from "@jhlagado/azm";
 
 import { AtomAssemblyError } from "./atom-assembly-error.mjs";
 
-const sourcePath = fileURLToPath(new URL("../../asm/atom-host-runtime.asm", import.meta.url));
+const artifactPath = fileURLToPath(new URL("../../assets/native-core.json", import.meta.url));
 let cachedCore;
 
-const addressOf = (symbol) => symbol.address ?? symbol.value;
-
-function artifact(result, kind) {
-  const selected = result.artifacts.find((candidate) => candidate.kind === kind);
-  if (selected === undefined) {
-    throw new AtomAssemblyError("bootstrap", "missing-artifact", `AZM did not produce the Atom ${kind} artifact`);
-  }
-  return selected;
+function bootstrap(code, message, details = {}) {
+  throw new AtomAssemblyError("bootstrap", code, message, details);
 }
 
-async function assembleNativeAtomCore() {
-  const result = await compile(sourcePath, {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: "strict",
-  });
-  const errors = result.diagnostics.filter(({ severity }) => severity === "error");
-  if (errors.length !== 0) {
-    throw new AtomAssemblyError(
-      "bootstrap",
-      "native-core-assembly",
-      "AZM could not assemble the strict-contract Atom host core",
-      { diagnostics: Object.freeze(errors.map((error) => Object.freeze({ ...error }))) },
-    );
+async function readNativeAtomCore() {
+  let artifact;
+  try {
+    artifact = JSON.parse(await fs.readFile(artifactPath, "utf8"));
+  } catch (cause) {
+    bootstrap("native-core-artifact", "the pinned native Atom core cannot be read", { cause });
+  }
+  if (artifact?.format !== "atom-native-core" || artifact?.version !== 1) {
+    bootstrap("native-core-format", "the pinned native Atom core has an unsupported format");
+  }
+  if (typeof artifact.hexText !== "string" || artifact.symbols === null || typeof artifact.symbols !== "object") {
+    bootstrap("native-core-format", "the pinned native Atom core is incomplete");
+  }
+  const digest = createHash("sha256").update(artifact.hexText, "utf8").digest("hex");
+  if (digest !== artifact.hexSha256) {
+    bootstrap("native-core-integrity", "the pinned native Atom core failed its SHA-256 check");
+  }
+  const artifactDigest = createHash("sha256")
+    .update(artifact.hexText, "utf8")
+    .update("\0", "utf8")
+    .update(JSON.stringify(artifact.symbols), "utf8")
+    .digest("hex");
+  if (artifactDigest !== artifact.artifactSha256) {
+    bootstrap("native-core-integrity", "the pinned native Atom core symbol map failed its SHA-256 check");
   }
 
-  const hex = artifact(result, "hex");
-  const d8m = artifact(result, "d8m");
-  const symbols = Object.freeze(Object.fromEntries(d8m.json.symbols.flatMap((symbol) => {
-    const value = addressOf(symbol);
-    return value === undefined ? [] : [[symbol.name, value]];
-  })));
+  const symbols = Object.freeze({ ...artifact.symbols });
   const required = [
     "AtomAssemble",
     "AtomHostResidentEnd",
@@ -50,12 +49,10 @@ async function assembleNativeAtomCore() {
     "AtomSinkAbort",
   ];
   for (const name of required) {
-    if (symbols[name] === undefined) {
-      throw new AtomAssemblyError("bootstrap", "missing-symbol", `native Atom core omits ${name}`);
-    }
+    if (!Number.isInteger(symbols[name])) bootstrap("missing-symbol", `native Atom core omits ${name}`);
   }
   if (symbols.AtomHostResidentEnd > 0x4000) {
-    throw new AtomAssemblyError("bootstrap", "resident-capacity", "native Atom host core exceeds one 16 KiB bank");
+    bootstrap("resident-capacity", "native Atom host core exceeds one 16 KiB bank");
   }
 
   const codeNames = [
@@ -77,8 +74,11 @@ async function assembleNativeAtomCore() {
   const codeBytes = codeRanges.reduce((sum, { start, end }) => sum + end - start, 0);
 
   return Object.freeze({
-    sourcePath,
-    hexText: hex.text,
+    artifactPath,
+    source: artifact.source,
+    hexSha256: digest,
+    artifactSha256: artifactDigest,
+    hexText: artifact.hexText,
     symbols,
     codeRanges,
     codeBytes,
@@ -87,6 +87,6 @@ async function assembleNativeAtomCore() {
 }
 
 export function loadNativeAtomCore() {
-  cachedCore ??= assembleNativeAtomCore();
+  cachedCore ??= readNativeAtomCore();
   return cachedCore;
 }

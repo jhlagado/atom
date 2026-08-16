@@ -78,9 +78,10 @@ test("the Mac host resolves, masks, and executes one project through native Atom
     [0x4008, [0xff]],
     [0x4009, [0xff]],
   ]);
-  assert.deepEqual(result.generation.patches, [
-    { bank: 0, address: 0x4003, bytes: [0x02] },
-  ]);
+  assert.deepEqual(
+    result.generation.patches.map(({ bank, address, bytes }) => ({ bank, address, bytes })),
+    [{ bank: 0, address: 0x4003, bytes: [0x02] }],
+  );
   assert.equal(result.generation.finalCursor, 0x400a);
   assert.equal(result.generation.highWater, 0x400a);
   assert.equal(result.generation.remaining, 0xf6);

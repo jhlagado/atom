@@ -1,11 +1,43 @@
 {
   "name": "atom-z80",
   "version": "0.1.0",
-  "private": true,
   "description": "atom: a streaming Z80 assembler that runs on a Z80",
   "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhlagado/atom.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jhlagado/atom/issues"
+  },
+  "homepage": "https://github.com/jhlagado/atom#readme",
+  "keywords": [
+    "z80",
+    "assembler",
+    "tec-1"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
+  "bin": {
+    "atom": "bin/atom.mjs"
+  },
+  "exports": {
+    ".": "./src/host/index.mjs"
+  },
+  "files": [
+    "assets/native-core.json",
+    "bin",
+    "docs/atom-object-format.md",
+    "docs/command-line.md",
+    "src/host",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
+    "build:native-core": "node scripts/generate-native-core.mjs",
+    "verify:native-core": "node scripts/generate-native-core.mjs --check",
     "generate": "node src/generate-mnemonics.mjs",
     "annotate:contracts": "node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/encoder-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/symbol-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/tokenizer-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/parser-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/expression-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/integration-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/output-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/statements-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/driver-proof.asm && node node_modules/@jhlagado/azm/dist/src/cli.js --rc audit --contracts --nobin --nohex --nod8m --nolst asm/atom-host-runtime.asm",
     "build:dependencies": "npm --prefix ../debug80/packages/azm run build && npm --prefix ../debug80/packages/debug80-runtime run build",
@@ -14,6 +46,7 @@
     "pretest": "npm run prepare:proof",
     "test": "node --test test/*.test.mjs",
     "test:host": "node --test test/host-*.test.mjs",
+    "test:package": "node --test test/host-package.test.mjs",
     "premeasure": "npm run prepare:proof",
     "measure": "node test/measure.mjs",
     "measure:symbols": "node test/measure-symbols.mjs",
@@ -24,12 +57,18 @@
     "measure:output": "node test/measure-output.mjs",
     "measure:statements": "node test/measure-statements.mjs",
     "measure:driver": "node test/measure-driver.mjs",
-    "measure:host-native": "node test/measure-host-native.mjs"
+    "measure:host-native": "node test/measure-host-native.mjs",
+    "prepack": "npm run verify:native-core"
   },
   "dependencies": {
-    "@jhlagado/azm": "file:../debug80/packages/azm",
     "@jhlagado/debug80-runtime": "file:../debug80/packages/debug80-runtime"
   },
+  "devDependencies": {
+    "@jhlagado/azm": "file:../debug80/packages/azm"
+  },
+  "bundledDependencies": [
+    "@jhlagado/debug80-runtime"
+  ],
   "engines": {
     "node": ">=20"
   }

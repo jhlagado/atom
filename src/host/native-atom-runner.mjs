@@ -149,7 +149,12 @@ export function createMemoryAtomSink() {
         return reject(ATOM_HOST_SINK_STATUS.IMAGE_ORDER, "image-order", "IMAGE records descend or overlap");
       }
       const bytes = frozenBytes(operation.bytes);
-      images.push(Object.freeze({ bank: 0, address: operation.address, bytes }));
+      images.push(Object.freeze({
+        bank: 0,
+        address: operation.address,
+        bytes,
+        ...(operation.source === undefined ? {} : { source: operation.source }),
+      }));
       for (let offset = 0; offset < bytes.length; offset += 1) imageAddresses.add(operation.address + offset);
       imageEnd = operation.address + bytes.length;
       return 0;
@@ -168,7 +173,12 @@ export function createMemoryAtomSink() {
         }
       }
       const bytes = frozenBytes(operation.bytes);
-      patches.push(Object.freeze({ bank: 0, address: operation.address, bytes }));
+      patches.push(Object.freeze({
+        bank: 0,
+        address: operation.address,
+        bytes,
+        ...(operation.source === undefined ? {} : { source: operation.source }),
+      }));
       for (let offset = 0; offset < bytes.length; offset += 1) patchAddresses.add(operation.address + offset);
       return 0;
     },
@@ -240,8 +250,8 @@ export function materializeAtomGeneration(generation, { fill = 0 } = {}) {
 
 const RADIX40 = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
-function unpackSymbol(memory, pointer, symbols) {
-  if (pointer < SYMBOL_START || pointer + symbols.AtomSymbolRecordBytes > SYMBOL_END) return undefined;
+function unpackPackedSymbol(memory, pointer, symbols) {
+  if (pointer < 0 || pointer + symbols.AtomSymbolNameBytes > memory.length) return undefined;
   const first = word(memory, pointer);
   const second = word(memory, pointer + 2);
   const third = memory[pointer + 4] | ((memory[pointer + 5] & symbols.AtomSymbolNameHighMask) << 8);
@@ -254,6 +264,11 @@ function unpackSymbol(memory, pointer, symbols) {
   if (codes.some((code) => code < 0 || code >= RADIX40.length)) return undefined;
   const name = codes.map((code) => RADIX40[code]).join("").trimEnd();
   return (memory[pointer + 5] & symbols.AtomSymbolFlagPrivate) === 0 ? name : `_${name}`;
+}
+
+function unpackSymbol(memory, pointer, symbols) {
+  if (pointer < SYMBOL_START || pointer + symbols.AtomSymbolRecordBytes > SYMBOL_END) return undefined;
+  return unpackPackedSymbol(memory, pointer, symbols);
 }
 
 function sourcePosition(part, offset) {
@@ -276,6 +291,15 @@ function sourcePosition(part, offset) {
     line,
     column,
   });
+}
+
+function uniqueDeclarations(declarations) {
+  const unique = new Map();
+  for (const declaration of declarations) {
+    const key = `${declaration.name}\0${declaration.value}\0${declaration.source?.ordinal ?? -1}\0${declaration.source?.offset ?? -1}`;
+    if (!unique.has(key)) unique.set(key, declaration);
+  }
+  return Object.freeze([...unique.values()]);
 }
 
 function nativeFailure(result, project, memory, symbols, sinkState, execution, cause, bridgeFailure) {
@@ -386,6 +410,8 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let instructions = 0;
   let cycles = 0;
   let logicalHighWater = target.start;
+  const layout = [];
+  const declaredSymbols = [];
   const currentDiagnostic = () => {
     const ordinal = memory[symbols.AtomStatementErrorPart];
     const part = snapshot.parts[ordinal];
@@ -404,10 +430,15 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     [symbols.AtomSinkImageByte, Object.freeze({ kind: "image", action: () => {
       const address = pair(runtime.cpu.h, runtime.cpu.l);
       recordExtent(address + 1, "IMAGE lies outside the target range");
-      return sink.image(Object.freeze({ bank: runtime.cpu.c, address, bytes: Object.freeze([runtime.cpu.a]) }));
+      return sink.image(Object.freeze({
+        bank: runtime.cpu.c,
+        address,
+        bytes: Object.freeze([runtime.cpu.a]),
+        source: currentDiagnostic(),
+      }));
     } })],
-    [symbols.AtomSinkPatchByte, Object.freeze({ kind: "patch-byte", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.h, runtime.cpu.l), bytes: Object.freeze([runtime.cpu.a]) })) })],
-    [symbols.AtomSinkPatchWord, Object.freeze({ kind: "patch-word", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.d, runtime.cpu.e), bytes: Object.freeze([runtime.cpu.l, runtime.cpu.h]) })) })],
+    [symbols.AtomSinkPatchByte, Object.freeze({ kind: "patch-byte", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.h, runtime.cpu.l), bytes: Object.freeze([runtime.cpu.a]), source: currentDiagnostic() })) })],
+    [symbols.AtomSinkPatchWord, Object.freeze({ kind: "patch-word", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.d, runtime.cpu.e), bytes: Object.freeze([runtime.cpu.l, runtime.cpu.h]), source: currentDiagnostic() })) })],
     [symbols.AtomSinkCommit, Object.freeze({ kind: "commit", action: () => {
       if (bridgeFailure !== undefined) return ATOM_HOST_SINK_STATUS.TARGET_RANGE;
       return sink.commit(Object.freeze({
@@ -442,11 +473,27 @@ export async function assembleResolvedAtomProject(project, options = {}) {
 
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
     if (runtime.cpu.pc === symbols.AtomOutputSetOrigin) {
-      recordExtent(pair(runtime.cpu.h, runtime.cpu.l), "ORG lies outside the target range");
+      const address = pair(runtime.cpu.h, runtime.cpu.l);
+      const source = currentDiagnostic();
+      layout.push(Object.freeze({ kind: "org", address, count: 0, source }));
+      recordExtent(address, "ORG lies outside the target range");
     } else if (runtime.cpu.pc === symbols.AtomOutputReserve) {
       const cursor = word(memory, symbols.AtomOutputCursor);
       const count = pair(runtime.cpu.h, runtime.cpu.l);
+      layout.push(Object.freeze({ kind: "reserve", address: cursor, count, source: currentDiagnostic() }));
       recordExtent(cursor + count, "DS reservation lies outside the target range");
+    } else if (
+      runtime.cpu.pc === symbols.AtomSymbolDeclare ||
+      runtime.cpu.pc === symbols.AtomSymbolDeclareGlobalLabel
+    ) {
+      const name = unpackPackedSymbol(memory, pair(runtime.cpu.h, runtime.cpu.l), symbols);
+      if (name !== undefined) {
+        declaredSymbols.push(Object.freeze({
+          name,
+          value: pair(runtime.cpu.d, runtime.cpu.e),
+          source: currentDiagnostic(),
+        }));
+      }
     }
     const service = serviceAt.get(runtime.cpu.pc);
     if (service !== undefined) {
@@ -515,7 +562,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     });
   }
   return Object.freeze({
-    generation: sinkState.generation,
+    generation: Object.freeze({
+      ...sinkState.generation,
+      layout: Object.freeze(layout.slice()),
+      symbols: uniqueDeclarations(declaredSymbols),
+    }),
     execution,
     native: result,
     core: Object.freeze({
