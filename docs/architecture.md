@@ -31,7 +31,7 @@ their final bytes are emitted as PATCH records when the symbol becomes known.
 | Filesystem access and path confinement | Streaming tokenization |
 | `%INCLUDE`, `%DEFINE`, and conditional masking | Case-insensitive symbols and private scope |
 | Dependency graph, ordering, and SP1 plan | Expression parsing and validation |
-| Loading each ordered source part | Labels, equates, data, placement, and string directives |
+| Loading each ordered source part | Labels, equates, data, placement, alignment, and string directives |
 | NOBJ storage and output sink implementation | Complete Z80 instruction encoding |
 | Binary, HEX, listing, and D8 rendering | Forward-reference and patch decisions |
 | Atomic artifact publication | Final undefined-symbol check and lifecycle control |
@@ -97,7 +97,7 @@ development generator flattens its include closure and performs mechanical
 rewrites into the checked Atom source under `self-host/`. The proof runs three
 complete builds: the pinned AZM image assembles that source, the resulting Atom
 image assembles it again, and translated source is assembled independently by
-AZM. All initialized addresses and all 13,430 resident bytes must agree.
+AZM. All initialized addresses and all 13,812 resident bytes must agree.
 
 This generated representation is not a second hand-maintained implementation.
 `npm run verify:self-host-source` fails if it drifts from the readable source.

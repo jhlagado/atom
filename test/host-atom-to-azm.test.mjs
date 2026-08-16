@@ -24,6 +24,9 @@ test("Atom-to-AZM translation changes only concrete assembler directives", () =>
   assert.equal(translateAtomLineToAzm(".DATA: DB 1"), ".DATA: .db 1");
   assert.equal(translateAtomLineToAzm('TEXT: CSTR "A;B" ; data'), 'TEXT: .cstr "A;B" ; data');
   assert.equal(translateAtomLineToAzm("DB ';' ; semicolon"), ".db ';' ; semicolon");
+  assert.equal(translateAtomLineToAzm("ALIGN 16"), ".align 16");
+  assert.equal(translateAtomLineToAzm("LD A,LOW(Target)+HIGH (Other)"), "LD A,LSB(Target)+MSB (Other)");
+  assert.equal(translateAtomLineToAzm('DB "LOW(X)",LOW(X) ; HIGH(Y)'), '.db "LOW(X)",LSB(X) ; HIGH(Y)');
   assert.equal(translateAtomLineToAzm("LD A,%1010 ; binary"), "LD A,%1010 ; binary");
 });
 

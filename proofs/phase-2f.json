@@ -20,7 +20,7 @@
     "AtomPendingPeek": { "measuredInstructions": 136, "maxInstructions": 180, "measuredCycles": 1683, "maxCycles": 2200 },
     "AtomPackSymbol": { "measuredInstructions": 468, "maxInstructions": 550, "measuredCycles": 3994, "maxCycles": 5000 },
     "AtomSymbolDeclare": { "measuredInstructions": 72, "maxInstructions": 1100, "measuredCycles": 735, "maxCycles": 14000 },
-    "AtomParserParse": { "measuredInstructions": 5471, "maxInstructions": 8500, "measuredCycles": 54537, "maxCycles": 85000 },
+    "AtomParserParse": { "measuredInstructions": 5874, "maxInstructions": 8500, "measuredCycles": 58102, "maxCycles": 85000 },
     "AtomOutputEmitInstruction": { "measuredInstructions": 828, "maxInstructions": 1000, "measuredCycles": 7778, "maxCycles": 10000 },
     "AtomOutputResolveSymbol": { "measuredInstructions": 1348, "maxInstructions": 1600, "measuredCycles": 16039, "maxCycles": 19000 }
   }

@@ -18,7 +18,7 @@
     "AtomPackSymbol": { "measuredInstructions": 435, "maxInstructions": 500, "measuredCycles": 3736, "maxCycles": 4200 },
     "AtomSymbolDeclare": { "measuredInstructions": 120, "maxInstructions": 1000, "measuredCycles": 1488, "maxCycles": 12000 },
     "AtomSymbolAdvanceScope": { "measuredInstructions": 20, "maxInstructions": 40, "measuredCycles": 258, "maxCycles": 500 },
-    "AtomParserParse": { "measuredInstructions": 5570, "maxInstructions": 8000, "measuredCycles": 56908, "maxCycles": 80000 },
+    "AtomParserParse": { "measuredInstructions": 5950, "maxInstructions": 8000, "measuredCycles": 60269, "maxCycles": 80000 },
     "AtomPatchLocate": { "measuredInstructions": 129, "maxInstructions": 180, "measuredCycles": 1152, "maxCycles": 1600 },
     "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 2040, "maxCycles": 2450 },
     "AtomParserQueueReferences": { "measuredInstructions": 228, "maxInstructions": 320, "measuredCycles": 2091, "maxCycles": 3000 }

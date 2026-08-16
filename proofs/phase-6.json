@@ -2,28 +2,28 @@
   "name": "Atom Phase 6 native self-hosting proof",
   "source": {
     "inputFiles": 13,
-    "statements": 7315,
+    "statements": 7529,
     "generatedParts": 5,
-    "generatedBytes": 96289,
+    "generatedBytes": 99296,
     "checkedParts": 6,
-    "checkedBytes": 96462,
-    "globalSymbols": 832,
-    "privateSymbols": 408
+    "checkedBytes": 99469,
+    "globalSymbols": 847,
+    "privateSymbols": 430
   },
   "native": {
-    "codeAndTables": 12879,
+    "codeAndTables": 13261,
     "fixedWorkspace": 551,
-    "linkedResidentExtent": 13430,
-    "physicalMarginBelow16KiB": 2954,
-    "initializedBytes": 13054,
+    "linkedResidentExtent": 13812,
+    "physicalMarginBelow16KiB": 2572,
+    "initializedBytes": 13436,
     "reservedBytes": 376,
-    "patchRecords": 2174,
-    "declaredSymbols": 1240
+    "patchRecords": 2247,
+    "declaredSymbols": 1277
   },
   "execution": {
-    "instructions": 156323531,
-    "cycles": 1427943875,
-    "serviceCalls": 15230,
+    "instructions": 163392529,
+    "cycles": 1492523777,
+    "serviceCalls": 15685,
     "sourcePages": [0, 1, 2, 3, 4, 5],
     "maxInstructions": 200000000,
     "maxCycles": 2000000000
@@ -34,14 +34,14 @@
     "secondAtomGeneration": true
   },
   "package": {
-    "packedBytesObserved": 267182,
-    "unpackedBytes": 1289012,
-    "entries": 264,
+    "packedBytesObserved": 282974,
+    "unpackedBytes": 1340800,
+    "entries": 277,
     "installedSelfHostWithoutAzm": true
   },
   "proofs": {
-    "tests": 241,
-    "passed": 241,
+    "tests": 260,
+    "passed": 260,
     "failed": 0,
     "strictRegisterContracts": true
   }

@@ -59,6 +59,12 @@ in A. Success returns the patch kind in A and the field's byte offset in B.
 | Relative | 3 | Subtract `patchAddress+1`; result must fit -128–127 |
 | Displacement | 4 | Final value must fit -128–127 |
 | Truncating byte | 5 | Store the low byte of the final signed or unsigned word; used by `DB`. |
+| Low byte | 6 | Store bits 0–7 of the final word. |
+| High byte | 7 | Store bits 8–15 of the final word. |
+
+The low-byte and high-byte kinds retain an outer `LOW()` or `HIGH()` transform
+without enlarging the six-byte pending record. They cannot be combined with a
+relative or index-displacement patch rule.
 
 `AtomParserQueueReferences` accepts the logical instruction output address in
 DE. It preflights the complete pending-list requirement, converts each byte

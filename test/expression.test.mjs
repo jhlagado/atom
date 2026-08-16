@@ -71,6 +71,49 @@ test("all concrete operators accept nested whitespace and stop before delimiters
   assert.equal(result.hl, azmWord("($10 << 2) | (%11 ^ 1)"));
 });
 
+test("LOW and HIGH are case-insensitive byte functions matching AZM", () => {
+  for (const [source, oracle] of [
+    ["LOW($1234)", "LSB($1234)"],
+    ["hIgH($1234)", "MSB($1234)"],
+    ["LOW(1+$12FF)", "LSB(1+$12FF)"],
+    ["HIGH(-1)", "MSB(-1)"],
+    ["HIGH(LOW($1234))", "MSB(LSB($1234))"],
+  ]) {
+    h.reset();
+    const result = h.evaluate(source);
+    assert.equal(result.carry, 0, source);
+    assert.equal(result.status, EXPRESSION.RESOLVED, source);
+    assert.equal(result.hl, azmWord(oracle), source);
+  }
+});
+
+test("LOW and HIGH retain one forward affine symbol for byte patching", () => {
+  for (const [source, transform, addend] of [
+    ["LOW(Target)", 2, 0],
+    ["HIGH(Target+5)", 3, 5],
+    ["low(5+Target)", 2, 5],
+  ]) {
+    h.reset();
+    const result = h.evaluate(source);
+    assert.equal(result.carry, 0, source);
+    assert.equal(result.status, EXPRESSION.UNRESOLVED, source);
+    assert.equal((result.hl << 16) >> 16, addend, source);
+    assert.equal(h.memory[h.symbols.AtomExpressionResultUnresolved], transform, source);
+  }
+
+  for (const [source, status] of [
+    ["LOW()", EXPRESSION.EXPECTED_PRIMARY],
+    ["LOW(Target)+1", EXPRESSION.FORWARD_FORM],
+    ["HIGH(LOW(Target))", EXPRESSION.FORWARD_FORM],
+  ]) {
+    h.reset();
+    const result = h.evaluate(source);
+    assert.equal(result.carry, 1, source);
+    assert.equal(result.status, status, source);
+    assert.equal(result.afterGlobalEnd, result.beforeGlobalEnd, source);
+  }
+});
+
 test("boundary-partitioned concrete arithmetic is byte-identical to AZM", () => {
   const values = [0, 1, 2, 7, 127, 128, 255, 256, 32767, 32768, 65534, 65535];
   const cases = new Set();

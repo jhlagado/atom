@@ -38,7 +38,7 @@ are frozen. Compressed archive size is observational because gzip output can
 vary with the npm toolchain.
 
 Release evidence belongs in the current phase report and
-`proofs/phase-9.json`. Every number must be labelled Measured, Projected, or
+`proofs/phase-10.json`. Every number must be labelled Measured, Projected, or
 Hypothesis. A green test count alone is insufficient; record native size,
 fixed workspace, linked extent, self-host equivalence, package census, and the
 exact dependency commits.

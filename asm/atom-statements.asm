@@ -25,7 +25,8 @@ AtomDirectiveDs:  .equ 5
 AtomDirectiveCstr:.equ 6
 AtomDirectivePstr:.equ 7
 AtomDirectiveIstr:.equ 8
-AtomDirectiveCount:.equ 8
+AtomDirectiveAlign:.equ 9
+AtomDirectiveCount:.equ 9
 
 ; Assemble the source part already installed in the tokenizer. Part EOF is not
 ; final assembly EOF: a later source part may still define a global reference.
@@ -218,6 +219,8 @@ AtomStatementDirectivePublished:
             JP   Z,AtomStatementPstr
             CP   AtomDirectiveIstr
             JP   Z,AtomStatementIstr
+            CP   AtomDirectiveAlign
+            JP   Z,AtomStatementAlign
             JP   AtomStatementExpectedSaved
 
 AtomStatementOrg:
@@ -272,7 +275,7 @@ AtomStatementDataExpression:
 .if AtomDriverMode
             JP   AtomStatementDataDelimiter
 .else
-            JR   AtomStatementDataDelimiter
+            JP   AtomStatementDataDelimiter
 .endif
 AtomStatementDataResolvedByte:
             LD   A,L
@@ -281,7 +284,7 @@ AtomStatementDataResolvedByte:
 .if AtomDriverMode
             JP   AtomStatementDataDelimiter
 .else
-            JR   AtomStatementDataDelimiter
+            JP   AtomStatementDataDelimiter
 .endif
 
 AtomStatementDataUnresolved:
@@ -297,12 +300,24 @@ AtomStatementDataUnresolved:
             JP   C,AtomStatementOutputFailure
             CALL AtomPendingCheckCapacity
             JP   C,AtomStatementSymbolFailure
+            LD   A,(AtomExpressionResultUnresolved)
+            CP   AtomExpressionForwardLow
+            JR   Z,AtomStatementDataPendingLow
+            CP   AtomExpressionForwardHigh
+            JR   Z,AtomStatementDataPendingHigh
+            LD   A,(AtomStatementDataPatchKind)
+            JR   AtomStatementDataPendingKindReady
+AtomStatementDataPendingLow:
+            LD   A,AtomPatchKindLowByte
+            JR   AtomStatementDataPendingKindReady
+AtomStatementDataPendingHigh:
+            LD   A,AtomPatchKindHighByte
+AtomStatementDataPendingKindReady:
+            LD   (AtomStatementDataPendingKind),A
 .if AtomDriverMode
             LD   A,(AtomExpressionSymbolPart)
             CP   16
             JP   NC,AtomStatementSymbolPartFailure
-            LD   A,(AtomStatementDataPatchKind)
-            LD   (AtomStatementDataPendingKind),A
 .endif
             LD   HL,(AtomStatementDataKey)
             CALL AtomSymbolReference
@@ -343,11 +358,7 @@ AtomStatementDataPlaceholderByte:
 AtomStatementDataQueue:
             LD   IX,(AtomStatementDataSymbol)
             LD   DE,(AtomStatementDataAddress)
-.if AtomDriverMode
             LD   A,(AtomStatementDataPendingKind)
-.else
-            LD   A,(AtomStatementDataPatchKind)
-.endif
             LD   B,A
             LD   A,(AtomStatementDataAddend)
             LD   C,A
@@ -568,6 +579,50 @@ AtomStatementDsReserve:
             JP   C,AtomStatementOutputFailure
             JP   AtomStatementNext
 
+; ALIGN emits the same initialized zero padding as AZM. Any positive resolved
+; word is accepted; alignment is not restricted to powers of two.
+AtomStatementAlign:
+            LD   BC,(AtomOutputCursor)
+            CALL AtomExpressionParseDeferred
+            JP   C,AtomStatementDirectiveFailure
+            OR   A
+            JP   NZ,AtomStatementDirectiveUnresolved
+            LD   A,(AtomExpressionResultValue+2)
+            OR   A
+            JP   NZ,AtomStatementDirectiveRange
+            LD   A,H
+            OR   L
+            JP   Z,AtomStatementDirectiveRange
+            LD   (AtomStatementDataValue),HL
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenEol
+            JP   NZ,AtomStatementDirectiveDelimiter
+            LD   HL,(AtomOutputCursor)
+            LD   (AtomExpressionLeftValue),HL
+            XOR  A
+            LD   (AtomExpressionLeftValue+2),A
+            LD   HL,(AtomStatementDataValue)
+            LD   (AtomExpressionResultValue),HL
+            LD   (AtomExpressionResultValue+2),A
+            CALL AtomExpressionRemainder
+            JP   C,AtomStatementDirectiveFailure
+            LD   HL,(AtomExpressionResultValue)
+            LD   A,H
+            OR   L
+            JR   Z,AtomStatementAlignCountReady
+            EX   DE,HL
+            LD   HL,(AtomStatementDataValue)
+            OR   A
+            SBC  HL,DE
+AtomStatementAlignCountReady:
+            LD   (AtomStatementDataCount),HL
+            XOR  A
+            LD   (AtomStatementDataFill),A
+            LD   HL,(AtomStatementDataCount)
+            CALL AtomOutputCheckCapacity
+            JP   C,AtomStatementOutputFailure
+            JP   AtomStatementDsFillLoop
+
 AtomStatementSuccess:
             XOR  A
             RET
@@ -623,6 +678,8 @@ AtomStatementDirectiveTable:
             .db 4,AtomDirectivePstr
             .dw $3B4C
             .db 4,AtomDirectiveIstr
+            .dw $0829
+            .db 5,AtomDirectiveAlign
 
 .routine out A clobbers HL,zero,sign,parity,halfCarry
 AtomStatementStringTake:
@@ -717,6 +774,9 @@ AtomStatementDirectiveFailure:
 AtomStatementDirectiveUnresolved:
             LD   A,AtomExpressionUnresolved
             JR   AtomStatementDirectiveFailure
+AtomStatementDirectiveRange:
+            LD   A,AtomExpressionStatusRange
+            JR   AtomStatementDirectiveFailure
 AtomStatementDirectiveExpected:
             LD   A,AtomExpressionStatusExpectedPrimary
             JR   AtomStatementDirectiveFailure
@@ -747,9 +807,7 @@ AtomStatementDataPatchKind: .db 0
 AtomStatementDataAddend:    .db 0
 AtomStatementDataFill:      .db 0
 AtomStatementDataValue:     .dw 0
-.if AtomDriverMode
 AtomStatementDataPendingKind:.equ AtomStatementDataValue
-.endif
 AtomStatementDataCount:     .dw 0
 AtomStatementDataKey:       .dw 0
 AtomStatementDataSymbol:    .dw 0

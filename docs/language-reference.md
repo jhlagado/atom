@@ -77,6 +77,15 @@ constant addend from -128 through 127. `TARGET`, `TARGET+5`, `5+TARGET`, and
 `TARGET-(2*3)` qualify. Two unresolved symbols, multiplication of an unresolved
 symbol, and unary negation of an unresolved symbol do not.
 
+`LOW(EXPRESSION)` returns bits 0–7 and `HIGH(EXPRESSION)` returns bits 8–15.
+Concrete expressions may nest these functions. A forward byte function must
+be the outermost operation and may retain one affine symbol, as in
+`HIGH(TARGET+5)`. Further arithmetic such as `LOW(TARGET)+1` is rejected.
+Forward byte functions are valid in fixed immediate or absolute fields and in
+`DB` or `DW`; they are rejected for relative branches and IX/IY displacements,
+whose range calculation cannot be retained in the six-byte pending record.
+`LOW` and `HIGH` remain legal symbol names when they are not followed by `(`.
+
 ## Instructions
 
 Atom accepts the complete Z80 instruction-form census used by AZM, including
@@ -123,6 +132,7 @@ DB 1,"TEXT",0
 DW BASE,$+2
 DS 16
 DS 8,$FF
+ALIGN 16
 CSTR "READY"
 PSTR "NAME"
 ISTR "TOKEN"
@@ -138,6 +148,9 @@ ISTR "TOKEN"
   affine expressions produce word patches. Strings are not accepted.
 - `DS COUNT` reserves uninitialized storage. `DS COUNT,FILL` emits initialized
   fill bytes. Both expressions must already be resolved.
+- `ALIGN BOUNDARY` emits initialized zero bytes up to the next address divisible
+  by a resolved positive boundary. An already aligned address emits nothing;
+  the boundary need not be a power of two.
 - `CSTR "TEXT"` emits the decoded bytes followed by zero.
 - `PSTR "TEXT"` emits the decoded byte count followed by the bytes.
 - `ISTR "TEXT"` sets bit 7 on the final decoded byte. An empty `ISTR` emits
@@ -178,10 +191,10 @@ for a binary literal when followed by `0` or `1`, and as remainder otherwise.
 
 ## Deliberate boundaries
 
-Atom does not currently implement macros, op expansion, `ALIGN`, `INCBIN`,
-`LOW()` or `HIGH()`, automatic branch promotion, dotted directives, typed
-layout, modules or imports with namespace semantics, repeated textual
-inclusion, string-valued equates, forward equates, or banked output. Filesystem
-work, dependency resolution, conditional assembly, listing generation, D8
-maps, Intel HEX, and artifact publication are host or operating-adapter
-services rather than resident assembler features.
+Atom does not currently implement macros, op expansion, `INCBIN`, automatic
+branch promotion, dotted directives, typed layout, modules or imports with
+namespace semantics, repeated textual inclusion, string-valued equates,
+forward equates, or banked output. Filesystem work, dependency resolution,
+conditional assembly, listing generation, D8 maps, Intel HEX, and artifact
+publication are host or operating-adapter services rather than resident
+assembler features.

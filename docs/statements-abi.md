@@ -19,13 +19,14 @@ START:
     DW START,.LOOP
     DS 8
     DS 4,$FF
+    ALIGN 16
     DJNZ .LOOP
 ```
 
 Assembler directives are bare reserved words: `EQU`, `ORG`, `DB`, `DW`, `DS`,
-`CSTR`, `PSTR`, and `ISTR`. Dotted spellings are rejected. Lines beginning with
-`%` belong to the host preprocessor and must have been masked before native
-assembly.
+`ALIGN`, `CSTR`, `PSTR`, and `ISTR`. Dotted spellings are rejected. Lines
+beginning with `%` belong to the host preprocessor and must have been masked
+before native assembly.
 
 ## Labels and equates
 
@@ -73,6 +74,11 @@ The count and optional fill must both be resolved. A trailing uninitialized
 reservation therefore advances subsequent labels but does not extend the
 loadable byte stream, matching AZM.
 
+`ALIGN BOUNDARY` requires a resolved positive word and emits initialized zero
+bytes until the cursor is divisible by that boundary. It accepts non-power-of-two
+boundaries and emits nothing when the cursor is already aligned. Complete
+capacity is checked before the first byte.
+
 Each list item evaluates `$` at that item's output address. Output and pending
 capacity are checked before a forward data symbol is inserted or its
 placeholder is emitted. A later sink failure is terminal for the uncommitted
@@ -104,13 +110,16 @@ packed symbol key.
 ## Current limits
 
 Atom intentionally rejects forward-dependent `EQU`, unresolved `ORG`,
-unresolved `DS` count or fill, strings in `DW`, string-valued equates, and
-dotted directive aliases. The host AZM translator
+unresolved `DS` count or fill, unresolved `ALIGN`, strings in `DW`,
+string-valued equates, and dotted directive aliases. The host AZM translator
 must rewrite Atom's decoded string escapes as explicit byte values because
 AZM's quoted data syntax has different escape semantics.
 
 Single-quoted character literals enter expressions as numeric byte values and
 use the same escapes as strings.
+
+`LOW()` and `HIGH()` are expression functions. Their forward forms use the
+low-byte and high-byte pending kinds described in `symbolic-parser-abi.md`.
 
 `AtomAssembleFinish` performs the final undefined-symbol and private-scope
 checks after the last part. An undefined result sets the exact part and offset

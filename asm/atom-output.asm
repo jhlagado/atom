@@ -235,7 +235,15 @@ _AtomOutputResolveSignReady:
             CP   AtomPatchKindTruncateByte
             JR   Z,_AtomOutputResolveSubmitByte
 .endif
+            CP   AtomPatchKindLowByte
+            JR   Z,_AtomOutputResolveSubmitByte
+            CP   AtomPatchKindHighByte
+            JR   Z,_AtomOutputResolveHighByte
             JP   AtomOutputResolveInternal
+
+_AtomOutputResolveHighByte:
+            LD   A,(AtomOutputResolveValue+1)
+            JR   _AtomOutputResolveSubmitByteA
 
 _AtomOutputResolveByte:
             LD   A,(AtomOutputResolveValue+2)

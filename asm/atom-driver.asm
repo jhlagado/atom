@@ -320,7 +320,7 @@ AtomFinishAnchor:
             LD   A,(IX+4)
             AND  AtomPendingKindMask
             JR   Z,AtomFinishInternal
-            CP   AtomPatchKindTruncateByte+1
+            CP   AtomPatchKindHighByte+1
             JR   NC,AtomFinishInternal
             LD   A,(IX+4)
             AND  AtomPendingPartMask

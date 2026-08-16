@@ -326,9 +326,10 @@ AtomParserAddReference:
             LD   A,(AtomParserOperandCount)
             LD   (DE),A
             INC  DE
-            XOR  A
+            LD   A,(AtomExpressionResultUnresolved)
             LD   (DE),A
             INC  DE
+            XOR  A
             LD   (DE),A
             INC  DE
             LD   A,(AtomExpressionSymbolPart)
@@ -1071,7 +1072,27 @@ _AtomParserLocateReferenceLoop:
             CALL AtomParserBuildReferenceAddress
             LD   HL,AtomParserBuildKind
             ADD  HL,DE
+            LD   A,(HL)
+            CP   AtomExpressionForwardLow
+            JR   Z,_AtomParserLocateLowReference
+            CP   AtomExpressionForwardHigh
+            JR   Z,_AtomParserLocateHighReference
             LD   A,(AtomParserReferenceKindScratch)
+            JR   _AtomParserLocateStoreKind
+_AtomParserLocateLowReference:
+            LD   A,AtomPatchKindLowByte
+            JR   _AtomParserLocateByteFunction
+_AtomParserLocateHighReference:
+            LD   A,AtomPatchKindHighByte
+_AtomParserLocateByteFunction:
+            PUSH AF
+            LD   A,(AtomParserReferenceKindScratch)
+            CP   AtomPatchKindRelative
+            JR   Z,_AtomParserLocateByteFunctionInvalid
+            CP   AtomPatchKindDisplacement
+            JR   Z,_AtomParserLocateByteFunctionInvalid
+            POP  AF
+_AtomParserLocateStoreKind:
             LD   (HL),A
             INC  HL
             LD   A,(AtomParserReferenceOffsetScratch)
@@ -1079,6 +1100,10 @@ _AtomParserLocateReferenceLoop:
             LD   HL,AtomParserReferenceScan
             INC  (HL)
             JR   _AtomParserLocateReferenceLoop
+
+_AtomParserLocateByteFunctionInvalid:
+            POP  AF
+            JR   _AtomParserUnpatchableReference
 
 _AtomParserUnpatchableReference:
             LD   A,AtomParserStatusUnpatchable

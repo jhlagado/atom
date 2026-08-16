@@ -21,7 +21,7 @@
     "AtomOutputEmitWord": { "measuredInstructions": 141, "maxInstructions": 180, "measuredCycles": 1360, "maxCycles": 1750 },
     "AtomOutputReserve": { "measuredInstructions": 20, "maxInstructions": 30, "measuredCycles": 226, "maxCycles": 320 },
     "AtomOutputSetOrigin": { "measuredInstructions": 3, "maxInstructions": 8, "measuredCycles": 30, "maxCycles": 80 },
-    "AtomAssemblePart": { "measuredInstructions": 24632, "maxInstructions": 31000, "measuredCycles": 241065, "maxCycles": 305000 },
+    "AtomAssemblePart": { "measuredInstructions": 32858, "maxInstructions": 42000, "measuredCycles": 323504, "maxCycles": 420000 },
     "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
     "AtomTokenizerNext": { "measuredInstructions": 233, "maxInstructions": 300, "measuredCycles": 2386, "maxCycles": 3100 },
     "AtomRecognizeMnemonic": { "measuredInstructions": 470, "maxInstructions": 600, "measuredCycles": 4146, "maxCycles": 5200 },

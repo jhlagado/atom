@@ -164,3 +164,32 @@ test("D8 classifies string directives as data and colon equates as constants", a
     [["LENGTH", "constant"], ["TEXT", "label"]],
   );
 });
+
+test("D8 classifies ALIGN padding as source-provenanced data", async () => {
+  const { artifacts } = await render([
+    "ORG 4001H",
+    "ALIGN 4",
+    "NOP",
+    "",
+  ].join("\n"));
+  assert.deepEqual(artifacts.d8.files["main.asm"].segments, [
+    {
+      start: 0x4001,
+      end: 0x4004,
+      lstLine: 2,
+      line: 2,
+      column: 1,
+      kind: "data",
+      confidence: "high",
+    },
+    {
+      start: 0x4004,
+      end: 0x4005,
+      lstLine: 3,
+      line: 3,
+      column: 1,
+      kind: "code",
+      confidence: "high",
+    },
+  ]);
+});

@@ -10,9 +10,9 @@
     { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 32 },
     { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 1348 },
     { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 40 },
-    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1880 },
+    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 2086 },
     { "name": "expression-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 302 },
-    { "name": "lower-free", "start": "AtomExpressionWorkspaceEnd", "end": "AtomExpressionProofSourceStart", "exactBytes": 14901 },
+    { "name": "lower-free", "start": "AtomExpressionWorkspaceEnd", "end": "AtomExpressionProofSourceStart", "exactBytes": 14695 },
     { "name": "proof-source", "start": "AtomExpressionProofSourceStart", "end": "AtomExpressionProofSourceEnd", "exactBytes": 514 },
     { "name": "proof-key", "start": "AtomExpressionProofKeyStart", "end": "AtomExpressionProofKeyEnd", "exactBytes": 8 },
     { "name": "mid-free-a", "start": "AtomExpressionProofKeyEnd", "end": "AtomExpressionProofSymbolStart", "exactBytes": 3574 },
@@ -24,7 +24,7 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "expression-rule-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionRuleCodeEnd", "exactBytes": 1880 },
+    { "name": "expression-rule-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionRuleCodeEnd", "exactBytes": 2086 },
     { "name": "expression-fixed-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 302 },
     { "name": "expression-value-stack", "start": "AtomExpressionValueStack", "end": "AtomExpressionOperatorStack", "exactBytes": 160 },
     { "name": "expression-operator-stack", "start": "AtomExpressionOperatorStack", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 80 },

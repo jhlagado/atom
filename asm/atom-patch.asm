@@ -10,6 +10,8 @@ AtomPatchKindWord:         .equ 2
 AtomPatchKindRelative:     .equ 3
 AtomPatchKindDisplacement: .equ 4
 AtomPatchKindTruncateByte: .equ 5
+AtomPatchKindLowByte:      .equ 6
+AtomPatchKindHighByte:     .equ 7
 
 ; Locate one patchable operand in an already validated instruction record.
 ;

@@ -42,6 +42,12 @@ AtomExpressionMarkerLeftParen:  .equ $7F
 AtomExpressionUnaryPlus:        .equ $80+AtomTokenPlus
 AtomExpressionUnaryMinus:       .equ $80+AtomTokenMinus
 AtomExpressionUnaryTilde:       .equ $80+AtomTokenTilde
+AtomExpressionUnaryLow:         .equ $F0
+AtomExpressionUnaryHigh:        .equ $F1
+
+AtomExpressionForwardPlain:     .equ 1
+AtomExpressionForwardLow:       .equ 2
+AtomExpressionForwardHigh:      .equ 3
 
 ; Parse one expression beginning at the current published token.
 ;
@@ -134,6 +140,62 @@ AtomExpressionQueue:
             LD   C,L
             JP   AtomPendingAdd
 
+; LOW(...) and HIGH(...) are unary byte functions. AZM spells the same
+; operations LSB(...) and MSB(...); Atom keeps the more familiar source names.
+.routine out A,carry clobbers BC,DE,HL,IX,zero,sign,parity,halfCarry
+AtomExpressionClassifyFunction:
+            LD   A,(AtomTokenRecord+AtomTokenLengthOffset)
+            CP   3
+            JR   Z,_AtomExpressionClassifyLow
+            CP   4
+            JR   NZ,_AtomExpressionNotFunction
+            LD   C,AtomExpressionUnaryHigh
+            LD   DE,$336F
+            JR   _AtomExpressionClassifyFunctionPack
+_AtomExpressionClassifyLow:
+            LD   C,AtomExpressionUnaryLow
+            LD   DE,$4D6F
+_AtomExpressionClassifyFunctionPack:
+            PUSH DE
+            PUSH BC
+            LD   HL,(AtomTokenRecord+AtomTokenLexemeOffset)
+            LD   B,A
+            LD   DE,AtomExpressionResultKey
+            CALL AtomRadix40Pack
+            POP  BC
+            POP  DE
+            JR   C,_AtomExpressionNotFunction
+            LD   HL,(AtomExpressionResultKey)
+            OR   A
+            SBC  HL,DE
+            JR   NZ,_AtomExpressionNotFunction
+            LD   HL,(AtomTokenSourceCursor)
+            LD   DE,(AtomTokenSourceEnd)
+_AtomExpressionFunctionLookahead:
+            LD   A,H
+            CP   D
+            JR   NZ,_AtomExpressionFunctionLookaheadByte
+            LD   A,L
+            CP   E
+            JR   Z,_AtomExpressionNotFunction
+_AtomExpressionFunctionLookaheadByte:
+            LD   A,(HL)
+            CP   " "
+            JR   Z,_AtomExpressionFunctionLookaheadSpace
+            CP   $09
+            JR   Z,_AtomExpressionFunctionLookaheadSpace
+            CP   "("
+            JR   NZ,_AtomExpressionNotFunction
+            LD   A,C
+            OR   A
+            RET
+_AtomExpressionFunctionLookaheadSpace:
+            INC  HL
+            JR   _AtomExpressionFunctionLookahead
+_AtomExpressionNotFunction:
+            SCF
+            RET
+
 ; Consume one operand, grouping marker, or unary operator. The operator and
 ; value stacks make the parser finite and non-recursive for strict proof.
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE,IX,IY
@@ -184,6 +246,8 @@ _AtomExpressionPrimaryCurrent:
             CALL AtomExpressionSetResolvedWord
             JR   _AtomExpressionPrimaryFinish
 _AtomExpressionPrimaryName:
+            CALL AtomExpressionClassifyFunction
+            JR   NC,_AtomExpressionPushFunction
             CALL AtomExpressionPrimaryName
             RET  C
             JR   _AtomExpressionPrimaryPublish
@@ -198,6 +262,21 @@ _AtomExpressionPrimaryPublish:
             XOR  A
             LD   (AtomExpressionExpectOperand),A
             RET
+
+_AtomExpressionPushFunction:
+            LD   (AtomExpressionOperator),A
+            LD   A,7
+            LD   (AtomExpressionOperatorPrecedence),A
+            CALL AtomExpressionCaptureOperatorPosition
+            CALL AtomExpressionPushOperator
+            RET  C
+            CALL AtomExpressionNextToken
+            RET  C
+            LD   A,(AtomTokenRecord+AtomTokenKindOffset)
+            CP   AtomTokenLeftParen
+            JP   Z,_AtomExpressionPushParen
+            LD   A,AtomExpressionStatusExpectedPrimary
+            JP   AtomExpressionFailHere
 
 ; Consume a binary operator or close one grouping level. Zero on return means
 ; the current token is an outer delimiter and parsing is complete.
@@ -579,15 +658,56 @@ _AtomExpressionApplyUnaryLoop:
             LD   A,(AtomExpressionOperator)
             CP   AtomExpressionUnaryPlus
             JR   Z,_AtomExpressionApplyUnaryPublish
+            CP   AtomExpressionUnaryLow
+            JR   Z,_AtomExpressionApplyUnaryForwardLow
+            CP   AtomExpressionUnaryHigh
+            JR   Z,_AtomExpressionApplyUnaryForwardHigh
+_AtomExpressionApplyUnaryForwardFailure:
             LD   A,AtomExpressionStatusForwardForm
             JP   AtomExpressionFailOperator
+_AtomExpressionApplyUnaryForwardLow:
+            LD   B,AtomExpressionForwardLow
+            JR   _AtomExpressionApplyUnaryForwardFunction
+_AtomExpressionApplyUnaryForwardHigh:
+            LD   B,AtomExpressionForwardHigh
+_AtomExpressionApplyUnaryForwardFunction:
+            LD   A,(AtomExpressionResultUnresolved)
+            CP   AtomExpressionForwardPlain
+            JR   NZ,_AtomExpressionApplyUnaryForwardFailure
+            LD   A,B
+            LD   (AtomExpressionResultUnresolved),A
+            JR   _AtomExpressionApplyUnaryPublish
 _AtomExpressionApplyUnaryConcrete:
             LD   A,(AtomExpressionOperator)
             CP   AtomExpressionUnaryPlus
             JR   Z,_AtomExpressionApplyUnaryPublish
             CP   AtomExpressionUnaryMinus
-            CALL Z,AtomExpressionNegateResult
-            CALL NZ,AtomExpressionComplementResult
+            JR   Z,_AtomExpressionApplyUnaryNegate
+            CP   AtomExpressionUnaryTilde
+            JR   Z,_AtomExpressionApplyUnaryComplement
+            CP   AtomExpressionUnaryLow
+            JR   Z,_AtomExpressionApplyUnaryLow
+            CP   AtomExpressionUnaryHigh
+            JR   Z,_AtomExpressionApplyUnaryHigh
+            JP   AtomExpressionInternalFailure
+_AtomExpressionApplyUnaryNegate:
+            CALL AtomExpressionNegateResult
+            JR   _AtomExpressionApplyUnaryConcreteDone
+_AtomExpressionApplyUnaryComplement:
+            CALL AtomExpressionComplementResult
+            JR   _AtomExpressionApplyUnaryConcreteDone
+_AtomExpressionApplyUnaryLow:
+            XOR  A
+            LD   (AtomExpressionResultValue+1),A
+            LD   (AtomExpressionResultValue+2),A
+            JR   _AtomExpressionApplyUnaryConcreteDone
+_AtomExpressionApplyUnaryHigh:
+            LD   A,(AtomExpressionResultValue+1)
+            LD   (AtomExpressionResultValue),A
+            XOR  A
+            LD   (AtomExpressionResultValue+1),A
+            LD   (AtomExpressionResultValue+2),A
+_AtomExpressionApplyUnaryConcreteDone:
             RET  C
 _AtomExpressionApplyUnaryPublish:
             CALL AtomExpressionPushValue
@@ -663,6 +783,12 @@ AtomExpressionReduceLoaded:
 .routine out A,carry clobbers BC,DE,HL,IX,IY,zero,sign,parity,halfCarry
 AtomExpressionReduceForward:
             LD   A,(AtomExpressionLeftUnresolved)
+            CP   AtomExpressionForwardLow
+            JP   NC,_AtomExpressionForwardFailure
+            LD   A,(AtomExpressionResultUnresolved)
+            CP   AtomExpressionForwardLow
+            JP   NC,_AtomExpressionForwardFailure
+            LD   A,(AtomExpressionLeftUnresolved)
             OR   A
             JR   Z,_AtomExpressionForwardRight
             LD   A,(AtomExpressionResultUnresolved)
@@ -693,7 +819,7 @@ _AtomExpressionForwardRight:
             JR   C,_AtomExpressionForwardReturn
             ; The right key already occupies AtomExpressionResultKey.
 _AtomExpressionForwardFinish:
-            LD   A,1
+            LD   A,AtomExpressionForwardPlain
             LD   (AtomExpressionResultUnresolved),A
             CALL AtomExpressionRequireAddend
 _AtomExpressionForwardReturn:

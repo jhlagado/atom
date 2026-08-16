@@ -334,6 +334,45 @@ test("character literals compose with expressions and instruction operands", () 
   assert.deepEqual(h.finalBytes().slice(5), azmBytes("EX AF,AF'"));
 });
 
+test("LOW and HIGH patch forward data and instruction bytes exactly", () => {
+  const source = [
+    "ORG 4000H",
+    "DB LOW(TARGET),HIGH(TARGET)",
+    "DW LOW(TARGET),HIGH(TARGET)",
+    "LD A,LOW(TARGET)",
+    "LD HL,HIGH(TARGET)",
+    "TARGET:",
+    "NOP",
+    "",
+  ].join("\n");
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(), [
+    0x0b, 0x40, 0x0b, 0, 0x40, 0,
+    0x3e, 0x0b, 0x21, 0x40, 0, 0,
+  ]);
+  const low = azmBytes("LD A,LSB(400BH)")[1];
+  const high = azmBytes("LD A,MSB(400BH)")[1];
+  assert.deepEqual(h.finalBytes().slice(0, 6), [low, high, low, 0, high, 0]);
+  assert.deepEqual(h.finalBytes().slice(6), [
+    ...azmBytes("LD A,LSB(400BH)"),
+    ...azmBytes("LD HL,MSB(400BH)"),
+    ...azmBytes("NOP"),
+  ]);
+});
+
+test("forward byte functions reject contexts whose range rule cannot be retained", () => {
+  for (const source of [
+    "JR LOW(TARGET)\nTARGET:\n",
+    "LD A,(IX+HIGH(TARGET))\nTARGET:\n",
+    "DB LOW(TARGET)+1\nTARGET:\n",
+  ]) {
+    const result = h.assemble(source);
+    assert.notEqual(result.status, STATEMENT.OK, source);
+    assert.deepEqual(h.operations(), [], source);
+  }
+});
+
 test("CSTR, PSTR, and ISTR are case-insensitive and byte-identical to AZM", () => {
   const source = 'cStR "OK"\nPsTr "AB"\nISTR "OK"\nISTR ""\n';
   const result = h.assemble(source);
@@ -406,6 +445,33 @@ test("DS supports zero, trailing reservations, and an optional fill byte", () =>
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(0x5000), [0xaa, 0xaa, 0xaa]);
   assert.deepEqual(h.finalBytes(0x5000), azmBytes("ORG $5000\nDS 0,$AA\nDS 3,$AA\n"));
+});
+
+test("ALIGN emits AZM-compatible initialized zero padding", () => {
+  const source = "ORG 0101H\nDB 0AAH\nALIGN 4\nALIGNED:\nDB 055H\nALIGN 6\nDB 066H\n";
+  const result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x0101), azmBytes(source.replaceAll(/\b(ORG|DB|ALIGN)\b/g, (name) => `.${name.toLowerCase()}`)));
+  assert.deepEqual(h.finalBytes(0x0101), [0xaa, 0, 0, 0x55, 0, 0, 0, 0x66]);
+  const aligned = h.find(h.pack("ALIGNED").key);
+  assert.equal(aligned.status, STATUS.OK);
+  assert.equal(h.memory[aligned.ix + 6] | (h.memory[aligned.ix + 7] << 8), 0x0104);
+});
+
+test("ALIGN validates resolution, positivity, delimiter, and capacity atomically", () => {
+  for (const source of ["ALIGN 0\n", "ALIGN -1\n", "ALIGN MISSING\n", "ALIGN 4,0\n"]) {
+    const result = h.assemble(source);
+    assert.equal(result.status, STATEMENT.DIRECTIVE, source);
+    assert.deepEqual(h.operations(), [], source);
+  }
+
+  const result = h.assemble("DB 1\nALIGN 4\n", { address: 0x4000, capacity: 2 });
+  assert.equal(result.status, STATEMENT.OUTPUT);
+  assert.deepEqual(h.finalBytes(), [1]);
+
+  const maximum = h.assemble("ALIGN 65535\n", { address: 0, capacity: 0 });
+  assert.equal(maximum.status, STATEMENT.OK);
+  assert.deepEqual(h.operations(), []);
 });
 
 test("forward DB and DW expressions publish exact truncating and word patches", () => {
