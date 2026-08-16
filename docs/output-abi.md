@@ -32,6 +32,16 @@ Z80 proofs: kind, bank, target address, byte count, and final bytes.
 flat bank zero and initializes the target cursor and remaining-capacity word.
 The target descriptor must already have validated the mathematical extent.
 
+Phase 2g adds the data and placement entries used by native directives:
+
+| Entry | Input | Effect |
+| --- | --- | --- |
+| `AtomOutputCheckCapacity` | `HL=count` | Checks the remaining mathematical target span without changing state. |
+| `AtomOutputEmitByte` | `A=byte` | Submits one IMAGE byte and advances the cursor. |
+| `AtomOutputEmitWord` | `HL=word` | Submits two little-endian IMAGE bytes after a two-byte preflight. |
+| `AtomOutputReserve` | `HL=count` | Advances over uninitialized target bytes without an IMAGE operation. |
+| `AtomOutputSetOrigin` | `HL=address` | Replaces the logical target cursor without emitting output. |
+
 `AtomOutputEmitInstruction` accepts IX pointing to the existing ten-byte parsed
 instruction record. It performs these operations:
 
@@ -58,6 +68,7 @@ The patch rules are:
 | Word | Symbol plus signed addend must remain in Atom's accepted word domain; the low word is stored little endian. |
 | Relative | Subtract `patchAddress+1`; the result must fit -128–127. |
 | Displacement | Symbol plus signed addend must fit -128–127. |
+| Truncating byte | Store the low byte after signed-symbol and addend arithmetic; used by `DB`. |
 
 Range or adapter failure leaves the current pending record in place. Patches
 accepted earlier in the same symbol drain remain in the uncommitted adapter
@@ -68,9 +79,7 @@ accepts IX pointing to a symbol and returns `DE=patch address`, `B=kind`, and
 `C=signed addend`. `AtomStatusNotFound` means the symbol has no remaining
 pending record.
 
-## Later integration
-
-The label and equate handlers will call `AtomSymbolDeclare` followed by
-`AtomOutputResolveSymbol`. The final driver will diagnose remaining undefined
-symbols, construct the map, and call the operating adapter's commit or abort
-entries. Those handlers and lifecycle calls are outside Phase 2f.
+The Phase 2g label and equate handlers call `AtomSymbolDeclare` or
+`AtomSymbolDeclareGlobalLabel`, then `AtomOutputResolveSymbol`. The final driver
+still needs to diagnose remaining undefined symbols, construct the map, and
+call the operating adapter's commit or abort entries.

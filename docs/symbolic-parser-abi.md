@@ -52,6 +52,7 @@ in A. Success returns the patch kind in A and the field's byte offset in B.
 | Word | 2 | Store the final little-endian word |
 | Relative | 3 | Subtract `patchAddress+1`; result must fit -128–127 |
 | Displacement | 4 | Final value must fit -128–127 |
+| Truncating byte | 5 | Store the low byte of the final signed or unsigned word; used by `DB`. |
 
 `AtomParserQueueReferences` accepts the logical instruction output address in
 DE. It preflights the complete pending-list requirement, converts each byte

@@ -12,14 +12,16 @@ proves the complete tokenizer-to-encoder path. Phase 2d adds the measured
 constant-expression evaluator and its forward-symbol handoff. Phase 2e
 connects expressions to instruction operands and proves their pending
 patch metadata. Phase 2f submits instruction image bytes and final patch bytes
-through the Nucleus operating-adapter boundary.
+through the Nucleus operating-adapter boundary. Phase 2g adds the native
+statement layer: global and `_`-private labels, bare `EQU`, `ORG`, `DB`, `DW`,
+and `DS`, data strings, and append-only forward patches.
 
 The host source packager now resolves `%include`, immutable `%define` values,
 and host-evaluated `%if`/`%else`/`%endif`; preserves source identities and
 offsets through equal-length masking; joins path-keyed placement; and emits a
-validated SP1 source plan. Native labels and directives, the multipart assembly
-driver, sink lifecycle, and final artifacts remain to be implemented. Macros
-and op expansion remain out of scope.
+validated SP1 source plan. The multipart assembly driver, sink lifecycle,
+final undefined-symbol check, diagnostics, and final artifacts remain to be
+implemented. Macros and op expansion remain out of scope.
 
 ```sh
 npm install
@@ -31,6 +33,7 @@ npm run measure:parser
 npm run measure:expression
 npm run measure:integration
 npm run measure:output
+npm run measure:statements
 ```
 
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
@@ -48,6 +51,9 @@ layout in [`docs/symbolic-parser-abi.md`](docs/symbolic-parser-abi.md).
 The Phase 2f output contract and measurements are in
 [`docs/phase-2f-report.md`](docs/phase-2f-report.md), with its native ABI in
 [`docs/output-abi.md`](docs/output-abi.md).
+The Phase 2g statement syntax, ABI, proof coverage, and measurements are in
+[`docs/statements-abi.md`](docs/statements-abi.md) and
+[`docs/phase-2g-report.md`](docs/phase-2g-report.md).
 The host preparation contract, limits, and proof map are in
 [`docs/host-source-packaging.md`](docs/host-source-packaging.md).
 

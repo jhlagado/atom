@@ -12,8 +12,9 @@ ASCII letters to uppercase while packing. The leading `_` is syntax and is not
 part of the RADIX-40 payload.
 
 The exact packed name occupies six bytes. Bits 3–7 of byte 5 remain outside the
-RADIX-40 value; Phase 2a assigns bit 7 to `private` and bit 6 to `defined`.
-Names are rejected when they exceed the limit. No path truncates a name.
+RADIX-40 value. Bit 7 records `private`, bit 6 records `defined`, and Phase 2g
+uses bit 5 to preserve a negative `EQU` value as signed. Names are rejected
+when they exceed the limit. No path truncates a name.
 
 An eight-byte symbol record contains:
 
@@ -39,8 +40,10 @@ distinct internal status `AtomStatusPendingInvariant`. Successful eviction
 restores the private cursor to the arena end, so total private labels do not
 accumulate across global scopes.
 
-The parser will call scope advancement when it accepts a global label. Global
-constants do not implicitly change private-label scope.
+`AtomSymbolDeclareGlobalLabel` validates private eviction, duplicate state, and
+post-eviction capacity before it changes either cursor. It then closes the old
+private scope and declares the global label as one transaction. Global
+constants do not change private-label scope.
 
 ## Pending records
 
@@ -65,6 +68,10 @@ metadata without removing the record. The output layer peeks, constructs and
 submits final patch bytes through the Nucleus sink boundary, then calls
 `AtomPendingTake` after the sink succeeds. Historical Phase 2a–2e images omit
 this entry and retain their measured bytes exactly.
+
+The Phase 2g build exposes `AtomPendingCheckCapacity`. Data directives use it
+before inserting a missing symbol or emitting a placeholder, so a one-record
+pending-capacity failure publishes neither state.
 
 All public routines return `A=AtomStatusOk` with carry clear on success. Failure
 returns a nonzero status with carry set. Unless a routine contract says
