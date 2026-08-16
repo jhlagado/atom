@@ -839,3 +839,35 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
   and tests. Atom remains at 10,314 resident code-and-table bytes and 491 fixed
   workspace bytes. Debug80 remained at
   `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
+
+### 2026-08-16 — Checkpoint 10 host-packager clearance
+
+- **Atom:** fetched `origin/codex/atom-host-packager` at
+  `267f0e96147a3d5947b59dc9792ac864598b61e8`, rebased against unchanged
+  `origin/main@9585767ede261d732955016abd66a78e3c69d0c8`, and committed and pushed
+  `d045f22387b086f434ed261845b4a290884a6066`.
+- **Documentation:** added the public preparation API, identity and resolution
+  rules, operational capacities, placement and SP1 contract, Atom
+  preprocessing rules, masking and snapshot ownership, extraction policy, and
+  a named requirement-to-proof map.
+- **Review:** the required read-only z80-engineering adversarial review found
+  no in-scope correctness defect. It confirmed the public GPL-3.0 repository,
+  frozen dependency identity, native leakage boundary, strict contracts,
+  memory manifests, and measurement account.
+- **Review dispositions:** the proof map now names the physical symlink-target
+  discriminator. A new extraction test failed under the former static-import
+  regex, then passed after the boundary check rejected every dynamic import and
+  every static relative import outside the neutral directory. The documentation
+  states that returned byte arrays are mutable buffers that consumers treat as
+  read-only. Concurrent hostile-filesystem races and crash-durable directory
+  sync remain outside the current contract.
+- **Green after review:** `npm run test:host` passed 82 of 82 tests and
+  `npm test` passed 164 of 164 with zero failures. The prose gate,
+  unfinished-marker search, module checks, and `git diff --check` passed.
+- **Measured native account:** the tokenizer reproduced 1,186 rule-code bytes,
+  33 table bytes, 1,219 total code-and-table bytes, and 32 workspace bytes. Its
+  longest observed next-token case remained 24,619 instructions and 277,004
+  T-states. The integrated Atom core remains 10,314 code-and-table bytes plus
+  491 fixed-workspace bytes; this host-only checkpoint added zero resident
+  bytes. Debug80 remained at
+  `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
