@@ -1,8 +1,8 @@
 # Atom
 
-Atom is a case-insensitive, single-pass Z80 assembler whose assembler core is
-written in Z80 assembly. The Mac command runs that core through Debug80, while
-the host handles files, conditional preprocessing, and finished artifacts.
+Atom is a single-pass Z80 assembler whose assembler core is written in Z80
+assembly. The Mac command runs that core through Debug80, while the host handles
+files, conditional preprocessing, and finished artifacts.
 
 Atom assembles the complete Z80 instruction set claimed by its AZM oracle,
 including CB, ED, DD, FD, index-half, and undocumented SLL/SLS forms. It also
