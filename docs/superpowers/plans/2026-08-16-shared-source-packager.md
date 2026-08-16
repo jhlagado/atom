@@ -126,21 +126,30 @@ git -C /Users/johnhardy/projects/atom status --short
 
 Expected: the remote design branch contains this corrected plan. Existing changes in other worktrees remain untouched.
 
-**Step 2: Create the isolated implementation branch**
+**Step 2: Create sibling Atom and frozen-dependency checkouts**
 
 ```bash
-git -C /Users/johnhardy/projects/atom worktree add -b codex/atom-host-packager /tmp/atom-host-packager origin/codex/shared-source-packager-contract
-npm install --prefix /tmp/atom-host-packager
+mkdir -p /tmp/atom-host-packager-work
+git clone --branch main --single-branch https://github.com/jhlagado/debug80.git /tmp/atom-host-packager-work/debug80
+git -C /Users/johnhardy/projects/atom worktree add -b codex/atom-host-packager /tmp/atom-host-packager-work/atom origin/codex/shared-source-packager-contract
+npm install --prefix /tmp/atom-host-packager-work/debug80
+npm install --prefix /tmp/atom-host-packager-work/atom
 ```
 
-Expected: `/tmp/atom-host-packager` is clean and install does not alter `package-lock.json` before planned script changes.
+Expected: Atom's existing `file:../debug80/...` dependencies resolve against the
+sibling checkout. Record the Debug80 branch and HEAD, then treat that checkout
+as a frozen build dependency: make no source change, commit, or push there.
+The Atom worktree is clean and install does not alter `package-lock.json` before
+planned script changes.
 
 **Step 3: Record the exact start**
 
 ```bash
-git -C /tmp/atom-host-packager branch --show-current
-git -C /tmp/atom-host-packager rev-parse HEAD
-git -C /tmp/atom-host-packager status --short --branch
+git -C /tmp/atom-host-packager-work/debug80 branch --show-current
+git -C /tmp/atom-host-packager-work/debug80 rev-parse HEAD
+git -C /tmp/atom-host-packager-work/atom branch --show-current
+git -C /tmp/atom-host-packager-work/atom rev-parse HEAD
+git -C /tmp/atom-host-packager-work/atom status --short --branch
 ```
 
 Append these values to the implementation log before changing source.
