@@ -181,6 +181,9 @@ _AtomOutputResolveLoop:
             JP   C,_AtomOutputResolvePeekFailure
             LD   (AtomOutputResolvePatchAddress),DE
             LD   A,B
+.if AtomDriverMode
+            AND  AtomPendingKindMask
+.endif
             LD   (AtomOutputResolveKind),A
             LD   A,C
             LD   (AtomOutputResolveAddend),A

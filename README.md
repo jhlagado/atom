@@ -14,14 +14,16 @@ connects expressions to instruction operands and proves their pending
 patch metadata. Phase 2f submits instruction image bytes and final patch bytes
 through the Nucleus operating-adapter boundary. Phase 2g adds the native
 statement layer: global and `_`-private labels, bare `EQU`, `ORG`, `DB`, `DW`,
-and `DS`, data strings, and append-only forward patches.
+and `DS`, data strings, and append-only forward patches. Phase 3 adds the
+native multipart driver, exact final undefined-symbol diagnostics, and sink
+begin/commit/abort lifecycle.
 
 The host source packager now resolves `%include`, immutable `%define` values,
 and host-evaluated `%if`/`%else`/`%endif`; preserves source identities and
 offsets through equal-length masking; joins path-keyed placement; and emits a
-validated SP1 source plan. The multipart assembly driver, sink lifecycle,
-final undefined-symbol check, diagnostics, and final artifacts remain to be
-implemented. Macros and op expansion remain out of scope.
+validated SP1 source plan. Mac host integration, artifact rendering, native
+self-assembly, and TEC-1 deployment remain to be implemented. Macros and op
+expansion remain out of scope.
 
 ```sh
 npm install
@@ -34,6 +36,7 @@ npm run measure:expression
 npm run measure:integration
 npm run measure:output
 npm run measure:statements
+npm run measure:driver
 ```
 
 The local AZM oracle is frozen in [`docs/phase-1-authorities.md`](docs/phase-1-authorities.md).
@@ -54,6 +57,9 @@ The Phase 2f output contract and measurements are in
 The Phase 2g statement syntax, ABI, proof coverage, and measurements are in
 [`docs/statements-abi.md`](docs/statements-abi.md) and
 [`docs/phase-2g-report.md`](docs/phase-2g-report.md).
+The native multipart and lifecycle ABI and its measurements are in
+[`docs/native-driver-abi.md`](docs/native-driver-abi.md) and
+[`docs/phase-3-report.md`](docs/phase-3-report.md).
 The host preparation contract, limits, and proof map are in
 [`docs/host-source-packaging.md`](docs/host-source-packaging.md).
 

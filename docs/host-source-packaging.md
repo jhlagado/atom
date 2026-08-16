@@ -6,7 +6,7 @@ and produces an ordered set of source parts. The native Z80 assembler receives
 those parts as a stream and has no filesystem or dependency-graph interface.
 
 The source packager does not compile or publish an Atom object. It returns a
-fully validated ordered set of source parts for the later streaming adapter.
+fully validated ordered set of source parts for the native streaming adapter.
 
 ## Public preparation API
 
@@ -75,6 +75,11 @@ The default Node limits are:
 
 Callers may lower these limits. Every exact limit is accepted; the first value
 beyond it is rejected during preparation.
+
+The Phase 3 native Atom driver accepts 1 through 16 parts. A host invoking that
+driver therefore resolves and validates the project with `maxParts: 16`. The
+SP1 wire format retains its 255-part limit for other consumers and future
+targets.
 
 ## Placement and SP1
 
@@ -189,12 +194,12 @@ executable observations.
 | Snapshot stability after filesystem mutation | `reader snapshots each dependency once and ignores later filesystem mutation`; `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | Failure before publication | `preprocessing failure returns no project and preserves a prior SP1 artifact`; `write failure preserves the prior plan and removes only its temp`; `rename failure preserves the prior plan and removes only its temp` |
 | Neutral static and dynamic import boundary | `neutral host modules do not import Atom implementation`; `neutral import proof rejects dynamic Atom imports` |
-| Resident diagnostics, listing lines and D8 ranges | Deferred to the native multipart adapter and artifact pipeline; prepared identity and offsets are covered by the two attribution proofs above |
+| Resident compiler diagnostics | `undefined global reports its exact source part, offset, and packed name`; existing tokenizer, expression, parser, and statement diagnostic proofs |
+| Listing lines and D8 ranges | Deferred to the Mac artifact pipeline; prepared identity and offsets are covered by the two attribution proofs above |
 
-Prepared compiler bytes and provenance are proved at this boundary. Resident
-compiler diagnostics and generated listing and D8 equivalence await the native
-multipart adapter and artifact pipeline; this host checkpoint makes no broader
-claim.
+Prepared compiler bytes and provenance are proved at this boundary. The native
+driver now returns exact compiler diagnostic part and offset values. Generated
+listing and D8 equivalence await the Mac artifact pipeline.
 
 ## Verification
 

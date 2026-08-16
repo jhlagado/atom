@@ -2,6 +2,7 @@
 AtomSymbolOutputMode: .equ 0
 AtomParserStatementMode: .equ 0
 AtomSymbolStatementMode: .equ 0
+AtomDriverMode: .equ 0
             .include "atom-encoder.asm"
 
             .include "atom-symbols.asm"

@@ -25,6 +25,9 @@ AtomParserStatusExpression:      .equ 13
 AtomParserStatusUnpatchable:     .equ 14
 AtomParserStatusSymbol:          .equ 15
 AtomParserStatusReferenceCapacity:.equ 16
+.if AtomDriverMode
+AtomParserStatusPartCapacity:      .equ 17
+.endif
 
 AtomParserReferenceCapacity:     .equ 2
 AtomParserBuildReferenceBytes:   .equ 13
@@ -1122,13 +1125,21 @@ _AtomParserPreflightCapacity:
             LD   DE,(AtomSymbolGlobalEnd)
             OR   A
             SBC  HL,DE
+.if AtomDriverMode
+            JP   C,AtomParserSymbolCapacityFailure
+.else
             JR   C,AtomParserSymbolCapacityFailure
+.endif
             LD   A,H
             OR   A
             JR   NZ,_AtomParserPublishReferences
             LD   A,L
             CP   B
+.if AtomDriverMode
+            JP   C,AtomParserSymbolCapacityFailure
+.else
             JR   C,AtomParserSymbolCapacityFailure
+.endif
 
 _AtomParserPublishReferences:
             XOR  A
@@ -1143,7 +1154,39 @@ _AtomParserPublishReferenceLoop:
             LD   H,D
             LD   L,E
             CALL AtomSymbolReference
+.if AtomDriverMode
+            JP   C,AtomParserUnexpectedSymbolFailure
+.else
             JR   C,AtomParserUnexpectedSymbolFailure
+.endif
+.if AtomDriverMode
+            LD   A,B
+            OR   A
+            JR   Z,_AtomParserReferenceDiagnosticReady
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildSourceOffset
+            ADD  HL,DE
+            LD   A,(HL)
+            LD   (IX+AtomSymbolValueLow),A
+            INC  HL
+            LD   A,(HL)
+            LD   (IX+AtomSymbolValueHigh),A
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+            LD   HL,AtomParserBuildPart
+            ADD  HL,DE
+            LD   A,(HL)
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            OR   AtomPendingDiagnosticAnchor
+            LD   HL,AtomParserBuildKind
+            ADD  HL,DE
+            OR   (HL)
+            LD   (HL),A
+_AtomParserReferenceDiagnosticReady:
+.endif
             PUSH IX
             POP  BC
             LD   A,(AtomParserReferenceScan)
@@ -1174,6 +1217,15 @@ _AtomParserPublishReferenceCount:
 AtomParserPreflightReference:
             LD   A,(AtomParserReferenceScan)
             CALL AtomParserBuildReferenceAddress
+.if AtomDriverMode
+            LD   HL,AtomParserBuildPart
+            ADD  HL,DE
+            LD   A,(HL)
+            CP   16
+            JP   NC,_AtomParserReferencePartFailure
+            LD   A,(AtomParserReferenceScan)
+            CALL AtomParserBuildReferenceAddress
+.endif
             LD   H,D
             LD   L,E
             CALL AtomSymbolFind
@@ -1188,6 +1240,11 @@ _AtomParserPreflightSymbolFailure:
             LD   (AtomParserSymbolStatus),A
             LD   A,AtomParserStatusSymbol
             JP   AtomParserFailReference
+.if AtomDriverMode
+_AtomParserReferencePartFailure:
+            LD   A,AtomParserStatusPartCapacity
+            JP   AtomParserFailReference
+.endif
 
 ; Carry clear when the two build keys are equal, carry set otherwise.
 .routine out A,carry clobbers DE,HL,zero,sign,parity,halfCarry,B

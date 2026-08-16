@@ -10,18 +10,27 @@ field.
 
 ## Sink entries
 
-The operating adapter provides three routines:
+The operating adapter provides six routines in the complete driver build:
 
 | Entry | Inputs | Operation |
 | --- | --- | --- |
+| `AtomSinkBegin` | `IX=build descriptor` | Open one uncommitted generation. |
 | `AtomSinkImageByte` | `A=byte`, `C=bank`, `HL=address` | Append one byte to the image spool. |
 | `AtomSinkPatchByte` | `A=byte`, `C=bank`, `HL=address` | Append one final replacement byte to the patch spool. |
 | `AtomSinkPatchWord` | `C=bank`, `DE=address`, `HL=word` | Append one final little-endian replacement word to the patch spool. |
+| `AtomSinkCommit` | `IX=build descriptor`, `HL=final cursor`, `DE=remaining capacity` | Form the map and atomically publish the generation. |
+| `AtomSinkAbort` | none | Discard the open generation. |
 
 Success returns carry clear. Failure returns carry set and a nonzero adapter
 status in A. A failed call appends no operation. An earlier successful call may
 remain in the uncommitted generation; the compiler driver must then call the
 adapter's abort operation, as Nucleus does.
+
+A failed begin leaves no open generation and receives no abort. Source,
+capacity, image, patch, finalization, and commit failures after a successful
+begin receive exactly one abort. Commit failure leaves the generation open
+until that abort. The operating adapter constructs NOBJ framing and the flat
+map from its retained descriptor and logical operation spools.
 
 The proof adapter records the same logical operation shape used by the Nucleus
 Z80 proofs: kind, bank, target address, byte count, and final bytes.
@@ -79,7 +88,7 @@ accepts IX pointing to a symbol and returns `DE=patch address`, `B=kind`, and
 `C=signed addend`. `AtomStatusNotFound` means the symbol has no remaining
 pending record.
 
-The Phase 2g label and equate handlers call `AtomSymbolDeclare` or
+The label and equate handlers call `AtomSymbolDeclare` or
 `AtomSymbolDeclareGlobalLabel`, then `AtomOutputResolveSymbol`. The final driver
-still needs to diagnose remaining undefined symbols, construct the map, and
-call the operating adapter's commit or abort entries.
+diagnoses remaining undefined symbols and calls the adapter's begin, commit,
+or abort entries. Serialized NOBJ remains outside the native assembler.

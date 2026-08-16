@@ -86,7 +86,7 @@ category in A:
 | 5 | symbol or pending capacity/state |
 | 6 | instruction parsing or validation |
 | 7 | output capacity, range, or sink failure |
-| 8 | final undefined symbol, reserved for the finish entry |
+| 8 | final undefined symbol |
 | 9 | internal invariant |
 
 `AtomStatementDetail` contains the nested component status.
@@ -103,5 +103,9 @@ colon-prefixed equates, and dotted directive aliases. The host AZM translator
 must rewrite Atom's decoded string escapes as explicit byte values because
 AZM's quoted data syntax has different escape semantics.
 
-The multipart iterator, final undefined-symbol check, sink commit/abort driver,
-map construction, and final artifact writers are later integration work.
+`AtomAssembleFinish` performs the final undefined-symbol and private-scope
+checks after the last part. An undefined result sets the exact part and offset
+of the anchored reference and returns the symbol-record pointer in IX. The
+multipart driver and lifecycle contract are in
+[`native-driver-abi.md`](native-driver-abi.md). Final artifact writers remain
+host or operating-adapter work.

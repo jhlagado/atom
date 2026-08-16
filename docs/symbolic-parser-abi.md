@@ -36,6 +36,12 @@ nine-byte reference contains:
 The list is valid until the next `AtomParserParse` call. It contains no source
 pointer or symbol spelling.
 
+The complete driver build marks the first reference that inserted an undefined
+symbol as its diagnostic anchor. The low three bits of the kind field remain
+the patch kind; bit 7 marks the anchor and bits 3–6 contain the source-part
+ordinal. `AtomParserQueueReferences` copies that byte into the unchanged
+six-byte pending record.
+
 Forward references are accepted only when the operand class fixes a byte field
 before the symbol value is known. `IM`, `RST`, and bit-number expressions
 change opcode bits, so their forward forms are diagnosed as unpatchable.

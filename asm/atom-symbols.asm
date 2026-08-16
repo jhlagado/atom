@@ -8,6 +8,9 @@ AtomSymbolCodeStart:
 
 AtomSymbolRecordBytes:       .equ 8
 AtomPendingRecordBytes:      .equ 6
+AtomPendingKindMask:         .equ $07
+AtomPendingPartMask:         .equ $78
+AtomPendingDiagnosticAnchor: .equ $80
 
 AtomSymbolNameBytes:         .equ 6
 AtomSymbolValueLow:          .equ 6
@@ -26,6 +29,9 @@ AtomStatusUndefinedPrivate:  .equ 5
 AtomStatusPendingCapacity:   .equ 6
 AtomStatusPendingInvariant:  .equ 7
 AtomStatusAlreadyDefined:    .equ 8
+.if AtomDriverMode
+AtomStatusPartCapacity:      .equ 9
+.endif
 
 ; in HL=symbol arena start, DE=symbol arena end (half-open)
 ; out carry clear, A=AtomStatusOk
@@ -213,13 +219,25 @@ _AtomSymbolDeclareInsert:
 ; exact-name record when necessary.
 ;
 ; in HL=six-byte packed key
-; out IX=record, A=AtomStatusOk and carry clear; or A=status and carry set
+; out IX=record, A=AtomStatusOk and carry clear; or A=status and carry set.
+; Driver builds additionally return B=1 only when this call inserted the record.
+.if AtomDriverMode
+.routine in HL out A,carry,IX,B clobbers C,DE,HL,zero,sign,parity,halfCarry
+.else
 .routine in HL out A,carry,IX clobbers BC,DE,HL,zero,sign,parity,halfCarry
+.endif
 AtomSymbolReference:
             LD   (AtomSymbolOperationKey),HL
             .expectout A,carry,IX
             CALL AtomSymbolFind
+.if AtomDriverMode
+            JR   C,_AtomSymbolReferenceMissing
+            LD   B,0
+            RET
+_AtomSymbolReferenceMissing:
+.else
             RET  NC
+.endif
             CP   AtomStatusNotFound
             JR   Z,_AtomSymbolReferenceInsert
             SCF
@@ -230,6 +248,10 @@ _AtomSymbolReferenceInsert:
             LD   (AtomSymbolOperationValue+1),A
             .expectout A,carry,IX
             CALL AtomSymbolInsert
+.if AtomDriverMode
+            RET  C
+            LD   B,1
+.endif
             RET
 
 ; Internal insertion. A contains flags to add (currently DEFINED or zero).

@@ -54,8 +54,16 @@ Each six-byte entry contains:
 | ---: | --- |
 | 0–1 | Symbol-record pointer |
 | 2–3 | Patch address |
-| 4 | Patch kind |
+| 4 | Patch kind and optional diagnostic anchor |
 | 5 | Auxiliary byte |
+
+In the complete driver build, bits 0–2 of byte 4 retain patch kinds 1–5. One
+pending record for each undefined symbol sets bit 7 as its diagnostic anchor;
+bits 3–6 contain the zero-based source-part ordinal. The undefined symbol's
+otherwise-unused value word contains that reference's source offset. Definition
+overwrites the word with the symbol value, and successful patch resolution
+removes every pending record for the symbol. This encoding retains the settled
+record sizes while supporting exact diagnostics across 16 source parts.
 
 `AtomPendingAdd` accepts only an undefined symbol. `AtomPendingTake` finds one
 entry for a newly defined symbol, returns its patch metadata, and fills the
@@ -68,6 +76,9 @@ metadata without removing the record. The output layer peeks, constructs and
 submits final patch bytes through the Nucleus sink boundary, then calls
 `AtomPendingTake` after the sink succeeds. Historical Phase 2a–2e images omit
 this entry and retain their measured bytes exactly.
+
+`AtomPendingPeek` returns the complete byte 4 in B. Driver-enabled output masks
+it with `AtomPendingKindMask` before dispatching the patch rule.
 
 The Phase 2g build exposes `AtomPendingCheckCapacity`. Data directives use it
 before inserting a missing symbol or emitting a placeholder, so a one-record

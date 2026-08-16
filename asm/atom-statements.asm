@@ -249,12 +249,20 @@ AtomStatementDataExpression:
             JR   Z,AtomStatementDataResolvedByte
             CALL AtomOutputEmitWord
             JP   C,AtomStatementOutputFailure
+.if AtomDriverMode
+            JP   AtomStatementDataDelimiter
+.else
             JR   AtomStatementDataDelimiter
+.endif
 AtomStatementDataResolvedByte:
             LD   A,L
             CALL AtomOutputEmitByte
             JP   C,AtomStatementOutputFailure
+.if AtomDriverMode
+            JP   AtomStatementDataDelimiter
+.else
             JR   AtomStatementDataDelimiter
+.endif
 
 AtomStatementDataUnresolved:
             LD   A,L
@@ -269,9 +277,33 @@ AtomStatementDataUnresolved:
             JP   C,AtomStatementOutputFailure
             CALL AtomPendingCheckCapacity
             JP   C,AtomStatementSymbolFailure
+.if AtomDriverMode
+            LD   A,(AtomExpressionSymbolPart)
+            CP   16
+            JP   NC,AtomStatementSymbolPartFailure
+            LD   A,(AtomStatementDataPatchKind)
+            LD   (AtomStatementDataPendingKind),A
+.endif
             LD   HL,(AtomStatementDataKey)
             CALL AtomSymbolReference
             JP   C,AtomStatementSymbolFailure
+.if AtomDriverMode
+            LD   A,B
+            OR   A
+            JR   Z,AtomStatementDataDiagnosticReady
+            LD   HL,(AtomExpressionSymbolOffset)
+            LD   (IX+AtomSymbolValueLow),L
+            LD   (IX+AtomSymbolValueHigh),H
+            LD   A,(AtomExpressionSymbolPart)
+            ADD  A,A
+            ADD  A,A
+            ADD  A,A
+            OR   AtomPendingDiagnosticAnchor
+            LD   HL,AtomStatementDataPendingKind
+            OR   (HL)
+            LD   (HL),A
+AtomStatementDataDiagnosticReady:
+.endif
             PUSH IX
             POP  HL
             LD   (AtomStatementDataSymbol),HL
@@ -291,7 +323,11 @@ AtomStatementDataPlaceholderByte:
 AtomStatementDataQueue:
             LD   IX,(AtomStatementDataSymbol)
             LD   DE,(AtomStatementDataAddress)
+.if AtomDriverMode
+            LD   A,(AtomStatementDataPendingKind)
+.else
             LD   A,(AtomStatementDataPatchKind)
+.endif
             LD   B,A
             LD   A,(AtomStatementDataAddend)
             LD   C,A
@@ -556,6 +592,11 @@ AtomStatementSymbolFailure:
             LD   A,AtomStatementStatusSymbol
             SCF
             RET
+.if AtomDriverMode
+AtomStatementSymbolPartFailure:
+            LD   A,AtomStatusPartCapacity
+            JR   AtomStatementSymbolFailure
+.endif
 .routine in A out A,carry clobbers halfCarry,zero,sign,parity
 AtomStatementInstructionFailure:
             LD   (AtomStatementDetail),A
@@ -619,6 +660,9 @@ AtomStatementDataPatchKind: .db 0
 AtomStatementDataAddend:    .db 0
 AtomStatementDataFill:      .db 0
 AtomStatementDataValue:     .dw 0
+.if AtomDriverMode
+AtomStatementDataPendingKind:.equ AtomStatementDataValue
+.endif
 AtomStatementDataCount:     .dw 0
 AtomStatementDataKey:       .dw 0
 AtomStatementDataSymbol:    .dw 0
