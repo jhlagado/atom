@@ -446,7 +446,6 @@ AtomExpressionPopValue:
 .routine out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE
 AtomExpressionPopLeftValue:
             LD   DE,AtomExpressionLeftValue
-            JR   AtomExpressionPopValueTo
 
 .routine in DE out A,carry clobbers HL,zero,sign,parity,halfCarry,BC,DE
 AtomExpressionPopValueTo:
@@ -955,15 +954,7 @@ _AtomExpressionShiftRightLoop:
             LD   HL,AtomExpressionResultValue+2
             LD   A,(HL)
             SRA  A
-            LD   (HL),A
-            DEC  HL
-            LD   A,(HL)
-            RR   A
-            LD   (HL),A
-            DEC  HL
-            LD   A,(HL)
-            RR   A
-            LD   (HL),A
+            CALL AtomExpressionShiftRightLow16
             DJNZ _AtomExpressionShiftRightLoop
             XOR  A
             RET
@@ -1206,6 +1197,10 @@ AtomExpressionMagnitudeRightShift:
             LD   HL,AtomExpressionMagnitudeRight+2
             LD   A,(HL)
             SRL  A
+            JP   AtomExpressionShiftRightLow16
+
+.routine in A,HL out carry,zero clobbers A,HL,sign,parity,halfCarry
+AtomExpressionShiftRightLow16:
             LD   (HL),A
             DEC  HL
             LD   A,(HL)

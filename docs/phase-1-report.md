@@ -1,7 +1,7 @@
 # Atom Phase 1 measurement report
 
 This report preserves the original Phase 1 checkpoint. The later native
-compression pass reduced the same encoder from 3,997 to Measured 3,348 resident
+compression pass reduced the same encoder from 3,997 to Measured 3,249 resident
 bytes and from 9 to Measured 6 workspace bytes while retaining the complete
 differential. See [the native compression audit](native-compression-audit.md)
 for the current account and measured execution trade-off.

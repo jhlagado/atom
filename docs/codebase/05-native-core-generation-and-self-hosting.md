@@ -128,7 +128,7 @@ a 16 KiB target.
 
 The pinned AZM-built native core assembles all six parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
-events, execution measurements, and a complete 12,499-byte materialized image.
+events, execution measurements, and a complete 12,381-byte materialized image.
 
 The proof compares that image with the memory initialized by the pinned core's
 Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
@@ -200,20 +200,20 @@ The checked measurement records:
 | Observation | Measured value |
 | --- | ---: |
 | Readable input files | 13 |
-| Flattened native statements | 7,290 |
+| Flattened native statements | 7,241 |
 | Generated content parts | 5 |
 | Checked resolver parts, including entry | 6 |
-| Checked source bytes | 102,331 |
-| Generated global symbols | 861 |
-| Generated private symbols | 422 |
-| Initialized resident bytes | 12,126 |
+| Checked source bytes | 101,804 |
+| Generated global symbols | 863 |
+| Generated private symbols | 428 |
+| Initialized resident bytes | 12,008 |
 | Reserved resident bytes | 373 |
-| Forward PATCH records | 2,008 |
-| Declared symbols | 1,283 |
-| Linked resident extent | 12,499 bytes |
+| Forward PATCH records | 1,962 |
+| Declared symbols | 1,291 |
+| Linked resident extent | 12,381 bytes |
 
-The first generation currently executes 98,912,641 instructions and
-1,056,608,830 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 99,279,516 instructions and
+1,060,540,694 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

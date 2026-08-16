@@ -286,7 +286,7 @@ The implementation exploits the instruction set's regular fields:
 Irregular core and ED forms use small tables. LD has its own validation and
 encoding paths because it contains the broadest set of register, memory,
 absolute, index, half-register, and special-register interactions. The current
-measurement records 939 direct LD bytes inside the 3,348-byte encoder core.
+measurement records 906 direct LD bytes inside the 3,249-byte encoder core.
 
 The frozen differential census contains 69 mnemonic spellings and 3,445 valid
 logical forms. The encoder also rejects 526 AZM-invalid source forms and 2,453

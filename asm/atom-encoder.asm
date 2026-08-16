@@ -317,13 +317,13 @@ _AtomValidateEx:
 _AtomValidateExAf:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpAFPrime
-            JP   Z,_AtomValidateLength1
+_AtomValidateZLength1:
+            JP   Z,AtomEncoded1
             JP   AtomInvalid
 _AtomValidateExDe:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpHL
-            JP   Z,_AtomValidateLength1
-            JP   AtomInvalid
+            JP   _AtomValidateZLength1
 
 _AtomValidateIm:
             CALL AtomRequireOneOperand
@@ -333,7 +333,7 @@ _AtomValidateIm:
             JP   C,AtomInvalid
             CP   AtomOpIm2+1
             JP   NC,AtomInvalid
-            JP   _AtomValidateLength2
+            JP   AtomEncoded2
 
 _AtomValidateRst:
             CALL AtomRequireOneOperand
@@ -343,29 +343,30 @@ _AtomValidateRst:
             JP   C,AtomInvalid
             CP   AtomOpRst56+1
             JP   NC,AtomInvalid
-            JP   _AtomValidateLength1
+            JP   AtomEncoded1
 
 _AtomValidateIncDec:
             CALL AtomRequireOneOperand
             RET  C
             LD   A,(IX+AtomInstrOp0)
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength1
+            JP   C,AtomEncoded1
             LD   A,(IX+AtomInstrOp0)
             CALL AtomIsReg16
-            JP   C,_AtomValidateLength1
+            JP   C,AtomEncoded1
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpIX
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpIY
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CALL AtomIsHalfIndex
-            JP   C,_AtomValidateLength2
+            JP   C,AtomEncoded2
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpMemHL
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CALL AtomIsIndexed
-            JP   C,_AtomValidateLength3
+_AtomValidateCLength3:
+            JP   C,AtomEncoded3
             JP   AtomInvalid
 
 _AtomValidateStack:
@@ -373,18 +374,19 @@ _AtomValidateStack:
             RET  C
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpBC
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CP   AtomOpDE
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CP   AtomOpHL
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CP   AtomOpAF
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
 _AtomValidateIndexLength2:
             CP   AtomOpIX
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpIY
-            JP   Z,_AtomValidateLength2
+_AtomValidateZLength2:
+            JP   Z,AtomEncoded2
             JP   AtomInvalid
 
 AtomLdValidationStart .equ $
@@ -424,12 +426,12 @@ _AtomValidateLd:
 _AtomValidateLdReg8:
             LD   A,(IX+AtomInstrOp1)
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength1
+            JP   C,AtomEncoded1
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpImm8
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpMemHL
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CP   AtomOpMemAbs
             JR   Z,_AtomValidateLdReg8Absolute
             CP   AtomOpMemBC
@@ -441,7 +443,7 @@ _AtomValidateLdReg8:
             CP   AtomOpR
             JR   Z,_AtomValidateLdReg8Accumulator2
             CALL AtomIsIndexed
-            JP   C,_AtomValidateLength3
+            JP   C,AtomEncoded3
             LD   A,(IX+AtomInstrOp1)
             CALL AtomIsHalfIndex
             JP   NC,AtomInvalid
@@ -451,7 +453,7 @@ _AtomValidateLdNoRealHalf:
             JP   Z,AtomInvalid
             CP   AtomOpL
             JP   Z,AtomInvalid
-            JP   _AtomValidateLength2
+            JP   AtomEncoded2
 _AtomValidateLdReg8Absolute:
 _AtomValidateLdReg8Accumulator:
             LD   A,(IX+AtomInstrOp0)
@@ -459,13 +461,14 @@ _AtomValidateLdReg8Accumulator:
             JP   NZ,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpMemAbs
-            JP   Z,_AtomValidateLength3
-            JP   _AtomValidateLength1
+            JP   Z,AtomEncoded3
+            JP   AtomEncoded1
 _AtomValidateLdReg8Accumulator2:
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpA
+_AtomValidateNzLength2:
             JP   NZ,AtomInvalid
-            JP   _AtomValidateLength2
+            JP   AtomEncoded2
 
 _AtomValidateLdHalf:
             LD   A,(IX+AtomInstrOp1)
@@ -481,13 +484,12 @@ _AtomValidateLdHalfFamily:
             LD   A,(IX+AtomInstrOp1)
             XOR  B
             AND  $08
-            JP   NZ,AtomInvalid
-            JP   _AtomValidateLength2
+            JP   _AtomValidateNzLength2
 
 _AtomValidateLdReg16:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpImm16
-            JP   Z,_AtomValidateLength3
+            JP   Z,AtomEncoded3
             CP   AtomOpMemAbs
             JR   Z,_AtomValidateLdReg16Absolute
             LD   A,(IX+AtomInstrOp0)
@@ -501,66 +503,61 @@ _AtomValidateLdReg16:
 _AtomValidateLdReg16Absolute:
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpHL
-            JP   Z,_AtomValidateLength3
-            JP   _AtomValidateLength4
+            JP   Z,AtomEncoded3
+            JP   AtomEncoded4
 _AtomValidateLdSp:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpHL
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             JP   _AtomValidateIndexLength2
 _AtomValidateLdLegacyHl:
 _AtomValidateLdLegacyBc:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpDE
-            JP   Z,_AtomValidateLength2
-            JP   AtomInvalid
+            JP   _AtomValidateZLength2
 
 _AtomValidateLdIndex16:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpImm16
-            JP   Z,_AtomValidateLength4
+            JP   Z,AtomEncoded4
             CP   AtomOpMemAbs
-            JP   Z,_AtomValidateLength4
+_AtomValidateZLength4:
+            JP   Z,AtomEncoded4
             JP   AtomInvalid
 _AtomValidateLdSpecial:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpA
-            JP   Z,_AtomValidateLength2
-            JP   AtomInvalid
+            JP   _AtomValidateZLength2
 _AtomValidateLdMemAbs:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpA
-            JP   Z,_AtomValidateLength3
+            JP   Z,AtomEncoded3
             CALL AtomIsReg16
             JR   NC,_AtomValidateLdMemAbsIndex
             CP   AtomOpHL
-            JP   Z,_AtomValidateLength3
-            JP   _AtomValidateLength4
+            JP   Z,AtomEncoded3
+            JP   AtomEncoded4
 _AtomValidateLdMemAbsIndex:
             CP   AtomOpIX
-            JP   Z,_AtomValidateLength4
+            JP   Z,AtomEncoded4
             CP   AtomOpIY
-            JP   Z,_AtomValidateLength4
-            JP   AtomInvalid
+            JP   _AtomValidateZLength4
 _AtomValidateLdMemPair:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpA
-            JP   Z,_AtomValidateLength1
-            JP   AtomInvalid
+            JP   _AtomValidateZLength1
 _AtomValidateLdMemHL:
             LD   A,(IX+AtomInstrOp1)
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength1
+            JP   C,AtomEncoded1
             CP   AtomOpImm8
-            JP   Z,_AtomValidateLength2
-            JP   AtomInvalid
+            JP   _AtomValidateZLength2
 _AtomValidateLdIndexed:
             LD   A,(IX+AtomInstrOp1)
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength3
+            JP   C,AtomEncoded3
             CP   AtomOpImm8
-            JP   Z,_AtomValidateLength4
-            JP   AtomInvalid
+            JP   _AtomValidateZLength4
 AtomLdValidationEnd .equ $
 
 _AtomValidateIn:
@@ -573,17 +570,16 @@ _AtomValidateIn:
             RET  C
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpPortC
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpImm8
             JP   NZ,AtomInvalid
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpA
-            JP   NZ,AtomInvalid
-            JP   _AtomValidateLength2
+            JP   _AtomValidateNzLength2
 _AtomValidateInOne:
             CALL AtomRequireOneOperand
             RET  C
-            JP   _AtomValidateLength2
+            JP   AtomEncoded2
 
 _AtomValidateOut:
             CALL AtomRequireTwoOperands
@@ -595,14 +591,14 @@ _AtomValidateOut:
             JP   NZ,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpA
-            JP   NZ,AtomInvalid
-            JP   _AtomValidateLength2
+            JP   _AtomValidateNzLength2
 _AtomValidateOutC:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpZero
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength2
+_AtomValidateCLength2:
+            JP   C,AtomEncoded2
             JP   AtomInvalid
 
 _AtomValidateBit:
@@ -624,11 +620,11 @@ _AtomValidateBit:
 _AtomValidateBitIndexedNoDestination:
             CALL AtomRequireTwoOperands
             RET  C
-            JP   _AtomValidateLength4
+            JP   AtomEncoded4
 _AtomValidateBitPlain:
             CALL AtomRequireTwoOperands
             RET  C
-            JP   _AtomValidateLength2
+            JP   AtomEncoded2
 
 _AtomValidateRotate:
             LD   A,(IX+AtomInstrOp0)
@@ -643,14 +639,14 @@ _AtomValidateRotate:
             LD   A,(IX+AtomInstrOp1)
 _AtomValidateOptionalReg8Length4:
             CP   AtomOpNone
-            JP   Z,_AtomValidateLength4
+            JP   Z,AtomEncoded4
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength4
+            JP   C,AtomEncoded4
             JP   AtomInvalid
 _AtomValidateRotatePlain:
             CALL AtomRequireOneOperand
             RET  C
-            JP   _AtomValidateLength2
+            JP   AtomEncoded2
 
 _AtomValidateAlu:
             LD   A,(IX+AtomInstrOp1)
@@ -660,17 +656,16 @@ _AtomValidateAlu:
             RET  C
             LD   A,(IX+AtomInstrOp0)
             CALL AtomIsReg8
-            JP   C,_AtomValidateLength1
+            JP   C,AtomEncoded1
             CP   AtomOpMemHL
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CP   AtomOpImm8
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CALL AtomIsHalfIndex
-            JP   C,_AtomValidateLength2
+            JP   C,AtomEncoded2
             LD   A,(IX+AtomInstrOp0)
             CALL AtomIsIndexed
-            JP   C,_AtomValidateLength3
-            JP   AtomInvalid
+            JP   _AtomValidateCLength3
 _AtomValidateAlu16:
             CALL AtomRequireTwoOperands
             RET  C
@@ -687,8 +682,7 @@ _AtomValidateAdcSbc16:
             JP   NZ,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
             CALL AtomIsReg16
-            JP   C,_AtomValidateLength2
-            JP   AtomInvalid
+            JP   _AtomValidateCLength2
 _AtomValidateAdd16:
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpHL
@@ -701,18 +695,17 @@ _AtomValidateAddIndex:
             LD   B,A
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpBC
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpDE
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpSP
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   B
-            JP   Z,_AtomValidateLength2
-            JP   AtomInvalid
+            JP   _AtomValidateZLength2
 _AtomValidateAddHl:
             LD   A,(IX+AtomInstrOp1)
             CALL AtomIsReg16
-            JP   C,_AtomValidateLength1
+            JP   C,AtomEncoded1
             JP   AtomInvalid
 
 _AtomValidateJp:
@@ -723,14 +716,13 @@ _AtomValidateJp:
             RET  C
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpImm16
-            JP   Z,_AtomValidateLength3
+            JP   Z,AtomEncoded3
             CP   AtomOpMemHL
-            JP   Z,_AtomValidateLength1
+            JP   Z,AtomEncoded1
             CP   AtomOpMemIX
-            JP   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             CP   AtomOpMemIY
-            JP   Z,_AtomValidateLength2
-            JP   AtomInvalid
+            JP   _AtomValidateZLength2
 _AtomValidateJpConditional:
             CALL AtomRequireTwoOperands
             RET  C
@@ -739,7 +731,7 @@ _AtomValidateJpConditional:
             JP   NC,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpImm16
-            JR   Z,_AtomValidateLength3
+            JP   Z,AtomEncoded3
             JR   AtomInvalid
 
 _AtomValidateCall:
@@ -750,7 +742,7 @@ _AtomValidateCall:
             RET  C
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpImm16
-            JR   Z,_AtomValidateLength3
+            JP   Z,AtomEncoded3
             JR   AtomInvalid
 _AtomValidateCallConditional:
             JR   _AtomValidateJpConditional
@@ -770,7 +762,7 @@ _AtomValidateJrConditional:
             JR   NC,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpRel8
-            JR   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             JR   AtomInvalid
 
 _AtomValidateDjnz:
@@ -779,7 +771,7 @@ _AtomValidateDjnz:
 _AtomValidateRelativeOperand:
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpRel8
-            JR   Z,_AtomValidateLength2
+            JP   Z,AtomEncoded2
             JR   AtomInvalid
 
 _AtomValidationDispatchTable:
@@ -790,22 +782,6 @@ _AtomValidationDispatchTable:
             .dw _AtomValidateAlu,_AtomValidateJp,_AtomValidateCall
             .dw _AtomValidateJr,_AtomValidateDjnz
 
-_AtomValidateLength1:
-            XOR  A
-            INC  A
-            RET
-_AtomValidateLength2:
-            LD   A,2
-            OR   A
-            RET
-_AtomValidateLength3:
-            LD   A,3
-            OR   A
-            RET
-_AtomValidateLength4:
-            LD   A,4
-            OR   A
-            RET
 .routine out A,carry maybe-out zero clobbers sign,parity,halfCarry,zero
 AtomInvalid:
             XOR  A
@@ -852,14 +828,14 @@ AtomIsReg16:
             RET
 .routine in A out carry,zero,sign,parity,halfCarry
 AtomIsHalfIndex:
+            PUSH BC
+            LD   C,A
+            AND  $F6
             CP   AtomOpIXH
-            JR   C,AtomPredicateNo
-            CP   AtomOpIXL+1
-            JR   C,AtomPredicateYes
-            CP   AtomOpIYH
-            JR   C,AtomPredicateNo
-            CP   AtomOpIYL+1
-            RET
+            LD   A,C
+            POP  BC
+            JR   Z,AtomPredicateYes
+            JR   AtomPredicateNo
 .routine in A out carry,zero,sign,parity,halfCarry
 AtomIsIndexed:
             CP   AtomOpIndexIX
@@ -986,8 +962,6 @@ _AtomEncodeExSpHl:
             JP   _AtomStoreEncoded1
 
 _AtomEncodeIm:
-            LD   A,$ED
-            LD   (AtomScratch+0),A
             LD   A,(IX+AtomInstrOp0)
             SUB  AtomOpIm0
             LD   E,A
@@ -995,7 +969,8 @@ _AtomEncodeIm:
             LD   HL,AtomImOpcodes
             ADD  HL,DE
             LD   A,(HL)
-            JP   _AtomStoreScratch1Encoded2
+            LD   B,A
+            JP   _AtomStoreEdBEncoded2
 
 _AtomEncodeRst:
             LD   A,(IX+AtomInstrOp0)
@@ -1038,6 +1013,7 @@ _AtomStoreScratch2Encoded3:
             JP   AtomEncoded3
 _AtomEncodeIncDecRegister:
             LD   A,(IX+AtomInstrOp0)
+_AtomEncodeThreeShiftAddB:
             ADD  A,A
             ADD  A,A
             ADD  A,A
@@ -1051,13 +1027,10 @@ _AtomEncodeIncDecPair:
             LD   B,$0B
 _AtomEncodeIncDecPairBaseReady:
             LD   A,(IX+AtomInstrOp0)
+_AtomEncodePairFieldB:
             AND  3
             ADD  A,A
-            ADD  A,A
-            ADD  A,A
-            ADD  A,A
-            ADD  A,B
-            JP   _AtomStoreEncoded1
+            JR   _AtomEncodeThreeShiftAddB
 _AtomEncodeIncDecIndexPair:
             CALL AtomStorePrefixPreserveAF
             LD   A,B
@@ -1093,13 +1066,7 @@ _AtomEncodeStackBase:
             JR   Z,_AtomEncodeStackIndex
             CP   AtomOpIY
             JR   Z,_AtomEncodeStackIndex
-            AND  3
-            ADD  A,A
-            ADD  A,A
-            ADD  A,A
-            ADD  A,A
-            ADD  A,B
-            JP   _AtomStoreEncoded1
+            JP   _AtomEncodePairFieldB
 _AtomEncodeStackIndex:
             .expectout A
             CALL AtomPrefixFromOperand
@@ -1175,6 +1142,7 @@ _AtomEncodeLdRegImm:
             ADD  A,A
             ADD  A,A
             ADD  A,6
+_AtomStoreAValue1Encoded2:
             LD   (AtomScratch+0),A
             LD   A,(IX+AtomInstrValue1)
             JP   _AtomStoreScratch1Encoded2
@@ -1187,6 +1155,7 @@ _AtomEncodeLdRegMemHl:
             JP   _AtomStoreEncoded1
 _AtomEncodeLdAAbs:
             LD   A,$3A
+_AtomStoreAValue1Encoded3:
             LD   (AtomScratch+0),A
             JP   AtomCopyValue1ToScratch1
 _AtomEncodeLdAMemPair:
@@ -1273,8 +1242,7 @@ _AtomEncodeLdReg16Imm:
             ADD  A,A
             ADD  A,A
             INC  A
-            LD   (AtomScratch+0),A
-            JP   AtomCopyValue1ToScratch1
+            JP   _AtomStoreAValue1Encoded3
 _AtomEncodeLdReg16Abs:
             LD   A,(IX+AtomInstrOp0)
             CP   AtomOpHL
@@ -1293,8 +1261,7 @@ _AtomEncodeLdReg16Abs:
             JP   AtomCopyValue1ToScratch2
 _AtomEncodeLdHlAbs:
             LD   A,$2A
-            LD   (AtomScratch+0),A
-            JP   AtomCopyValue1ToScratch1
+            JP   _AtomStoreAValue1Encoded3
 _AtomEncodeLdSp:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpHL
@@ -1375,9 +1342,7 @@ _AtomEncodeLdMemHl:
             JP   _AtomStoreEncoded1
 _AtomEncodeLdMemHlImm:
             LD   A,$36
-            LD   (AtomScratch+0),A
-            LD   A,(IX+AtomInstrValue1)
-            JP   _AtomStoreScratch1Encoded2
+            JP   _AtomStoreAValue1Encoded2
 _AtomEncodeLdIndexed:
             LD   A,(IX+AtomInstrOp0)
             .expectout A
@@ -1408,22 +1373,18 @@ _AtomEncodeIn:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpImm8
             JR   Z,_AtomEncodeInImmediate
-            LD   A,$ED
-            LD   (AtomScratch+0),A
             LD   A,(IX+AtomInstrOp0)
             ADD  A,A
             ADD  A,A
             ADD  A,A
             ADD  A,$40
-            JP   _AtomStoreScratch1Encoded2
+            JR   _AtomEncodeInEd
 _AtomEncodeInBare:
             LD   A,$70
             JR   _AtomEncodeInEd
 _AtomEncodeInImmediate:
             LD   A,$DB
-            LD   (AtomScratch+0),A
-            LD   A,(IX+AtomInstrValue1)
-            JP   _AtomStoreScratch1Encoded2
+            JP   _AtomStoreAValue1Encoded2
 _AtomEncodeInEd:
             LD   B,A
             JP   _AtomStoreEdBEncoded2
@@ -1636,8 +1597,7 @@ _AtomEncodeJp:
 _AtomEncodeJpConditional:
             LD   B,$C2
             CALL AtomEncodeConditionOpcode
-            LD   (AtomScratch+0),A
-            JP   AtomCopyValue1ToScratch1
+            JP   _AtomStoreAValue1Encoded3
 _AtomEncodeJpHl:
             LD   A,$E9
             JR   _AtomStoreEncoded1

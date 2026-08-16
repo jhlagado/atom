@@ -54,9 +54,9 @@ const result = {
   },
   wholeAssembler: {
     classification: "Projected",
-    bytes: { low: 9348, high: 11948 },
-    kibibytes: { low: 9.1, high: 11.7 },
-    basis: "Measured 3348-byte core plus a projected 6000-8600 remaining resident bytes; see docs/phase-1-report.md",
+    bytes: { low: 9249, high: 11849 },
+    kibibytes: { low: 9.0, high: 11.6 },
+    basis: "Measured 3249-byte core plus a historical projected 6000-8600 remaining resident bytes; see docs/phase-1-report.md",
   },
   gates: { target: 3000, reviewAbove: 3500, rejectAbove: 5000 },
 };

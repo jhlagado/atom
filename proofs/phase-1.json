@@ -4,9 +4,9 @@
   "memoryProfile": "phase-1-memory.json",
   "contracts": "strict",
   "executionBudgets": {
-    "AtomFormLength": { "measuredInstructions": 100, "maxInstructions": 125, "measuredCycles": 919, "maxCycles": 1150 },
-    "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 2040, "maxCycles": 2450 },
-    "AtomRadix40Pack": { "measuredInstructions": 446, "maxInstructions": 550, "measuredCycles": 3931, "maxCycles": 4800 },
-    "AtomRecognizeMnemonic": { "measuredInstructions": 915, "maxInstructions": 1150, "measuredCycles": 9538, "maxCycles": 12000 }
+    "AtomFormLength": { "measuredInstructions": 103, "maxInstructions": 125, "measuredCycles": 925, "maxCycles": 1150 },
+    "AtomEncode": { "measuredInstructions": 214, "maxInstructions": 250, "measuredCycles": 2041, "maxCycles": 2450 },
+    "AtomRadix40Pack": { "measuredInstructions": 466, "maxInstructions": 550, "measuredCycles": 4099, "maxCycles": 4800 },
+    "AtomRecognizeMnemonic": { "measuredInstructions": 934, "maxInstructions": 1150, "measuredCycles": 9619, "maxCycles": 12000 }
   }
 }

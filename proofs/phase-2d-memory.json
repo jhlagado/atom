@@ -2,7 +2,7 @@
   "addressSpaceBytes": 65536,
   "regions": [
     { "name": "reserved-low", "start": 0, "end": "AtomEncoderCoreStart", "exactBytes": 8192 },
-    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3348 },
+    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3249 },
     { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 6 },
     { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 590 },
     { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 22 },
@@ -10,9 +10,9 @@
     { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 30 },
     { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 1307 },
     { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 40 },
-    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1873 },
+    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1866 },
     { "name": "expression-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 296 },
-    { "name": "lower-free", "start": "AtomExpressionWorkspaceEnd", "end": "AtomExpressionProofSourceStart", "exactBytes": 15704 },
+    { "name": "lower-free", "start": "AtomExpressionWorkspaceEnd", "end": "AtomExpressionProofSourceStart", "exactBytes": 15810 },
     { "name": "proof-source", "start": "AtomExpressionProofSourceStart", "end": "AtomExpressionProofSourceEnd", "exactBytes": 514 },
     { "name": "proof-key", "start": "AtomExpressionProofKeyStart", "end": "AtomExpressionProofKeyEnd", "exactBytes": 8 },
     { "name": "mid-free-a", "start": "AtomExpressionProofKeyEnd", "end": "AtomExpressionProofSymbolStart", "exactBytes": 3574 },
@@ -24,7 +24,7 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "expression-rule-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionRuleCodeEnd", "exactBytes": 1873 },
+    { "name": "expression-rule-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionRuleCodeEnd", "exactBytes": 1866 },
     { "name": "expression-fixed-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 296 },
     { "name": "expression-value-stack", "start": "AtomExpressionValueStack", "end": "AtomExpressionOperatorStack", "exactBytes": 160 },
     { "name": "expression-operator-stack", "start": "AtomExpressionOperatorStack", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 80 },

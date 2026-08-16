@@ -53,36 +53,36 @@ linked result is:
 
 | Account | Classification | Baseline bytes | Result bytes | Change |
 | --- | --- | ---: | ---: | ---: |
-| Code and immutable tables | Measured | 13,261 | 11,968 | -1,293 |
+| Code and immutable tables | Measured | 13,261 | 11,850 | -1,411 |
 | Fixed writable workspace | Measured | 551 | 531 | -20 |
-| Linked resident extent | Measured | 13,812 | 12,499 | -1,313 |
-| Margin below 16 KiB | Measured | 2,572 | 3,885 | +1,313 |
+| Linked resident extent | Measured | 13,812 | 12,381 | -1,431 |
+| Margin below 16 KiB | Measured | 2,572 | 4,003 | +1,431 |
 
 The module split is:
 
 | Module | Result code and immutable bytes | Result workspace bytes | Resident change |
 | --- | ---: | ---: | ---: |
-| Encoder, validation, recognition, and tables | 3,348 | 6 | -652 |
+| Encoder, validation, recognition, and tables | 3,249 | 6 | -751 |
 | Symbols and pending references | 730 | 22 | -150 |
 | Tokenizer | 1,360 | 30 | -22 |
-| Expression evaluator | 1,922 | 297 | -219 |
+| Expression evaluator | 1,915 | 297 | -226 |
 | Patch locator | 67 | 0 | -6 |
 | Parser | 2,067 | 98 | -95 |
 | Output | 467 | 22 | -38 |
-| Statements and directives | 1,370 | 47 | -89 |
+| Statements and directives | 1,358 | 47 | -101 |
 | Driver | 619 | 9 | -36 |
 | Host-service stubs | 18 | 0 | -6 |
 
-The encoder now occupies Measured 3,348 resident bytes: 3,070 bytes of code,
-278 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,307
-bytes, rule-driven encoding uses 1,527 bytes, and the direct LD subtotal is 939
+The encoder now occupies Measured 3,249 resident bytes: 2,971 bytes of code,
+278 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,251
+bytes, rule-driven encoding uses 1,484 bytes, and the direct LD subtotal is 906
 bytes. Mnemonic recognition uses 59 bytes of code and a 207-byte exact table,
-plus the shared 177-byte RADIX-40 packer. The complete encoder is now 152 bytes
+plus the shared 177-byte RADIX-40 packer. The complete encoder is now 251 bytes
 below the 3,500-byte Phase 1 review gate.
 
-The compact mnemonic table has a measured execution cost. Its worst direct
-lookup is a rejected four-character name at 915 instructions and 9,538
-T-states. The full self-build uses 98,912,641 instructions and 1,056,608,830
+The compact mnemonic table has a measured execution cost. The exhaustive
+mixed-case proof reaches 934 instructions and 9,619 T-states for lowercase
+`DJNZ`. The full self-build uses 99,279,516 instructions and 1,060,540,694
 T-states, up from the baseline 95,471,840 instructions and 995,258,332
 T-states. Both values remain below the fixed 200 million instruction and two
 billion T-state limits.
@@ -100,6 +100,16 @@ one; either nonzero value maps to the required mask after one doubling. The
 replacement reduces that helper from 10 bytes to 7, removes 75,703 instructions
 and 496,825 T-states from the self-build, and preserves `BC` and the published
 flag contract.
+
+The second-order suffix pass removed another Measured 118 bytes. The encoder
+contributed 99 bytes through shared validation-length returns, flag-preserving
+validation trampolines, ED and value-copy tails, common opcode arithmetic, and
+a three-byte half-index predicate reduction that still preserves `BC`.
+Statements contributed 12 bytes by sharing five output-completion tails.
+Expressions contributed 7 bytes through one fall-through and a shared
+lower-word right-shift suffix; signed and unsigned high-byte shifts remain
+separate. The added calls increase the self-build by Measured 366,875
+instructions and 3,931,864 T-states relative to the preceding checkpoint.
 
 Experiments that did not provide a safe saving were removed. These include a
 broad register predicate that admitted an invalid index-half form, hash-only

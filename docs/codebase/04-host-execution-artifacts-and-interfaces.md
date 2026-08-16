@@ -86,8 +86,8 @@ exports and avoid importing private files below `src/host/`.
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
-| Linked core, workspace, and sink stubs | `$0000..$30D3` | 12,499 |
-| Free space below descriptor boundary | `$30D3..$4000` | 3,885 |
+| Linked core, workspace, and sink stubs | `$0000..$305D` | 12,381 |
+| Free space below descriptor boundary | `$305D..$4000` | 4,003 |
 | Build and part descriptors | `$4000..$4100` | 256 |
 | Symbol arena | `$4100..$7500` | 13,312 |
 | Pending arena | `$7500..$7F00` | 2,560 |

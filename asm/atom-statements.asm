@@ -152,6 +152,7 @@ AtomStatementInstructionPublished:
             CALL AtomParserParsePublished
             JP   C,AtomStatementInstructionFailure
             CALL AtomOutputEmitInstruction
+AtomStatementOutputThenNext:
             JP   C,AtomStatementOutputFailure
             JP   AtomStatementNext
 
@@ -183,8 +184,7 @@ AtomStatementEquateSignReady:
             SET  5,(IX+5)
 AtomStatementEquateResolve:
             CALL AtomOutputResolveSymbol
-            JP   C,AtomStatementOutputFailure
-            JP   AtomStatementNext
+            JP   AtomStatementOutputThenNext
 
 AtomStatementDirectivePublished:
             SUB  AtomDirectiveOrg
@@ -217,8 +217,7 @@ AtomStatementOrg:
             JP   NZ,AtomStatementDirectiveDelimiter
             LD   HL,(AtomStatementDataValue)
             CALL AtomOutputSetOrigin
-            JP   C,AtomStatementOutputFailure
-            JP   AtomStatementNext
+            JP   AtomStatementOutputThenNext
 
 AtomStatementDb:
             LD   A,1
@@ -473,8 +472,7 @@ AtomStatementStringDone:
             JP   NZ,AtomStatementNext
             XOR  A
             CALL AtomOutputEmitByte
-            JP   C,AtomStatementOutputFailure
-            JP   AtomStatementNext
+            JP   AtomStatementOutputThenNext
 AtomStatementStringDbDone:
             CALL AtomTokenizerNext
             JP   C,AtomStatementLexicalFailure
@@ -535,8 +533,7 @@ AtomStatementDsFillLoop:
 AtomStatementDsReserve:
             LD   HL,(AtomStatementDataCount)
             CALL AtomOutputReserve
-            JP   C,AtomStatementOutputFailure
-            JP   AtomStatementNext
+            JP   AtomStatementOutputThenNext
 
 ; ALIGN emits the same initialized zero padding as AZM. Any positive resolved
 ; word is accepted; alignment is not restricted to powers of two.

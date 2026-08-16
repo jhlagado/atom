@@ -3,11 +3,11 @@
   "version": 1,
   "statistics": {
     "inputFiles": 13,
-    "statements": 7290,
-    "sourceBytes": 102158,
+    "statements": 7241,
+    "sourceBytes": 101631,
     "parts": 5,
-    "globalSymbols": 861,
-    "privateSymbols": 422
+    "globalSymbols": 863,
+    "privateSymbols": 428
   },
   "symbols": [
     {
@@ -796,6 +796,13 @@
       "scope": "ATOMVALIDATEFORM"
     },
     {
+      "original": "_AtomValidateZLength1",
+      "short": ".VZL1",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
       "original": "_AtomValidateExDe",
       "short": ".VEDE",
       "private": true,
@@ -824,6 +831,13 @@
       "scope": "ATOMVALIDATEFORM"
     },
     {
+      "original": "_AtomValidateCLength3",
+      "short": ".VCL3",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
       "original": "_AtomValidateStack",
       "short": ".VSTACK",
       "private": true,
@@ -833,6 +847,13 @@
     {
       "original": "_AtomValidateIndexLength2",
       "short": ".VIL2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateZLength2",
+      "short": ".VZL2",
       "private": true,
       "module": "EN",
       "scope": "ATOMVALIDATEFORM"
@@ -881,6 +902,13 @@
     {
       "original": "_AtomValidateLdReg8Accumulator2",
       "short": ".VLR8A2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateNzLength2",
+      "short": ".VNL2",
       "private": true,
       "module": "EN",
       "scope": "ATOMVALIDATEFORM"
@@ -937,6 +965,13 @@
     {
       "original": "_AtomValidateLdIndex16",
       "short": ".VLI16",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateZLength4",
+      "short": ".VZL4",
       "private": true,
       "module": "EN",
       "scope": "ATOMVALIDATEFORM"
@@ -1013,6 +1048,13 @@
     {
       "original": "_AtomValidateOutC",
       "short": ".VOC",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateCLength2",
+      "short": ".VCL2",
       "private": true,
       "module": "EN",
       "scope": "ATOMVALIDATEFORM"
@@ -1160,34 +1202,6 @@
     {
       "original": "_AtomValidationDispatchTable",
       "short": ".VDTABLE",
-      "private": true,
-      "module": "EN",
-      "scope": "ATOMVALIDATEFORM"
-    },
-    {
-      "original": "_AtomValidateLength1",
-      "short": ".VL1",
-      "private": true,
-      "module": "EN",
-      "scope": "ATOMVALIDATEFORM"
-    },
-    {
-      "original": "_AtomValidateLength2",
-      "short": ".VL2",
-      "private": true,
-      "module": "EN",
-      "scope": "ATOMVALIDATEFORM"
-    },
-    {
-      "original": "_AtomValidateLength3",
-      "short": ".VL3",
-      "private": true,
-      "module": "EN",
-      "scope": "ATOMVALIDATEFORM"
-    },
-    {
-      "original": "_AtomValidateLength4",
-      "short": ".VL4",
       "private": true,
       "module": "EN",
       "scope": "ATOMVALIDATEFORM"
@@ -1391,6 +1405,13 @@
       "scope": "ATOMENCODECORE"
     },
     {
+      "original": "_AtomEncodeThreeShiftAddB",
+      "short": ".TSAB",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
       "original": "_AtomEncodeIncDecPair",
       "short": ".IDPAIR",
       "private": true,
@@ -1400,6 +1421,13 @@
     {
       "original": "_AtomEncodeIncDecPairBaseReady",
       "short": ".IDPBREAD",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodePairFieldB",
+      "short": ".PFB",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -1488,6 +1516,13 @@
       "scope": "ATOMENCODECORE"
     },
     {
+      "original": "_AtomStoreAValue1Encoded2",
+      "short": ".SAV1E2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
       "original": "_AtomEncodeLdRegMemHl",
       "short": ".LRMHL",
       "private": true,
@@ -1497,6 +1532,13 @@
     {
       "original": "_AtomEncodeLdAAbs",
       "short": ".LDAABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomStoreAValue1Encoded3",
+      "short": ".SAV1E3",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -4753,6 +4795,12 @@
       "module": "EX"
     },
     {
+      "original": "AtomExpressionShiftRightLow16",
+      "short": "EX_SRL16",
+      "private": false,
+      "module": "EX"
+    },
+    {
       "original": "AtomExpressionRemainderAtLeastDivisor",
       "short": "EX_RALDI",
       "private": false,
@@ -7065,6 +7113,12 @@
     {
       "original": "AtomStatementInstructionPublished",
       "short": "ST_IPUB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementOutputThenNext",
+      "short": "ST_OTNEX",
       "private": false,
       "module": "ST"
     },
