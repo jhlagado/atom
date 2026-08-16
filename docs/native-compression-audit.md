@@ -53,36 +53,36 @@ linked result is:
 
 | Account | Classification | Baseline bytes | Result bytes | Change |
 | --- | --- | ---: | ---: | ---: |
-| Code and immutable tables | Measured | 13,261 | 11,850 | -1,411 |
+| Code and immutable tables | Measured | 13,261 | 11,825 | -1,436 |
 | Fixed writable workspace | Measured | 551 | 531 | -20 |
-| Linked resident extent | Measured | 13,812 | 12,381 | -1,431 |
-| Margin below 16 KiB | Measured | 2,572 | 4,003 | +1,431 |
+| Linked resident extent | Measured | 13,812 | 12,356 | -1,456 |
+| Margin below 16 KiB | Measured | 2,572 | 4,028 | +1,456 |
 
 The module split is:
 
 | Module | Result code and immutable bytes | Result workspace bytes | Resident change |
 | --- | ---: | ---: | ---: |
-| Encoder, validation, recognition, and tables | 3,249 | 6 | -751 |
-| Symbols and pending references | 730 | 22 | -150 |
+| Encoder, validation, recognition, and tables | 3,234 | 6 | -766 |
+| Symbols and pending references | 727 | 22 | -153 |
 | Tokenizer | 1,360 | 30 | -22 |
-| Expression evaluator | 1,915 | 297 | -226 |
+| Expression evaluator | 1,912 | 297 | -229 |
 | Patch locator | 67 | 0 | -6 |
 | Parser | 2,067 | 98 | -95 |
 | Output | 467 | 22 | -38 |
-| Statements and directives | 1,358 | 47 | -101 |
+| Statements and directives | 1,357 | 47 | -102 |
 | Driver | 619 | 9 | -36 |
-| Host-service stubs | 18 | 0 | -6 |
+| Host-service stubs | 15 | 0 | -9 |
 
-The encoder now occupies Measured 3,249 resident bytes: 2,971 bytes of code,
-278 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,251
-bytes, rule-driven encoding uses 1,484 bytes, and the direct LD subtotal is 906
+The encoder now occupies Measured 3,234 resident bytes: 2,956 bytes of code,
+278 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,246
+bytes, rule-driven encoding uses 1,474 bytes, and the direct LD subtotal is 899
 bytes. Mnemonic recognition uses 59 bytes of code and a 207-byte exact table,
-plus the shared 177-byte RADIX-40 packer. The complete encoder is now 251 bytes
+plus the shared 177-byte RADIX-40 packer. The complete encoder is now 266 bytes
 below the 3,500-byte Phase 1 review gate.
 
 The compact mnemonic table has a measured execution cost. The exhaustive
 mixed-case proof reaches 934 instructions and 9,619 T-states for lowercase
-`DJNZ`. The full self-build uses 99,279,516 instructions and 1,060,540,694
+`DJNZ`. The full self-build uses 99,692,822 instructions and 1,065,172,422
 T-states, up from the baseline 95,471,840 instructions and 995,258,332
 T-states. Both values remain below the fixed 200 million instruction and two
 billion T-state limits.
@@ -90,7 +90,7 @@ billion T-state limits.
 The implementation retained shared encoder tails, prefix and ED suffixes,
 word-copy tails, in-range relative branches, fall-through removal, flag
 idioms, shared token and symbol helpers, common diagnostic copying, local-state
-removal, arithmetic predicates, shared validation and encoding dispatch,
+removal, arithmetic predicates, a shared mnemonic-family dispatcher,
 RADIX-40 group sharing, and expression-workspace overlays. The mnemonic table
 uses three exact packed bytes per dense ordinal and a bounded linear scan.
 
@@ -110,6 +110,30 @@ Expressions contributed 7 bytes through one fall-through and a shared
 lower-word right-shift suffix; signed and unsigned high-byte shifts remain
 separate. The added calls increase the self-build by Measured 366,875
 instructions and 3,931,864 T-states relative to the preceding checkpoint.
+
+A third linked-listing census removed another Measured 25 bytes with no
+workspace change. Six newly in-range encoder branches and a shared absolute
+value tail removed 15 bytes. Expression fall-through removed 3, statement
+fall-through removed 1, shared symbol-status returns removed 3, and one common
+fail-closed host-service body removed 3 while retaining all six hook addresses.
+The complete self-build increased by Measured 413,306 instructions and
+4,631,728 T-states relative to the preceding checkpoint. Most of that change
+comes from the one-byte symbol-not-found tail saving, which adds one jump to a
+frequent lookup path.
+
+Two larger hypotheses were rejected by the current byte account. The public
+`AtomFormLength` entry and the atomic `AtomEncode` entry require separate
+validation and encoding handler maps. Those two maps already contain the
+minimum 17 two-byte addresses apiece; the repeated mnemonic-family mapping is
+shared code, and `AtomEncodeCore` itself occupies only 9 bytes. A combined
+paired-pointer continuation therefore adds routing code without removing table
+data. The three keyword recognizers also use three different exact record
+shapes: dense mnemonics use an implicit ordinal, operand words store an explicit
+class, and four- and five-character directives require a second packed word.
+A common fixed record either enlarges the 69-entry mnemonic table or loses exact
+rejection. Sharing only the three-byte stepping loop does not repay its caller
+setup. Both ideas require a changed representation premise before another
+experiment is justified.
 
 Experiments that did not provide a safe saving were removed. These include a
 broad register predicate that admitted an invalid index-half form, hash-only

@@ -4,15 +4,15 @@
   "contracts": "strict",
   "targetCpu": "Zilog Z80",
   "measurements": {
-    "codeAndTables": 11850,
+    "codeAndTables": 11825,
     "fixedWorkspace": 531,
-    "linkedResidentExtent": 12381,
-    "hostServiceStubs": 18
+    "linkedResidentExtent": 12356,
+    "hostServiceStubs": 15
   },
   "integrationExecution": {
-    "measuredInstructions": 29086,
+    "measuredInstructions": 29092,
     "maxInstructions": 50000,
-    "measuredCycles": 295661,
+    "measuredCycles": 295723,
     "maxCycles": 500000,
     "serviceCalls": 13,
     "imageRecords": 10,

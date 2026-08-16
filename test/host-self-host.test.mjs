@@ -86,10 +86,10 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
 
   assert.deepEqual(generated.statistics, {
     inputFiles: 13,
-    statements: 7241,
-    sourceBytes: 101631,
+    statements: 7228,
+    sourceBytes: 101723,
     parts: 5,
-    globalSymbols: 863,
+    globalSymbols: 865,
     privateSymbols: 428,
   });
   assert.equal(first.generation.images.length, proof.native.initializedBytes);

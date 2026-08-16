@@ -1197,7 +1197,6 @@ AtomExpressionMagnitudeRightShift:
             LD   HL,AtomExpressionMagnitudeRight+2
             LD   A,(HL)
             SRL  A
-            JP   AtomExpressionShiftRightLow16
 
 .routine in A,HL out carry,zero clobbers A,HL,sign,parity,halfCarry
 AtomExpressionShiftRightLow16:

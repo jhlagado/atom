@@ -56,7 +56,7 @@ const result = {
     classification: "Projected",
     bytes: { low: 9249, high: 11849 },
     kibibytes: { low: 9.0, high: 11.6 },
-    basis: "Measured 3249-byte core plus a historical projected 6000-8600 remaining resident bytes; see docs/phase-1-report.md",
+    basis: "Measured 3234-byte core plus a historical projected 6000-8600 remaining resident bytes; see docs/phase-1-report.md",
   },
   gates: { target: 3000, reviewAbove: 3500, rejectAbove: 5000 },
 };

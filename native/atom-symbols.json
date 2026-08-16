@@ -3,10 +3,10 @@
   "version": 1,
   "statistics": {
     "inputFiles": 13,
-    "statements": 7241,
-    "sourceBytes": 101631,
+    "statements": 7228,
+    "sourceBytes": 101723,
     "parts": 5,
-    "globalSymbols": 863,
+    "globalSymbols": 865,
     "privateSymbols": 428
   },
   "symbols": [
@@ -1677,6 +1677,13 @@
       "scope": "ATOMENCODECORE"
     },
     {
+      "original": "_AtomStoreAValue0Encoded3",
+      "short": ".SAV0E3",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
       "original": "_AtomEncodeLdAbsHl",
       "short": ".LDABSHL",
       "private": true,
@@ -2635,11 +2642,10 @@
       "scope": "ATOMPENDINGFIND"
     },
     {
-      "original": "_AtomPendingPeekNotFound",
-      "short": ".PNFOUND",
-      "private": true,
-      "module": "SY",
-      "scope": "ATOMPENDINGFIND"
+      "original": "AtomPendingNotFoundReturn",
+      "short": "SY_NFRET",
+      "private": false,
+      "module": "SY"
     },
     {
       "original": "AtomPendingTake",
@@ -8169,6 +8175,12 @@
     {
       "original": "AtomSinkAbort",
       "short": "HS_ABORT",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomSinkFailClosed",
+      "short": "HS_FCLOS",
       "private": false,
       "module": "HS"
     },

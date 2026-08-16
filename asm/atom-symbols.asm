@@ -137,13 +137,15 @@ _AtomSymbolFound:
             XOR  A
             RET
 _AtomSymbolNotFound:
-            LD   A,AtomStatusNotFound
-            SCF
-            RET
+            JP   AtomPendingNotFoundReturn
 _AtomSymbolPrivateNoScope:
+.if AtomDriverMode
+            JP   AtomSymbolGlobalLabelPrivate
+.else
             LD   A,AtomStatusPrivateNoScope
             SCF
             RET
+.endif
 
 ; in IX=record; compares against AtomSymbolOperationKey
 ; out Z when equal; flags otherwise. Clobbers A,B,DE,HL.
@@ -188,9 +190,13 @@ AtomSymbolDeclare:
             XOR  A
             RET
 _AtomSymbolDuplicate:
+.if AtomDriverMode
+            JP   AtomSymbolGlobalLabelDuplicate
+.else
             LD   A,AtomStatusDuplicate
             SCF
             RET
+.endif
 _AtomSymbolDeclareMissing:
             CP   AtomStatusNotFound
             JR   Z,_AtomSymbolDeclareInsert
@@ -410,10 +416,12 @@ AtomSymbolGlobalLabelCommit:
             LD   A,AtomStatusPendingInvariant
             SCF
             RET
+.routine out A,carry clobbers halfCarry
 AtomSymbolGlobalLabelPrivate:
             LD   A,AtomStatusPrivateNoScope
             SCF
             RET
+.routine out A,carry clobbers halfCarry
 AtomSymbolGlobalLabelDuplicate:
             LD   A,AtomStatusDuplicate
             SCF
@@ -555,7 +563,7 @@ AtomPendingFind:
             LD   DE,(AtomPendingNext)
 _AtomPendingPeekLoop:
             CALL AtomCompareIxDe
-            JR   Z,_AtomPendingPeekNotFound
+            JR   Z,AtomPendingNotFoundReturn
             LD   L,(IX+0)
             LD   H,(IX+1)
             PUSH DE
@@ -574,7 +582,8 @@ _AtomPendingPeekFound:
             LD   C,(IX+5)
             XOR  A
             RET
-_AtomPendingPeekNotFound:
+.routine out A,carry clobbers halfCarry
+AtomPendingNotFoundReturn:
             LD   A,AtomStatusNotFound
             SCF
             RET

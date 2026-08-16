@@ -184,7 +184,7 @@ AtomStatementEquateSignReady:
             SET  5,(IX+5)
 AtomStatementEquateResolve:
             CALL AtomOutputResolveSymbol
-            JP   AtomStatementOutputThenNext
+            JR   AtomStatementOutputThenNext
 
 AtomStatementDirectivePublished:
             SUB  AtomDirectiveOrg

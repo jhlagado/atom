@@ -323,7 +323,7 @@ _AtomValidateZLength1:
 _AtomValidateExDe:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpHL
-            JP   _AtomValidateZLength1
+            JR   _AtomValidateZLength1
 
 _AtomValidateIm:
             CALL AtomRequireOneOperand
@@ -484,7 +484,7 @@ _AtomValidateLdHalfFamily:
             LD   A,(IX+AtomInstrOp1)
             XOR  B
             AND  $08
-            JP   _AtomValidateNzLength2
+            JR   _AtomValidateNzLength2
 
 _AtomValidateLdReg16:
             LD   A,(IX+AtomInstrOp1)
@@ -541,7 +541,7 @@ _AtomValidateLdMemAbsIndex:
             CP   AtomOpIX
             JP   Z,AtomEncoded4
             CP   AtomOpIY
-            JP   _AtomValidateZLength4
+            JR   _AtomValidateZLength4
 _AtomValidateLdMemPair:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpA
@@ -557,7 +557,7 @@ _AtomValidateLdIndexed:
             CALL AtomIsReg8
             JP   C,AtomEncoded3
             CP   AtomOpImm8
-            JP   _AtomValidateZLength4
+            JR   _AtomValidateZLength4
 AtomLdValidationEnd .equ $
 
 _AtomValidateIn:
@@ -728,7 +728,7 @@ _AtomValidateJpConditional:
             RET  C
             LD   A,(IX+AtomInstrOp0)
             CALL AtomIsCondition
-            JP   NC,AtomInvalid
+            JR   NC,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpImm16
             JP   Z,AtomEncoded3
@@ -1066,7 +1066,7 @@ _AtomEncodeStackBase:
             JR   Z,_AtomEncodeStackIndex
             CP   AtomOpIY
             JR   Z,_AtomEncodeStackIndex
-            JP   _AtomEncodePairFieldB
+            JR   _AtomEncodePairFieldB
 _AtomEncodeStackIndex:
             .expectout A
             CALL AtomPrefixFromOperand
@@ -1313,12 +1313,12 @@ _AtomEncodeLdMemAbs:
             JP   AtomCopyValue0ToScratch2
 _AtomEncodeLdAbsA:
             LD   A,$32
+_AtomStoreAValue0Encoded3:
             LD   (AtomScratch+0),A
             JP   AtomCopyValue0ToScratch1
 _AtomEncodeLdAbsHl:
             LD   A,$22
-            LD   (AtomScratch+0),A
-            JP   AtomCopyValue0ToScratch1
+            JR   _AtomStoreAValue0Encoded3
 _AtomEncodeLdAbsIndex:
             .expectout A
             CALL AtomPrefixFromOperand
@@ -1592,8 +1592,7 @@ _AtomEncodeJp:
             CP   AtomOpMemIY
             JR   Z,_AtomEncodeJpIndex
             LD   A,$C3
-            LD   (AtomScratch+0),A
-            JP   AtomCopyValue0ToScratch1
+            JP   _AtomStoreAValue0Encoded3
 _AtomEncodeJpConditional:
             LD   B,$C2
             CALL AtomEncodeConditionOpcode
@@ -1613,8 +1612,7 @@ _AtomEncodeCall:
             CP   AtomOpNone
             JR   NZ,_AtomEncodeCallConditional
             LD   A,$CD
-            LD   (AtomScratch+0),A
-            JR   AtomCopyValue0ToScratch1
+            JP   _AtomStoreAValue0Encoded3
 _AtomEncodeCallConditional:
             LD   B,$C4
             CALL AtomEncodeConditionOpcode
