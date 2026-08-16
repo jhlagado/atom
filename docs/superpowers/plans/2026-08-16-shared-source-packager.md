@@ -748,3 +748,22 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
   limits, explicit visiting/visited/edge state, frozen resolved parts, retained
   path accounting, and structured dependency diagnostics. No resident Z80
   account changed.
+
+### 2026-08-16 — Checkpoint 6 placement and publication
+
+- **Atom:** fetched `origin/codex/atom-host-packager` at
+  `0717779af23024f7bd2eb18dea15992516af4f12`; committed and pushed
+  `3b1b39f` on `codex/atom-host-packager`.
+- **Red:** 13 initial focused proofs failed before placement, provenance, and
+  publication existed. A later exclusive-open discriminator reproduced cleanup
+  of a temporary path that the writer had not created.
+- **Green:** `npm run test:host` passed 46 of 46 tests with zero failures after
+  cleanup was restricted to a successfully opened temporary file. Module syntax
+  checks and `git diff --check` also passed.
+- **Coverage:** path-keyed banks and limits, placement aliases and unreachable
+  paths, ordinals, immutable provenance, direct source-offset mapping,
+  equal-length preprocessing, SP1 parse-back, prior-output preservation, exact
+  pre-open validation, write and rename failures, and temporary-file ownership.
+- **Measured scope:** no Z80 assembly, proof manifest, runtime, or workspace file
+  changed, so this checkpoint adds zero bytes to Atom's resident account. Debug80
+  remained at `main@3f2adb669bb9e7888305c623f8c843054c3dd111` and was not modified.
