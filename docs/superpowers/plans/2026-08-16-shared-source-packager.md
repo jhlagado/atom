@@ -699,3 +699,17 @@ Execution appends one short entry per checkpoint with date, fetched base, branch
 - **Implementation:** added the Atom-local neutral directory, its extraction
   rule, the structured frozen diagnostic, the public export, and the scoped
   host-test command. No resident Z80 byte or workspace account changed.
+
+### 2026-08-16 — Checkpoint 3 SP1 codec
+
+- **Red:** all 11 focused SP1 tests failed because the parser and serializer
+  exports were absent.
+- **Green:** `node --test test/host-source-plan.test.mjs` passed 11 of 11 tests
+  with zero failures.
+- **Coverage:** canonical LF output; LF and CRLF input; noncanonical count and
+  bank rejection; count mismatch; invalid record, path, ASCII, and newline
+  rejection; exact `END`; trailing-data rejection; wire limits at 255; and
+  caller part, path, and bank limits.
+- **Implementation:** added byte-strict parsing, canonical serialization,
+  frozen parsed records, structured plan diagnostics, and parse-back validation
+  of serialized bytes. No resident Z80 account changed.
