@@ -25,7 +25,7 @@ for (const source of indexedZeroAliases) {
 
 const s = h.symbols;
 console.log(JSON.stringify({
-  labels: "All byte, instruction, and cycle counts are Measured in the Phase 2c proof image.",
+  labels: "All byte, instruction, and cycle counts are Measured in the authoritative checked core.",
   coverage: {
     azmSupportedForms: valid.length,
     parsedRecordsMatched: valid.length,
@@ -45,11 +45,14 @@ console.log(JSON.stringify({
       (s.AtomEncoderCoreEnd - s.AtomEncoderCoreStart) +
       (s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart) +
       (s.AtomTokenizerCodeEnd - s.AtomTokenizerCodeStart) +
+      (s.AtomExpressionCodeEnd - s.AtomExpressionCodeStart) +
+      (s.AtomPatchCodeEnd - s.AtomPatchCodeStart) +
       (s.AtomParserCodeEnd - s.AtomParserCodeStart),
     fixedWorkspace:
       (s.AtomEncoderWorkspaceEnd - s.AtomEncoderWorkspaceStart) +
       (s.AtomSymbolWorkspaceEnd - s.AtomSymbolWorkspaceStart) +
       (s.AtomTokenizerWorkspaceEnd - s.AtomTokenizerWorkspaceStart) +
+      (s.AtomExpressionWorkspaceEnd - s.AtomExpressionWorkspaceStart) +
       (s.AtomParserWorkspaceEnd - s.AtomParserWorkspaceStart),
   },
   execution: h.statistics,

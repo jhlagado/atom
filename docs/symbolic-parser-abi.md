@@ -1,9 +1,9 @@
 # Symbolic instruction parser ABI
 
-Phase 2e assembles `atom-parser.asm` with `AtomParserExpressionMode=1` and
-assembles `atom-expression.asm` with `AtomExpressionDeferredMode=1`. The Phase
-2c and Phase 2d proof images set their respective flags to zero, which preserves
-their measured concrete and standalone images byte for byte.
+The authoritative `native/atom.atm` core enables expression operands, deferred
+symbol keys, patch-field location, and driver diagnostic anchors. The concrete
+and symbolic parser proofs both call this checked core. Historical Phase 2c and
+Phase 2e reports retain measurements from the earlier mode-specific images.
 
 ## Parse result
 
@@ -35,6 +35,10 @@ nine-byte reference contains:
 
 The list is valid until the next `AtomParserParse` call. It contains no source
 pointer or symbol spelling.
+
+The source-part ordinal is 0 through 15. A forward reference carrying ordinal
+16 or greater fails with `AtomParserStatusPartCapacity` before the destination,
+reference list, or symbol arena changes.
 
 The complete driver build marks the first reference that inserted an undefined
 symbol as its diagnostic anchor. The low three bits of the kind field remain

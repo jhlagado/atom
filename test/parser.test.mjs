@@ -78,7 +78,7 @@ test("concrete grammar and range failures are explicit and atomic", () => {
     ["LD A,", PARSER_STATUS.EXPECTED_OPERAND, 1],
     ["LD A B", PARSER_STATUS.EXPECTED_DELIMITER, 1],
     ["LD A,B,C,D", PARSER_STATUS.TOO_MANY_OPERANDS, 1],
-    ["LD Q,A", PARSER_STATUS.UNKNOWN_OPERAND, 1],
+    ["LD Q,A", PARSER_STATUS.INVALID_FORM, 1],
     ["LD A,$10000", PARSER_STATUS.LEXICAL, 1],
     ["LD A,$100", PARSER_STATUS.VALUE_RANGE, 1],
     ["LD A,(IX+128)", PARSER_STATUS.VALUE_RANGE, 1],

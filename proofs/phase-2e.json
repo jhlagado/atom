@@ -1,15 +1,19 @@
 {
-  "name": "Atom Phase 2e symbolic instruction integration correctness proof",
-  "source": "../asm/integration-proof.asm",
+  "name": "Atom authoritative symbolic parser and patch correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2e-memory.json",
-  "contracts": "strict",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 512,
     "symbolRecords": 16,
     "pendingRecords": 8,
     "referencesPerInstruction": 2,
-    "maximumInstructionBytes": 4
+    "maximumInstructionBytes": 4,
+    "maximumPartOrdinal": 15,
+    "pendingKindMask": 7,
+    "diagnosticAnchorBit": 128
   },
   "executionBudgets": {
     "AtomTokenizerReset": {
@@ -49,9 +53,9 @@
       "maxCycles": 1000
     },
     "AtomParserParse": {
-      "measuredInstructions": 6277,
+      "measuredInstructions": 6375,
       "maxInstructions": 15700,
-      "measuredCycles": 63372,
+      "measuredCycles": 63404,
       "maxCycles": 158430
     },
     "AtomPatchLocate": {
@@ -67,9 +71,9 @@
       "maxCycles": 6200
     },
     "AtomParserQueueReferences": {
-      "measuredInstructions": 220,
+      "measuredInstructions": 224,
       "maxInstructions": 550,
-      "measuredCycles": 1938,
+      "measuredCycles": 1974,
       "maxCycles": 4850
     }
   }

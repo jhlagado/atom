@@ -1,5 +1,29 @@
 # Atom Phase 2e symbolic instruction integration report
 
+## Authority migration checkpoint
+
+The symbolic parser and patch proof now executes the authoritative
+`native/atom.atm` core instead of a separately linked
+`asm/integration-proof.asm` image. Automatic translation checks the same source
+under AZM 0.3.9 strict register and stack contracts. The runtime harness audits
+all 65,536 addresses after every invocation, including all 10,335 operand-site
+locator calls.
+
+The checked path contains **Measured 1,868 bytes** of expression code,
+**Measured 67 bytes** of patch-locator code, and **Measured 2,061 bytes** of
+parser code and tables. Expression and parser workspace total **Measured 355
+bytes**. The complete encoder-through-parser account is **Measured 9,201 bytes**
+of code and tables plus **Measured 407 bytes** of workspace; the complete native
+core remains **Measured 12,093 resident bytes**.
+
+The production driver adds two rules that the earlier proof image compiled
+out. Forward references accept source-part ordinals 0 through 15 and reject 16
+before publishing a symbol or record. Pending kind bytes retain the patch kind
+in bits 0–2, set bit 7 on a diagnostic anchor, and store the source-part ordinal
+in bits 3–6. The checked proof now compares those bytes exactly. The original
+Phase 2e measurements and projections below remain as the historical prototype
+account.
+
 ## Result
 
 **Correctness — Measured: pass.** The instruction parser now accepts concrete

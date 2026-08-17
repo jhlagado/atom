@@ -1,5 +1,23 @@
 # Atom Phase 2c concrete instruction parser report
 
+## Authority migration checkpoint
+
+The concrete parser differential now calls the expression-enabled parser in
+the authoritative `native/atom.atm` core. It no longer assembles the reduced
+`asm/parser-proof.asm` variant. Every case starts with fresh symbol and pending
+arenas, so a name operand follows the public expression path before complete
+form validation. `LD Q,A`, for example, reports an invalid form rather than the
+reduced parser's unknown-operand category; both paths leave the destination and
+symbol state unchanged.
+
+The checked parser contains **Measured 1,980 bytes** of rule code, **Measured
+81 bytes** of operand-table data, and **Measured 92 bytes** of fixed workspace.
+The full parser path through the encoder, symbols, tokenizer, expression
+evaluator, and patch locator contains **Measured 9,201 bytes** of code and
+tables plus **Measured 407 bytes** of workspace. The complete native core
+remains **Measured 12,093 resident bytes**. The original Phase 2c measurements
+and projections below remain as the historical prototype account.
+
 ## Result
 
 **Correctness: Measured pass.** The native parser converts instruction text to

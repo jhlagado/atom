@@ -1,55 +1,92 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { compile } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
-const addressOf = (symbol) => symbol.address ?? symbol.value;
 const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
 const manifest = JSON.parse(fs.readFileSync("proofs/phase-2e.json", "utf8"));
 
+const PROOF_SYMBOLS = Object.freeze({
+  AtomIntegrationProofSourceStart: 0x8000,
+  AtomIntegrationSourceBefore: 0x8000,
+  AtomIntegrationSource: 0x8001,
+  AtomIntegrationSourceLimit: 0x8201,
+  AtomIntegrationSourceAfter: 0x8201,
+  AtomIntegrationProofSourceEnd: 0x8202,
+  AtomIntegrationProofRecordStart: 0x8202,
+  AtomIntegrationRecordBefore: 0x8202,
+  AtomIntegrationRecord: 0x8203,
+  AtomIntegrationRecordAfter: 0x820d,
+  AtomIntegrationProofRecordEnd: 0x820e,
+  AtomIntegrationProofOutputStart: 0x820e,
+  AtomIntegrationOutputBefore: 0x820e,
+  AtomIntegrationOutput: 0x820f,
+  AtomIntegrationOutputAfter: 0x8213,
+  AtomIntegrationProofOutputEnd: 0x8214,
+  AtomIntegrationProofKeyStart: 0x8214,
+  AtomIntegrationKeyBefore: 0x8214,
+  AtomIntegrationKey: 0x8215,
+  AtomIntegrationKeyAfter: 0x821b,
+  AtomIntegrationProofKeyEnd: 0x821c,
+  AtomIntegrationProofSymbolStart: 0x9000,
+  AtomIntegrationSymbolBefore: 0x9000,
+  AtomIntegrationSymbolArena: 0x9001,
+  AtomIntegrationSymbolLimit: 0x9081,
+  AtomIntegrationSymbolAfter: 0x9081,
+  AtomIntegrationProofSymbolEnd: 0x9082,
+  AtomIntegrationProofPendingStart: 0x9100,
+  AtomIntegrationPendingBefore: 0x9100,
+  AtomIntegrationPendingArena: 0x9101,
+  AtomIntegrationPendingLimit: 0x9131,
+  AtomIntegrationPendingAfter: 0x9131,
+  AtomIntegrationProofPendingEnd: 0x9132,
+});
+
 export const PATCH_KIND = Object.freeze({ BYTE: 1, WORD: 2, RELATIVE: 3, DISPLACEMENT: 4 });
 
-export async function createIntegrationHarness({ contracts = "strict", auditEveryCall = false } = {}) {
-  const assembled = await compile("asm/integration-proof.asm", {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: contracts,
-  });
-  const errors = assembled.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `integration proof assembly failed: ${JSON.stringify(errors)}`);
-  const hex = assembled.artifacts.find(({ kind }) => kind === "hex");
-  const d8m = assembled.artifacts.find(({ kind }) => kind === "d8m");
-  assert.equal(hex?.kind, "hex");
-  assert.equal(d8m?.kind, "d8m");
-  const symbols = Object.fromEntries(d8m.json.symbols.flatMap((symbol) => {
-    const value = addressOf(symbol);
-    return value === undefined ? [] : [[symbol.name, value]];
-  }));
-  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomParserParse);
+export async function createIntegrationHarness({ proofManifest = manifest } = {}) {
+  const core = await loadNativeAtomCore();
+  assert.equal(core.source, "native/atom.atm");
+  const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
+  const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomParserParse);
   const memory = runtime.hardware.memory;
+  for (const [name, value] of [
+    ["AtomIntegrationSourceBefore", 0x3c], ["AtomIntegrationSourceAfter", 0xc3],
+    ["AtomIntegrationRecordBefore", 0x69], ["AtomIntegrationRecordAfter", 0x96],
+    ["AtomIntegrationOutputBefore", 0x5a], ["AtomIntegrationOutputAfter", 0xa5],
+    ["AtomIntegrationKeyBefore", 0xa6], ["AtomIntegrationKeyAfter", 0x6a],
+    ["AtomIntegrationSymbolBefore", 0x39], ["AtomIntegrationSymbolAfter", 0x93],
+    ["AtomIntegrationPendingBefore", 0x4b], ["AtomIntegrationPendingAfter", 0xb4],
+  ]) memory[symbols[name]] = value;
   const pristine = memory.slice();
-  const immutable = [
-    [symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd],
-    [symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd],
-    [symbols.AtomTokenizerCodeStart, symbols.AtomTokenizerCodeEnd],
-    [symbols.AtomExpressionCodeStart, symbols.AtomExpressionCodeEnd],
-    [symbols.AtomPatchCodeStart, symbols.AtomPatchCodeEnd],
-    [symbols.AtomParserCodeStart, symbols.AtomParserCodeEnd],
-  ].map(([start, end]) => ({ start, bytes: pristine.slice(start, end) }));
-  const audited = new Set();
+  const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: pristine.slice(start, end) }));
   const statistics = {};
   let sourceBytes = new Uint8Array();
+  let restartCount = 0;
 
   function restart() {
     memory.set(pristine);
     runtime.reset();
     runtime.cpu.halted = false;
     sourceBytes = new Uint8Array();
+    restartCount += 1;
+    for (const [start, end] of [
+      [symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd],
+      [symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd],
+      [symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd],
+      [symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd],
+      [symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd],
+    ]) {
+      for (let address = start; address < end; address += 1) {
+        memory[address] = (restartCount * 73 + address * 29) & 0xff;
+      }
+    }
   }
 
   function execute(entry, setup = () => {}, label = entry) {
@@ -64,7 +101,7 @@ export async function createIntegrationHarness({ contracts = "strict", auditEver
     let instructions = 0;
     let cycles = 0;
     const recent = [];
-    const budget = manifest.executionBudgets[entry];
+    const budget = proofManifest.executionBudgets[entry];
     assert.ok(budget, `missing execution budget for ${entry}`);
     while (runtime.cpu.pc !== RETURN_SENTINEL && instructions < budget.maxInstructions && cycles <= budget.maxCycles) {
       recent.push(runtime.cpu.pc);
@@ -97,26 +134,21 @@ export async function createIntegrationHarness({ contracts = "strict", auditEver
     if (cycles > observed.cycles) Object.assign(observed, { cycles, cycleCase: label });
     statistics[entry] = observed;
 
-    const symbolicOrFailurePath = entry === "AtomParserParse" &&
-      (runtime.cpu.flags.C || memory[symbols.AtomParserReferenceBuildCount] > 0);
-    if (auditEveryCall || symbolicOrFailurePath || entry === "AtomParserQueueReferences" || !audited.has(entry)) {
-      const inside = (address, start, end) => address >= start && address < end;
-      for (let address = 0; address < memory.length; address += 1) {
-        const allowed =
-          inside(address, symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd) ||
-          inside(address, symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd) ||
-          inside(address, symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd) ||
-          inside(address, symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd) ||
-          inside(address, symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd) ||
-          (entry === "AtomPackSymbol" && inside(address, symbols.AtomIntegrationKey, symbols.AtomIntegrationKey + 6)) ||
-          (["AtomSymbolDeclare", "AtomParserParse"].includes(entry) && inside(address, symbols.AtomIntegrationSymbolArena, symbols.AtomIntegrationSymbolLimit)) ||
-          (entry === "AtomParserParse" && inside(address, symbols.AtomIntegrationRecord, symbols.AtomIntegrationRecord + 10)) ||
-          (entry === "AtomEncode" && inside(address, symbols.AtomIntegrationOutput, symbols.AtomIntegrationOutput + 4)) ||
-          (entry === "AtomParserQueueReferences" && inside(address, symbols.AtomIntegrationPendingArena, symbols.AtomIntegrationPendingLimit)) ||
-          (address > STACK_BEFORE && address < STACK_AFTER);
-        if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
-      }
-      audited.add(entry);
+    const inside = (address, start, end) => address >= start && address < end;
+    for (let address = 0; address < memory.length; address += 1) {
+      const allowed =
+        inside(address, symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd) ||
+        inside(address, symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd) ||
+        inside(address, symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd) ||
+        inside(address, symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd) ||
+        inside(address, symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd) ||
+        (entry === "AtomPackSymbol" && inside(address, symbols.AtomIntegrationKey, symbols.AtomIntegrationKey + 6)) ||
+        (["AtomSymbolDeclare", "AtomParserParse"].includes(entry) && inside(address, symbols.AtomIntegrationSymbolArena, symbols.AtomIntegrationSymbolLimit)) ||
+        (entry === "AtomParserParse" && inside(address, symbols.AtomIntegrationRecord, symbols.AtomIntegrationRecord + 10)) ||
+        (entry === "AtomEncode" && inside(address, symbols.AtomIntegrationOutput, symbols.AtomIntegrationOutput + 4)) ||
+        (entry === "AtomParserQueueReferences" && inside(address, symbols.AtomIntegrationPendingArena, symbols.AtomIntegrationPendingLimit)) ||
+        (address > STACK_BEFORE && address < STACK_AFTER);
+      if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
     }
     return {
       status: runtime.cpu.a,
@@ -167,11 +199,13 @@ export async function createIntegrationHarness({ contracts = "strict", auditEver
     const count = memory[symbols.AtomParserReferenceCount];
     return Array.from({ length: count }, (_, index) => {
       const start = symbols.AtomParserReferences + index * 9;
+      const rawKind = memory[start + 4];
       return {
         symbol: memory[start] | (memory[start + 1] << 8),
         addend: (memory[start + 2] << 24) >> 24,
         operand: memory[start + 3],
-        kind: memory[start + 4],
+        kind: rawKind & symbols.AtomPendingKindMask,
+        rawKind,
         offset: memory[start + 5],
         part: memory[start + 6],
         sourceOffset: memory[start + 7] | (memory[start + 8] << 8),

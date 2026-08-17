@@ -46,10 +46,8 @@ link files under `asm/`:
 
 ```text
 encoder-proof.asm
-parser-proof.asm
 output-proof.asm
 statements-proof.asm
-integration-proof.asm
 driver-proof.asm
 ```
 
@@ -58,9 +56,10 @@ records, source buffers, arenas, adapter state, stack, and sentinel return
 addresses. AZM assembles them with strict register contracts before Debug80
 executes their entry points.
 
-The checked expression lane instead executes `native/atom.atm` directly. It
-supplies guarded source, key, symbol, and pending regions and audits all 65,536
-addresses after every invocation.
+The checked expression and parser/patch lanes instead execute
+`native/atom.atm` directly. They supply guarded source, record, output, key,
+symbol, and pending regions and audit all 65,536 addresses after every
+invocation.
 
 The support modules restore pristine memory before each invocation. They seed
 workspaces and guards with varying patterns, install the input records and
@@ -89,8 +88,8 @@ pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
 scope transitions, failure atomicity, and record-size boundaries. The tokenizer
 lane supplies a guarded source interval and repeats the complete lexical,
 diagnostic, publication, classifier, and source-boundary corpus against the
-checked core. Expression, parser, output, statements, and driver still use
-frozen AZM proof images.
+checked core. The expression and parser/patch lanes also use the checked core.
+Output, statements, and driver still use frozen AZM proof images.
 
 ## Frozen memory profiles
 

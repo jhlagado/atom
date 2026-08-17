@@ -1,199 +1,46 @@
 {
   "addressSpaceBytes": 65536,
   "regions": [
-    {
-      "name": "reserved-low",
-      "start": 0,
-      "end": "AtomEncoderCoreStart",
-      "exactBytes": 8192
-    },
-    {
-      "name": "encoder-resident",
-      "start": "AtomEncoderCoreStart",
-      "end": "AtomEncoderCoreEnd",
-      "exactBytes": 3132
-    },
-    {
-      "name": "encoder-workspace",
-      "start": "AtomEncoderWorkspaceStart",
-      "end": "AtomEncoderWorkspaceEnd",
-      "exactBytes": 6
-    },
-    {
-      "name": "symbol-code",
-      "start": "AtomSymbolCodeStart",
-      "end": "AtomSymbolCodeEnd",
-      "exactBytes": 589
-    },
-    {
-      "name": "symbol-workspace",
-      "start": "AtomSymbolWorkspaceStart",
-      "end": "AtomSymbolWorkspaceEnd",
-      "exactBytes": 20
-    },
-    {
-      "name": "tokenizer-code",
-      "start": "AtomTokenizerCodeStart",
-      "end": "AtomTokenizerCodeEnd",
-      "exactBytes": 1346
-    },
-    {
-      "name": "tokenizer-workspace",
-      "start": "AtomTokenizerWorkspaceStart",
-      "end": "AtomTokenizerWorkspaceEnd",
-      "exactBytes": 26
-    },
-    {
-      "name": "expression-code",
-      "start": "AtomExpressionCodeStart",
-      "end": "AtomExpressionCodeEnd",
-      "exactBytes": 1851
-    },
-    {
-      "name": "expression-workspace",
-      "start": "AtomExpressionWorkspaceStart",
-      "end": "AtomExpressionWorkspaceEnd",
-      "exactBytes": 263
-    },
-    {
-      "name": "patch-locator",
-      "start": "AtomPatchCodeStart",
-      "end": "AtomPatchCodeEnd",
-      "exactBytes": 67
-    },
-    {
-      "name": "parser-code",
-      "start": "AtomParserCodeStart",
-      "end": "AtomParserCodeEnd",
-      "exactBytes": 1966
-    },
-    {
-      "name": "parser-workspace",
-      "start": "AtomParserWorkspaceStart",
-      "end": "AtomParserWorkspaceEnd",
-      "exactBytes": 92
-    },
-    {
-      "name": "lower-free",
-      "start": "AtomParserWorkspaceEnd",
-      "end": "AtomIntegrationProofSourceStart",
-      "exactBytes": 15218
-    },
-    {
-      "name": "proof-source",
-      "start": "AtomIntegrationProofSourceStart",
-      "end": "AtomIntegrationProofSourceEnd",
-      "exactBytes": 514
-    },
-    {
-      "name": "proof-record",
-      "start": "AtomIntegrationProofRecordStart",
-      "end": "AtomIntegrationProofRecordEnd",
-      "exactBytes": 12
-    },
-    {
-      "name": "proof-output",
-      "start": "AtomIntegrationProofOutputStart",
-      "end": "AtomIntegrationProofOutputEnd",
-      "exactBytes": 6
-    },
-    {
-      "name": "proof-key",
-      "start": "AtomIntegrationProofKeyStart",
-      "end": "AtomIntegrationProofKeyEnd",
-      "exactBytes": 8
-    },
-    {
-      "name": "mid-free-a",
-      "start": "AtomIntegrationProofKeyEnd",
-      "end": "AtomIntegrationProofSymbolStart",
-      "exactBytes": 3556
-    },
-    {
-      "name": "proof-symbol-arena",
-      "start": "AtomIntegrationProofSymbolStart",
-      "end": "AtomIntegrationProofSymbolEnd",
-      "exactBytes": 130
-    },
-    {
-      "name": "mid-free-b",
-      "start": "AtomIntegrationProofSymbolEnd",
-      "end": "AtomIntegrationProofPendingStart",
-      "exactBytes": 126
-    },
-    {
-      "name": "proof-pending-arena",
-      "start": "AtomIntegrationProofPendingStart",
-      "end": "AtomIntegrationProofPendingEnd",
-      "exactBytes": 50
-    },
-    {
-      "name": "upper-free",
-      "start": "AtomIntegrationProofPendingEnd",
-      "end": 65024,
-      "exactBytes": 27854
-    },
-    {
-      "name": "proof-stack",
-      "start": 65024,
-      "end": 65280,
-      "exactBytes": 256
-    },
-    {
-      "name": "reserved-top",
-      "start": 65280,
-      "end": 65536,
-      "exactBytes": 256
-    }
+    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3132 },
+    { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 6 },
+    { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 727 },
+    { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 20 },
+    { "name": "tokenizer-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1346 },
+    { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 26 },
+    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1868 },
+    { "name": "expression-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 263 },
+    { "name": "patch-code", "start": "AtomPatchCodeStart", "end": "AtomPatchCodeEnd", "exactBytes": 67 },
+    { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2061 },
+    { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 92 },
+    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 467 },
+    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
+    { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1345 },
+    { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 23 },
+    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 619 },
+    { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
+    { "name": "host-service-code", "start": "AtomHostServiceCodeStart", "end": "AtomHostServiceCodeEnd", "exactBytes": 8 },
+    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomIntegrationProofSourceStart", "exactBytes": 20675 },
+    { "name": "proof-source", "start": "AtomIntegrationProofSourceStart", "end": "AtomIntegrationProofSourceEnd", "exactBytes": 514 },
+    { "name": "proof-record", "start": "AtomIntegrationProofRecordStart", "end": "AtomIntegrationProofRecordEnd", "exactBytes": 12 },
+    { "name": "proof-output", "start": "AtomIntegrationProofOutputStart", "end": "AtomIntegrationProofOutputEnd", "exactBytes": 6 },
+    { "name": "proof-key", "start": "AtomIntegrationProofKeyStart", "end": "AtomIntegrationProofKeyEnd", "exactBytes": 8 },
+    { "name": "mid-free-a", "start": "AtomIntegrationProofKeyEnd", "end": "AtomIntegrationProofSymbolStart", "exactBytes": 3556 },
+    { "name": "proof-symbol-arena", "start": "AtomIntegrationProofSymbolStart", "end": "AtomIntegrationProofSymbolEnd", "exactBytes": 130 },
+    { "name": "mid-free-b", "start": "AtomIntegrationProofSymbolEnd", "end": "AtomIntegrationProofPendingStart", "exactBytes": 126 },
+    { "name": "proof-pending-arena", "start": "AtomIntegrationProofPendingStart", "end": "AtomIntegrationProofPendingEnd", "exactBytes": 50 },
+    { "name": "upper-free", "start": "AtomIntegrationProofPendingEnd", "end": 65024, "exactBytes": 27854 },
+    { "name": "proof-stack", "start": 65024, "end": 65280, "exactBytes": 256 },
+    { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    {
-      "name": "integration-code-and-tables",
-      "start": "AtomEncoderCoreStart",
-      "end": "AtomIntegrationResidentEnd",
-      "exactBytes": 9358
-    },
-    {
-      "name": "expression-code",
-      "start": "AtomExpressionCodeStart",
-      "end": "AtomExpressionCodeEnd",
-      "exactBytes": 1851
-    },
-    {
-      "name": "patch-locator-code",
-      "start": "AtomPatchCodeStart",
-      "end": "AtomPatchCodeEnd",
-      "exactBytes": 67
-    },
-    {
-      "name": "parser-rule-code",
-      "start": "AtomParserCodeStart",
-      "end": "AtomParserRuleCodeEnd",
-      "exactBytes": 1885
-    },
-    {
-      "name": "parser-table",
-      "start": "AtomParserImmutableStart",
-      "end": "AtomParserImmutableEnd",
-      "exactBytes": 81
-    },
-    {
-      "name": "parser-workspace",
-      "start": "AtomParserWorkspaceStart",
-      "end": "AtomParserWorkspaceEnd",
-      "exactBytes": 92
-    },
-    {
-      "name": "reference-build-list",
-      "start": "AtomParserReferenceBuild",
-      "end": "AtomParserReferences",
-      "exactBytes": 26
-    },
-    {
-      "name": "public-reference-list",
-      "start": "AtomParserReferences",
-      "end": "AtomParserWorkspaceEnd",
-      "exactBytes": 18
-    }
+    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12093 },
+    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1868 },
+    { "name": "patch-locator-code", "start": "AtomPatchCodeStart", "end": "AtomPatchCodeEnd", "exactBytes": 67 },
+    { "name": "parser-rule-code", "start": "AtomParserCodeStart", "end": "AtomParserRuleCodeEnd", "exactBytes": 1980 },
+    { "name": "parser-table", "start": "AtomParserImmutableStart", "end": "AtomParserImmutableEnd", "exactBytes": 81 },
+    { "name": "parser-code-and-table", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2061 },
+    { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 92 },
+    { "name": "reference-build-list", "start": "AtomParserReferenceBuild", "end": "AtomParserReferences", "exactBytes": 26 },
+    { "name": "public-reference-list", "start": "AtomParserReferences", "end": "AtomParserWorkspaceEnd", "exactBytes": 18 }
   ]
 }

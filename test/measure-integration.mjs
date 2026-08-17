@@ -40,10 +40,14 @@ for (const source of ["INC Forward", "BIT Forward,A", "RST Forward", "LD A,Forwa
   h.reset();
   h.parse(source);
 }
+h.reset();
+h.parse("JP Forward", { part: 15 });
+h.reset();
+h.parse("JP Forward", { part: 16 });
 
 const s = h.symbols;
 console.log(JSON.stringify({
-  labels: "All byte, instruction, cycle, and census counts are Measured in the Phase 2e proof image.",
+  labels: "All byte, instruction, cycle, and census counts are Measured in the authoritative checked core.",
   coverage: {
     concreteFormsParsedAndEncoded: validCases().length,
     patchableOperandSitesLocated: patchable,
@@ -51,6 +55,7 @@ console.log(JSON.stringify({
     resolvedExpressionForms: 10,
     forwardMetadataForms: 5,
     invalidForwardForms: 4,
+    forwardPartCapacityBoundaryCases: 2,
   },
   components: {
     deferredExpressionCode: s.AtomExpressionCodeEnd - s.AtomExpressionCodeStart,

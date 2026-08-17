@@ -14,6 +14,7 @@ const STATUS = Object.freeze({
   EXPRESSION: 13,
   UNPATCHABLE: 14,
   SYMBOL: 15,
+  PART_CAPACITY: 17,
 });
 const OP = Object.freeze({ INDEX_IX: 48, INDEX_IY: 49, MEM_ABS: 50, IMM8: 51, IMM16: 52, REL8: 54, NONE: 255 });
 
@@ -138,11 +139,13 @@ test("forward expressions publish exact metadata only after full-form validation
   ];
   for (const [source, expected] of cases) {
     h.reset();
-    const parsed = h.parse(source, { part: 19 });
+    const parsed = h.parse(source, { part: 15 });
     assert.equal(parsed.carry, 0, source);
     assert.equal(parsed.references.length, expected.length, source);
-    assert.deepEqual(parsed.references.map(({ symbol: _symbol, part, ...reference }) => ({ ...reference, part })),
-      expected.map((reference) => ({ ...reference, part: 19 })), source);
+    assert.deepEqual(parsed.references.map(({ symbol: _symbol, part, rawKind: _rawKind, ...reference }) => ({ ...reference, part })),
+      expected.map((reference) => ({ ...reference, part: 15 })), source);
+    assert.deepEqual(parsed.references.map(({ kind, rawKind }) => rawKind),
+      expected.map(({ kind }) => 0xf8 | kind), `${source}: diagnostic anchors`);
     assert.equal(parsed.afterGlobalEnd, parsed.beforeGlobalEnd + expected.length * 8, source);
     assert.equal(parsed.references.every(({ symbol }) => symbol >= h.symbols.AtomIntegrationSymbolArena), true, source);
   }
@@ -163,8 +166,8 @@ test("two-field pending handoff is exact and capacity failure is atomic", () => 
   assert.equal(queued.carry, 0);
   assert.equal(queued.status, 0);
   assert.deepEqual(h.pendingRecords(), [
-    [parsed.references[0].symbol & 0xff, parsed.references[0].symbol >>> 8, 0x02, 0x40, PATCH_KIND.DISPLACEMENT, 0],
-    [parsed.references[1].symbol & 0xff, parsed.references[1].symbol >>> 8, 0x03, 0x40, PATCH_KIND.BYTE, 0],
+    [parsed.references[0].symbol & 0xff, parsed.references[0].symbol >>> 8, 0x02, 0x40, 0xb8 | PATCH_KIND.DISPLACEMENT, 0],
+    [parsed.references[1].symbol & 0xff, parsed.references[1].symbol >>> 8, 0x03, 0x40, 0xb8 | PATCH_KIND.BYTE, 0],
   ]);
 
   h.reset({ pendingBytes: 11 });
@@ -216,4 +219,24 @@ test("symbol publication preflight is atomic and private scope remains exact", (
   assert.equal(parsed.references.length, 1);
   assert.equal(parsed.references[0].addend, -1);
   assert.equal(parsed.afterLocalBegin, parsed.beforeLocalBegin - 8);
+});
+
+test("forward-reference part ordinals stop exactly at the native capacity", () => {
+  h.reset();
+  let parsed = h.parse("JP Forward", { part: 15 });
+  assert.equal(parsed.carry, 0);
+  assert.equal(parsed.references.length, 1);
+  assert.equal(parsed.references[0].part, 15);
+  assert.equal(parsed.references[0].rawKind, 0xf8 | PATCH_KIND.WORD);
+
+  h.reset();
+  parsed = h.parse("JP Forward", { part: 16 });
+  assert.equal(parsed.carry, 1);
+  assert.equal(parsed.status, STATUS.PART_CAPACITY);
+  assert.equal(parsed.error.part, 16);
+  assert.equal(parsed.error.offset, 3);
+  assert.deepEqual(parsed.record, parsed.before);
+  assert.deepEqual(parsed.references, []);
+  assert.equal(parsed.afterGlobalEnd, parsed.beforeGlobalEnd);
+  assert.equal(parsed.afterLocalBegin, parsed.beforeLocalBegin);
 });
