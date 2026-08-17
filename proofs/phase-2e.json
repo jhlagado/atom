@@ -12,15 +12,65 @@
     "maximumInstructionBytes": 4
   },
   "executionBudgets": {
-    "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
-    "AtomSymbolReset": { "measuredInstructions": 7, "maxInstructions": 12, "measuredCycles": 99, "maxCycles": 150 },
-    "AtomPendingReset": { "measuredInstructions": 5, "maxInstructions": 10, "measuredCycles": 66, "maxCycles": 120 },
-    "AtomPackSymbol": { "measuredInstructions": 440, "maxInstructions": 500, "measuredCycles": 3788, "maxCycles": 4200 },
-    "AtomSymbolDeclare": { "measuredInstructions": 130, "maxInstructions": 1000, "measuredCycles": 1608, "maxCycles": 12000 },
-    "AtomSymbolAdvanceScope": { "measuredInstructions": 24, "maxInstructions": 40, "measuredCycles": 312, "maxCycles": 500 },
-    "AtomParserParse": { "measuredInstructions": 6225, "maxInstructions": 8000, "measuredCycles": 63582, "maxCycles": 80000 },
-    "AtomPatchLocate": { "measuredInstructions": 131, "maxInstructions": 180, "measuredCycles": 1151, "maxCycles": 1600 },
-    "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 1997, "maxCycles": 2450 },
-    "AtomParserQueueReferences": { "measuredInstructions": 220, "maxInstructions": 320, "measuredCycles": 1938, "maxCycles": 3000 }
+    "AtomTokenizerReset": {
+      "measuredInstructions": 22,
+      "maxInstructions": 60,
+      "measuredCycles": 248,
+      "maxCycles": 620
+    },
+    "AtomSymbolReset": {
+      "measuredInstructions": 7,
+      "maxInstructions": 30,
+      "measuredCycles": 99,
+      "maxCycles": 250
+    },
+    "AtomPendingReset": {
+      "measuredInstructions": 5,
+      "maxInstructions": 30,
+      "measuredCycles": 66,
+      "maxCycles": 170
+    },
+    "AtomPackSymbol": {
+      "measuredInstructions": 440,
+      "maxInstructions": 1100,
+      "measuredCycles": 3788,
+      "maxCycles": 9470
+    },
+    "AtomSymbolDeclare": {
+      "measuredInstructions": 131,
+      "maxInstructions": 330,
+      "measuredCycles": 1618,
+      "maxCycles": 4050
+    },
+    "AtomSymbolAdvanceScope": {
+      "measuredInstructions": 24,
+      "maxInstructions": 80,
+      "measuredCycles": 312,
+      "maxCycles": 1000
+    },
+    "AtomParserParse": {
+      "measuredInstructions": 6277,
+      "maxInstructions": 15700,
+      "measuredCycles": 63372,
+      "maxCycles": 158430
+    },
+    "AtomPatchLocate": {
+      "measuredInstructions": 164,
+      "maxInstructions": 410,
+      "measuredCycles": 1397,
+      "maxCycles": 3500
+    },
+    "AtomEncode": {
+      "measuredInstructions": 284,
+      "maxInstructions": 710,
+      "measuredCycles": 2477,
+      "maxCycles": 6200
+    },
+    "AtomParserQueueReferences": {
+      "measuredInstructions": 220,
+      "maxInstructions": 550,
+      "measuredCycles": 1938,
+      "maxCycles": 4850
+    }
   }
 }

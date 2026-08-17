@@ -57,6 +57,21 @@ test("precedence, associativity, unary operations, and current address match AZM
   }
 });
 
+test("forward keys and concrete arithmetic safely reuse the expression workspace", () => {
+  h.reset();
+  for (const [source, status, value] of [
+    ["Forward+5", EXPRESSION.UNRESOLVED, 5],
+    ["6*7", EXPRESSION.RESOLVED, 42],
+    ["Forward-3", EXPRESSION.UNRESOLVED, -3],
+    ["100/4", EXPRESSION.RESOLVED, 25],
+  ]) {
+    const result = h.evaluate(source);
+    assert.equal(result.carry, 0, source);
+    assert.equal(result.status, status, source);
+    assert.equal((result.hl << 16) >> 16, value, source);
+  }
+});
+
 test("all concrete operators accept nested whitespace and stop before delimiters", () => {
   h.reset();
   let result = h.evaluate(" 1 + ( 2 * 3 ) , 9 ");

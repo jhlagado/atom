@@ -14,7 +14,7 @@ filesystem. Its public entry is `AtomAssemble`, which consumes memory-backed
 source descriptors and caller-owned symbol and pending arenas.
 
 The current checked image is linked at `$0000` for Debug80. Its linked extent is
-Measured 12,356 bytes, leaving Measured 4,028 bytes below `$4000`. A TEC target
+Measured 12,093 bytes, leaving Measured 4,291 bytes below `$4000`. A TEC target
 may keep that placement or relink the same modules at a target-specific ROM or
 bank origin. Relinking must be followed by the complete strict-contract and
 runtime proof battery; the Mac address is not a portable absolute contract.
@@ -30,7 +30,7 @@ A TEC adapter must provide the six sink calls documented in `output-abi.md`:
 - commit with the final cursor and remaining capacity; and
 - abort an open generation.
 
-The Debug80 image contains 18 bytes of fail-closed stubs at those names. They
+The Debug80 image contains 8 bytes of fail-closed stubs at those names. They
 return failure when executed directly. A hardware build must replace or route
 those entries to real operating services; copying the pinned Mac image to the
 TEC-1 is not enough.
@@ -60,16 +60,16 @@ filesystem calls to the assembler.
 The current tokenizer takes a half-open memory interval and requires the part
 to remain addressable until it reaches EOF. The Mac adapter pages at whole-part
 boundaries, and each part may be as large as 24 KiB. Atom's self-host source has
-five generated parts totalling Measured 101,723 bytes plus a small entry
+five generated parts totalling Measured 101,108 bytes plus a small entry
 part. This proves multipart operation but does not prove that the same page
 size fits TEC RAM.
 
 ## RAM decision
 
 With less than 24 KiB of effective RAM, the Mac proof layout cannot be copied
-unchanged. Its 531-byte fixed workspace, symbol arena, pending arena, maximum
-descriptors, and 256-byte stack consume Measured 16,759 bytes before source
-buffering. Only 7,817 bytes remain in a 24 KiB budget, and the operating adapter
+unchanged. Its 453-byte fixed workspace, symbol arena, pending arena, maximum
+descriptors, and 256-byte stack consume Measured 16,676 bytes before source
+buffering. Only 7,900 bytes remain in a 24 KiB budget, and the operating adapter
 needs some of that space.
 
 There are three credible deployment choices:
@@ -84,7 +84,7 @@ There are three credible deployment choices:
 
 The first choice is preferred when TEC storage hardware exposes a usable bank
 or window. Otherwise the next project checkpoint should measure the third
-choice against the 4,028-byte resident margin. It is a Hypothesis, not a
+choice against the 4,291-byte resident margin. It is a Hypothesis, not a
 projection, that the complete source and sink adapter will fit that margin.
 
 A TEC filesystem adapter must also implement the measured Mac `INCBIN`

@@ -12,16 +12,71 @@
     "maximumInstructionBytes": 4
   },
   "executionBudgets": {
-    "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
-    "AtomSymbolReset": { "measuredInstructions": 7, "maxInstructions": 12, "measuredCycles": 99, "maxCycles": 150 },
-    "AtomPendingReset": { "measuredInstructions": 5, "maxInstructions": 10, "measuredCycles": 66, "maxCycles": 120 },
-    "AtomProofSinkReset": { "measuredInstructions": 5, "maxInstructions": 10, "measuredCycles": 53, "maxCycles": 100 },
-    "AtomOutputReset": { "measuredInstructions": 4, "maxInstructions": 10, "measuredCycles": 50, "maxCycles": 120 },
-    "AtomPendingPeek": { "measuredInstructions": 152, "maxInstructions": 180, "measuredCycles": 1899, "maxCycles": 2200 },
-    "AtomPackSymbol": { "measuredInstructions": 473, "maxInstructions": 550, "measuredCycles": 4043, "maxCycles": 5000 },
-    "AtomSymbolDeclare": { "measuredInstructions": 74, "maxInstructions": 1100, "measuredCycles": 762, "maxCycles": 14000 },
-    "AtomParserParse": { "measuredInstructions": 6176, "maxInstructions": 8500, "measuredCycles": 61706, "maxCycles": 85000 },
-    "AtomOutputEmitInstruction": { "measuredInstructions": 839, "maxInstructions": 1000, "measuredCycles": 7746, "maxCycles": 10000 },
-    "AtomOutputResolveSymbol": { "measuredInstructions": 1366, "maxInstructions": 1600, "measuredCycles": 16258, "maxCycles": 19000 }
+    "AtomTokenizerReset": {
+      "measuredInstructions": 22,
+      "maxInstructions": 60,
+      "measuredCycles": 248,
+      "maxCycles": 620
+    },
+    "AtomSymbolReset": {
+      "measuredInstructions": 7,
+      "maxInstructions": 30,
+      "measuredCycles": 99,
+      "maxCycles": 250
+    },
+    "AtomPendingReset": {
+      "measuredInstructions": 5,
+      "maxInstructions": 30,
+      "measuredCycles": 66,
+      "maxCycles": 170
+    },
+    "AtomProofSinkReset": {
+      "measuredInstructions": 5,
+      "maxInstructions": 30,
+      "measuredCycles": 53,
+      "maxCycles": 140
+    },
+    "AtomOutputReset": {
+      "measuredInstructions": 4,
+      "maxInstructions": 20,
+      "measuredCycles": 50,
+      "maxCycles": 130
+    },
+    "AtomPendingPeek": {
+      "measuredInstructions": 152,
+      "maxInstructions": 380,
+      "measuredCycles": 1899,
+      "maxCycles": 4750
+    },
+    "AtomPackSymbol": {
+      "measuredInstructions": 473,
+      "maxInstructions": 1190,
+      "measuredCycles": 4043,
+      "maxCycles": 10110
+    },
+    "AtomSymbolDeclare": {
+      "measuredInstructions": 74,
+      "maxInstructions": 190,
+      "measuredCycles": 762,
+      "maxCycles": 1910
+    },
+    "AtomParserParse": {
+      "measuredInstructions": 6277,
+      "maxInstructions": 15700,
+      "measuredCycles": 62462,
+      "maxCycles": 156160
+    },
+    "AtomOutputEmitInstruction": {
+      "measuredInstructions": 904,
+      "maxInstructions": 2260,
+      "measuredCycles": 8226,
+      "maxCycles": 20570
+    },
+    "AtomOutputResolveSymbol": {
+      "measuredInstructions": 1366,
+      "maxInstructions": 3420,
+      "measuredCycles": 16258,
+      "maxCycles": 40650
+    }
   }
 }

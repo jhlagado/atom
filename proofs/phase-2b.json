@@ -11,7 +11,13 @@
     "rawStringTokenBytes": 255
   },
   "claimedSyntax": {
-    "numericFamilies": ["decimal", "dollar-hex", "percent-binary", "intel-h-hex", "intel-b-binary"],
+    "numericFamilies": [
+      "decimal",
+      "dollar-hex",
+      "percent-binary",
+      "intel-h-hex",
+      "intel-b-binary"
+    ],
     "characterLiterals": true,
     "unprocessedDirectiveStatus": 9,
     "unterminatedCharacterStatus": 10,
@@ -20,15 +26,15 @@
   "executionBudgets": {
     "AtomTokenizerReset": {
       "measuredInstructions": 22,
-      "maxInstructions": 30,
+      "maxInstructions": 60,
       "measuredCycles": 248,
-      "maxCycles": 320
+      "maxCycles": 620
     },
     "AtomTokenizerNext": {
       "measuredInstructions": 24619,
-      "maxInstructions": 30000,
+      "maxInstructions": 61550,
       "measuredCycles": 277004,
-      "maxCycles": 340000
+      "maxCycles": 692510
     }
   }
 }

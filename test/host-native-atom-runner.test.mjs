@@ -100,8 +100,8 @@ test("the Mac host resolves, masks, and executes one project through native Atom
   assert.equal(result.native.carry, 0);
   assert.equal(result.execution.returnPc, 0xfffe);
   assert.equal(result.execution.finalSp, 0xfeff);
-  assert.equal(result.core.codeBytes, 11_825);
-  assert.equal(result.core.residentExtentBytes, 12_356);
+  assert.equal(result.core.codeBytes, 11_640);
+  assert.equal(result.core.residentExtentBytes, 12_093);
   const proof = JSON.parse(await fs.readFile("proofs/phase-4.json", "utf8"));
   assert.equal(result.execution.instructions, proof.integrationExecution.measuredInstructions);
   assert.equal(result.execution.cycles, proof.integrationExecution.measuredCycles);
@@ -383,17 +383,31 @@ test("two fresh native runs are byte-for-byte and operation-for-operation determ
 
 test("the linked service entries fail closed when host interception is absent", async () => {
   const core = await loadNativeAtomCore();
-  const runtime = createZ80Runtime(parseIntelHex(core.hexText), core.symbols.AtomSinkBegin);
-  const memory = runtime.hardware.memory;
-  memory[0xf000] = 0xfe;
-  memory[0xf001] = 0xff;
-  runtime.cpu.sp = 0xf000;
-  runtime.cpu.pc = core.symbols.AtomSinkBegin;
-  for (let instructions = 0; runtime.cpu.pc !== 0xfffe && instructions < 4; instructions += 1) runtime.step();
-  assert.equal(runtime.cpu.pc, 0xfffe);
-  assert.equal(runtime.cpu.sp, 0xf002);
-  assert.equal(runtime.cpu.a, 0xff);
-  assert.equal(runtime.cpu.flags.C, 1);
+  const entries = [
+    "AtomSinkBegin",
+    "AtomSinkImageByte",
+    "AtomSinkPatchByte",
+    "AtomSinkPatchWord",
+    "AtomSinkCommit",
+    "AtomSinkAbort",
+  ];
+  assert.equal(new Set(entries.map((name) => core.symbols[name])).size, entries.length);
+
+  for (const entry of entries) {
+    const runtime = createZ80Runtime(parseIntelHex(core.hexText), core.symbols[entry]);
+    const memory = runtime.hardware.memory;
+    memory[0xf000] = 0xfe;
+    memory[0xf001] = 0xff;
+    runtime.cpu.a = 0x42;
+    runtime.cpu.flags.C = 0;
+    runtime.cpu.sp = 0xf000;
+    runtime.cpu.pc = core.symbols[entry];
+    for (let instructions = 0; runtime.cpu.pc !== 0xfffe && instructions < 12; instructions += 1) runtime.step();
+    assert.equal(runtime.cpu.pc, 0xfffe, entry);
+    assert.equal(runtime.cpu.sp, 0xf002, entry);
+    assert.equal(runtime.cpu.a, 0xff, entry);
+    assert.equal(runtime.cpu.flags.C, 1, entry);
+  }
 });
 
 test("the Phase 4 host memory profile covers exactly 64 KiB", async () => {

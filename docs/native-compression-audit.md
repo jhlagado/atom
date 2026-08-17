@@ -53,36 +53,36 @@ linked result is:
 
 | Account | Classification | Baseline bytes | Result bytes | Change |
 | --- | --- | ---: | ---: | ---: |
-| Code and immutable tables | Measured | 13,261 | 11,825 | -1,436 |
-| Fixed writable workspace | Measured | 551 | 531 | -20 |
-| Linked resident extent | Measured | 13,812 | 12,356 | -1,456 |
-| Margin below 16 KiB | Measured | 2,572 | 4,028 | +1,456 |
+| Code and immutable tables | Measured | 13,261 | 11,640 | -1,621 |
+| Fixed writable workspace | Measured | 551 | 453 | -98 |
+| Linked resident extent | Measured | 13,812 | 12,093 | -1,719 |
+| Margin below 16 KiB | Measured | 2,572 | 4,291 | +1,719 |
 
 The module split is:
 
 | Module | Result code and immutable bytes | Result workspace bytes | Resident change |
 | --- | ---: | ---: | ---: |
-| Encoder, validation, recognition, and tables | 3,234 | 6 | -766 |
-| Symbols and pending references | 727 | 22 | -153 |
-| Tokenizer | 1,360 | 30 | -22 |
-| Expression evaluator | 1,912 | 297 | -229 |
+| Encoder, validation, recognition, and tables | 3,132 | 6 | -868 |
+| Symbols and pending references | 727 | 20 | -155 |
+| Tokenizer | 1,346 | 26 | -40 |
+| Expression evaluator | 1,868 | 263 | -307 |
 | Patch locator | 67 | 0 | -6 |
-| Parser | 2,067 | 98 | -95 |
-| Output | 467 | 22 | -38 |
-| Statements and directives | 1,357 | 47 | -102 |
+| Parser | 2,061 | 92 | -107 |
+| Output | 467 | 14 | -46 |
+| Statements and directives | 1,345 | 23 | -138 |
 | Driver | 619 | 9 | -36 |
-| Host-service stubs | 15 | 0 | -9 |
+| Host-service stubs | 8 | 0 | -16 |
 
-The encoder now occupies Measured 3,234 resident bytes: 2,956 bytes of code,
-278 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,246
-bytes, rule-driven encoding uses 1,474 bytes, and the direct LD subtotal is 899
+The encoder now occupies Measured 3,132 resident bytes: 2,888 bytes of code,
+244 bytes of immutable data, and 6 bytes of workspace. Validation uses 1,208
+bytes, rule-driven encoding uses 1,444 bytes, and the direct LD subtotal is 881
 bytes. Mnemonic recognition uses 59 bytes of code and a 207-byte exact table,
-plus the shared 177-byte RADIX-40 packer. The complete encoder is now 266 bytes
+plus the shared 177-byte RADIX-40 packer. The complete encoder is now 368 bytes
 below the 3,500-byte Phase 1 review gate.
 
 The compact mnemonic table has a measured execution cost. The exhaustive
 mixed-case proof reaches 934 instructions and 9,619 T-states for lowercase
-`DJNZ`. The full self-build uses 99,692,822 instructions and 1,065,172,422
+`DJNZ`. The full self-build uses 99,459,995 instructions and 1,059,714,120
 T-states, up from the baseline 95,471,840 instructions and 995,258,332
 T-states. Both values remain below the fixed 200 million instruction and two
 billion T-state limits.
@@ -121,18 +121,38 @@ The complete self-build increased by Measured 413,306 instructions and
 comes from the one-byte symbol-not-found tail saving, which adds one jump to a
 frequent lookup path.
 
+The final adversarial pass removed another Measured 263 resident bytes: 185
+bytes of code and immutable tables and 78 bytes of workspace. Splitting the
+core-opcode table by its ordinal boundary saved 45 bytes, endpoint-encoding the
+mnemonic families saved 14, and deriving directive ordinals from their dense
+table order saved 8. Operator kind and precedence now share one byte, and
+mutually exclusive expression, parser, output, statement, symbol, and tokenizer
+state shares measured workspace. Sequential reuse tests exercise those
+overlays. The six fail-closed host hooks retain distinct entry addresses in an
+eight-byte fall-through block; the host proof now calls every entry directly.
+The final linked census contains no in-range `JP` conversion and no jump to the
+next instruction.
+
+One parser overlay experiment was rejected. The first six bytes of parser
+scratch remain live while an unresolved record is being diagnosed, so placing
+the diagnostic record there corrupted the source position. The retained map
+uses dead bytes six through nine and passes concrete, unresolved, and failure
+paths. A common parser error-return label was also rejected because it widened
+AZM's strict routine control-flow contract for no useful structural benefit.
+
 Two larger hypotheses were rejected by the current byte account. The public
 `AtomFormLength` entry and the atomic `AtomEncode` entry require separate
 validation and encoding handler maps. Those two maps already contain the
 minimum 17 two-byte addresses apiece; the repeated mnemonic-family mapping is
 shared code, and `AtomEncodeCore` itself occupies only 9 bytes. A combined
 paired-pointer continuation therefore adds routing code without removing table
-data. The three keyword recognizers also use three different exact record
-shapes: dense mnemonics use an implicit ordinal, operand words store an explicit
-class, and four- and five-character directives require a second packed word.
-A common fixed record either enlarges the 69-entry mnemonic table or loses exact
-rejection. Sharing only the three-byte stepping loop does not repay its caller
-setup. Both ideas require a changed representation premise before another
+data. The three keyword recognizers also use different exact record shapes:
+dense mnemonics use an implicit ordinal, operand words store an explicit class,
+and four- and five-character directives require a second packed word.
+Directives now derive their ordinal from dense table order, but a common fixed
+record still enlarges the 69-entry mnemonic table or loses exact rejection.
+Sharing only the three-byte stepping loop does not repay its caller setup. Both
+larger ideas require a changed representation premise before another
 experiment is justified.
 
 Experiments that did not provide a safe saving were removed. These include a

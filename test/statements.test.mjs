@@ -170,6 +170,20 @@ test("statement path assembles blank lines, labels, and instructions", () => {
   assert.deepEqual(h.finalBytes(), [0x18, 0xfe]);
 });
 
+test("instruction, EQU, data, string, and forward-data paths safely share workspace", () => {
+  const result = h.assemble([
+    "Start: NOP",
+    "Value: EQU 100",
+    "DB 1",
+    "CSTR \"A\"",
+    "DW Later",
+    "Later: DB 2",
+    "",
+  ].join("\n"));
+  assert.equal(result.carry, 0);
+  assert.deepEqual(h.finalBytes(), [0x00, 0x01, 0x41, 0x00, 0x06, 0x40, 0x02]);
+});
+
 test("forward global references resolve to append-only patch bytes", () => {
   const result = h.assemble("JR Later\nNOP\nLater:\n");
   assert.equal(result.status, STATEMENT.OK);

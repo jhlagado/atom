@@ -146,19 +146,19 @@ The current pinned strict-contract image divides into these measured ranges:
 
 | Native module | Code and immutable bytes | Fixed workspace bytes |
 | --- | ---: | ---: |
-| Encoder, validation, recognition, and tables | 3,234 | 6 |
-| Symbols and pending references | 727 | 22 |
-| Tokenizer | 1,360 | 30 |
-| Expression evaluator | 1,912 | 297 |
+| Encoder, validation, recognition, and tables | 3,132 | 6 |
+| Symbols and pending references | 727 | 20 |
+| Tokenizer | 1,346 | 26 |
+| Expression evaluator | 1,868 | 263 |
 | Patch-field locator | 67 | 0 |
-| Operand parser | 2,067 | 98 |
-| Output and patch submission | 467 | 22 |
-| Statements and directives | 1,357 | 47 |
+| Operand parser | 2,061 | 92 |
+| Output and patch submission | 467 | 14 |
+| Statements and directives | 1,345 | 23 |
 | Multipart driver | 619 | 9 |
-| Fail-closed host sink stubs | 15 | 0 |
-| **Total** | **11,825** | **531** |
+| Fail-closed host sink stubs | 8 | 0 |
+| **Total** | **11,640** | **453** |
 
-The linked resident extent is measured at 12,356 bytes, leaving 4,028 bytes
+The linked resident extent is measured at 12,093 bytes, leaving 4,291 bytes
 below a 16 KiB boundary. Caller-owned source, symbol, pending, descriptor, and
 stack storage are separate accounts. The values above come from
 `assets/native-core.json` and the workspace symbols used by

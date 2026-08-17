@@ -32,10 +32,10 @@ This checkpoint changes host code only. Native code growth is Measured 0 bytes:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Code and immutable tables | Measured | 11,825 |
-| Fixed workspace | Measured | 531 |
-| Linked resident extent | Measured | 12,356 |
-| Physical margin below 16 KiB | Measured | 4,028 |
+| Code and immutable tables | Measured | 11,640 |
+| Fixed workspace | Measured | 453 |
+| Linked resident extent | Measured | 12,093 |
+| Physical margin below 16 KiB | Measured | 4,291 |
 
 The bridge still receives one IMAGE call per included byte because lowering
 uses the native initialized `DS` path. This costs execution time but no resident
@@ -49,10 +49,10 @@ malformed syntax, the 65,535-byte boundary, inactive conditional source,
 listing text, D8 range classification, and injected bridge-count disagreement.
 
 `INCBIN` itself changes no native instruction. The current compressed-core
-proof covers Measured 12,356 resident bytes and Measured 11,983 initialized
+proof covers Measured 12,093 resident bytes and Measured 11,742 initialized
 addresses, and byte identity across the pinned core, translated AZM build, and
 two Atom generations.
 
-The Atom-local suite passes Measured 266 of 266 tests. Package-census values are
+The Atom-local suite passes Measured 268 of 268 tests. Package-census values are
 stored outside the archive in `proofs/phase-11.json` and
 `proofs/package-census.json` to avoid a self-referential packaged size field.

@@ -352,16 +352,17 @@ AtomOutputCodeEnd:
 AtomOutputWorkspaceStart:
 AtomOutputCursor:              .dw 0
 AtomOutputRemaining:           .dw 0
-AtomOutputInstructionStart:    .dw 0
-AtomOutputInstructionBytes:    .ds 4
-AtomOutputInstructionLength:   .db 0
-AtomOutputInstructionScan:     .db 0
-AtomOutputResolveSymbolPointer:.dw 0
-AtomOutputResolvePatchAddress: .dw 0
-AtomOutputResolveKind:         .db 0
-AtomOutputResolveAddend:       .db 0
-AtomOutputResolveValue:        .ds 3
+AtomOutputWorkUnion:            .ds 10
+AtomOutputInstructionStart:    .equ AtomOutputWorkUnion
+AtomOutputInstructionBytes:    .equ AtomOutputWorkUnion+2
+AtomOutputInstructionLength:   .equ AtomOutputWorkUnion+6
+AtomOutputInstructionScan:     .equ AtomOutputWorkUnion+7
+AtomOutputResolveSymbolPointer:.equ AtomOutputWorkUnion
+AtomOutputResolvePatchAddress: .equ AtomOutputWorkUnion+2
+AtomOutputResolveKind:         .equ AtomOutputWorkUnion+4
+AtomOutputResolveAddend:       .equ AtomOutputWorkUnion+5
+AtomOutputResolveValue:        .equ AtomOutputWorkUnion+6
 .if AtomParserStatementMode
-AtomOutputResolveBaseHigh:     .db 0
+AtomOutputResolveBaseHigh:     .equ AtomOutputWorkUnion+9
 .endif
 AtomOutputWorkspaceEnd:

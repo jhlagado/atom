@@ -251,15 +251,11 @@ AtomStatementDataExpression:
             CP   1
             JR   Z,AtomStatementDataResolvedByte
             CALL AtomOutputEmitWord
-            JP   C,AtomStatementOutputFailure
-.if AtomDriverMode
-            JP   AtomStatementDataDelimiter
-.else
-            JP   AtomStatementDataDelimiter
-.endif
+            JR   AtomStatementDataOutputResult
 AtomStatementDataResolvedByte:
             LD   A,L
             CALL AtomOutputEmitByte
+AtomStatementDataOutputResult:
             JP   C,AtomStatementOutputFailure
 .if AtomDriverMode
             JP   AtomStatementDataDelimiter
@@ -596,6 +592,7 @@ AtomRecognizeDirective:
             RET  C
             LD   IX,AtomStatementDirectiveTable
             LD   B,AtomDirectiveCount
+            LD   C,AtomDirectiveEqu
 AtomRecognizeDirectiveLoop:
             LD   A,(AtomScratch)
             CP   (IX+0)
@@ -609,12 +606,13 @@ AtomRecognizeDirectiveLoop:
             LD   A,(AtomScratch+3)
             CP   (IX+3)
             JR   NZ,AtomRecognizeDirectiveNext
-            LD   A,(IX+4)
+            LD   A,C
             OR   A
             RET
 AtomRecognizeDirectiveNext:
-            LD   DE,5
+            LD   DE,4
             ADD  IX,DE
+            INC  C
             DJNZ AtomRecognizeDirectiveLoop
 AtomRecognizeDirectiveNotFound:
             XOR  A
@@ -623,23 +621,14 @@ AtomRecognizeDirectiveNotFound:
 
 AtomStatementDirectiveTable:
             .dw $21FD,$0000
-            .db AtomDirectiveEqu
             .dw $6097,$0000
-            .db AtomDirectiveOrg
             .dw $1950,$0000
-            .db AtomDirectiveDb
             .dw $1C98,$0000
-            .db AtomDirectiveDw
             .dw $1BF8,$0000
-            .db AtomDirectiveDs
             .dw $15CC,$7080
-            .db AtomDirectiveCstr
             .dw $670C,$7080
-            .db AtomDirectivePstr
             .dw $3B4C,$7080
-            .db AtomDirectiveIstr
             .dw $0829,$2DF0
-            .db AtomDirectiveAlign
 
 .routine out A clobbers HL,zero,sign,parity,halfCarry
 AtomStatementStringTake:
@@ -751,30 +740,31 @@ AtomStatementDirectiveString:
 AtomStatementCodeEnd:
 
 AtomStatementWorkspaceStart:
-AtomStatementKey:           .ds 6
-AtomStatementInstruction:   .ds 10
-AtomStatementMnemonic:      .db 0
-AtomStatementMnemonicValid: .db 0
-AtomStatementDetail:        .db 0
+AtomStatementWorkUnion:     .ds 20
+AtomStatementKey:           .equ AtomStatementWorkUnion
+AtomStatementInstruction:   .equ AtomStatementWorkUnion
+AtomStatementMnemonic:      .equ AtomStatementWorkUnion+6
+AtomStatementMnemonicValid: .equ AtomStatementWorkUnion+7
+AtomStatementDirective:     .equ AtomStatementWorkUnion+8
+AtomStatementDirectiveValid:.equ AtomStatementWorkUnion+9
+AtomStatementDetail:        .equ AtomStatementWorkUnion+10
+AtomStatementEquateValue:   .equ AtomStatementWorkUnion+6
+AtomStatementEquateSigned:  .equ AtomStatementWorkUnion+8
+AtomStatementDataWidth:     .equ AtomStatementWorkUnion
+AtomStatementDataPatchKind: .equ AtomStatementWorkUnion+1
+AtomStatementDataAddend:    .equ AtomStatementWorkUnion+2
+AtomStatementDataFill:      .equ AtomStatementWorkUnion+3
+AtomStatementDataValue:     .equ AtomStatementWorkUnion+4
+AtomStatementDataPendingKind:.equ AtomStatementDataValue
+AtomStatementDataCount:     .equ AtomStatementWorkUnion+6
+AtomStatementDataKey:       .equ AtomStatementWorkUnion+8
+AtomStatementDataSymbol:    .equ AtomStatementWorkUnion+10
+AtomStatementDataAddress:   .equ AtomStatementWorkUnion+12
+AtomStatementStringPointer: .equ AtomStatementWorkUnion+14
+AtomStatementStringRemaining:.equ AtomStatementWorkUnion+16
+AtomStatementStringCount:   .equ AtomStatementWorkUnion+17
+AtomStatementStringNibble:  .equ AtomStatementWorkUnion+18
+AtomStatementStringMode:    .equ AtomStatementWorkUnion+19
 AtomStatementErrorPart:     .db 0
 AtomStatementErrorOffset:   .dw 0
-AtomStatementEquateValue:   .dw 0
-AtomStatementEquateSigned:  .db 0
-AtomStatementDirective:     .db 0
-AtomStatementDirectiveValid:.db 0
-AtomStatementDataWidth:     .db 0
-AtomStatementDataPatchKind: .db 0
-AtomStatementDataAddend:    .db 0
-AtomStatementDataFill:      .db 0
-AtomStatementDataValue:     .dw 0
-AtomStatementDataPendingKind:.equ AtomStatementDataValue
-AtomStatementDataCount:     .dw 0
-AtomStatementDataKey:       .dw 0
-AtomStatementDataSymbol:    .dw 0
-AtomStatementDataAddress:   .dw 0
-AtomStatementStringPointer: .dw 0
-AtomStatementStringRemaining:.db 0
-AtomStatementStringCount:   .db 0
-AtomStatementStringNibble:  .db 0
-AtomStatementStringMode:    .db 0
 AtomStatementWorkspaceEnd:

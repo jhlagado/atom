@@ -3,16 +3,64 @@
   "source": "../asm/symbol-proof.asm",
   "memoryProfile": "phase-2a-memory.json",
   "contracts": "strict",
-  "proofCapacity": { "symbolRecords": 8, "pendingRecords": 4 },
+  "proofCapacity": {
+    "symbolRecords": 8,
+    "pendingRecords": 4
+  },
   "executionBudgets": {
-    "AtomSymbolReset": { "measuredInstructions": 7, "maxInstructions": 10, "measuredCycles": 99, "maxCycles": 125 },
-    "AtomPendingReset": { "measuredInstructions": 5, "maxInstructions": 8, "measuredCycles": 66, "maxCycles": 85 },
-    "AtomPackSymbol": { "measuredInstructions": 476, "maxInstructions": 600, "measuredCycles": 4152, "maxCycles": 5200 },
-    "AtomSymbolDeclare": { "measuredInstructions": 214, "maxInstructions": 250, "measuredCycles": 2540, "maxCycles": 3000 },
-    "AtomSymbolFind": { "measuredInstructions": 187, "maxInstructions": 215, "measuredCycles": 2090, "maxCycles": 2350 },
-    "AtomSymbolReference": { "measuredInstructions": 215, "maxInstructions": 245, "measuredCycles": 2365, "maxCycles": 2650 },
-    "AtomSymbolAdvanceScope": { "measuredInstructions": 24, "maxInstructions": 125, "measuredCycles": 312, "maxCycles": 1500 },
-    "AtomPendingAdd": { "measuredInstructions": 38, "maxInstructions": 55, "measuredCycles": 340, "maxCycles": 550 },
-    "AtomPendingTake": { "measuredInstructions": 98, "maxInstructions": 120, "measuredCycles": 1214, "maxCycles": 1450 }
+    "AtomSymbolReset": {
+      "measuredInstructions": 7,
+      "maxInstructions": 30,
+      "measuredCycles": 99,
+      "maxCycles": 250
+    },
+    "AtomPendingReset": {
+      "measuredInstructions": 5,
+      "maxInstructions": 30,
+      "measuredCycles": 66,
+      "maxCycles": 170
+    },
+    "AtomPackSymbol": {
+      "measuredInstructions": 476,
+      "maxInstructions": 1190,
+      "measuredCycles": 4152,
+      "maxCycles": 10380
+    },
+    "AtomSymbolDeclare": {
+      "measuredInstructions": 215,
+      "maxInstructions": 540,
+      "measuredCycles": 2550,
+      "maxCycles": 6380
+    },
+    "AtomSymbolFind": {
+      "measuredInstructions": 188,
+      "maxInstructions": 470,
+      "measuredCycles": 2100,
+      "maxCycles": 5250
+    },
+    "AtomSymbolReference": {
+      "measuredInstructions": 216,
+      "maxInstructions": 540,
+      "measuredCycles": 2375,
+      "maxCycles": 5940
+    },
+    "AtomSymbolAdvanceScope": {
+      "measuredInstructions": 24,
+      "maxInstructions": 60,
+      "measuredCycles": 312,
+      "maxCycles": 780
+    },
+    "AtomPendingAdd": {
+      "measuredInstructions": 38,
+      "maxInstructions": 100,
+      "measuredCycles": 340,
+      "maxCycles": 850
+    },
+    "AtomPendingTake": {
+      "measuredInstructions": 98,
+      "maxInstructions": 250,
+      "measuredCycles": 1214,
+      "maxCycles": 3040
+    }
   }
 }

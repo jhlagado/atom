@@ -1,25 +1,115 @@
 {
   "addressSpaceBytes": 65536,
   "regions": [
-    { "name": "reserved-low", "start": 0, "end": "AtomEncoderCoreStart", "exactBytes": 8192 },
-    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3234 },
-    { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 6 },
-    { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 589 },
-    { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 22 },
-    { "name": "lower-free", "start": "AtomSymbolWorkspaceEnd", "end": "AtomSymbolProofDataStart", "exactBytes": 20725 },
-    { "name": "proof-data", "start": "AtomSymbolProofDataStart", "end": "AtomSymbolProofDataEnd", "exactBytes": 20 },
-    { "name": "middle-free", "start": "AtomSymbolProofDataEnd", "end": "AtomSymbolArenaBefore", "exactBytes": 4076 },
-    { "name": "symbol-proof-arena", "start": "AtomSymbolArenaBefore", "end": "AtomSymbolArenaProofEnd", "exactBytes": 66 },
-    { "name": "arena-gap", "start": "AtomSymbolArenaProofEnd", "end": "AtomPendingArenaBefore", "exactBytes": 190 },
-    { "name": "pending-proof-arena", "start": "AtomPendingArenaBefore", "end": "AtomPendingArenaProofEnd", "exactBytes": 26 },
-    { "name": "upper-free", "start": "AtomPendingArenaProofEnd", "end": 65024, "exactBytes": 27878 },
-    { "name": "proof-stack", "start": 65024, "end": 65280, "exactBytes": 256 },
-    { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
+    {
+      "name": "reserved-low",
+      "start": 0,
+      "end": "AtomEncoderCoreStart",
+      "exactBytes": 8192
+    },
+    {
+      "name": "encoder-resident",
+      "start": "AtomEncoderCoreStart",
+      "end": "AtomEncoderCoreEnd",
+      "exactBytes": 3132
+    },
+    {
+      "name": "encoder-workspace",
+      "start": "AtomEncoderWorkspaceStart",
+      "end": "AtomEncoderWorkspaceEnd",
+      "exactBytes": 6
+    },
+    {
+      "name": "symbol-code",
+      "start": "AtomSymbolCodeStart",
+      "end": "AtomSymbolCodeEnd",
+      "exactBytes": 589
+    },
+    {
+      "name": "symbol-workspace",
+      "start": "AtomSymbolWorkspaceStart",
+      "end": "AtomSymbolWorkspaceEnd",
+      "exactBytes": 20
+    },
+    {
+      "name": "lower-free",
+      "start": "AtomSymbolWorkspaceEnd",
+      "end": "AtomSymbolProofDataStart",
+      "exactBytes": 20829
+    },
+    {
+      "name": "proof-data",
+      "start": "AtomSymbolProofDataStart",
+      "end": "AtomSymbolProofDataEnd",
+      "exactBytes": 20
+    },
+    {
+      "name": "middle-free",
+      "start": "AtomSymbolProofDataEnd",
+      "end": "AtomSymbolArenaBefore",
+      "exactBytes": 4076
+    },
+    {
+      "name": "symbol-proof-arena",
+      "start": "AtomSymbolArenaBefore",
+      "end": "AtomSymbolArenaProofEnd",
+      "exactBytes": 66
+    },
+    {
+      "name": "arena-gap",
+      "start": "AtomSymbolArenaProofEnd",
+      "end": "AtomPendingArenaBefore",
+      "exactBytes": 190
+    },
+    {
+      "name": "pending-proof-arena",
+      "start": "AtomPendingArenaBefore",
+      "end": "AtomPendingArenaProofEnd",
+      "exactBytes": 26
+    },
+    {
+      "name": "upper-free",
+      "start": "AtomPendingArenaProofEnd",
+      "end": 65024,
+      "exactBytes": 27878
+    },
+    {
+      "name": "proof-stack",
+      "start": 65024,
+      "end": 65280,
+      "exactBytes": 256
+    },
+    {
+      "name": "reserved-top",
+      "start": 65280,
+      "end": 65536,
+      "exactBytes": 256
+    }
   ],
   "extents": [
-    { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 589 },
-    { "name": "fixed-symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 22 },
-    { "name": "proof-symbol-capacity", "start": "AtomSymbolArena", "end": "AtomSymbolArenaLimit", "exactBytes": 64 },
-    { "name": "proof-pending-capacity", "start": "AtomPendingArena", "end": "AtomPendingArenaLimit", "exactBytes": 24 }
+    {
+      "name": "symbol-code",
+      "start": "AtomSymbolCodeStart",
+      "end": "AtomSymbolCodeEnd",
+      "exactBytes": 589
+    },
+    {
+      "name": "fixed-symbol-workspace",
+      "start": "AtomSymbolWorkspaceStart",
+      "end": "AtomSymbolWorkspaceEnd",
+      "exactBytes": 20
+    },
+    {
+      "name": "proof-symbol-capacity",
+      "start": "AtomSymbolArena",
+      "end": "AtomSymbolArenaLimit",
+      "exactBytes": 64
+    },
+    {
+      "name": "proof-pending-capacity",
+      "start": "AtomPendingArena",
+      "end": "AtomPendingArenaLimit",
+      "exactBytes": 24
+    }
   ]
 }

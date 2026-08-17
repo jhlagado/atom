@@ -106,7 +106,7 @@ under `asm/`, assigns collision-checked semantic names, and records every rename
 in `native/atom-symbols.json`. The proof runs three complete builds: the pinned
 image assembles the `.atm` source, the resulting Atom image assembles it again,
 and the same `.atm` source is translated for an independent strict-AZM build.
-All initialized addresses and all 12,356 resident bytes must agree.
+All initialized addresses and all 12,093 resident bytes must agree.
 
 This transition representation is not a second hand-maintained implementation.
 `npm run verify:self-host-source` fails if it drifts from the frozen oracle.

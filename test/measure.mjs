@@ -9,6 +9,18 @@ const negative = invalidCases().filter(({ source }) => azmRejects(source));
 const encodings = new Set(valid.map(({ source }) => azmBytes(source).map((b) => b.toString(16).padStart(2, "0")).join("")));
 const records = new Set(valid.map(({ record }) => Buffer.from(record).toString("hex")));
 
+for (const { record } of valid) {
+  harness.length(record);
+  harness.encode(record);
+}
+for (const record of systematicInvalidRecords()) {
+  harness.length(record);
+  harness.encode(record);
+}
+for (const mnemonic of MNEMONICS.slice(1)) harness.recognize(mnemonic);
+harness.recognize("ZZZZ");
+harness.pack("ZZZZZZZZ");
+
 const result = {
   labels: "All byte counts are Measured unless explicitly marked Projected or Hypothesis.",
   authority: {
@@ -52,6 +64,7 @@ const result = {
     azmSupportedFraction: `${valid.length}/${valid.length} of the frozen AZM form census`,
     unsupportedAzmForms: [],
   },
+  execution: harness.statistics,
   wholeAssembler: {
     classification: "Projected",
     bytes: { low: 9249, high: 11849 },

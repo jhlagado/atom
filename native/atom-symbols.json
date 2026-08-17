@@ -3,11 +3,11 @@
   "version": 1,
   "statistics": {
     "inputFiles": 13,
-    "statements": 7228,
-    "sourceBytes": 101723,
+    "statements": 7147,
+    "sourceBytes": 101108,
     "parts": 5,
-    "globalSymbols": 865,
-    "privateSymbols": 428
+    "globalSymbols": 872,
+    "privateSymbols": 440
   },
   "symbols": [
     {
@@ -736,6 +736,20 @@
       "scope": "ATOMDISPATCHMNEMONIC"
     },
     {
+      "original": "_AtomDispatchCategoryLoop",
+      "short": ".DCLOOP",
+      "private": true,
+      "module": "AT",
+      "scope": "ATOMDISPATCHMNEMONIC"
+    },
+    {
+      "original": "_AtomDispatchCategoryReady",
+      "short": ".DCREADY",
+      "private": true,
+      "module": "AT",
+      "scope": "ATOMDISPATCHMNEMONIC"
+    },
+    {
       "original": "_AtomDispatchReady",
       "short": ".DREADY",
       "private": true,
@@ -743,8 +757,8 @@
       "scope": "ATOMDISPATCHMNEMONIC"
     },
     {
-      "original": "AtomMnemonicCategoryTable",
-      "short": "EN_CTABL",
+      "original": "AtomMnemonicCategoryEnds",
+      "short": "EN_CENDS",
       "private": false,
       "module": "EN"
     },
@@ -991,6 +1005,13 @@
       "scope": "ATOMVALIDATEFORM"
     },
     {
+      "original": "_AtomValidateLdAbsolutePairLength",
+      "short": ".VLAPLEN",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
       "original": "_AtomValidateLdMemAbsIndex",
       "short": ".VLMAINDE",
       "private": true,
@@ -1153,6 +1174,13 @@
     {
       "original": "_AtomValidateJpConditional",
       "short": ".VJCONDIT",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMVALIDATEFORM"
+    },
+    {
+      "original": "_AtomValidateAbsoluteLength3",
+      "short": ".VAL3",
       "private": true,
       "module": "EN",
       "scope": "ATOMVALIDATEFORM"
@@ -1572,6 +1600,13 @@
       "scope": "ATOMENCODECORE"
     },
     {
+      "original": "_AtomStorePrefixBEncoded2",
+      "short": ".SPBE2",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
       "original": "_AtomEncodeLdRegIndexed",
       "short": ".LRINDEXE",
       "private": true,
@@ -1588,6 +1623,13 @@
     {
       "original": "_AtomEncodeLdHalf",
       "short": ".LDHALF",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomEncodeLdHalfOpcode",
+      "short": ".LHOPCODE",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -1616,6 +1658,13 @@
     {
       "original": "_AtomEncodeLdReg16Abs",
       "short": ".LR1ABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomStoreScratch1CopyValue1ToScratch2",
+      "short": ".SS1CV1TS",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -1665,6 +1714,13 @@
     {
       "original": "_AtomEncodeLdMemAbs",
       "short": ".LDMEMABS",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomStoreScratch1CopyValue0ToScratch2",
+      "short": ".SS1CV0TS",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -1721,6 +1777,13 @@
     {
       "original": "_AtomEncodeLdIndexed",
       "short": ".LINDEXED",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomStoreScratch1Value0Encoded3",
+      "short": ".SS1V0E3",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -1783,6 +1846,13 @@
     {
       "original": "_AtomEncodeOutImmediate",
       "short": ".OIMMEDIA",
+      "private": true,
+      "module": "EN",
+      "scope": "ATOMENCODECORE"
+    },
+    {
+      "original": "_AtomStoreScratch0Value0Encoded2",
+      "short": ".SS0V0E2",
       "private": true,
       "module": "EN",
       "scope": "ATOMENCODECORE"
@@ -3258,6 +3328,12 @@
       "scope": "ATOMTOKENSCANDIGITLED"
     },
     {
+      "original": "AtomTokenFinishNumber",
+      "short": "TK_FNUMB",
+      "private": false,
+      "module": "TK"
+    },
+    {
       "original": "AtomTokenScanBased",
       "short": "TK_SBASE",
       "private": false,
@@ -3318,6 +3394,12 @@
       "private": true,
       "module": "TK",
       "scope": "ATOMTOKENSCANBASED"
+    },
+    {
+      "original": "AtomTokenFinishNumberLength",
+      "short": "TK_FNLEN",
+      "private": false,
+      "module": "TK"
     },
     {
       "original": "AtomTokenInvalidNumber",
@@ -3521,6 +3603,13 @@
     {
       "original": "_AtomTokenizerShift",
       "short": ".SHIFT",
+      "private": true,
+      "module": "TK",
+      "scope": "ATOMTOKENIZERNEXT"
+    },
+    {
+      "original": "_AtomTokenizerFinishPunctuation",
+      "short": ".FPUNCTUA",
       "private": true,
       "module": "TK",
       "scope": "ATOMTOKENIZERNEXT"
@@ -4032,6 +4121,13 @@
       "scope": "ATOMEXPRESSIONPARSECOMMON"
     },
     {
+      "original": "_AtomExpressionReturnUnresolved",
+      "short": ".RUNRESOL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSECOMMON"
+    },
+    {
       "original": "_AtomExpressionFinishDeferred",
       "short": ".FINDEFR",
       "private": true,
@@ -4109,6 +4205,13 @@
       "short": "EX_POP",
       "private": false,
       "module": "EX"
+    },
+    {
+      "original": "_AtomExpressionRequireLeftParen",
+      "short": ".RLPAREN",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPARSEOPERAND"
     },
     {
       "original": "_AtomExpressionPushUnary",
@@ -4216,6 +4319,13 @@
     {
       "original": "_AtomExpressionPrimaryUnresolved",
       "short": ".PUNRESOL",
+      "private": true,
+      "module": "EX",
+      "scope": "ATOMEXPRESSIONPRIMARYNAME"
+    },
+    {
+      "original": "_AtomExpressionStoreUnresolved",
+      "short": ".SUNRESOL",
       "private": true,
       "module": "EX",
       "scope": "ATOMEXPRESSIONPRIMARYNAME"
@@ -4694,6 +4804,12 @@
       "scope": "ATOMEXPRESSIONMULTIPLY"
     },
     {
+      "original": "AtomExpressionApplySignResult",
+      "short": "EX_ASRES",
+      "private": false,
+      "module": "EX"
+    },
+    {
       "original": "AtomExpressionDivide",
       "short": "EX_DIVID",
       "private": false,
@@ -4961,12 +5077,6 @@
     {
       "original": "AtomExpressionOperator",
       "short": "EX_OPER",
-      "private": false,
-      "module": "EX"
-    },
-    {
-      "original": "AtomExpressionOperatorPrecedence",
-      "short": "EX_OPREC",
       "private": false,
       "module": "EX"
     },
@@ -6142,18 +6252,16 @@
       "module": "PR"
     },
     {
-      "original": "_AtomParserPreflightSymbolFailure",
-      "short": ".PSFAIL",
-      "private": true,
-      "module": "PR",
-      "scope": "ATOMPARSERPREFLIGHTREFERENCE"
+      "original": "AtomParserSymbolFailure",
+      "short": "PR_SFAIL",
+      "private": false,
+      "module": "PR"
     },
     {
-      "original": "_AtomParserReferencePartFailure",
-      "short": ".RPFAIL",
-      "private": true,
-      "module": "PR",
-      "scope": "ATOMPARSERPREFLIGHTREFERENCE"
+      "original": "AtomParserReferencePartFailure",
+      "short": "PR_RPFAI",
+      "private": false,
+      "module": "PR"
     },
     {
       "original": "AtomParserCompareReferenceKeys",
@@ -6481,6 +6589,12 @@
       "module": "PR"
     },
     {
+      "original": "AtomParserScratch",
+      "short": "PR_SCRAT",
+      "private": false,
+      "module": "PR"
+    },
+    {
       "original": "AtomParserErrorStatus",
       "short": "PR_ESTAT",
       "private": false,
@@ -6495,12 +6609,6 @@
     {
       "original": "AtomParserErrorOffset",
       "short": "PR_EOFF",
-      "private": false,
-      "module": "PR"
-    },
-    {
-      "original": "AtomParserScratch",
-      "short": "PR_SCRAT",
       "private": false,
       "module": "PR"
     },
@@ -6859,6 +6967,12 @@
       "module": "OU"
     },
     {
+      "original": "AtomOutputWorkUnion",
+      "short": "OU_WUNIO",
+      "private": false,
+      "module": "OU"
+    },
+    {
       "original": "AtomOutputInstructionStart",
       "short": "OU_IBEG",
       "private": false,
@@ -7191,6 +7305,12 @@
     {
       "original": "AtomStatementDataResolvedByte",
       "short": "ST_DRB",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDataOutputResult",
+      "short": "ST_DORES",
       "private": false,
       "module": "ST"
     },
@@ -7555,6 +7675,12 @@
       "module": "ST"
     },
     {
+      "original": "AtomStatementWorkUnion",
+      "short": "ST_WUNIO",
+      "private": false,
+      "module": "ST"
+    },
+    {
       "original": "AtomStatementKey",
       "short": "ST_KEY",
       "private": false,
@@ -7579,20 +7705,20 @@
       "module": "ST"
     },
     {
+      "original": "AtomStatementDirective",
+      "short": "ST_DIR",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementDirectiveValid",
+      "short": "ST_DVALI",
+      "private": false,
+      "module": "ST"
+    },
+    {
       "original": "AtomStatementDetail",
       "short": "ST_DETAI",
-      "private": false,
-      "module": "ST"
-    },
-    {
-      "original": "AtomStatementErrorPart",
-      "short": "ST_EPART",
-      "private": false,
-      "module": "ST"
-    },
-    {
-      "original": "AtomStatementErrorOffset",
-      "short": "ST_EOFF",
       "private": false,
       "module": "ST"
     },
@@ -7605,18 +7731,6 @@
     {
       "original": "AtomStatementEquateSigned",
       "short": "ST_ESIGN",
-      "private": false,
-      "module": "ST"
-    },
-    {
-      "original": "AtomStatementDirective",
-      "short": "ST_DIR",
-      "private": false,
-      "module": "ST"
-    },
-    {
-      "original": "AtomStatementDirectiveValid",
-      "short": "ST_DVALI",
       "private": false,
       "module": "ST"
     },
@@ -7707,6 +7821,18 @@
     {
       "original": "AtomStatementStringMode",
       "short": "ST_SMODE",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementErrorPart",
+      "short": "ST_EPART",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementErrorOffset",
+      "short": "ST_EOFF",
       "private": false,
       "module": "ST"
     },

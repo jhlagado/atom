@@ -1235,7 +1235,7 @@ AtomParserPreflightReference:
             ADD  HL,DE
             LD   A,(HL)
             CP   16
-            JR   NC,_AtomParserReferencePartFailure
+            JR   NC,AtomParserReferencePartFailure
             LD   A,(AtomParserReferenceScan)
             CALL AtomParserBuildReferenceAddress
 .endif
@@ -1244,17 +1244,17 @@ AtomParserPreflightReference:
             CALL AtomSymbolFind
             RET  NC
             CP   AtomStatusNotFound
-            JR   NZ,_AtomParserPreflightSymbolFailure
+            JR   NZ,AtomParserSymbolFailure
             LD   HL,AtomParserReferenceMissingCount
             INC  (HL)
             XOR  A
             RET
-_AtomParserPreflightSymbolFailure:
+AtomParserSymbolFailure:
             LD   (AtomParserSymbolStatus),A
             LD   A,AtomParserStatusSymbol
             JP   AtomParserFailReference
 .if AtomDriverMode
-_AtomParserReferencePartFailure:
+AtomParserReferencePartFailure:
             LD   A,AtomParserStatusPartCapacity
             JP   AtomParserFailReference
 .endif
@@ -1278,9 +1278,7 @@ _AtomParserCompareReferenceKeyLoop:
 
 AtomParserSymbolCapacityFailure:
             LD   A,AtomStatusSymbolCapacity
-            LD   (AtomParserSymbolStatus),A
-            LD   A,AtomParserStatusSymbol
-            JP   AtomParserFailReference
+            JR   AtomParserSymbolFailure
 AtomParserUnexpectedSymbolFailure:
             LD   (AtomParserSymbolStatus),A
             LD   A,AtomParserStatusInternal
@@ -1514,13 +1512,13 @@ AtomParserMemoryBase:         .db 0
 AtomParserIndexClass:         .db 0
 AtomParserDisplacementSign:   .db 0
 AtomParserNameKey:            .ds 6
-AtomParserErrorStatus:        .db 0
-AtomParserErrorPart:          .db 0
-AtomParserErrorOffset:        .dw 0
 AtomParserScratch:            .ds 10
+AtomParserErrorStatus:        .equ AtomParserScratch+6
+AtomParserErrorPart:          .equ AtomParserScratch+7
+AtomParserErrorOffset:        .equ AtomParserScratch+8
 .if AtomParserExpressionMode
-AtomParserExpressionStatus:   .db 0
-AtomParserSymbolStatus:       .db 0
+AtomParserExpressionStatus:   .equ AtomParserScratch+5
+AtomParserSymbolStatus:       .equ AtomParserScratch+5
 AtomParserReferenceCount:     .db 0
 AtomParserReferenceBuildCount:.db 0
 AtomParserUnresolvedMask:     .db 0

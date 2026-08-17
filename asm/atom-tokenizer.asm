@@ -429,6 +429,7 @@ _AtomTokenScanDigitLedFinish:
             LD   HL,(AtomTokenScanOffset)
             ADD  HL,BC
             LD   (AtomTokenSourceOffsetState),HL
+AtomTokenFinishNumber:
             LD   A,AtomTokenNumber
             JP   AtomTokenFinish
 
@@ -496,10 +497,10 @@ _AtomTokenScanBasedEof:
             JR   Z,AtomTokenInvalidNumber
 _AtomTokenScanBasedFinish:
             LD   (AtomTokenScanValue),HL
+AtomTokenFinishNumberLength:
             LD   A,B
             LD   (AtomTokenScanLength),A
-            LD   A,AtomTokenNumber
-            JP   AtomTokenFinish
+            JR   AtomTokenFinishNumber
 
 AtomTokenInvalidNumber:
             LD   A,AtomTokenStatusInvalidNumber
@@ -649,9 +650,7 @@ _AtomTokenizerPunctuation:
             LD   C,(HL)
             CALL AtomTokenSourceTake
             LD   A,1
-            LD   (AtomTokenScanLength),A
-            LD   A,C
-            JP   AtomTokenFinish
+            JR   _AtomTokenizerFinishPunctuation
 
 _AtomTokenizerSkipByte:
             CALL AtomTokenSourceTake
@@ -720,6 +719,7 @@ _AtomTokenizerShift:
             JP   NZ,AtomTokenInvalidByte
             CALL AtomTokenSourceTake
             LD   A,2
+_AtomTokenizerFinishPunctuation:
             LD   (AtomTokenScanLength),A
             LD   A,C
             JP   AtomTokenFinish
@@ -845,10 +845,7 @@ _AtomTokenScanCharacterClose:
             JP   Z,AtomTokenUnterminatedCharacter
             CP   $27
             JP   NZ,AtomTokenInvalidCharacter
-            LD   A,B
-            LD   (AtomTokenScanLength),A
-            LD   A,AtomTokenNumber
-            JP   AtomTokenFinish
+            JP   AtomTokenFinishNumberLength
 
 AtomTokenizerRuleCodeEnd:
 
@@ -925,8 +922,8 @@ AtomTokenScanOffset:         .dw 0
 AtomTokenScanLength:         .db 0
 AtomTokenScanValue:          .dw 0
 AtomTokenDigitsSeen:         .db 0
-AtomTokenErrorStatus:        .db 0
-AtomTokenErrorPart:          .db 0
-AtomTokenErrorOffset:        .dw 0
+AtomTokenErrorStatus:        .equ AtomTokenScanLength
+AtomTokenErrorPart:          .equ AtomTokenScanValue
+AtomTokenErrorOffset:        .equ AtomTokenScanValue+1
 AtomTokenRecord:             .ds AtomTokenRecordBytes
 AtomTokenizerWorkspaceEnd:

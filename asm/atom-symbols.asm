@@ -655,5 +655,5 @@ AtomSymbolOperationFlags:     .db 0
 AtomPendingArenaBase:         .dw 0
 AtomPendingArenaEnd:          .dw 0
 AtomPendingNext:              .dw 0
-AtomPendingOperationSymbol:   .dw 0
+AtomPendingOperationSymbol:   .equ AtomSymbolOperationKey
 AtomSymbolWorkspaceEnd:

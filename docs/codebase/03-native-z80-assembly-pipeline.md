@@ -4,7 +4,7 @@
 
 The native pipeline begins at `AtomAssemble` and ends when the output adapter
 accepts a commit or abort. Everything between those points runs as Z80 code.
-The compiler uses caller-owned source, symbol, and pending arenas plus 531 bytes
+The compiler uses caller-owned source, symbol, and pending arenas plus 453 bytes
 of fixed non-reentrant workspace linked beside the code and immutable tables.
 
 `asm/atom-host-runtime.asm` selects the complete configuration. Smaller proof
@@ -286,7 +286,7 @@ The implementation exploits the instruction set's regular fields:
 Irregular core and ED forms use small tables. LD has its own validation and
 encoding paths because it contains the broadest set of register, memory,
 absolute, index, half-register, and special-register interactions. The current
-measurement records 899 direct LD bytes inside the 3,234-byte encoder core.
+measurement records 881 direct LD bytes inside the 3,132-byte encoder core.
 
 The frozen differential census contains 69 mnemonic spellings and 3,445 valid
 logical forms. The encoder also rejects 526 AZM-invalid source forms and 2,453

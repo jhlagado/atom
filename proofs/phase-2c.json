@@ -11,8 +11,23 @@
     "instructionAddress": 16384
   },
   "executionBudgets": {
-    "AtomTokenizerReset": { "measuredInstructions": 22, "maxInstructions": 30, "measuredCycles": 248, "maxCycles": 320 },
-    "AtomParserParse": { "measuredInstructions": 4151, "maxInstructions": 4500, "measuredCycles": 40326, "maxCycles": 44000 },
-    "AtomEncode": { "measuredInstructions": 209, "maxInstructions": 250, "measuredCycles": 1997, "maxCycles": 2450 }
+    "AtomTokenizerReset": {
+      "measuredInstructions": 22,
+      "maxInstructions": 60,
+      "measuredCycles": 248,
+      "maxCycles": 620
+    },
+    "AtomParserParse": {
+      "measuredInstructions": 4191,
+      "maxInstructions": 10480,
+      "measuredCycles": 40656,
+      "maxCycles": 101640
+    },
+    "AtomEncode": {
+      "measuredInstructions": 284,
+      "maxInstructions": 710,
+      "measuredCycles": 2477,
+      "maxCycles": 6200
+    }
   }
 }

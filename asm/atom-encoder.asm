@@ -229,13 +229,18 @@ AtomDispatchMnemonic:
             JR   _AtomDispatchReady
 _AtomDispatchMapped:
             SUB  AtomMRet
-            LD   L,A
-            LD   H,0
-            PUSH DE
-            LD   DE,AtomMnemonicCategoryTable
-            ADD  HL,DE
-            LD   A,(HL)
-            POP  DE
+            PUSH BC
+            LD   HL,AtomMnemonicCategoryEnds
+            LD   C,1
+_AtomDispatchCategoryLoop:
+            CP   (HL)
+            JR   C,_AtomDispatchCategoryReady
+            INC  HL
+            INC  C
+            JR   _AtomDispatchCategoryLoop
+_AtomDispatchCategoryReady:
+            LD   A,C
+            POP  BC
 _AtomDispatchReady:
             ADD  A,A
             LD   L,A
@@ -248,12 +253,9 @@ _AtomDispatchReady:
             LD   A,B
             JP   (HL)
 
-AtomMnemonicCategoryTable:
-            .db 1,2,3,4,5,5,6,6,7,8,9
-            .db 10,10,10
-            .db 11,11,11,11,11,11,11,11,11
-            .db 12,12,12,12,12,12,12,12
-            .db 13,14,15,16
+; Exclusive endpoints of the sixteen dense non-core mnemonic families.
+AtomMnemonicCategoryEnds:
+            .db 1,2,3,4,6,8,9,10,11,14,23,31,32,33,34,35
 
 ; Values at offsets 4..9 are never read by this routine.
 .routine in IX out A,carry clobbers zero,sign,parity,halfCarry,B,DE,HL
@@ -271,17 +273,10 @@ _AtomValidateCore:
             CALL AtomRequireNoOperands
             RET  C
             LD   A,(IX+AtomInstrMnemonic)
-            DEC  A
-            ADD  A,A
-            LD   E,A
-            LD   D,0
-            LD   HL,AtomCoreOpcodes+1
-            ADD  HL,DE
-            LD   A,(HL)
+            CP   14
+            SBC  A,A
+            ADD  A,2
             OR   A
-            LD   A,1
-            RET  Z
-            INC  A
             RET
 
 _AtomValidateRet:
@@ -502,9 +497,7 @@ _AtomValidateLdReg16:
             JP   AtomInvalid
 _AtomValidateLdReg16Absolute:
             LD   A,(IX+AtomInstrOp0)
-            CP   AtomOpHL
-            JP   Z,AtomEncoded3
-            JP   AtomEncoded4
+            JR   _AtomValidateLdAbsolutePairLength
 _AtomValidateLdSp:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpHL
@@ -534,6 +527,7 @@ _AtomValidateLdMemAbs:
             JP   Z,AtomEncoded3
             CALL AtomIsReg16
             JR   NC,_AtomValidateLdMemAbsIndex
+_AtomValidateLdAbsolutePairLength:
             CP   AtomOpHL
             JP   Z,AtomEncoded3
             JP   AtomEncoded4
@@ -644,9 +638,7 @@ _AtomValidateOptionalReg8Length4:
             JP   C,AtomEncoded4
             JP   AtomInvalid
 _AtomValidateRotatePlain:
-            CALL AtomRequireOneOperand
-            RET  C
-            JP   AtomEncoded2
+            JP   _AtomValidateInOne
 
 _AtomValidateAlu:
             LD   A,(IX+AtomInstrOp1)
@@ -730,6 +722,7 @@ _AtomValidateJpConditional:
             CALL AtomIsCondition
             JR   NC,AtomInvalid
             LD   A,(IX+AtomInstrOp1)
+_AtomValidateAbsoluteLength3:
             CP   AtomOpImm16
             JP   Z,AtomEncoded3
             JR   AtomInvalid
@@ -741,9 +734,7 @@ _AtomValidateCall:
             CALL AtomRequireOneOperand
             RET  C
             LD   A,(IX+AtomInstrOp0)
-            CP   AtomOpImm16
-            JP   Z,AtomEncoded3
-            JR   AtomInvalid
+            JR   _AtomValidateAbsoluteLength3
 _AtomValidateCallConditional:
             JR   _AtomValidateJpConditional
 
@@ -912,19 +903,18 @@ AtomEncodeCore:
             JP   AtomDispatchMnemonic
 
 _AtomEncodeCoreOpcode:
+            LD   B,A
             DEC  A
-            ADD  A,A
             LD   E,A
             LD   D,0
             LD   HL,AtomCoreOpcodes
             ADD  HL,DE
+            LD   A,B
+            CP   14
             LD   A,(HL)
-            LD   (AtomScratch+0),A
-            INC  HL
-            LD   A,(HL)
-            OR   A
-            JP   Z,AtomEncoded1
-            JP   _AtomStoreScratch1Encoded2
+            JP   C,_AtomStoreEncoded1
+            LD   B,A
+            JP   _AtomStoreEdBEncoded2
 
 _AtomEncodeRet:
             LD   A,(IX+AtomInstrOp0)
@@ -1174,6 +1164,7 @@ _AtomEncodeLdASpecial:
 _AtomEncodeLdASpecialReady:
 _AtomStoreEdBEncoded2:
             LD   A,$ED
+_AtomStorePrefixBEncoded2:
             LD   (AtomScratch+0),A
             LD   A,B
             JP   _AtomStoreScratch1Encoded2
@@ -1200,9 +1191,7 @@ _AtomEncodeLdRegHalf:
             ADD  A,A
             ADD  A,A
             ADD  A,A
-            ADD  A,B
-            ADD  A,$40
-            JP   _AtomStoreScratch1Encoded2
+            JR   _AtomEncodeLdHalfOpcode
 
 _AtomEncodeLdHalf:
             CALL AtomStorePrefixPreserveAF
@@ -1213,6 +1202,7 @@ _AtomEncodeLdHalf:
             LD   B,A
             LD   A,(IX+AtomInstrOp1)
             AND  7
+_AtomEncodeLdHalfOpcode:
             ADD  A,B
             ADD  A,$40
             JP   _AtomStoreScratch1Encoded2
@@ -1257,6 +1247,7 @@ _AtomEncodeLdReg16Abs:
             LD   A,$ED
             LD   (AtomScratch+0),A
             LD   A,B
+_AtomStoreScratch1CopyValue1ToScratch2:
             LD   (AtomScratch+1),A
             JP   AtomCopyValue1ToScratch2
 _AtomEncodeLdHlAbs:
@@ -1282,8 +1273,7 @@ _AtomEncodeLdIndex16:
             JR   Z,_AtomEncodeLdIndex16Opcode
             LD   A,$2A
 _AtomEncodeLdIndex16Opcode:
-            LD   (AtomScratch+1),A
-            JP   AtomCopyValue1ToScratch2
+            JR   _AtomStoreScratch1CopyValue1ToScratch2
 _AtomEncodeLdSpecialTarget:
             LD   B,$47
             CP   AtomOpI
@@ -1309,6 +1299,7 @@ _AtomEncodeLdMemAbs:
             LD   A,$ED
             LD   (AtomScratch+0),A
             LD   A,B
+_AtomStoreScratch1CopyValue0ToScratch2:
             LD   (AtomScratch+1),A
             JP   AtomCopyValue0ToScratch2
 _AtomEncodeLdAbsA:
@@ -1324,8 +1315,7 @@ _AtomEncodeLdAbsIndex:
             CALL AtomPrefixFromOperand
             LD   (AtomScratch+0),A
             LD   A,$22
-            LD   (AtomScratch+1),A
-            JP   AtomCopyValue0ToScratch2
+            JR   _AtomStoreScratch1CopyValue0ToScratch2
 _AtomEncodeLdMemPair:
             SUB  AtomOpMemBC
             ADD  A,A
@@ -1352,6 +1342,7 @@ _AtomEncodeLdIndexed:
             CP   AtomOpImm8
             JR   Z,_AtomEncodeLdIndexedImm
             ADD  A,$70
+_AtomStoreScratch1Value0Encoded3:
             LD   (AtomScratch+1),A
             LD   A,(IX+AtomInstrValue0)
             JP   _AtomStoreScratch2Encoded3
@@ -1405,6 +1396,7 @@ _AtomEncodeOut:
             JR   _AtomEncodeInEd
 _AtomEncodeOutImmediate:
             LD   A,$D3
+_AtomStoreScratch0Value0Encoded2:
             LD   (AtomScratch+0),A
             LD   A,(IX+AtomInstrValue0)
             JP   _AtomStoreScratch1Encoded2
@@ -1465,9 +1457,7 @@ _AtomEncodeCbPlain:
             ADD  A,B
             LD   B,A
             LD   A,$CB
-            LD   (AtomScratch+0),A
-            LD   A,B
-            JP   _AtomStoreScratch1Encoded2
+            JP   _AtomStorePrefixBEncoded2
 _AtomEncodeRotateIndexed:
             LD   A,(IX+AtomInstrOp1)
             CP   AtomOpNone
@@ -1517,9 +1507,7 @@ _AtomEncodeAlu:
 _AtomEncodeAluImmediate:
             LD   A,B
             ADD  A,$C6
-            LD   (AtomScratch+0),A
-            LD   A,(IX+AtomInstrValue0)
-            JP   _AtomStoreScratch1Encoded2
+            JP   _AtomStoreScratch0Value0Encoded2
 _AtomEncodeAluHalf:
             LD   A,(IX+AtomInstrOp0)
             CALL AtomStorePrefixPreserveAF
@@ -1531,9 +1519,7 @@ _AtomEncodeAluIndexed:
             CALL AtomStorePrefixPreserveAF
             LD   A,B
             ADD  A,$86
-            LD   (AtomScratch+1),A
-            LD   A,(IX+AtomInstrValue0)
-            JP   _AtomStoreScratch2Encoded3
+            JP   _AtomStoreScratch1Value0Encoded3
 _AtomEncodeAlu16:
             LD   A,(IX+AtomInstrMnemonic)
             CP   AtomMAdd
@@ -1737,42 +1723,12 @@ AtomEncoderCodeEnd:
 AtomEncoderImmutableStart:
 AtomOpcodeTableStart:
 
-; Two bytes per no-operand mnemonic. A zero second byte marks length one.
+; Ordinals 1..13 are one-byte opcodes. Ordinals 14..34 use ED plus the
+; corresponding suffix in the remainder of this single indexed table.
 AtomCoreOpcodes:
-            .db $00,$00 ; NOP
-            .db $F3,$00 ; DI
-            .db $FB,$00 ; EI
-            .db $37,$00 ; SCF
-            .db $3F,$00 ; CCF
-            .db $2F,$00 ; CPL
-            .db $27,$00 ; DAA
-            .db $D9,$00 ; EXX
-            .db $76,$00 ; HALT
-            .db $07,$00 ; RLCA
-            .db $0F,$00 ; RRCA
-            .db $17,$00 ; RLA
-            .db $1F,$00 ; RRA
-            .db $ED,$44 ; NEG
-            .db $ED,$67 ; RRD
-            .db $ED,$6F ; RLD
-            .db $ED,$A0 ; LDI
-            .db $ED,$B0 ; LDIR
-            .db $ED,$A8 ; LDD
-            .db $ED,$B8 ; LDDR
-            .db $ED,$A1 ; CPI
-            .db $ED,$B1 ; CPIR
-            .db $ED,$A9 ; CPD
-            .db $ED,$B9 ; CPDR
-            .db $ED,$A2 ; INI
-            .db $ED,$B2 ; INIR
-            .db $ED,$AA ; IND
-            .db $ED,$BA ; INDR
-            .db $ED,$A3 ; OUTI
-            .db $ED,$B3 ; OTIR
-            .db $ED,$AB ; OUTD
-            .db $ED,$BB ; OTDR
-            .db $ED,$4D ; RETI
-            .db $ED,$45 ; RETN
+            .db $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F
+            .db $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2
+            .db $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45
 
 AtomImOpcodes:  .db $46,$56,$5E
 AtomOpcodeTableEnd:
