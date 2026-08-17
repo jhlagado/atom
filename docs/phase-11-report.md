@@ -32,10 +32,10 @@ This checkpoint changes host code only. Native code growth is Measured 0 bytes:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Code and immutable tables | Measured | 11,640 |
+| Code and immutable tables | Measured | 11,648 |
 | Fixed workspace | Measured | 453 |
-| Linked resident extent | Measured | 12,093 |
-| Physical margin below 16 KiB | Measured | 4,291 |
+| Linked resident extent | Measured | 12,101 |
+| Physical margin below 16 KiB | Measured | 4,283 |
 
 The bridge still receives one IMAGE call per included byte because lowering
 uses the native initialized `DS` path. This costs execution time but no resident
@@ -49,7 +49,7 @@ malformed syntax, the 65,535-byte boundary, inactive conditional source,
 listing text, D8 range classification, and injected bridge-count disagreement.
 
 `INCBIN` itself changes no native instruction. The current compressed-core
-proof covers Measured 12,093 resident bytes and Measured 11,742 initialized
+proof covers Measured 12,101 resident bytes and Measured 11,750 initialized
 addresses, and byte identity across the pinned core, translated AZM build, and
 two Atom generations.
 

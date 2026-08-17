@@ -135,11 +135,10 @@ evaluator feed the parser. The output layer connects parsed instructions and
 pending records to the sink. The statement layer drives individual source
 lines, and the driver controls the complete multipart generation.
 
-The older direct proof files under `asm/` link controlled subsystem images with
-guards, entry points, and adapter state. They remain frozen during the proof
-migration. Encoder also has a checked-core differential, so every claimed form
-now executes the authoritative `.atm` bytes. The remaining subsystem lanes will
-move in dependency order before the corresponding AZM modules are removed.
+Every subsystem proof executes the checked core with controlled guards, entry
+points, and caller-owned state. The older direct proof links under `asm/` have
+been retired. The remaining frozen implementation is bootstrap history pending
+one dependency-removal audit.
 
 ## Measured native account
 
@@ -157,9 +156,9 @@ The current pinned strict-contract image divides into these measured ranges:
 | Statements and directives | 1,345 | 23 |
 | Multipart driver | 619 | 9 |
 | Fail-closed host sink stubs | 8 | 0 |
-| **Total** | **11,640** | **453** |
+| **Total** | **11,648** | **453** |
 
-The linked resident extent is measured at 12,093 bytes, leaving 4,291 bytes
+The linked resident extent is measured at 12,101 bytes, leaving 4,283 bytes
 below a 16 KiB boundary. Caller-owned source, symbol, pending, descriptor, and
 stack storage are separate accounts. The values above come from
 `assets/native-core.json` and the workspace symbols used by

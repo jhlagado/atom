@@ -16,10 +16,10 @@
     { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
     { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1345 },
     { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 23 },
-    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 619 },
+    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 627 },
     { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
     { "name": "host-service-code", "start": "AtomHostServiceCodeStart", "end": "AtomHostServiceCodeEnd", "exactBytes": 8 },
-    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomStatementProofAdapterWorkspaceStart", "exactBytes": 12483 },
+    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomStatementProofAdapterWorkspaceStart", "exactBytes": 12475 },
     { "name": "proof-adapter-workspace", "start": "AtomStatementProofAdapterWorkspaceStart", "end": "AtomStatementProofAdapterWorkspaceEnd", "exactBytes": 10 },
     { "name": "adapter-free", "start": "AtomStatementProofAdapterWorkspaceEnd", "end": "AtomStatementProofSourceStart", "exactBytes": 8182 },
     { "name": "proof-source", "start": "AtomStatementProofSourceStart", "end": "AtomStatementProofSourceEnd", "exactBytes": 130 },
@@ -35,7 +35,7 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12093 },
+    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12101 },
     { "name": "statement-parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2061 },
     { "name": "statement-dispatcher-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1345 },
     {

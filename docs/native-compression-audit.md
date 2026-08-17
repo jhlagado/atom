@@ -46,7 +46,7 @@ census fixes the arithmetic, but the proposed source has not yet been
 assembled. “Hypothesis” marks a representation that still needs an experiment
 before its byte cost is known.
 
-## Measured result
+## Compression checkpoint result
 
 All locally safe and profitable candidates survived the proof battery. The
 linked result is:
@@ -57,6 +57,14 @@ linked result is:
 | Fixed writable workspace | Measured | 551 | 453 | -98 |
 | Linked resident extent | Measured | 13,812 | 12,093 | -1,719 |
 | Margin below 16 KiB | Measured | 2,572 | 4,291 | +1,719 |
+
+That table is the end of the compression pass, not the current release
+account. The later checked-core driver proof exposed an uninitialized
+diagnostic position on sink-begin failure. Initializing the three-byte record
+added eight code bytes. The current image therefore contains Measured 11,648
+bytes of code and immutable tables plus 453 bytes of workspace, for a Measured
+12,101-byte linked extent and 4,283-byte physical margin. The correction leaves
+the language and successful output unchanged.
 
 The module split is:
 
@@ -86,6 +94,10 @@ mixed-case proof reaches 934 instructions and 9,619 T-states for lowercase
 T-states, up from the baseline 95,471,840 instructions and 995,258,332
 T-states. Both values remain below the fixed 200 million instruction and two
 billion T-state limits.
+
+After the driver correction, the current self-build uses Measured 99,498,360
+instructions and 1,060,106,568 T-states. The historical values above remain the
+end-of-compression comparison point.
 
 The implementation retained shared encoder tails, prefix and ED suffixes,
 word-copy tails, in-range relative branches, fall-through removal, flag

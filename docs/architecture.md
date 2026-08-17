@@ -106,9 +106,10 @@ in `native/atom-symbols.json`. The proof runs three complete builds: the pinned
 image assembles the `.atm` source, the resulting Atom image assembles it again,
 and the same prepared `.atm` parts are translated for an independent strict-AZM
 build.
-All initialized addresses and all 12,093 resident bytes must agree.
+All initialized addresses and all 12,101 resident bytes must agree.
 
-`npm run build:native-core` now starts from `native/atom.atm`; it does not
-regenerate `.atm` from `asm/`. The older AZM implementation remains frozen only
-while direct subsystem proof images are replaced with checked-core tests.
-[The self-hosting design](self-hosting.md) records that remaining migration.
+`npm run build:native-core` starts from `native/atom.atm`; it does not
+regenerate `.atm` from `asm/`. Every subsystem proof now calls the checked core.
+The older AZM implementation remains frozen only until the final dependency
+audit proves it can be removed. [The self-hosting design](self-hosting.md)
+records that last cleanup boundary.

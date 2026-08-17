@@ -118,8 +118,8 @@ The Debug80 integration uses this measured layout:
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
-| Linked native core, fixed workspace, and host stubs | `$0000..$2F3D` | 12,093 |
-| Free space below the descriptor bank boundary | `$2F3D..$4000` | 4,291 |
+| Linked native core, fixed workspace, and host stubs | `$0000..$2F45` | 12,101 |
+| Free space below the descriptor bank boundary | `$2F45..$4000` | 4,283 |
 | Build and part-descriptor allocation | `$4000..$4100` | 256 |
 | Symbol arena | `$4100..$7500` | 13,312 |
 | Pending-reference arena | `$7500..$7F00` | 2,560 |

@@ -1,6 +1,37 @@
 # Atom Phase 3 native-driver report
 
-## Result
+## Current authority checkpoint
+
+The driver proof now executes the checked Atom-built core from
+`assets/native-core.json`. The standalone `asm/driver-proof.asm` link and its
+297-byte Z80 adapter have been removed. Guarded caller-owned source,
+descriptors, symbol and pending arenas, and operation log replace the old proof
+image. The harness intercepts all six production service entries and tracks
+the exact bytes written by begin, image, patch, commit, and abort operations.
+
+Every direct invocation audits all 65,536 addresses. The current suite covers
+descriptor boundaries, all sixteen source-part ordinals, cross-part private
+scope, forward patches, undefined diagnostics, hole-filled pending records,
+begin/image/patch/commit failures, exact abort counts, and recovery after an
+aborted build. Strict register and stack contracts pass through automatic
+Atom-to-AZM translation.
+
+Nonzero workspace seeding exposed one concealed defect: begin failure returned
+an uninitialized source-part field. `DR_ASM` now clears its three diagnostic
+position bytes at generation start. The fix costs eight bytes and makes the
+existing part-zero failure contract independent of prior RAM contents.
+
+The current driver is 627 bytes with nine bytes of workspace. Encoder through
+driver occupies 11,640 bytes of code and tables plus 453 bytes of workspace.
+Including the eight fail-closed host stubs, the linked native core is 12,101
+bytes and leaves 4,283 bytes below 16 KiB. The host-intercepted proof adapter
+uses 24 bytes of synthetic state and contributes no resident Z80 code.
+
+The remainder of this report records the original Phase 3 measurement. Its
+counts and projections describe that historical checkpoint, not the current
+assembler.
+
+## Original Phase 3 result
 
 **Measured: pass.** Atom now performs complete native multipart assembly from a
 validated memory descriptor. It resets all build state, assembles as many as 16
@@ -21,7 +52,7 @@ cross-part private scope, pending-list hole filling, undefined metadata,
 injected begin/image/patch/commit failures, and exact abort counts. The full
 repository suite contains **Measured: 211 passing tests**.
 
-## Resident byte account
+## Original Phase 3 resident byte account
 
 Phase 2g measured 11,705 code/data bytes and 541 fixed workspace bytes. Phase 3
 adds 779 code/data bytes and nine workspace bytes.
@@ -51,7 +82,7 @@ descriptor and complete 16-part descriptor array occupy 15 and 80 caller-owned
 bytes. Source, symbol records, pending records, sink spools, and stack remain
 outside fixed workspace and retain their separately reported capacities.
 
-## Lifecycle and failure evidence
+## Original Phase 3 lifecycle and failure evidence
 
 The driver validates all descriptors before begin. Zero and 17 parts, wrapped
 descriptor arithmetic, a wrong ordinal, reversed source or arena bounds, and a
@@ -67,7 +98,7 @@ name, and a pending anchor moved by hole filling. Corrupt or missing anchor
 metadata produces the internal status rather than an ordinary undefined-symbol
 diagnostic.
 
-## Execution measurements
+## Original Phase 3 execution measurements
 
 The 16-part descriptor validator executes in **Measured: 489 instructions and
 4,374 T-states**. Final scanning of an exactly full 32-record proof symbol arena
@@ -76,7 +107,7 @@ executes in **Measured: 354 instructions and 4,116 T-states**. The complete
 980,298 T-states**, about **Measured: 245.1 ms at 4 MHz**. These are named proof
 cases rather than source-size-independent worst-case bounds.
 
-## Remaining resident projection
+## Original Phase 3 remaining resident projection
 
 The native assembly path is complete through exact structured diagnostics and
 generation closure. Remaining one-bank work consists of deployment support:
@@ -102,6 +133,6 @@ npm run measure:statements
 npm run measure:driver
 ```
 
-The commands verify the frozen Debug80/AZM dependency identity, historical
-Phase 2g byte stability, strict contracts, the Phase 3 memory profile,
+The commands verify the pinned Debug80/AZM dependency identity, historical
+Phase 2g byte stability, strict contracts, the current complete memory profile,
 multipart runtime paths, and fresh symbol-derived measurements.

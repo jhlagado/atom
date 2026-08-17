@@ -38,7 +38,6 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `encoder-proof.asm` | Direct encoder, recognizer, and RADIX-40 harness with guarded records and stack |
-| `driver-proof.asm` | Multipart build descriptor, source parts, arenas, sink lifecycle, and finalization proof |
 
 ## `src/` root
 
@@ -145,7 +144,7 @@ from the frozen `asm/` tree.
 | `output-support.mjs` | Checked-core output harness with host-intercepted production services, guarded logical-operation state, and complete memory auditing |
 | `statements-support.mjs` | Checked-core statement harness with guarded caller state, host-intercepted production services, exact diagnostics, and complete memory auditing |
 | `integration-support.mjs` | Checked-core symbolic parser and patch harness with guarded caller-owned regions |
-| `driver-support.mjs` | Multipart driver harness, descriptor builders, sink lifecycle, and full-map checks |
+| `driver-support.mjs` | Checked-core multipart driver harness with guarded descriptors and arenas, all six host-intercepted services, exact lifecycle state, and complete memory auditing |
 | `cases.mjs` | Generated valid, AZM-invalid, and systematically malformed instruction records |
 | `native-host-case.mjs` | Small two-part program shared by host-native tests and measurements |
 

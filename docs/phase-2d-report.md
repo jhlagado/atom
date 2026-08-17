@@ -13,7 +13,7 @@ checks, pending-record handoff, guarded caller-owned arenas, and a complete
 The checked expression evaluator contains **Measured 1,868 bytes** of code and
 **Measured 263 bytes** of fixed workspace: **Measured 160 bytes** for the value
 stack, **Measured 64 bytes** for the operator stack, and **Measured 39 bytes**
-for other state. The complete native core remains **Measured 12,093 resident
+for other state. The complete native core remains **Measured 12,101 resident
 bytes**. The original Phase 2d measurements and projections below are retained
 as the historical account from the earlier prototype checkpoint.
 

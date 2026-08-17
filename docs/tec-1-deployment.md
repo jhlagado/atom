@@ -14,7 +14,7 @@ filesystem. Its public entry is `AtomAssemble`, which consumes memory-backed
 source descriptors and caller-owned symbol and pending arenas.
 
 The current checked image is linked at `$0000` for Debug80. Its linked extent is
-Measured 12,093 bytes, leaving Measured 4,291 bytes below `$4000`. A TEC target
+Measured 12,101 bytes, leaving Measured 4,283 bytes below `$4000`. A TEC target
 may keep that placement or relink the same modules at a target-specific ROM or
 bank origin. Relinking must be followed by the complete strict-contract and
 runtime proof battery; the Mac address is not a portable absolute contract.
@@ -60,7 +60,7 @@ filesystem calls to the assembler.
 The current tokenizer takes a half-open memory interval and requires the part
 to remain addressable until it reaches EOF. The Mac adapter pages at whole-part
 boundaries, and each part may be as large as 24 KiB. Atom's self-host source has
-five generated parts totalling Measured 101,108 bytes plus a small entry
+five generated parts totalling Measured 101,177 bytes plus a small entry
 part. This proves multipart operation but does not prove that the same page
 size fits TEC RAM.
 
@@ -84,7 +84,7 @@ There are three credible deployment choices:
 
 The first choice is preferred when TEC storage hardware exposes a usable bank
 or window. Otherwise the next project checkpoint should measure the third
-choice against the 4,291-byte resident margin. It is a Hypothesis, not a
+choice against the 4,283-byte resident margin. It is a Hypothesis, not a
 projection, that the complete source and sink adapter will fit that margin.
 
 A TEC filesystem adapter must also implement the measured Mac `INCBIN`

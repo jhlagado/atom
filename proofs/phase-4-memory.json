@@ -95,7 +95,7 @@
       "name": "driver-code",
       "start": "AtomDriverCodeStart",
       "end": "AtomDriverCodeEnd",
-      "exactBytes": 619
+      "exactBytes": 627
     },
     {
       "name": "driver-workspace",
@@ -113,7 +113,7 @@
       "name": "resident-free",
       "start": "AtomHostResidentEnd",
       "end": 16384,
-      "exactBytes": 4291
+      "exactBytes": 4283
     },
     {
       "name": "host-descriptors",
@@ -209,7 +209,7 @@
           "AtomHostServiceCodeEnd"
         ]
       ],
-      "exactBytes": 11640
+      "exactBytes": 11648
     },
     {
       "name": "native-fixed-workspace",
@@ -253,7 +253,7 @@
       "name": "linked-resident-extent",
       "start": "AtomEncoderCoreStart",
       "end": "AtomHostResidentEnd",
-      "exactBytes": 12093
+      "exactBytes": 12101
     }
   ]
 }

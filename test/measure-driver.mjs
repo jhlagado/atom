@@ -46,7 +46,7 @@ const integratedWorkspace = [
 
 console.log(JSON.stringify({
   labels: {
-    componentsAndExecution: "Measured in the linked Phase 3 multipart-driver proof image.",
+    componentsAndExecution: "Measured in the authoritative checked core.",
   },
   components: {
     symbolCodeAndTables: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd"),
@@ -55,7 +55,8 @@ console.log(JSON.stringify({
     statementCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),
     driverCode: extent("AtomDriverCodeStart", "AtomDriverCodeEnd"),
     driverWorkspace: extent("AtomDriverWorkspaceStart", "AtomDriverWorkspaceEnd"),
-    diagnosticMetadataIncrement: integratedCode - 11216 - extent("AtomDriverCodeStart", "AtomDriverCodeEnd"),
+    hostInterceptedProofAdapterCode: 0,
+    proofAdapterWorkspace: extent("AtomDriverProofAdapterWorkspaceStart", "AtomDriverProofAdapterWorkspaceEnd"),
   },
   integrated: {
     codeAndTables: integratedCode,

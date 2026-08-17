@@ -14,7 +14,7 @@ The checked path contains **Measured 1,868 bytes** of expression code,
 parser code and tables. Expression and parser workspace total **Measured 355
 bytes**. The complete encoder-through-parser account is **Measured 9,201 bytes**
 of code and tables plus **Measured 407 bytes** of workspace; the complete native
-core remains **Measured 12,093 resident bytes**.
+core remains **Measured 12,101 resident bytes**.
 
 The production driver adds two rules that the earlier proof image compiled
 out. Forward references accept source-part ordinals 0 through 15 and reject 16

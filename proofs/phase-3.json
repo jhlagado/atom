@@ -1,15 +1,10 @@
 {
-  "name": "Atom Phase 3 native multipart driver correctness proof",
-  "source": "../asm/driver-proof.asm",
-  "contracts": "strict",
+  "name": "Atom authoritative native multipart driver correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "executionBudgets": {
-    "AtomProofDriverReset": {
-      "measuredInstructions": 11,
-      "maxInstructions": 30,
-      "measuredCycles": 131,
-      "maxCycles": 330
-    },
     "AtomDriverValidateDescriptor": {
       "measuredInstructions": 525,
       "maxInstructions": 1320,
@@ -23,9 +18,9 @@
       "maxCycles": 12720
     },
     "AtomAssemble": {
-      "measuredInstructions": 115699,
+      "measuredInstructions": 115673,
       "maxInstructions": 289250,
-      "measuredCycles": 1182875,
+      "measuredCycles": 1182591,
       "maxCycles": 2957190
     }
   }

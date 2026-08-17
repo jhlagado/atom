@@ -8,14 +8,14 @@ below are Measured from the checked image or executable tests.
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Z80 code and immutable tables | Measured | 11,640 |
+| Z80 code and immutable tables | Measured | 11,648 |
 | Fixed non-reentrant workspace | Measured | 453 |
-| Linked resident extent at origin zero | Measured | 12,093 |
-| Margin below one 16 KiB bank | Measured | 4,291 |
+| Linked resident extent at origin zero | Measured | 12,101 |
+| Margin below one 16 KiB bank | Measured | 4,283 |
 
 The package, authoritative native source, Debug80 runtime, renderer, and Mac CLI
 do not consume this Z80 bank. A TEC-specific source/output adapter is not part
-of the 12,093-byte image and must be measured separately.
+of the 12,101-byte image and must be measured separately.
 
 ## Native source and output
 
@@ -31,7 +31,7 @@ of the 12,093-byte image and must be measured separately.
 
 Every source part must fit one 24 KiB page. Total source may exceed that size
 because the Mac adapter replaces the page at part boundaries. The checked
-native self-host input is Measured 101,108 bytes in five parts; its largest
+native self-host input is Measured 101,177 bytes in five parts; its largest
 individual part fits the page.
 
 The native target uses a non-wrapping half-open 16-bit range whose mathematical
@@ -95,8 +95,8 @@ driver. `assembleAtomProject` lowers the relevant capacities before execution.
 | SP1 bank ordinal | 0–255; zero for native Atom |
 
 The Mac runner's default execution budgets are 200,000,000 Z80 instructions
-and 2,000,000,000 T-states. Atom's measured self-build uses 99,458,987
-instructions and 1,059,703,728 T-states.
+and 2,000,000,000 T-states. Atom's measured self-build uses 99,498,360
+instructions and 1,060,106,568 T-states.
 
 ## A realistic 24 KiB TEC workspace
 

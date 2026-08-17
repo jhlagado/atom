@@ -96,7 +96,7 @@ a 16 KiB target.
 
 The pinned Atom-built native core assembles all six parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
-events, execution measurements, and a complete 12,093-byte materialized image.
+events, execution measurements, and a complete 12,101-byte materialized image.
 
 The proof compares that image with the memory initialized by the pinned core's
 Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
@@ -167,20 +167,20 @@ The checked measurement records:
 
 | Observation | Measured value |
 | --- | ---: |
-| Flattened native statements | 7,147 |
+| Flattened native statements | 7,153 |
 | Native content parts | 5 |
 | Checked resolver parts, including entry | 6 |
-| Checked source bytes | 101,257 |
+| Checked source bytes | 101,326 |
 | Ledger global symbols | 872 |
 | Ledger private symbols | 440 |
-| Initialized resident bytes | 11,742 |
+| Initialized resident bytes | 11,750 |
 | Reserved resident bytes | 351 |
 | Forward PATCH records | 1,929 |
 | Declared symbols | 1,312 |
-| Linked resident extent | 12,093 bytes |
+| Linked resident extent | 12,101 bytes |
 
-The first generation currently executes 99,458,987 instructions and
-1,059,703,728 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 99,498,360 instructions and
+1,060,106,568 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

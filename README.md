@@ -77,10 +77,10 @@ The measured native account is:
 
 | Item | Bytes |
 | --- | ---: |
-| Code and immutable tables | 11,640 |
+| Code and immutable tables | 11,648 |
 | Fixed workspace | 453 |
-| Linked resident extent | 12,093 |
-| Margin below 16 KiB | 4,291 |
+| Linked resident extent | 12,101 |
+| Margin below 16 KiB | 4,283 |
 
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [TEC-1 deployment design](docs/tec-1-deployment.md) separate the measured Mac
@@ -103,8 +103,10 @@ npm run release:check
 The authoritative native source is under `native/` with an exact long-to-short
 symbol ledger. Atom assembles that source into the pinned core; the build also
 translates the same prepared parts to AZM for strict register-contract and byte
-comparison. The older `asm/` implementation remains temporarily for direct
-subsystem proof harnesses while those lanes move to the checked core.
+comparison. Every subsystem proof now executes the checked core directly. The
+older `asm/` implementation remains only until the final dependency-removal
+audit proves that no build, proof, package, or documentation path still uses
+it.
 `npm run verify:native-source` checks the complete authority path. See the
 [self-hosting design](docs/self-hosting.md). AZM is a development oracle and is
 not installed with the command-line package.

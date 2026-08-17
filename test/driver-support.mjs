@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { compile } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
-const addressOf = (symbol) => symbol.address ?? symbol.value;
 const word = (memory, address) => memory[address] | (memory[address + 1] << 8);
 const writeWord = (memory, address, value) => {
   memory[address] = value & 0xff;
@@ -16,37 +16,68 @@ const writeWord = (memory, address, value) => {
 };
 const manifest = JSON.parse(fs.readFileSync("proofs/phase-3.json", "utf8"));
 
+const PROOF_SYMBOLS = Object.freeze({
+  AtomDriverProofAdapterWorkspaceStart: 0x6000,
+  AtomDriverProofLogNext: 0x6000,
+  AtomDriverProofFailAfter: 0x6002,
+  AtomDriverProofFailBegin: 0x6003,
+  AtomDriverProofFailCommit: 0x6004,
+  AtomDriverProofOpen: 0x6005,
+  AtomDriverProofBegan: 0x6006,
+  AtomDriverProofCommitted: 0x6007,
+  AtomDriverProofAborted: 0x6008,
+  AtomDriverProofBeginDescriptor: 0x6009,
+  AtomDriverProofCommitDescriptor: 0x600b,
+  AtomDriverProofCommitCursor: 0x600d,
+  AtomDriverProofCommitRemaining: 0x600f,
+  AtomDriverProofAdapterWorkspaceEnd: 0x6018,
+  AtomDriverProofSourceStart: 0x8000,
+  AtomDriverSourceBefore: 0x8000,
+  AtomDriverSource: 0x8001,
+  AtomDriverSourceLimit: 0x8301,
+  AtomDriverSourceAfter: 0x8301,
+  AtomDriverProofSourceEnd: 0x8302,
+  AtomDriverProofDescriptorStart: 0x8302,
+  AtomDriverDescriptorBefore: 0x8302,
+  AtomDriverBuildDescriptor: 0x8303,
+  AtomDriverPartDescriptors: 0x8312,
+  AtomDriverDescriptorAfter: 0x8362,
+  AtomDriverProofDescriptorEnd: 0x8363,
+  AtomDriverProofSymbolStart: 0x9000,
+  AtomDriverSymbolBefore: 0x9000,
+  AtomDriverSymbolArena: 0x9001,
+  AtomDriverSymbolLimit: 0x9101,
+  AtomDriverSymbolAfter: 0x9101,
+  AtomDriverProofSymbolEnd: 0x9102,
+  AtomDriverProofPendingStart: 0x9200,
+  AtomDriverPendingBefore: 0x9200,
+  AtomDriverPendingArena: 0x9201,
+  AtomDriverPendingLimit: 0x9261,
+  AtomDriverPendingAfter: 0x9261,
+  AtomDriverProofPendingEnd: 0x9262,
+  AtomDriverProofLogStart: 0x9400,
+  AtomDriverLogBefore: 0x9400,
+  AtomDriverProofLog: 0x9401,
+  AtomDriverProofLogLimit: 0x9801,
+  AtomDriverLogAfter: 0x9801,
+  AtomDriverProofLogEnd: 0x9802,
+});
+
 export async function createDriverHarness() {
-  const assembled = await compile("asm/driver-proof.asm", {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: "strict",
-  });
-  const errors = assembled.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `driver proof assembly failed: ${JSON.stringify(errors)}`);
-  const hex = assembled.artifacts.find(({ kind }) => kind === "hex");
-  const d8m = assembled.artifacts.find(({ kind }) => kind === "d8m");
-  assert.equal(hex?.kind, "hex");
-  assert.equal(d8m?.kind, "d8m");
-  const symbols = Object.fromEntries(d8m.json.symbols.flatMap((symbol) => {
-    const value = addressOf(symbol);
-    return value === undefined ? [] : [[symbol.name, value]];
-  }));
-  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomAssemble);
+  const core = await loadNativeAtomCore();
+  assert.equal(core.source, "native/atom.atm");
+  const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
+  const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomAssemble);
   const memory = runtime.hardware.memory;
+  for (const [name, value] of [
+    ["AtomDriverSourceBefore", 0x3c], ["AtomDriverSourceAfter", 0xc3],
+    ["AtomDriverDescriptorBefore", 0x69], ["AtomDriverDescriptorAfter", 0x96],
+    ["AtomDriverSymbolBefore", 0x39], ["AtomDriverSymbolAfter", 0x93],
+    ["AtomDriverPendingBefore", 0x4b], ["AtomDriverPendingAfter", 0xb4],
+    ["AtomDriverLogBefore", 0x5a], ["AtomDriverLogAfter", 0xa5],
+  ]) memory[symbols[name]] = value;
   const pristine = memory.slice();
-  const immutable = [
-    [symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd],
-    [symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd],
-    [symbols.AtomTokenizerCodeStart, symbols.AtomTokenizerCodeEnd],
-    [symbols.AtomExpressionCodeStart, symbols.AtomExpressionCodeEnd],
-    [symbols.AtomPatchCodeStart, symbols.AtomPatchCodeEnd],
-    [symbols.AtomParserCodeStart, symbols.AtomParserCodeEnd],
-    [symbols.AtomOutputCodeStart, symbols.AtomOutputCodeEnd],
-    [symbols.AtomStatementCodeStart, symbols.AtomStatementCodeEnd],
-    [symbols.AtomDriverCodeStart, symbols.AtomDriverCodeEnd],
-    [symbols.AtomDriverProofAdapterStart, symbols.AtomDriverProofAdapterEnd],
-  ].map(([start, end]) => ({ start, bytes: pristine.slice(start, end) }));
+  const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: pristine.slice(start, end) }));
   const workspace = [
     [symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd],
     [symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd],
@@ -56,22 +87,118 @@ export async function createDriverHarness() {
     [symbols.AtomOutputWorkspaceStart, symbols.AtomOutputWorkspaceEnd],
     [symbols.AtomStatementWorkspaceStart, symbols.AtomStatementWorkspaceEnd],
     [symbols.AtomDriverWorkspaceStart, symbols.AtomDriverWorkspaceEnd],
-    [symbols.AtomDriverProofAdapterWorkspaceStart, symbols.AtomDriverProofAdapterWorkspaceEnd],
   ];
   const statistics = {};
-  const fullMemoryAudited = new Set();
   let sourceSnapshot = new Uint8Array();
   let descriptorSnapshot = new Uint8Array();
+  let restartCount = 0;
+  let interceptedWrites = null;
 
   function restart() {
     memory.set(pristine);
     runtime.reset();
     runtime.cpu.halted = false;
+    restartCount += 1;
+    for (const [start, end] of [...workspace, [symbols.AtomDriverProofAdapterWorkspaceStart, symbols.AtomDriverProofAdapterWorkspaceEnd]]) {
+      for (let address = start; address < end; address += 1) {
+        memory[address] = (restartCount * 73 + address * 29) & 0xff;
+      }
+    }
     sourceSnapshot = memory.slice(symbols.AtomDriverSource, symbols.AtomDriverSourceLimit);
     descriptorSnapshot = memory.slice(symbols.AtomDriverBuildDescriptor, symbols.AtomDriverDescriptorAfter);
   }
 
   const inside = (address, start, end) => address >= start && address < end;
+
+  function resetAdapter() {
+    memory.fill(0, symbols.AtomDriverProofAdapterWorkspaceStart, symbols.AtomDriverProofAdapterWorkspaceEnd);
+    writeWord(memory, symbols.AtomDriverProofLogNext, symbols.AtomDriverProofLog);
+  }
+
+  function writeServiceByte(address, value) {
+    assert.ok(interceptedWrites, "sink write outside an executing native entry");
+    memory[address] = value;
+    interceptedWrites.add(address);
+  }
+
+  function writeServiceWord(address, value) {
+    writeServiceByte(address, value & 0xff);
+    writeServiceByte(address + 1, value >>> 8);
+  }
+
+  function appendOperation(kind, bank, address, bytes) {
+    if (memory[symbols.AtomDriverProofOpen] === 0) return 0xef;
+    let failAfter = memory[symbols.AtomDriverProofFailAfter];
+    if (failAfter !== 0) {
+      failAfter -= 1;
+      writeServiceByte(symbols.AtomDriverProofFailAfter, failAfter);
+      if (failAfter === 0) return 0xe1;
+    }
+    const next = word(memory, symbols.AtomDriverProofLogNext);
+    const required = 6 + bytes.length;
+    if (next > symbols.AtomDriverProofLogLimit || symbols.AtomDriverProofLogLimit - next < required) return 0xe2;
+    for (const [offset, value] of [kind, bank, address & 0xff, address >>> 8, bytes.length, 0, ...bytes].entries()) {
+      writeServiceByte(next + offset, value);
+    }
+    writeServiceWord(symbols.AtomDriverProofLogNext, next + required);
+    return 0;
+  }
+
+  function returnFromService(status) {
+    const returnAddress = word(memory, runtime.cpu.sp);
+    runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
+    runtime.cpu.pc = returnAddress;
+    runtime.cpu.a = status;
+    runtime.cpu.flags.C = status === 0 ? 0 : 1;
+  }
+
+  function interceptService() {
+    const { cpu } = runtime;
+    let status;
+    if (cpu.pc === symbols.AtomSinkBegin) {
+      if (memory[symbols.AtomDriverProofFailBegin] !== 0) {
+        status = 0xe0;
+      } else if (memory[symbols.AtomDriverProofOpen] !== 0) {
+        status = 0xef;
+      } else {
+        writeServiceWord(symbols.AtomDriverProofBeginDescriptor, cpu.ix);
+        writeServiceByte(symbols.AtomDriverProofOpen, 1);
+        writeServiceByte(symbols.AtomDriverProofBegan, (memory[symbols.AtomDriverProofBegan] + 1) & 0xff);
+        status = 0;
+      }
+    } else if (cpu.pc === symbols.AtomSinkImageByte) {
+      status = appendOperation(1, cpu.c, (cpu.h << 8) | cpu.l, [cpu.a]);
+    } else if (cpu.pc === symbols.AtomSinkPatchByte) {
+      status = appendOperation(2, cpu.c, (cpu.h << 8) | cpu.l, [cpu.a]);
+    } else if (cpu.pc === symbols.AtomSinkPatchWord) {
+      status = appendOperation(2, cpu.c, (cpu.d << 8) | cpu.e, [cpu.l, cpu.h]);
+    } else if (cpu.pc === symbols.AtomSinkCommit) {
+      if (memory[symbols.AtomDriverProofOpen] === 0) {
+        status = 0xef;
+      } else if (memory[symbols.AtomDriverProofFailCommit] !== 0) {
+        status = 0xe3;
+      } else {
+        writeServiceWord(symbols.AtomDriverProofCommitDescriptor, cpu.ix);
+        writeServiceWord(symbols.AtomDriverProofCommitCursor, (cpu.h << 8) | cpu.l);
+        writeServiceWord(symbols.AtomDriverProofCommitRemaining, (cpu.d << 8) | cpu.e);
+        writeServiceByte(symbols.AtomDriverProofOpen, 0);
+        writeServiceByte(symbols.AtomDriverProofCommitted, 1);
+        status = 0;
+      }
+    } else if (cpu.pc === symbols.AtomSinkAbort) {
+      if (memory[symbols.AtomDriverProofOpen] === 0) {
+        status = 0xef;
+      } else {
+        writeServiceByte(symbols.AtomDriverProofOpen, 0);
+        writeServiceByte(symbols.AtomDriverProofAborted, (memory[symbols.AtomDriverProofAborted] + 1) & 0xff);
+        status = 0;
+      }
+    } else {
+      return false;
+    }
+    returnFromService(status);
+    return true;
+  }
 
   function execute(entry, setup = () => {}, label = entry) {
     assert.ok(symbols[entry] !== undefined, `missing driver proof entry ${entry}`);
@@ -83,6 +210,8 @@ export async function createDriverHarness() {
     const before = memory.slice();
     runtime.cpu.sp = RETURN_SLOT;
     runtime.cpu.pc = symbols[entry];
+    const serviceWrites = new Set();
+    interceptedWrites = serviceWrites;
     const budget = manifest.executionBudgets[entry];
     assert.ok(budget, `missing execution budget for ${entry}`);
     let instructions = 0;
@@ -91,6 +220,7 @@ export async function createDriverHarness() {
     while (runtime.cpu.pc !== RETURN_SENTINEL && instructions < budget.maxInstructions && cycles <= budget.maxCycles) {
       recent.push(runtime.cpu.pc);
       if (recent.length > 16) recent.shift();
+      if (interceptService()) continue;
       const step = runtime.step();
       instructions += 1;
       cycles += step.cycles ?? 0;
@@ -117,18 +247,15 @@ export async function createDriverHarness() {
       assert.deepEqual(memory.slice(region.start, region.start + region.bytes.length), region.bytes, `${label}: immutable bytes changed`);
     }
 
-    const auditKey = [entry, runtime.cpu.a, memory[symbols.AtomDriverProofBegan], memory[symbols.AtomDriverProofCommitted], memory[symbols.AtomDriverProofAborted]].join(":");
-    if (!fullMemoryAudited.has(auditKey)) {
-      for (let address = 0; address < memory.length; address += 1) {
-        const allowed = workspace.some(([start, end]) => inside(address, start, end)) ||
-          (entry === "AtomAssemble" && inside(address, symbols.AtomDriverSymbolArena, symbols.AtomDriverSymbolLimit)) ||
-          (entry === "AtomAssemble" && inside(address, symbols.AtomDriverPendingArena, symbols.AtomDriverPendingLimit)) ||
-          (entry === "AtomAssemble" && inside(address, symbols.AtomDriverProofLog, symbols.AtomDriverProofLogLimit)) ||
-          (address > STACK_BEFORE && address < STACK_AFTER);
-        if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
-      }
-      fullMemoryAudited.add(auditKey);
+    for (let address = 0; address < memory.length; address += 1) {
+      const allowed = workspace.some(([start, end]) => inside(address, start, end)) ||
+        serviceWrites.has(address) ||
+        (entry === "AtomAssemble" && inside(address, symbols.AtomDriverSymbolArena, symbols.AtomDriverSymbolLimit)) ||
+        (entry === "AtomAssemble" && inside(address, symbols.AtomDriverPendingArena, symbols.AtomDriverPendingLimit)) ||
+        (address > STACK_BEFORE && address < STACK_AFTER);
+      if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
     }
+    interceptedWrites = null;
 
     const observed = statistics[entry] ?? { instructions: 0, cycles: 0, instructionCase: "", cycleCase: "" };
     if (instructions > observed.instructions) Object.assign(observed, { instructions, instructionCase: label });
@@ -200,8 +327,7 @@ export async function createDriverHarness() {
 
   function runAssemble(parts, options, resetMachine) {
     if (resetMachine) restart();
-    const reset = execute("AtomProofDriverReset");
-    assert.equal(reset.carry, 0);
+    resetAdapter();
     installBuild(parts, options);
     memory[symbols.AtomDriverProofFailBegin] = options.failBegin ? 1 : 0;
     memory[symbols.AtomDriverProofFailCommit] = options.failCommit ? 1 : 0;

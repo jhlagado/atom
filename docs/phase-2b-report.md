@@ -13,7 +13,7 @@ diagnostic, publication, classifier, and boundary corpus.
 The current linked tokenizer contains **Measured 1,346 bytes** of code and
 immutable tables, including **Measured 64 bytes** of tables, plus **Measured 26
 bytes** of fixed workspace. The token record remains **Measured 9 bytes**. The
-complete native core remains **Measured 12,093 resident bytes**. The original
+complete native core remains **Measured 12,101 resident bytes**. The original
 Phase 2b measurements and projections below are retained as the historical
 account from the earlier prototype checkpoint.
 

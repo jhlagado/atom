@@ -41,25 +41,24 @@ that the public build still observes the intended result.
 
 ## Native proof images
 
-Two legacy proof links remain under `asm/`. The encoder link preserves the
-historical Phase 1 proof account; the driver link is the final subsystem still
-awaiting checked-core migration:
+One legacy proof link remains under `asm/`. The encoder link preserves the
+historical Phase 1 proof account while the removal audit runs:
 
 ```text
 encoder-proof.asm
-driver-proof.asm
 ```
 
-These files choose module flags, origin, workspaces, guarded input and output
+The proof configuration sets module flags, origin, workspaces, guarded input and output
 records, source buffers, arenas, adapter state, stack, and sentinel return
 addresses. AZM assembles them with strict register contracts before Debug80
 executes their entry points.
 
-The checked expression, parser/patch, output, and statement lanes instead execute
+The checked expression, parser/patch, output, statement, and driver lanes execute
 `native/atom.atm` directly. They supply guarded source, record, output, key,
 symbol, pending, and logical sink regions and audit all 65,536 addresses after
-every invocation. The output harness intercepts the production service entries
-and returns through the native stack; it carries no proof-only Z80 adapter.
+every invocation. The output and driver harnesses intercept the production
+service entries and return through the native stack; they carry no proof-only
+Z80 adapter.
 
 The support modules restore pristine memory before each invocation. They seed
 workspaces and guards with varying patterns, install the input records and
@@ -88,8 +87,9 @@ pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
 scope transitions, failure atomicity, and record-size boundaries. The tokenizer
 lane supplies a guarded source interval and repeats the complete lexical,
 diagnostic, publication, classifier, and source-boundary corpus against the
-checked core. The expression, parser/patch, output, and statement lanes also use
-the checked core. Only the driver still uses a frozen AZM proof image.
+checked core. The expression, parser/patch, output, statement, and driver lanes
+also use the checked core. No current subsystem proof depends on a frozen AZM
+proof image.
 
 ## Frozen memory profiles
 
