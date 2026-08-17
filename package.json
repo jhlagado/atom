@@ -21,7 +21,8 @@
   },
   "type": "module",
   "bin": {
-    "atom": "bin/atom.mjs"
+    "atom": "bin/atom.mjs",
+    "azm-to-atom": "bin/azm-to-atom.mjs"
   },
   "exports": {
     ".": "./src/host/index.mjs"
@@ -34,6 +35,7 @@
     "examples",
     "native/*.atm",
     "native/atom-symbols.json",
+    "src/abi.mjs",
     "src/host",
     "LICENSE",
     "README.md"

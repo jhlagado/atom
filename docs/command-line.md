@@ -100,6 +100,22 @@ checkout:
 npm run verify:example
 ```
 
+## Converting AZM source
+
+The package also installs a strict `azm-to-atom` converter:
+
+```sh
+azm-to-atom SOURCE/MAIN.ASM
+```
+
+It writes `SOURCE/MAIN.ATM` and refuses to overwrite an existing file. Use
+`--output` to choose another path or `--stdout` to inspect the converted text.
+The converter maps only the byte-preserving common language. Unsupported AZM
+features such as includes, imports, conditional assembly, ops, typed layouts,
+exports, and string equates produce a positioned error instead of approximate
+Atom source. The [AZM conversion guide](azm-to-atom.md) defines the exact
+boundary and the programmatic API.
+
 ## Options
 
 ```text

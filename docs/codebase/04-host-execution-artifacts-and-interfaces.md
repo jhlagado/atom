@@ -80,6 +80,34 @@ The package currently exposes these functions directly rather than through a
 versioned `createAtomAssembler()` facade. Consumers should use the package root
 exports and avoid importing private files below `src/host/`.
 
+## AZM source conversion
+
+`translateAzmSourceToAtom()` is the strict, in-memory migration entry:
+
+```js
+import { translateAzmSourceToAtom } from "atom-z80";
+
+const atomSource = translateAzmSourceToAtom(azmSource, {
+  sourceName: "SOURCE/MAIN.ASM",
+});
+```
+
+The converter recognizes the Z80 instruction set and the shared assembler
+directives. It translates underscore locals, byte functions, numeric prefixes,
+proof annotations, and directive spelling. It also enforces Atom's symbol and
+immediate-equate constraints before returning the LF-normalized text.
+
+Unsupported AZM constructs throw `AtomAssemblyError` with category
+`translation`, a stable code, and a one-based source diagnostic. The converter
+does not guess at imports, conditional assembly, ops, layouts, exports, or
+string equates. This rule keeps conversion separate from the source packager
+and prevents a syntax rewrite from silently changing output bytes.
+
+`bin/azm-to-atom.mjs` adds filesystem policy around the pure function. It reads
+the complete input first, refuses to overwrite a destination, and writes no
+partial output after a translation failure. AZM remains a development oracle;
+the installed converter has no AZM runtime dependency.
+
 ## Native proof memory map
 
 `native-atom-runner.mjs` uses a fixed 64 KiB Mac proof map:

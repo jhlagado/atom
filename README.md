@@ -31,6 +31,17 @@ Assemble an entry file from its project root:
 atom --origin 4000H src/main.asm
 ```
 
+Migrate a source file from AZM's byte-preserving common subset:
+
+```sh
+azm-to-atom SOURCE/MAIN.ASM
+```
+
+The converter writes `SOURCE/MAIN.ATM`. It reports an error instead of guessing
+when an AZM construct has no Atom equivalent. The
+[AZM conversion guide](docs/azm-to-atom.md) lists every direct mapping and
+rejected boundary.
+
 Atom publishes one immutable bundle under
 `build/main.atom/current` containing:
 

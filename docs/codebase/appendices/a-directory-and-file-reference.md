@@ -11,7 +11,7 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `README.md` | Product overview, installation, current capability, measured native account, and correctness summary |
-| `package.json` | npm identity, public export, `atom` binary, package contents, dependencies, and verification scripts |
+| `package.json` | npm identity, public exports, `atom` and `azm-to-atom` binaries, package contents, dependencies, and verification scripts |
 | `package-lock.json` | Reproducible Node dependency resolution |
 | `LICENSE` | GPL-3.0-only license text |
 
@@ -68,6 +68,7 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `atom-to-azm.mjs` | Quote-aware and comment-aware conversion of prepared Atom directives, equates, and byte functions into one AZM oracle source |
+| `azm-to-atom.mjs` | Strict AZM common-subset conversion, symbol and source checks, positioned rejection, and deterministic Atom source output |
 
 ## `src/host/self-host/`
 
@@ -80,6 +81,7 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `atom.mjs` | Installed CLI: argument parsing, build options, self-host mode, in-process assembly, artifact rendering, publication, and terminal diagnostics |
+| `azm-to-atom.mjs` | Installed strict source converter with non-overwriting `.atm` output, standard-output mode, and positioned diagnostics |
 
 ## `assets/`
 
@@ -145,6 +147,7 @@ The `.atm` files are the sole editing authority for the native assembler.
 | `host-atom-masking.test.mjs` | Equal lengths, CR/LF preservation, inactive bytes, and leaked-directive discrimination |
 | `host-incbin.test.mjs` | Binary recognition, confinement, snapshotting, lowering, bridge counts, listing, and D8 |
 | `host-atom-to-azm.test.mjs` | Atom-to-AZM syntax translation and initialized-address comparison |
+| `host-azm-to-atom.test.mjs` | Strict mapping and rejection census, CLI behavior, and exact AZM-to-Atom initialized-address and byte differential |
 | `host-node-source-reader.test.mjs` | Physical path spelling, confinement, symlinks, identities, and snapshots |
 | `host-resolver.test.mjs` | Graph order, diamonds, repeats, cycles, and limits |
 | `host-placement.test.mjs` | Path-keyed bank assignments and placement failures |
@@ -198,6 +201,7 @@ The `.atm` files are the sole editing authority for the native assembler.
 | `language-reference.md` | Current Atom source syntax and deliberate language boundaries |
 | `limits.md` | Native limits, Mac proof capacities, expressions, symbols, pending records, and realistic TEC RAM discussion |
 | `command-line.md` | Installation, CLI options, bundle layout, diagnostics, example, and release command |
+| `azm-to-atom.md` | Converter commands, exact syntax mappings, rejected AZM boundaries, diagnostics, and programmatic API |
 | `mac-host-integration.md` | Native runner, sink interception, memory map, diagnostics, and public host modules |
 | `host-source-packaging.md` | Resolver, preprocessing, SP1, binary inclusion, extraction seam, and proof map |
 | `atom-object-format.md` | Atom flat NOBJ 0.2 framing and MAP profile |

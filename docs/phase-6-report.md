@@ -72,7 +72,7 @@ This proves the assembler and its source representation. It does not yet
 provide the TEC-1 operating adapter that reads each source part from storage.
 That adapter belongs to the next deployment phase.
 
-The complete battery passes **Measured: 273 of 273 tests**. AZM's strict
+The complete battery passes **Measured: 277 of 277 tests**. AZM's strict
 register-contract check also passes for the translated `.atm` native image.
 
 ## Reproduction

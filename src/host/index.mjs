@@ -14,6 +14,7 @@ export {
   translateAtomLineToAzm,
   translateResolvedAtomProjectToAzm,
 } from "./translation/atom-to-azm.mjs";
+export { translateAzmSourceToAtom } from "./translation/azm-to-atom.mjs";
 export { createSelfHostedAtomCore } from "./self-host/create-self-hosted-core.mjs";
 export {
   assembleResolvedAtomProject,
