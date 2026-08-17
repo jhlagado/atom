@@ -1,8 +1,9 @@
 {
-  "name": "Atom Phase 2f Nucleus-model output correctness proof",
-  "source": "../asm/output-proof.asm",
+  "name": "Atom authoritative streaming output correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2f-memory.json",
-  "contracts": "strict",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 128,
@@ -30,12 +31,6 @@
       "measuredCycles": 66,
       "maxCycles": 170
     },
-    "AtomProofSinkReset": {
-      "measuredInstructions": 5,
-      "maxInstructions": 30,
-      "measuredCycles": 53,
-      "maxCycles": 140
-    },
     "AtomOutputReset": {
       "measuredInstructions": 4,
       "maxInstructions": 20,
@@ -61,21 +56,21 @@
       "maxCycles": 1910
     },
     "AtomParserParse": {
-      "measuredInstructions": 6277,
+      "measuredInstructions": 6375,
       "maxInstructions": 15700,
-      "measuredCycles": 62462,
+      "measuredCycles": 63362,
       "maxCycles": 156160
     },
     "AtomOutputEmitInstruction": {
-      "measuredInstructions": 904,
+      "measuredInstructions": 699,
       "maxInstructions": 2260,
-      "measuredCycles": 8226,
+      "measuredCycles": 6368,
       "maxCycles": 20570
     },
     "AtomOutputResolveSymbol": {
-      "measuredInstructions": 1366,
+      "measuredInstructions": 1014,
       "maxInstructions": 3420,
-      "measuredCycles": 16258,
+      "measuredCycles": 13170,
       "maxCycles": 40650
     }
   }

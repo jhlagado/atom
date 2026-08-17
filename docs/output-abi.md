@@ -32,8 +32,10 @@ begin receive exactly one abort. Commit failure leaves the generation open
 until that abort. The operating adapter constructs NOBJ framing and the flat
 map from its retained descriptor and logical operation spools.
 
-The proof adapter records the same logical operation shape used by the Nucleus
-Z80 proofs: kind, bank, target address, byte count, and final bytes.
+The direct output proof intercepts the production image and patch service
+entries and records the same logical operation shape used by the Nucleus Z80
+proofs: kind, bank, target address, byte count, and final bytes. It executes the
+checked Atom-built core and adds no proof-only Z80 adapter code.
 
 The Mac adapter intercepts these six entry addresses in Debug80 before their
 stub instructions execute. It reads the documented Z80 registers, performs the
@@ -102,7 +104,9 @@ spool and disappear when the driver aborts that generation.
 `AtomPendingPeek` is the non-destructive counterpart of `AtomPendingTake`. It
 accepts IX pointing to a symbol and returns `DE=patch address`, `B=kind`, and
 `C=signed addend`. `AtomStatusNotFound` means the symbol has no remaining
-pending record.
+pending record. In the complete driver build, the low three bits of B hold the
+patch kind. The upper bits retain the source-part ordinal and diagnostic-anchor
+flag; the resolver masks those bits before selecting the patch calculation.
 
 The label and equate handlers call `AtomSymbolDeclare` or
 `AtomSymbolDeclareGlobalLabel`, then `AtomOutputResolveSymbol`. The final driver

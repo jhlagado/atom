@@ -1,6 +1,33 @@
 # Atom Phase 2f Nucleus-model output report
 
-## Result
+## Current authority checkpoint
+
+The output proof now executes the checked Atom-built core from
+`assets/native-core.json`. The standalone `asm/output-proof.asm` link has been
+removed. The harness supplies guarded caller-owned source, record, key, symbol,
+pending, and operation-log regions, then intercepts the real
+`AtomSinkImageByte`, `AtomSinkPatchByte`, and `AtomSinkPatchWord` service
+entries. It returns through the native stack exactly as the operating adapter
+does; there is no proof-only Z80 adapter code.
+
+Every direct invocation audits all 65,536 addresses. The current proof covers
+3,445 valid instruction forms, 526 invalid forms, all four instruction lengths,
+all patch kinds, capacity boundaries, range failures, and injected sink
+failures. The checked `.atm` source also passes strict register and stack
+contracts through the automatic Atom-to-AZM translation.
+
+The current measured account is 467 bytes of output code and 14 bytes of output
+workspace. Encoder through output occupies 9,668 bytes of code and immutable
+tables plus 421 bytes of fixed workspace. The complete linked native core is
+12,093 bytes, leaving 4,291 bytes below 16 KiB. The host-intercepted proof
+adapter contributes no resident Z80 code and uses ten bytes of synthetic proof
+state.
+
+The remainder of this report records the original Phase 2f measurement. Those
+numbers describe the implementation at that checkpoint and are retained as
+history; they are not the current native account.
+
+## Original Phase 2f result
 
 **Correctness — Measured: pass.** Atom now submits instruction image bytes and
 resolved patch bytes through the same logical target-sink boundary as Nucleus.
@@ -35,7 +62,7 @@ patch operation. Atom retains neither the generated image nor serialized NOBJ.
 The proof-only adapter is measured separately and is not part of Atom's
 resident account.
 
-## Byte account
+## Original Phase 2f byte account
 
 Phase 2e established **Measured: 9,840 bytes** of code and immutable data plus
 **Measured: 470 bytes** of fixed workspace. Phase 2f adds:
@@ -126,7 +153,7 @@ preserves the complete Phase 2e instruction claim. Banked output remains
 outside the claim because the settled six-byte pending record has no bank
 ordinal.
 
-## Execution measurement
+## Original Phase 2f execution measurement
 
 | Entry | Classification | Instructions | T-states | Measured case |
 | --- | --- | ---: | ---: | --- |
@@ -138,7 +165,7 @@ ordinal.
 At 4 MHz, the measured eight-patch drain takes **Measured: about 4.01 ms**.
 The named proof budgets retain margin above every measured maximum.
 
-## Whole-assembler projection
+## Original Phase 2f whole-assembler projection
 
 Phase 2f replaces the former 800–1,200-byte output-layer projection with a
 measured implementation. Remaining Atom-resident work is:
@@ -164,6 +191,8 @@ npm test
 npm run measure:output
 ```
 
-These commands verify the frozen dependency identities, strict AZM contracts,
-complete historical and Phase 2f proofs, exact memory account, and fresh
-symbol-derived measurements.
+These commands verify the pinned dependency identities, strict contracts,
+complete historical and current output proofs, exact memory account, and fresh
+symbol-derived measurements. `npm run annotate:contracts` now covers only the
+legacy proof images that have not yet moved to the checked core; the native
+source is checked by `npm run verify:native-source` and the test suite.

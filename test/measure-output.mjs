@@ -42,7 +42,7 @@ for (const [source, value] of [
 const s = h.symbols;
 const extent = (start, end) => s[end] - s[start];
 console.log(JSON.stringify({
-  labels: "All byte, instruction, cycle, and coverage counts are Measured in the Phase 2f proof image.",
+  labels: "All byte, instruction, cycle, and coverage counts are Measured in the authoritative checked core.",
   coverage: {
     concreteFormsEmitted: validCases().length,
     instructionLengthClasses: 4,
@@ -54,9 +54,7 @@ console.log(JSON.stringify({
   components: {
     outputCode: extent("AtomOutputCodeStart", "AtomOutputCodeEnd"),
     outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
-    pendingPeekCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 590,
-    parserPreflightCodeIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 1972,
-    proofAdapterCode: extent("AtomOutputProofAdapterStart", "AtomOutputProofAdapterEnd"),
+    hostInterceptedProofAdapterCode: 0,
     proofAdapterWorkspace: extent("AtomOutputProofAdapterWorkspaceStart", "AtomOutputProofAdapterWorkspaceEnd"),
   },
   integrated: {

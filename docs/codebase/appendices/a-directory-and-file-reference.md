@@ -38,7 +38,6 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `encoder-proof.asm` | Direct encoder, recognizer, and RADIX-40 harness with guarded records and stack |
-| `output-proof.asm` | Output, pending, encoder, and proof-sink harness |
 | `statements-proof.asm` | Statement parser with source, symbol, pending, output, and sink regions |
 | `driver-proof.asm` | Multipart build descriptor, source parts, arenas, sink lifecycle, and finalization proof |
 
@@ -144,7 +143,7 @@ from the frozen `asm/` tree.
 | `tokenizer-support.mjs` | Checked-core tokenizer harness with guarded source, exact token/error observations, and complete memory auditing |
 | `expression-support.mjs` | Expression harness, token setup, symbol state, and result extraction |
 | `parser-support.mjs` | Concrete-parser view over the checked symbolic parser harness |
-| `output-support.mjs` | Output harness and injectable proof-sink states |
+| `output-support.mjs` | Checked-core output harness with host-intercepted production services, guarded logical-operation state, and complete memory auditing |
 | `statements-support.mjs` | Statement harness with source, symbol, pending, output, and diagnostic observations |
 | `integration-support.mjs` | Checked-core symbolic parser and patch harness with guarded caller-owned regions |
 | `driver-support.mjs` | Multipart driver harness, descriptor builders, sink lifecycle, and full-map checks |

@@ -164,8 +164,8 @@ test("queues both unresolved fields only after every image byte succeeds", () =>
   assert.deepEqual(h.operations().map(({ bytes }) => bytes[0]), [0xdd, 0x36, 0x00, 0x00]);
   assert.equal(h.pendingRecords().length, 2);
   assert.deepEqual(h.pendingRecords().map((record) => [record[2] | (record[3] << 8), record[4], record[5]]), [
-    [0x4002, 4, 0],
-    [0x4003, 1, 0],
+    [0x4002, 0xb8 | 4, 0],
+    [0x4003, 0xb8 | 1, 0],
   ]);
 });
 
@@ -178,7 +178,7 @@ test("pending peek returns exact metadata without reclaiming the record", () => 
   const peeked = h.pendingPeek(symbol);
   assert.equal(peeked.carry, 0);
   assert.equal(peeked.de, 0x4001);
-  assert.equal(peeked.b, 2);
+  assert.equal(peeked.b, 0xb8 | 2);
   assert.equal(peeked.c, 5);
   assert.deepEqual(h.pendingRecords(), before);
   const missing = h.pendingPeek(0x1234);
