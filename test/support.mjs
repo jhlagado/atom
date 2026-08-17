@@ -1,13 +1,25 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { compile, compileSource } from "@jhlagado/azm";
+import { compileSource } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 
-const addressOf = (symbol) => symbol.address ?? symbol.value;
+import { loadNativeAtomCore } from "../src/host/index.mjs";
+
 const STACK_RETURN_SLOT = 0xfefe;
 const RETURN_SENTINEL = 0x80fe;
 const proofManifest = JSON.parse(fs.readFileSync("proofs/phase-1.json", "utf8"));
+const PROOF_SYMBOLS = Object.freeze({
+  AtomHarnessInputBefore: 0x7fff,
+  AtomHarnessInput: 0x8000,
+  AtomHarnessInputAfter: 0x800a,
+  AtomHarnessOutputBefore: 0x800f,
+  AtomHarnessOutput: 0x8010,
+  AtomHarnessOutputAfter: 0x8017,
+  AtomHarnessTextBefore: 0x801f,
+  AtomHarnessText: 0x8020,
+  AtomHarnessTextAfter: 0x8029,
+});
 
 function hex(value, width = 4) {
   return `$${value.toString(16).padStart(width, "0").toUpperCase()}`;
@@ -18,26 +30,19 @@ function pair(high, low) {
 }
 
 export async function createHarness() {
-  const assembled = await compile("asm/encoder-proof.asm", {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: "strict",
-  });
-  const errors = assembled.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `native harness failed strict assembly: ${JSON.stringify(errors)}`);
-  const hexArtifact = assembled.artifacts.find(({ kind }) => kind === "hex");
-  const d8m = assembled.artifacts.find(({ kind }) => kind === "d8m");
-  assert.equal(hexArtifact?.kind, "hex");
-  assert.equal(d8m?.kind, "d8m");
-  const symbols = Object.fromEntries(
-    d8m.json.symbols.flatMap((symbol) => {
-      const value = addressOf(symbol);
-      return value === undefined ? [] : [[symbol.name, value]];
-    }),
-  );
-  const program = parseIntelHex(hexArtifact.text);
-  const runtime = createZ80Runtime(program, symbols.AtomHarnessEntry);
+  const core = await loadNativeAtomCore();
+  assert.equal(core.source, "native/atom.atm");
+  const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
+  const program = parseIntelHex(core.hexText);
+  const runtime = createZ80Runtime(program, symbols.AtomEncode);
   const memory = runtime.hardware.memory;
+  memory[symbols.AtomHarnessOutputBefore] = 0x3c;
+  memory.fill(0xa5, symbols.AtomHarnessOutput, symbols.AtomHarnessOutput + 7);
+  memory[symbols.AtomHarnessOutputAfter] = 0xc3;
+  memory[symbols.AtomHarnessInputBefore] = 0x5a;
+  memory[symbols.AtomHarnessInputAfter] = 0xa5;
+  memory[symbols.AtomHarnessTextBefore] = 0x69;
+  memory[symbols.AtomHarnessTextAfter] = 0x96;
   const pristineMemory = memory.slice();
   const fullMemoryAudited = new Set();
   let invocation = 0;
@@ -102,7 +107,7 @@ export async function createHarness() {
     setup(memory, symbols, runtime.cpu);
     const inputBefore = memory.slice(symbols.AtomHarnessInput, symbols.AtomHarnessInput + 10);
     const textBefore = memory.slice(symbols.AtomHarnessText, symbols.AtomHarnessText + 9);
-    const immutableBefore = memory.slice(symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd);
+    const immutableBefore = core.codeRanges.map(({ start, end }) => memory.slice(start, end));
     const beforeExecution = memory.slice();
     const iyBefore = runtime.cpu.iy;
     const ixBefore = runtime.cpu.ix;
@@ -127,11 +132,13 @@ export async function createHarness() {
     assert.equal(memory[symbols.AtomHarnessInputAfter], 0xa5, `${label}: input overrun`);
     assert.equal(memory[symbols.AtomHarnessTextBefore], 0x69, `${label}: text underrun`);
     assert.equal(memory[symbols.AtomHarnessTextAfter], 0x96, `${label}: text overrun`);
-    assert.deepEqual(
-      memory.slice(symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd),
-      immutableBefore,
-      `${label}: resident code or immutable data changed`,
-    );
+    for (const [index, { start, end }] of core.codeRanges.entries()) {
+      assert.deepEqual(
+        memory.slice(start, end),
+        immutableBefore[index],
+        `${label}: resident code or immutable data changed`,
+      );
+    }
     assert.deepEqual(
       memory.slice(symbols.AtomHarnessInput, symbols.AtomHarnessInput + 10),
       inputBefore,

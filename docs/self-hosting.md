@@ -2,9 +2,9 @@
 
 Atom’s native source is permanently `.atm`. The checked source under `native/`
 is the input to native-core generation, the self-host proof, the command line’s
-`--self-host` mode, and the npm package. The older AZM implementation under
-`asm/` remains frozen while its direct subsystem proof harnesses move to the
-checked core. It no longer generates or governs the `.atm` files.
+`--self-host` mode, and the npm package. The repository retains no second native
+implementation. AZM consumes an automatic translation of the same `.atm`
+source only as an independent development oracle.
 
 This transition has two reasons for being staged. First, Atom stores only the
 first eight significant characters of a symbol, while the AZM source was
@@ -101,7 +101,7 @@ The host’s Atom-to-AZM oracle adapter restores these as `.ROUTINE` and
 and stack contracts against the `.atm` source. Atom ignores the comments while
 assembling the same bytes.
 
-## Authority and remaining migration
+## Authority
 
 The current checkpoint establishes the complete authority path:
 
@@ -116,22 +116,14 @@ The current checkpoint establishes the complete authority path:
 - the encoder differential calls the checked `.atm` core directly across all
   3,445 claimed forms and the complete invalid-record corpus.
 
-The `asm/` tree is now frozen bootstrap history. Its remaining encoder and
-complete-link contract commands are retained only until the dependency-removal
-audit proves they can be deleted. A native implementation change belongs in
-`native/*.atm`; no command regenerates those files from `asm/`.
+A native implementation change belongs in `native/*.atm`. No command
+regenerates those files from another source language.
 
 Every subsystem proof now executes the checked core. Encoder, symbols,
 tokenizer, expressions, parser/patch, output, statements, driver, and all six
 host-service boundaries are complete.
 
-Direct tests supply caller-owned symbol arenas and a 512-byte source interval
-with two-sided guards. They audit every address after every invocation. The
-standalone symbol, tokenizer, expression, parser, parser-integration, output,
-and statement proof links have been removed. The frozen
-`asm/atom-symbols.asm`, `asm/atom-tokenizer.asm`, and `asm/atom-expression.asm`
-remain only because the historical complete-link contract command still
-includes them. The remaining dependency search and removal checkpoint follows.
-
-The old implementation and one-way migration helper can now be removed once
-that audit finds no build, package, test, or documentation dependency.
+Direct tests supply caller-owned arenas and guarded source, record, and output
+intervals. Their proof profiles cover all 65,536 addresses. Strict contracts
+come from automatic Atom-to-AZM translation of the complete authoritative core;
+byte differentials and subsystem tests execute the checked Atom-built image.

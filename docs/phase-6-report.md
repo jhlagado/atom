@@ -17,8 +17,8 @@ bytes** in the 16 KiB bank.
 
 The checked `.atm` files are now the implementation authority. They contain
 collision-checked semantic names that fit Atom's eight-significant-character
-format and retain AZM proof annotations as `;@` comments. The older `asm/`
-implementation no longer generates them.
+format and retain AZM proof annotations as `;@` comments. They are the only
+native implementation retained in the repository.
 
 The source contains **Measured: 7,153 statements**. Its five code-bearing parts
 occupy **Measured: 101,177 bytes**. The checked `%INCLUDE` entry adds one small

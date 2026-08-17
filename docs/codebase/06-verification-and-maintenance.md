@@ -39,19 +39,13 @@ The test directory is flat, but filenames group it into clear lanes:
 The closest test should identify the broken layer. A wider test should prove
 that the public build still observes the intended result.
 
-## Native proof images
+## Native proof harnesses
 
-One legacy proof link remains under `asm/`. The encoder link preserves the
-historical Phase 1 proof account while the removal audit runs:
-
-```text
-encoder-proof.asm
-```
-
-The proof configuration sets module flags, origin, workspaces, guarded input and output
-records, source buffers, arenas, adapter state, stack, and sentinel return
-addresses. AZM assembles them with strict register contracts before Debug80
-executes their entry points.
+Native proof harnesses load `assets/native-core.json` and supply
+guarded input and output records, source buffers, arenas, adapter state, stack,
+and sentinel return addresses. Automatic Atom-to-AZM translation checks the
+same complete core under strict register contracts before Debug80 executes its
+entry points.
 
 The checked expression, parser/patch, output, statement, and driver lanes execute
 `native/atom.atm` directly. They supply guarded source, record, output, key,
@@ -79,8 +73,7 @@ For a direct entry, the common checks include:
 The full-memory audit covers all 65,536 addresses. A passing status byte cannot
 conceal a write elsewhere in the machine.
 
-During the `.atm` authority migration, each subsystem needs a checked-core lane
-before its legacy proof image is retired. The encoder lane calls the entries in
+The encoder lane calls the entries in
 `assets/native-core.json` and repeats the full valid and invalid differential.
 The symbol lane calls the same checked core with guarded caller-owned symbol and
 pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
@@ -88,16 +81,15 @@ scope transitions, failure atomicity, and record-size boundaries. The tokenizer
 lane supplies a guarded source interval and repeats the complete lexical,
 diagnostic, publication, classifier, and source-boundary corpus against the
 checked core. The expression, parser/patch, output, statement, and driver lanes
-also use the checked core. No current subsystem proof depends on a frozen AZM
-proof image.
+also use the checked core. No subsystem proof links or executes a second native
+image.
 
 ## Frozen memory profiles
 
 Files such as `proofs/phase-1-memory.json` describe every region in a direct
-proof map. The corresponding test resolves symbolic boundaries from either the
-fresh legacy AZM image or the checked native core and verifies that the regions
-begin at zero, meet without a gap or overlap, have their exact declared sizes,
-and end at `$10000`.
+proof map. The corresponding test resolves symbolic boundaries from the checked
+native core and verifies that the regions begin at zero, meet without a gap or
+overlap, have their exact declared sizes, and end at `$10000`.
 
 Later phase profiles apply the same discipline to the symbol, tokenizer,
 expression, parser, output, statement, integration, and driver images. Code,
@@ -132,17 +124,17 @@ collision rules that are easy to encode incorrectly.
 Every native public routine carries an AZM `.routine` annotation. Call sites may
 use `.expectout` where an inferred output must be explicit. Automatic
 translation assembles the authoritative `.atm` core under strict
-register-contract mode; every remaining direct proof image uses the same mode.
+register-contract mode. Runtime harnesses then execute those checked bytes.
 
 The annotations state inputs, outputs, possible outputs, clobbers, and flag
 effects. Runtime tests remain necessary: a static contract can describe the
 wrong implementation, and an execution test can miss an unexercised path. Atom
 uses both.
 
-`npm run annotate:contracts` invokes AZM's annotation path over every proof and
-the linked host image. It is a maintainer aid, not a blind formatter. Any
-generated contract change requires review against the routine body and direct
-runtime proof before commit.
+`npm run annotate:contracts` remains as a compatibility name for the strict
+translated-core check. It does not rewrite the authoritative `;@` annotations.
+Any contract change requires review against the routine body and direct runtime
+proof before commit.
 
 ## Execution budgets
 

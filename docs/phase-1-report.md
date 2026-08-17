@@ -28,7 +28,10 @@ and three binary-search state bytes.
 
 ## Resident byte account
 
-All extents below come from fresh AZM symbols in `asm/encoder-proof.asm`.
+The table below preserves the original linked measurement. That checkpoint used
+the now-removed AZM proof link. The current direct-entry harness resolves the
+same encoder boundaries from `assets/native-core.json`; the compression audit
+records the later 3,132-byte result.
 
 | Component | Classification | Bytes |
 | --- | --- | ---: |
@@ -156,13 +159,14 @@ and later components are independently measured.
 ## Reproduction
 
 ```sh
-npm run annotate:contracts  # only after changing routine bodies; review the diff
+npm run verify:strict-contracts
 npm test
 npm run measure
 ```
 
-Both commands first verify the reviewed dependency tree identities and rebuild
-AZM and Debug80 runtime from source. The first then requires strict contracts,
-executes the public ABI under the runtime, validates the complete memory
-profile, and runs positive and negative proofs. The second prints symbol-derived
-byte accounts and the frozen coverage census.
+The strict check translates the authoritative `.atm` source to AZM and requires
+all register and stack contracts to pass. The test and measurement commands
+first verify the reviewed dependency identities and rebuild AZM and Debug80
+Runtime from source. They then execute the public ABI, validate the complete
+memory profile, run positive and negative differentials, and print the
+symbol-derived byte account and frozen coverage census.

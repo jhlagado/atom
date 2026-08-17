@@ -15,36 +15,11 @@ the owner of a behavior quickly.
 | `package-lock.json` | Reproducible Node dependency resolution |
 | `LICENSE` | GPL-3.0-only license text |
 
-## `asm/` native implementation
-
-| File | Role |
-| --- | --- |
-| `atom-host-runtime.asm` | Complete origin-zero Mac-host link: selects full module modes, includes the native pipeline, and defines six fail-closed sink stubs |
-| `atom-encoder.asm` | RADIX-40 packer, mnemonic binary search, form validation, length calculation, Z80 encoding rules, opcode tables, and four-byte commit buffer |
-| `atom-symbols.asm` | Frozen bootstrap copy of exact packed symbols and pending-reference storage, retained by downstream legacy proof links |
-| `atom-tokenizer.asm` | Frozen bootstrap copy of the tokenizer, retained by downstream legacy proof links |
-| `atom-expression.asm` | Concrete and deferred expression parser, value/operator stacks, precedence reduction, arithmetic, and `LOW`/`HIGH` transforms |
-| `atom-patch.asm` | Maps validated operand fields to byte offsets and patch kinds |
-| `atom-parser.asm` | Mnemonic and operand parsing, ten-byte instruction record, concrete-value normalization, deferred reference preflight, and atomic parse commit |
-| `atom-output.asm` | Target cursor, capacity, IMAGE emission, pending queueing, symbol patch resolution, `ORG`, and reservation operations |
-| `atom-statements.asm` | Labels, optional-colon equates, bare directive recognition, instruction dispatch, data/string/storage/alignment handlers, and statement diagnostics |
-| `atom-driver.asm` | Build-descriptor validation, multipart loop, final undefined checks, and sink begin/commit/abort lifecycle |
-| `atom-abi.asmi` | External contracts supplied to AZM's strict register-contract analysis for cross-module native entries |
-| `atom-mnemonics.inc` | Generated sorted packed mnemonic table |
-| `atom-operands.inc` | Generated sorted packed operand-word table |
-
-## `asm/` proof links
-
-| File | Role |
-| --- | --- |
-| `encoder-proof.asm` | Direct encoder, recognizer, and RADIX-40 harness with guarded records and stack |
-
 ## `src/` root
 
 | File | Role |
 | --- | --- |
-| `src/abi.mjs` | JavaScript mnemonic and operand ordinals, parsed-record constructor, and reference RADIX-40 packer used by generators and tests |
-| `src/generate-mnemonics.mjs` | Generates the packed mnemonic and operand include tables from `src/abi.mjs` |
+| `src/abi.mjs` | JavaScript mnemonic and operand ordinals, parsed-record constructor, and reference RADIX-40 packer used by tests and host tooling |
 
 ## `src/host/` composition and execution
 
@@ -98,7 +73,6 @@ the owner of a behavior quickly.
 
 | File | Role |
 | --- | --- |
-| `build-self-host-source.mjs` | Flattens the readable AZM include closure, evaluates fixed conditions, removes proof annotations, rewrites directives and symbols, and chunks Atom-valid source |
 | `create-self-hosted-core.mjs` | Recovers original global symbols from one Atom generation, reconstructs code ranges, materializes HEX, and produces a runner-compatible replacement core |
 
 ## `bin/`
@@ -121,8 +95,7 @@ the owner of a behavior quickly.
 | `atom.atm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
 
-The `.atm` files are the editing authority. The build never regenerates them
-from the frozen `asm/` tree.
+The `.atm` files are the sole editing authority for the native assembler.
 
 ## `scripts/`
 

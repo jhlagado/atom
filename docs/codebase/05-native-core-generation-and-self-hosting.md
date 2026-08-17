@@ -84,9 +84,8 @@ npm run build:native-core
 npm run verify:native-source
 ```
 
-Changes belong in `native/*.atm`. The old one-way source generator is no longer
-a build command. Its internal migration helper remains only for a collision
-test until the legacy AZM implementation is removed.
+Changes belong in `native/*.atm`. No bootstrap source generator or second native
+implementation remains in the repository.
 
 ## First Atom generation
 

@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import test from "node:test";
-
-import { buildSelfHostSource } from "../src/host/self-host/build-self-host-source.mjs";
 
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",
@@ -53,31 +49,17 @@ test("the authoritative native symbol ledger is exact, scoped, and readable", as
   for (const [original, short] of Object.entries(KEY_NAMES)) assert.equal(byOriginal.get(original), short);
 });
 
-test("private-name collisions are suffixed only within their global scope", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "atom-short-names-"));
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
-  await fs.writeFile(path.join(root, "entry.asm"), [
-    "AtomParserFirst:",
-    "_LongSemanticAlphaOne:",
-    "JR _LongSemanticAlphaOne",
-    "_LargeSimpleAlphaOne:",
-    "JR _LargeSimpleAlphaOne",
-    "AtomParserSecond:",
-    "_LongSemanticAlphaOne:",
-    "JR _LongSemanticAlphaOne",
-    "",
-  ].join("\n"));
-
-  const source = await buildSelfHostSource({ root, entry: "entry.asm", maximumPartBytes: 1024 });
-  const firstScope = source.mapping.filter((symbol) => symbol.private && symbol.scope === "ATOMPARSERFIRST");
-  const secondScope = source.mapping.filter((symbol) => symbol.private && symbol.scope === "ATOMPARSERSECOND");
-  assert.equal(firstScope.length, 2);
-  assert.equal(new Set(firstScope.map(({ short }) => short)).size, 2);
-  assert.deepEqual(firstScope.map(({ short }) => short), [".LSAONE", ".LSAONE1"]);
-  assert.equal(secondScope.length, 1);
-  assert.equal(secondScope[0].short, firstScope.find(({ original }) => original === "_LongSemanticAlphaOne").short);
-
-  const text = new TextDecoder().decode(source.project.parts[0].compilerBytes);
-  for (const symbol of source.mapping) assert.doesNotMatch(symbol.short, /^(?:G|\.L)[0-9]{7}$/);
-  assert.doesNotMatch(text, /_(?:LongSemantic|LargeSimple)/);
+test("reviewed private-name collisions remain distinct within one scope", async () => {
+  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+  const byOriginal = new Map(ledger.symbols.map((symbol) => [symbol.original, symbol]));
+  for (const [scope, firstOriginal, firstShort, secondOriginal, secondShort] of [
+    ["ATOMVALIDATEFORM", "_AtomValidateAlu16", ".VA16", "_AtomValidateAdd16", ".VA161"],
+    ["ATOMTOKENSCANBASED", "_AtomTokenScanBinaryDigit", ".SBDIGIT", "_AtomTokenScanBasedDigit", ".SBDIGIT1"],
+  ]) {
+    const first = byOriginal.get(firstOriginal);
+    const second = byOriginal.get(secondOriginal);
+    assert.deepEqual([first.scope, first.short], [scope, firstShort]);
+    assert.deepEqual([second.scope, second.short], [scope, secondShort]);
+    assert.notEqual(first.short, second.short);
+  }
 });

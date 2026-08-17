@@ -193,6 +193,6 @@ npm run measure:output
 
 These commands verify the pinned dependency identities, strict contracts,
 complete historical and current output proofs, exact memory account, and fresh
-symbol-derived measurements. `npm run annotate:contracts` now covers only the
-legacy proof images that have not yet moved to the checked core; the native
-source is checked by `npm run verify:native-source` and the test suite.
+symbol-derived measurements. `npm run annotate:contracts` is a compatibility
+name for the same strict translated-core check used by
+`npm run verify:native-source`.

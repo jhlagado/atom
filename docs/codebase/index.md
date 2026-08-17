@@ -10,7 +10,7 @@ ABI documents, and executable proofs remain the final authority when a detail
 changes.
 
 Atom has two implementation domains. The assembler itself is handwritten Z80
-under `asm/`. The Node code under `src/host/` supplies filesystem access,
+under `native/`. The Node code under `src/host/` supplies filesystem access,
 preprocessing, Debug80 execution, output adapters, artifact rendering, and
 publication. Keeping those domains separate is the central architectural rule
 behind the repository.

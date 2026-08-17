@@ -103,10 +103,8 @@ npm run release:check
 The authoritative native source is under `native/` with an exact long-to-short
 symbol ledger. Atom assembles that source into the pinned core; the build also
 translates the same prepared parts to AZM for strict register-contract and byte
-comparison. Every subsystem proof now executes the checked core directly. The
-older `asm/` implementation remains only until the final dependency-removal
-audit proves that no build, proof, package, or documentation path still uses
-it.
+comparison. Every subsystem proof executes the checked core directly; the
+repository retains no second native implementation or one-way source generator.
 `npm run verify:native-source` checks the complete authority path. See the
 [self-hosting design](docs/self-hosting.md). AZM is a development oracle and is
 not installed with the command-line package.

@@ -93,13 +93,12 @@ The top-level repository is deliberately direct:
 
 ```text
 atom/
-  asm/                 FROZEN AZM MODULES AND DIRECT PROOF IMAGES
   assets/              PINNED GENERATED NATIVE CORE
   bin/                 INSTALLED COMMAND-LINE ENTRY
   docs/                PRODUCT, ABI, PHASE, AND ENGINEERING DOCUMENTATION
   examples/            SHIPPED SOURCE PROJECTS
   proofs/              FROZEN CENSUSES, MEMORY MAPS, AND MEASUREMENTS
-  scripts/             GENERATORS AND RELEASE CHECKS
+  scripts/             NATIVE-CORE AND RELEASE CHECKS
   native/              AUTHORITATIVE ATOM-SYNTAX NATIVE CORE AND SYMBOL LEDGER
   src/                 HOST IMPLEMENTATION AND GENERATED-TABLE INPUTS
   test/                NATIVE, HOST, DIFFERENTIAL, PACKAGE, AND SELF-HOST PROOFS
@@ -136,9 +135,8 @@ pending records to the sink. The statement layer drives individual source
 lines, and the driver controls the complete multipart generation.
 
 Every subsystem proof executes the checked core with controlled guards, entry
-points, and caller-owned state. The older direct proof links under `asm/` have
-been retired. The remaining frozen implementation is bootstrap history pending
-one dependency-removal audit.
+points, and caller-owned state. Atom retains no second native implementation or
+standalone subsystem link.
 
 ## Measured native account
 
@@ -154,7 +152,7 @@ The current pinned strict-contract image divides into these measured ranges:
 | Operand parser | 2,061 | 92 |
 | Output and patch submission | 467 | 14 |
 | Statements and directives | 1,345 | 23 |
-| Multipart driver | 619 | 9 |
+| Multipart driver | 627 | 9 |
 | Fail-closed host sink stubs | 8 | 0 |
 | **Total** | **11,648** | **453** |
 
@@ -190,14 +188,11 @@ the pinned image have explicit rebuild checks:
 
 | Generated file | Generator | Drift check |
 | --- | --- | --- |
-| `asm/atom-mnemonics.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
-| `asm/atom-operands.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
 | `assets/native-core.json` | `scripts/generate-native-core.mjs` using Atom plus strict AZM comparison | `npm run verify:native-source` |
 
 Native changes belong in `native/*.atm`, followed by
 `npm run build:native-core`. Editing `assets/native-core.json` directly only
-creates drift that the release gate rejects. The frozen `asm/` implementation
-is no longer a source for `.atm` generation.
+creates drift that the release gate rejects.
 
 ## Reading routes
 
