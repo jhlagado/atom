@@ -22,7 +22,7 @@ the owner of a behavior quickly.
 | `atom-host-runtime.asm` | Complete origin-zero Mac-host link: selects full module modes, includes the native pipeline, and defines six fail-closed sink stubs |
 | `atom-encoder.asm` | RADIX-40 packer, mnemonic binary search, form validation, length calculation, Z80 encoding rules, opcode tables, and four-byte commit buffer |
 | `atom-symbols.asm` | Frozen bootstrap copy of exact packed symbols and pending-reference storage, retained by downstream legacy proof links |
-| `atom-tokenizer.asm` | Streaming source-part tokenizer, numeric and string scanners, token record, line state, and lexical diagnostics |
+| `atom-tokenizer.asm` | Frozen bootstrap copy of the tokenizer, retained by downstream legacy proof links |
 | `atom-expression.asm` | Concrete and deferred expression parser, value/operator stacks, precedence reduction, arithmetic, and `LOW`/`HIGH` transforms |
 | `atom-patch.asm` | Maps validated operand fields to byte offsets and patch kinds |
 | `atom-parser.asm` | Mnemonic and operand parsing, ten-byte instruction record, concrete-value normalization, deferred reference preflight, and atomic parse commit |
@@ -38,7 +38,6 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `encoder-proof.asm` | Direct encoder, recognizer, and RADIX-40 harness with guarded records and stack |
-| `tokenizer-proof.asm` | Tokenizer source, token, guard, and stack harness |
 | `expression-proof.asm` | Expression/token/symbol harness and stack regions |
 | `parser-proof.asm` | Parser, expression, symbol, and instruction-record harness |
 | `output-proof.asm` | Output, pending, encoder, and proof-sink harness |
@@ -145,7 +144,7 @@ from the frozen `asm/` tree.
 | --- | --- |
 | `support.mjs` | Encoder direct-entry AZM assembly, Debug80 stepping, complete memory audit, instruction oracle helpers, and execution statistics |
 | `symbol-support.mjs` | Checked-core symbol and pending direct-entry harness with guarded caller-owned arenas and complete memory auditing |
-| `tokenizer-support.mjs` | Tokenizer direct-entry harness and token/source observations |
+| `tokenizer-support.mjs` | Checked-core tokenizer harness with guarded source, exact token/error observations, and complete memory auditing |
 | `expression-support.mjs` | Expression harness, token setup, symbol state, and result extraction |
 | `parser-support.mjs` | Parser harness, destination and reference observations |
 | `output-support.mjs` | Output harness and injectable proof-sink states |

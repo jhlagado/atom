@@ -122,10 +122,11 @@ files are frozen. A native implementation change belongs in `native/*.atm`; no
 command regenerates those files from `asm/`.
 
 Each remaining subsystem proof will move to the checked core before its old AZM
-module is deleted. Encoder and symbols are complete. The symbol harness uses
-the checked core with guarded caller-owned arenas and a complete memory-write
-audit; its standalone `asm/symbol-proof.asm` link has been removed. The frozen
-`asm/atom-symbols.asm` remains because the tokenizer, expression, parser,
-output, statements, integration, and driver proof images still include it.
-Those lanes follow in dependency order. The old implementation and one-way
-migration helper can be removed after the last direct proof lane moves.
+module is deleted. Encoder, symbols, and tokenizer are complete. Direct tests
+supply caller-owned symbol arenas and a 512-byte source interval with two-sided
+guards. They audit every address after every invocation. The standalone symbol
+and tokenizer proof links have been removed. The frozen
+`asm/atom-symbols.asm` and `asm/atom-tokenizer.asm` remain because expression,
+parser, output, statements, integration, and driver proof images still include
+them. Those lanes follow in dependency order. The old implementation and
+one-way migration helper can be removed after the last direct proof lane moves.

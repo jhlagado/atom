@@ -21,14 +21,13 @@ join two source words accidentally.
 
 - Success: carry clear, `A` is the token kind, and `IX` points to the record.
 - Failure: carry set and `A` is the lexical status. The previous token record
-  remains unchanged. `AtomTokenErrorPart` and `AtomTokenErrorOffset` identify
-  the first byte of the failed token.
+  remains unchanged, and IX is unspecified. `AtomTokenErrorPart` and
+  `AtomTokenErrorOffset` identify the first byte of the failed token.
 - EOF is a repeatable token with kind zero, not a failure.
 
 Both public routines are non-reentrant. Every return path restores SP and the
-hardware return address. The Phase 2b runtime proof also checks that IY remains
-unchanged, although the current conservative AZM summary lists IY as clobbered
-for `AtomTokenizerNext`.
+hardware return address. `AtomTokenizerReset` preserves IY;
+`AtomTokenizerNext` may clobber it as stated by the strict contract.
 
 ## Token record
 

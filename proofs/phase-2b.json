@@ -1,8 +1,9 @@
 {
-  "name": "Atom Phase 2b streaming tokenizer correctness proof",
-  "source": "../asm/tokenizer-proof.asm",
+  "name": "Atom authoritative streaming tokenizer correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2b-memory.json",
-  "contracts": "strict",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 512,

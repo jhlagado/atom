@@ -23,7 +23,7 @@ one("LD A,(IX-$80)\r\n", "representative indexed instruction line");
 
 const s = h.symbols;
 console.log(JSON.stringify({
-  labels: "All byte, instruction, and cycle counts are Measured in the Phase 2b proof image.",
+  labels: "All byte, instruction, and cycle counts are Measured in the authoritative checked core.",
   tokenizer: {
     ruleCode: s.AtomTokenizerRuleCodeEnd - s.AtomTokenizerCodeStart,
     immutableTables: s.AtomTokenizerImmutableEnd - s.AtomTokenizerImmutableStart,

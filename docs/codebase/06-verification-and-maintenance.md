@@ -46,7 +46,6 @@ link files under `asm/`:
 
 ```text
 encoder-proof.asm
-tokenizer-proof.asm
 expression-proof.asm
 parser-proof.asm
 output-proof.asm
@@ -84,9 +83,11 @@ before its legacy proof image is retired. The encoder lane calls the entries in
 `assets/native-core.json` and repeats the full valid and invalid differential.
 The symbol lane calls the same checked core with guarded caller-owned symbol and
 pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
-scope transitions, failure atomicity, and record-size boundaries. Tokenizer,
-expression, parser, output, statements, and driver still use frozen AZM proof
-images.
+scope transitions, failure atomicity, and record-size boundaries. The tokenizer
+lane supplies a guarded source interval and repeats the complete lexical,
+diagnostic, publication, classifier, and source-boundary corpus against the
+checked core. Expression, parser, output, statements, and driver still use
+frozen AZM proof images.
 
 ## Frozen memory profiles
 

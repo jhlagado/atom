@@ -1,115 +1,37 @@
 {
   "addressSpaceBytes": 65536,
   "regions": [
-    {
-      "name": "reserved-low",
-      "start": 0,
-      "end": "AtomEncoderCoreStart",
-      "exactBytes": 8192
-    },
-    {
-      "name": "encoder-resident",
-      "start": "AtomEncoderCoreStart",
-      "end": "AtomEncoderCoreEnd",
-      "exactBytes": 3132
-    },
-    {
-      "name": "encoder-workspace",
-      "start": "AtomEncoderWorkspaceStart",
-      "end": "AtomEncoderWorkspaceEnd",
-      "exactBytes": 6
-    },
-    {
-      "name": "symbol-code",
-      "start": "AtomSymbolCodeStart",
-      "end": "AtomSymbolCodeEnd",
-      "exactBytes": 589
-    },
-    {
-      "name": "symbol-workspace",
-      "start": "AtomSymbolWorkspaceStart",
-      "end": "AtomSymbolWorkspaceEnd",
-      "exactBytes": 20
-    },
-    {
-      "name": "tokenizer-code",
-      "start": "AtomTokenizerCodeStart",
-      "end": "AtomTokenizerCodeEnd",
-      "exactBytes": 1346
-    },
-    {
-      "name": "tokenizer-workspace",
-      "start": "AtomTokenizerWorkspaceStart",
-      "end": "AtomTokenizerWorkspaceEnd",
-      "exactBytes": 26
-    },
-    {
-      "name": "lower-free",
-      "start": "AtomTokenizerWorkspaceEnd",
-      "end": "AtomTokenizerProofSourceStart",
-      "exactBytes": 19457
-    },
-    {
-      "name": "proof-source",
-      "start": "AtomTokenizerProofSourceStart",
-      "end": "AtomTokenizerProofSourceEnd",
-      "exactBytes": 514
-    },
-    {
-      "name": "upper-free",
-      "start": "AtomTokenizerProofSourceEnd",
-      "end": 65024,
-      "exactBytes": 31742
-    },
-    {
-      "name": "proof-stack",
-      "start": 65024,
-      "end": 65280,
-      "exactBytes": 256
-    },
-    {
-      "name": "reserved-top",
-      "start": 65280,
-      "end": 65536,
-      "exactBytes": 256
-    }
+    { "name": "encoder-resident", "start": "AtomEncoderCoreStart", "end": "AtomEncoderCoreEnd", "exactBytes": 3132 },
+    { "name": "encoder-workspace", "start": "AtomEncoderWorkspaceStart", "end": "AtomEncoderWorkspaceEnd", "exactBytes": 6 },
+    { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 727 },
+    { "name": "symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 20 },
+    { "name": "tokenizer-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1346 },
+    { "name": "tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 26 },
+    { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1868 },
+    { "name": "expression-workspace", "start": "AtomExpressionWorkspaceStart", "end": "AtomExpressionWorkspaceEnd", "exactBytes": 263 },
+    { "name": "patch-code", "start": "AtomPatchCodeStart", "end": "AtomPatchCodeEnd", "exactBytes": 67 },
+    { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2061 },
+    { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 92 },
+    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 467 },
+    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
+    { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1345 },
+    { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 23 },
+    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 619 },
+    { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
+    { "name": "host-service-code", "start": "AtomHostServiceCodeStart", "end": "AtomHostServiceCodeEnd", "exactBytes": 8 },
+    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomTokenizerProofSourceStart", "exactBytes": 20675 },
+    { "name": "proof-source", "start": "AtomTokenizerProofSourceStart", "end": "AtomTokenizerProofSourceEnd", "exactBytes": 514 },
+    { "name": "upper-free", "start": "AtomTokenizerProofSourceEnd", "end": 65024, "exactBytes": 31742 },
+    { "name": "proof-stack", "start": 65024, "end": 65280, "exactBytes": 256 },
+    { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    {
-      "name": "tokenizer-rule-code",
-      "start": "AtomTokenizerCodeStart",
-      "end": "AtomTokenizerRuleCodeEnd",
-      "exactBytes": 1274
-    },
-    {
-      "name": "tokenizer-immutable-tables",
-      "start": "AtomTokenizerImmutableStart",
-      "end": "AtomTokenizerImmutableEnd",
-      "exactBytes": 64
-    },
-    {
-      "name": "tokenizer-code-and-tables",
-      "start": "AtomTokenizerCodeStart",
-      "end": "AtomTokenizerCodeEnd",
-      "exactBytes": 1346
-    },
-    {
-      "name": "fixed-tokenizer-workspace",
-      "start": "AtomTokenizerWorkspaceStart",
-      "end": "AtomTokenizerWorkspaceEnd",
-      "exactBytes": 26
-    },
-    {
-      "name": "token-record",
-      "start": "AtomTokenRecord",
-      "end": "AtomTokenizerWorkspaceEnd",
-      "exactBytes": 9
-    },
-    {
-      "name": "proof-source-capacity",
-      "start": "AtomTokenizerSource",
-      "end": "AtomTokenizerSourceLimit",
-      "exactBytes": 512
-    }
+    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12093 },
+    { "name": "tokenizer-rule-code", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerRuleCodeEnd", "exactBytes": 1274 },
+    { "name": "tokenizer-immutable-tables", "start": "AtomTokenizerImmutableStart", "end": "AtomTokenizerImmutableEnd", "exactBytes": 64 },
+    { "name": "tokenizer-code-and-tables", "start": "AtomTokenizerCodeStart", "end": "AtomTokenizerCodeEnd", "exactBytes": 1346 },
+    { "name": "fixed-tokenizer-workspace", "start": "AtomTokenizerWorkspaceStart", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 26 },
+    { "name": "token-record", "start": "AtomTokenRecord", "end": "AtomTokenizerWorkspaceEnd", "exactBytes": 9 },
+    { "name": "proof-source-capacity", "start": "AtomTokenizerSource", "end": "AtomTokenizerSourceLimit", "exactBytes": 512 }
   ]
 }
