@@ -21,7 +21,7 @@ verified before execution. Maintainers regenerate it with
 `npm run build:native-core`; `npm run verify:native-core` fails when source and
 the checked image differ.
 
-The package also contains Atom's generated native-valid source. This command
+The package also contains Atom's authoritative native source. This command
 assembles that source with the installed native core and writes
 `build/atom.atom/current/atom.bin` in the current directory:
 
@@ -32,9 +32,9 @@ atom --self-host
 The result is 12,093 bytes and must match the pinned core byte for byte.
 `--self-host` accepts only `-o`/`--output`, so origin, capacity, fill, entry,
 and preprocessor overrides cannot change the proof build.
-Maintainers regenerate the checked source with
-`npm run build:self-host-source`; `npm run verify:self-host-source` detects
-drift from the readable implementation under `asm/`.
+Maintainers edit the checked `.atm` files directly. `npm run build:native-core`
+assembles them with Atom, and `npm run verify:native-source` repeats that build
+plus the translated strict-AZM comparison.
 
 ## Basic build
 
@@ -119,7 +119,7 @@ non-wrapping half-open range whose end is no greater than `$FFFF`, so a target
 starting at zero has a maximum capacity of 65,535 bytes. Each native source
 part must fit the 24 KiB source window, with at most 16 ordered parts. The Mac
 adapter pages parts through that window at part boundaries. Atom's self-host
-build uses six ordered parts and does not retain the whole 101,281-byte
+build uses six ordered parts and does not retain the whole 101,257-byte
 source stream in Z80 RAM.
 
 ## Artifact publication

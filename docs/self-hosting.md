@@ -1,10 +1,10 @@
 # Self-hosting Atom
 
-Atom’s native source is moving permanently to `.atm`. The checked source under
-`native/` is already the source consumed by the self-host proof, the command
-line’s `--self-host` mode, and the npm package. The older AZM source under
-`asm/` remains temporarily as a frozen bootstrap oracle. It is not the target
-source format.
+Atom’s native source is permanently `.atm`. The checked source under `native/`
+is the input to native-core generation, the self-host proof, the command line’s
+`--self-host` mode, and the npm package. The older AZM implementation under
+`asm/` remains frozen while its direct subsystem proof harnesses move to the
+checked core. It no longer generates or governs the `.atm` files.
 
 This transition has two reasons for being staged. First, Atom stores only the
 first eight significant characters of a symbol, while the AZM source was
@@ -72,7 +72,8 @@ silently truncates one definition onto another.
 A private entry also records the original global scope. The ledger serves
 three purposes:
 
-1. It proves that every original definition received an exact short name.
+1. It records the reviewed migration from long bootstrap names to exact native
+   names.
 2. It lets the host recover the long ABI names required by the native runner.
 3. It makes the rename reviewable instead of burying it in ordinal labels.
 
@@ -100,26 +101,28 @@ The host’s Atom-to-AZM oracle adapter restores these as `.ROUTINE` and
 and stack contracts against the `.atm` source. Atom ignores the comments while
 assembling the same bytes.
 
-## Transition checkpoints
+## Authority and remaining migration
 
-The present checkpoint establishes the permanent `.atm` representation:
+The current checkpoint establishes the complete authority path:
 
-- semantic, collision-checked names replace ordinal generated names;
-- `.atm` source and its ledger are checked into `native/` and shipped;
-- Atom assembles the checked source twice with byte-identical results;
-- the host translates that same source to AZM and runs strict contract checks;
-- the obsolete generated `self-host/*.asm` copy is removed.
+- `native/atom.atm` and its five ordered source parts are hand-edited source;
+- `npm run build:native-core` uses the checked pinned core to assemble those
+  parts and writes the resulting image to `assets/native-core.json`;
+- the same prepared parts are translated to AZM syntax and assembled with
+  strict register contracts;
+- the build compares the exact initialized address set and every resident byte
+  between Atom and AZM before publishing the asset;
+- a second Atom generation must reproduce the first; and
+- the encoder differential calls the checked `.atm` core directly across all
+  3,445 claimed forms and the complete invalid-record corpus.
 
-During this checkpoint, `asm/` remains the frozen source used by the migration
-generator. `npm run verify:self-host-source` detects any drift between that
-oracle and `native/`. This is a temporary bridge, not a two-source maintenance
-model.
+The `asm/` tree now has one remaining job: it supplies the older direct proof
+images for subsystems that have not yet received checked-core harnesses. Those
+files are frozen. A native implementation change belongs in `native/*.atm`; no
+command regenerates those files from `asm/`.
 
-The next checkpoint will make `native/*.atm` authoritative. Native-core
-generation will run Atom over those files, while AZM will see only the
-automatically translated oracle form. Once that path has produced a stable
-release and the proof annotations have been audited from `.atm`, the old
-`asm/*.asm` implementation and the one-way migration generator can be deleted.
-
-At no stage are developers expected to keep two handwritten implementations in
-sync.
+Each remaining subsystem proof will move to the checked core before its old AZM
+module is deleted. Encoder is the first completed module. Symbols, tokenizer,
+expression, parser, output, statements, and driver follow in dependency order.
+The old implementation and one-way migration helper can be removed after the
+last direct proof lane moves.

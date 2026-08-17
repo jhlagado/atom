@@ -79,6 +79,12 @@ For a direct entry, the common checks include:
 The full-memory audit covers all 65,536 addresses. A passing status byte cannot
 conceal a write elsewhere in the machine.
 
+During the `.atm` authority migration, each subsystem also needs a checked-core
+lane before its legacy proof image is retired. The encoder lane is complete:
+`test/native-authority.test.mjs` calls the entries in
+`assets/native-core.json` and repeats the full valid and invalid differential.
+The remaining direct lanes still use their frozen AZM proof images.
+
 ## Frozen memory profiles
 
 Files such as `proofs/phase-1-memory.json` describe every region in a direct
@@ -287,14 +293,14 @@ npm run test:host
 npm test
 npm run verify:strict-contracts
 npm run verify:native-core
-npm run verify:self-host-source
+npm run verify:native-source
 npm run measure:host-native
 npm run measure:self-host
 npm run release:check
 ```
 
 `npm run release:check` is the complete local maintainer gate. It runs all
-native and host tests, strict core and generated-source checks, and the final
+native and host tests, strict core and authoritative-source checks, and the final
 host and self-host measurements. `prepublishOnly` invokes the same gate.
 
 Network and release-authority checks remain explicit:

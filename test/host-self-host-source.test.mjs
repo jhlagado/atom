@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { buildSelfHostSource } from "../src/host/index.mjs";
+import { buildSelfHostSource } from "../src/host/self-host/build-self-host-source.mjs";
 
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",
@@ -17,10 +17,10 @@ const KEY_NAMES = Object.freeze({
   AtomTokenizerReset: "TK_RESET",
 });
 
-test("the checked self-host symbol ledger is exact, scoped, and readable", async () => {
+test("the authoritative native symbol ledger is exact, scoped, and readable", async () => {
   const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
-  assert.equal(ledger.format, "atom-self-host-symbol-map");
-  assert.equal(ledger.version, 1);
+  assert.equal(ledger.format, "atom-native-symbol-ledger");
+  assert.equal(ledger.version, 2);
   assert.equal(ledger.symbols.length, 1312);
 
   const globalNames = new Set();

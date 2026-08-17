@@ -2,44 +2,36 @@
 
 [← Host execution, artifacts, and interfaces](04-host-execution-artifacts-and-interfaces.md) | [Verification and maintenance →](06-verification-and-maintenance.md)
 
-Atom keeps one readable Z80 implementation and derives two checked products
-from it: the pinned native image used by the Mac package and an Atom-syntax
-source form that the native assembler can assemble. The generators are part of
-the correctness boundary because the readable source uses AZM facilities that
-Atom deliberately omits.
+Atom keeps one authoritative Z80 implementation in `.atm` and derives the
+pinned native image used by the Mac package. The same prepared source is
+translated to AZM syntax for an independent strict-contract build. Core
+generation and translation are part of the correctness boundary.
 
 The self-host proof compares complete initialized-address sets and resident
 bytes across AZM and two Atom generations. It does not rely on two
 hand-maintained assembler implementations.
 
-## Readable source and link entry
+## Native source and link entry
 
-The native implementation is maintained under `asm/`. Its link entry is
-`atom-host-runtime.asm`, which:
+The native implementation is maintained under `native/`. Its link entry is
+`atom.atm`, whose `%INCLUDE` header orders five source parts. Those parts set
+origin zero, contain the nine native modules in link order, and finish with six
+fail-closed host sink entries.
 
-- sets origin zero;
-- enables the completed subsystem modes;
-- includes the nine native modules in link order;
-- defines six fail-closed host sink stubs; and
-- ends the AZM translation unit.
-
-The readable files use AZM's `.include`, `.if`, `.equ`, `.org`, `.db`, `.dw`,
-`.ds`, `.routine`, `.expectout`, and `.end` forms. `.routine` and `.expectout`
-are proof annotations. They affect AZM's register-contract analysis and emit no
-native byte.
-
-Atom source uses bare assembler directives, has no native include mechanism,
-and limits symbols to eight significant characters. The self-host generator
-therefore performs deterministic mechanical rewrites rather than requiring the
-readable implementation to use the smallest source representation.
+The source uses Atom's bare directives and eight-character symbols. Comments
+beginning with `;@ROUTINE` and `;@EXPECTOUT` retain register-contract metadata.
+Atom ignores those comments. The Atom-to-AZM translator restores them as AZM
+annotations for the strict oracle build.
 
 ## Building the pinned core
 
-`scripts/generate-native-core.mjs` calls AZM's programmatic compile API on
-`asm/atom-host-runtime.asm` with HEX, D8 symbols, and strict register contracts
-enabled.
+`scripts/generate-native-core.mjs` resolves `native/atom.atm`, runs the checked
+core over the ordered parts, and recovers the long host ABI names through
+`native/atom-symbols.json`. It then translates those same prepared bytes to AZM
+and enables strict register contracts.
 
-Generation fails when AZM reports any error. On success, the script extracts:
+Generation fails unless Atom and AZM produce the same initialized address set
+and every resident byte. On success, the script records:
 
 - Intel HEX text;
 - every address or value in the D8 symbol table;
@@ -61,36 +53,10 @@ and compares the complete rendered JSON with the checked file. The release gate
 uses the check form so an unreviewed generated diff cannot be hidden by a test
 that consumes stale bytes.
 
-## Building Atom-valid source
+## Native source ledger
 
-`buildSelfHostSource()` in `src/host/self-host/build-self-host-source.mjs`
-starts from the same link entry. It recursively reads the AZM include closure
-inside the `asm/` root and performs these transformations:
-
-1. remove ordinary comments and blank lines;
-2. evaluate the fixed link-time `.if`, `.else`, and `.endif` conditions;
-3. flatten every `.include` exactly once at its source position;
-4. preserve `.routine` and `.expectout` as `;@` proof comments and remove `.end`;
-5. omit link-configuration equates already fixed by the generator;
-6. convert AZM dotted directives to Atom's bare `EQU`, `ORG`, `DB`, `DW`, and
-   `DS` forms;
-7. convert one-byte AZM quoted literals to explicit numeric bytes where needed;
-8. assign every declared global and private symbol a unique short Atom name;
-9. rewrite exact identifier occurrences outside strings and numeric literals;
-   and
-10. split the result at line boundaries into source parts no larger than the
-    selected page budget.
-
-Global names use a two-letter module prefix and a semantic stem, such as
-`PR_PARSE` and `TK_RESET`. Private names use a dot plus a semantic stem and may
-be reused under different global labels. Allocation is case-insensitive and
-adds a deterministic base-36 suffix only when two stems collide in one scope.
-The mapping records the readable original, exact short name, module, privacy,
-and private scope. It never resolves a collision by silent truncation.
-
-The default maximum generated part size is 20 KiB, below the 24 KiB native
-source-page limit. The current source produces five generated content parts.
-`scripts/generate-self-host-source.mjs` also writes a sixth entry part:
+The five content parts remain below the 24 KiB native source-page limit. The
+sixth file is the entry and dependency header:
 
 ```asm
 %INCLUDE "ATOM-00.ATM"
@@ -104,21 +70,23 @@ The host resolver orders those dependencies before `atom.atm`, so the checked
 self-host project presented to the native driver has six parts. The empty
 entry still has its own identity and descriptor.
 
-`native/atom-symbols.json` retains generator statistics and the complete
-original-to-short symbol map. It lets the proof recover the original ABI symbol
-names from the generated assembly's declarations.
+`native/atom-symbols.json` records the complete original-to-short migration and
+the fixed names required by the host runner. It lets core generation recover
+long ABI names from the declarations emitted by native Atom. Global names use
+a two-letter module prefix and a semantic stem, such as `PR_PARSE` and
+`TK_RESET`. Private names use a dot plus a semantic stem and may be reused under
+different global labels.
 
-The generated source is managed by:
+The authoritative source is managed by:
 
 ```sh
-npm run build:self-host-source
-npm run verify:self-host-source
+npm run build:native-core
+npm run verify:native-source
 ```
 
-During this migration checkpoint, changes belong in `asm/` or the generator.
-The checked files under `native/` are the permanent Atom representation but are
-not yet the editing authority. See `docs/self-hosting.md` for the authority
-flip and removal sequence.
+Changes belong in `native/*.atm`. The old one-way source generator is no longer
+a build command. Its internal migration helper remains only for a collision
+test until the legacy AZM implementation is removed.
 
 ## First Atom generation
 
@@ -126,20 +94,20 @@ The self-host proof resolves `native/atom.atm` through the ordinary host
 source packager and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 
-The pinned AZM-built native core assembles all six parts. The resulting
+The pinned Atom-built native core assembles all six parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
 events, execution measurements, and a complete 12,093-byte materialized image.
 
 The proof compares that image with the memory initialized by the pinned core's
 Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
 reproduces the code, immutable tables, fixed workspace image, and sink stubs
-built independently by AZM.
+checked into the package.
 
 ## Recovering a runnable self-hosted core
 
-`createSelfHostedAtomCore()` accepts the source generator's symbol mapping and
+`createSelfHostedAtomCore()` accepts the checked symbol ledger and
 the first Atom generation. It selects declarations whose short names correspond
-to generated global symbols, maps them back to original names, and requires all
+to ledger globals, maps them back to original names, and requires all
 entry and range symbols needed by the runner.
 
 The helper reconstructs the ten immutable code ranges, materializes the first
@@ -148,7 +116,7 @@ accepted by `assembleResolvedAtomProject({ nativeCore })`.
 
 It also checks that:
 
-- every required generated global has exactly one value;
+- every required ledger global has exactly one value;
 - every code start and end is present and ordered;
 - the materialized image begins at zero; and
 - its end equals `AtomHostResidentEnd`.
@@ -199,21 +167,20 @@ The checked measurement records:
 
 | Observation | Measured value |
 | --- | ---: |
-| Readable input files | 13 |
 | Flattened native statements | 7,147 |
-| Generated content parts | 5 |
+| Native content parts | 5 |
 | Checked resolver parts, including entry | 6 |
-| Checked source bytes | 101,281 |
-| Generated global symbols | 872 |
-| Generated private symbols | 440 |
+| Checked source bytes | 101,257 |
+| Ledger global symbols | 872 |
+| Ledger private symbols | 440 |
 | Initialized resident bytes | 11,742 |
 | Reserved resident bytes | 351 |
 | Forward PATCH records | 1,929 |
 | Declared symbols | 1,312 |
 | Linked resident extent | 12,093 bytes |
 
-The first generation currently executes 99,459,995 instructions and
-1,059,714,120 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 99,458,987 instructions and
+1,059,703,728 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

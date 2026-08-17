@@ -82,7 +82,7 @@ below the 3,500-byte Phase 1 review gate.
 
 The compact mnemonic table has a measured execution cost. The exhaustive
 mixed-case proof reaches 934 instructions and 9,619 T-states for lowercase
-`DJNZ`. The full self-build uses 99,459,995 instructions and 1,059,714,120
+`DJNZ`. The full self-build uses 99,458,987 instructions and 1,059,703,728
 T-states, up from the baseline 95,471,840 instructions and 995,258,332
 T-states. Both values remain below the fixed 200 million instruction and two
 billion T-state limits.

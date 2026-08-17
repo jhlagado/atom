@@ -41,14 +41,14 @@
     "secondAtomGeneration": true
   },
   "package": {
-    "packedBytesObserved": 355110,
-    "unpackedBytes": 1685551,
+    "packedBytesObserved": 350501,
+    "unpackedBytes": 1658074,
     "entries": 293,
     "installedSelfHostWithoutAzm": true
   },
   "proofs": {
-    "atomLocalTests": 268,
-    "atomLocalPassed": 268,
+    "atomLocalTests": 270,
+    "atomLocalPassed": 270,
     "atomLocalFailed": 0,
     "releaseCheckRequiresPinnedDebug80Main": true
   }

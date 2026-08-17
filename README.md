@@ -100,11 +100,14 @@ Run the maintainer gate with:
 npm run release:check
 ```
 
-The checked Atom-valid native source is under `native/` with an exact
-long-to-short symbol ledger. The AZM source under `asm/` is retained only as a
-temporary migration and bootstrap oracle; `npm run verify:self-host-source`
-detects drift during that transition. See the [self-hosting design](docs/self-hosting.md).
-AZM is a development oracle and is not installed with the command-line package.
+The authoritative native source is under `native/` with an exact long-to-short
+symbol ledger. Atom assembles that source into the pinned core; the build also
+translates the same prepared parts to AZM for strict register-contract and byte
+comparison. The older `asm/` implementation remains temporarily for direct
+subsystem proof harnesses while those lanes move to the checked core.
+`npm run verify:native-source` checks the complete authority path. See the
+[self-hosting design](docs/self-hosting.md). AZM is a development oracle and is
+not installed with the command-line package.
 
 The detailed engineering record remains available in the phase reports:
 

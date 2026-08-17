@@ -7,10 +7,10 @@ accepts a commit or abort. Everything between those points runs as Z80 code.
 The compiler uses caller-owned source, symbol, and pending arenas plus 453 bytes
 of fixed non-reentrant workspace linked beside the code and immutable tables.
 
-`asm/atom-host-runtime.asm` selects the complete configuration. Smaller proof
-images use assembly-time flags to link earlier or isolated subsystem modes, but
-the installed core enables deferred expressions, statement parsing, output,
-symbol resolution, and the multipart driver.
+`native/atom.atm` selects the complete configuration. Frozen AZM proof images
+still use assembly-time flags to link isolated subsystem modes during their
+checked-core migration, but the installed core enables deferred expressions,
+statement parsing, output, symbol resolution, and the multipart driver.
 
 ## Build descriptor and driver
 

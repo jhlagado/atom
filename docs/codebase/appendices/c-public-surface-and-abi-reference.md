@@ -99,7 +99,6 @@ the first Atom generation.
 | --- | --- |
 | `translateAtomLineToAzm()` | Translate one prepared Atom source line into AZM syntax |
 | `translateResolvedAtomProjectToAzm()` | Produce one AZM oracle source from ordered prepared parts |
-| `buildSelfHostSource()` | Derive short-symbol Atom source from the readable native implementation |
 | `createSelfHostedAtomCore()` | Recover a runner-compatible native core from one Atom generation |
 | `AtomAssemblyError` | Structured error class for execution, artifacts, translation, self-hosting, and publication |
 
@@ -234,6 +233,6 @@ the package does not yet ship TypeScript declarations:
 - Atom NOBJ flat profile 0.2; and
 - D8 map output accepted by Debug80.
 
-Workspace addresses, internal native labels, proof stack addresses, generated
-short self-host names, and private files below `src/host/` are implementation
+Workspace addresses, internal native labels, proof stack addresses, native
+short names, and private files below `src/host/` are implementation
 details. Tools should not derive behavior from them.

@@ -9,7 +9,6 @@ import { parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import {
   assembleResolvedAtomProject,
-  buildSelfHostSource,
   createSelfHostedAtomCore,
   loadNativeAtomCore,
   materializeAtomGeneration,
@@ -24,15 +23,12 @@ const SELF_HOST_BUDGETS = Object.freeze({
 
 test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-identically", async (t) => {
   const proof = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
-  const generated = await buildSelfHostSource({ root: path.resolve("asm") });
+  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+  const source = Object.freeze({ mapping: ledger.symbols, statistics: ledger.statistics });
   const project = await resolveAtomProject({
     root: path.resolve("native"),
     entry: "atom.atm",
   });
-  assert.deepEqual(
-    project.parts.slice(0, -1).map(({ compilerBytes }) => new TextDecoder().decode(compilerBytes)),
-    generated.project.parts.map(({ compilerBytes }) => new TextDecoder().decode(compilerBytes)),
-  );
   assert.deepEqual(project.parts.map(({ logicalIdentity }) => logicalIdentity), [
     "atom-00.atm",
     "atom-01.atm",
@@ -54,7 +50,7 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
   assert.equal(firstImage.end, pinned.residentExtentBytes);
   assert.deepEqual(firstImage.bytes, pinnedImage);
 
-  const selfHostedCore = createSelfHostedAtomCore(generated, first.generation);
+  const selfHostedCore = createSelfHostedAtomCore(source, first.generation);
   const second = await assembleResolvedAtomProject(project, { ...options, nativeCore: selfHostedCore });
   assert.deepEqual(materializeAtomGeneration(second.generation).bytes, firstImage.bytes);
   assert.deepEqual(second.execution, first.execution);
@@ -84,11 +80,12 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
   assert.deepEqual(oracleInitializedAddresses, atomInitializedAddresses);
   assert.deepEqual(oracleProgram.memory.slice(0, firstImage.bytes.length), firstImage.bytes);
 
-  assert.deepEqual(generated.statistics, {
-    inputFiles: 13,
+  assert.deepEqual(source.statistics, {
     statements: 7147,
     sourceBytes: 101108,
-    parts: 5,
+    sourceParts: 5,
+    checkedParts: 6,
+    checkedBytes: 101257,
     globalSymbols: 872,
     privateSymbols: 440,
   });

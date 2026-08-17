@@ -158,8 +158,7 @@ installed package.
 
 ```sh
 npm run test:host
-node node_modules/@jhlagado/azm/dist/src/cli.js --rc strict --contracts \
-  --nobin --nohex --nod8m --nolst asm/atom-host-runtime.asm
+npm run verify:native-source
 npm run measure:host-native
 npm run measure:self-host
 ```

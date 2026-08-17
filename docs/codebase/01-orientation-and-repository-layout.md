@@ -93,14 +93,14 @@ The top-level repository is deliberately direct:
 
 ```text
 atom/
-  asm/                 HANDWRITTEN Z80 CORE AND DIRECT PROOF IMAGES
+  asm/                 FROZEN AZM MODULES AND DIRECT PROOF IMAGES
   assets/              PINNED GENERATED NATIVE CORE
   bin/                 INSTALLED COMMAND-LINE ENTRY
   docs/                PRODUCT, ABI, PHASE, AND ENGINEERING DOCUMENTATION
   examples/            SHIPPED SOURCE PROJECTS
   proofs/              FROZEN CENSUSES, MEMORY MAPS, AND MEASUREMENTS
   scripts/             GENERATORS AND RELEASE CHECKS
-  native/              CHECKED ATOM-SYNTAX FORM OF THE NATIVE CORE
+  native/              AUTHORITATIVE ATOM-SYNTAX NATIVE CORE AND SYMBOL LEDGER
   src/                 HOST IMPLEMENTATION AND GENERATED-TABLE INPUTS
   test/                NATIVE, HOST, DIFFERENTIAL, PACKAGE, AND SELF-HOST PROOFS
   package.json         PACKAGE EXPORT, COMMAND, DEPENDENCIES, AND TEST LANES
@@ -109,23 +109,23 @@ atom/
 The package uses JavaScript ESM and requires Node 20 or later. AZM and Debug80
 Runtime are local development dependencies. The published package bundles
 Debug80 Runtime but omits AZM; AZM remains the independent development oracle
-used to build and verify the pinned native image.
+used to verify the Atom-built native image.
 
 ## Native source layout
 
-`asm/atom-host-runtime.asm` is the linked Mac-host image. It selects the full
-configuration and includes the native modules in dependency order:
+`native/atom.atm` is the linked Mac-host entry. Its five ordered parts contain
+the native modules in dependency order:
 
 ```text
-atom-encoder.asm
-atom-symbols.asm
-atom-tokenizer.asm
-atom-expression.asm
-atom-patch.asm
-atom-parser.asm
-atom-output.asm
-atom-statements.asm
-atom-driver.asm
+encoder
+symbols and pending references
+tokenizer
+expression evaluator
+patch locator
+operand parser
+output
+statements and directives
+multipart driver
 host sink stubs
 ```
 
@@ -135,10 +135,11 @@ evaluator feed the parser. The output layer connects parsed instructions and
 pending records to the sink. The statement layer drives individual source
 lines, and the driver controls the complete multipart generation.
 
-The direct proof files such as `encoder-proof.asm`, `symbol-proof.asm`, and
-`driver-proof.asm` link smaller configurations around one subsystem. They are
-not alternative implementations. Each proof supplies a controlled memory map,
-entry point, guards, and adapter state for direct runtime tests.
+The older direct proof files under `asm/` link controlled subsystem images with
+guards, entry points, and adapter state. They remain frozen during the proof
+migration. Encoder also has a checked-core differential, so every claimed form
+now executes the authoritative `.atm` bytes. The remaining subsystem lanes will
+move in dependency order before the corresponding AZM modules are removed.
 
 ## Measured native account
 
@@ -185,20 +186,19 @@ publication.
 
 ## Generated and hand-edited files
 
-The readable implementation under `asm/` is hand-edited. Several checked files
-are generated from it or from shared JavaScript descriptions:
+The implementation under `native/` is hand-edited. Generated descriptions and
+the pinned image have explicit rebuild checks:
 
 | Generated file | Generator | Drift check |
 | --- | --- | --- |
 | `asm/atom-mnemonics.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
 | `asm/atom-operands.inc` | `src/generate-mnemonics.mjs` | `npm run generate` followed by the worktree diff |
-| `assets/native-core.json` | `scripts/generate-native-core.mjs` using strict AZM | `npm run verify:native-core` |
-| `native/atom-00.atm` through `atom-04.atm` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
-| `native/atom.atm` and `atom-symbols.json` | `scripts/generate-self-host-source.mjs` | `npm run verify:self-host-source` |
+| `assets/native-core.json` | `scripts/generate-native-core.mjs` using Atom plus strict AZM comparison | `npm run verify:native-source` |
 
-Changes belong in the generator or readable source, followed by regeneration.
-Editing a generated file directly only creates drift that the release gate will
-reject.
+Native changes belong in `native/*.atm`, followed by
+`npm run build:native-core`. Editing `assets/native-core.json` directly only
+creates drift that the release gate rejects. The frozen `asm/` implementation
+is no longer a source for `.atm` generation.
 
 ## Reading routes
 
@@ -207,23 +207,24 @@ The best entry point depends on the change:
 - For source dependency or conditional behaviour, begin in
   `resolve-atom-project.mjs`, then follow the Atom source profile into
   `source-packager/resolver.mjs`.
-- For a lexical problem, begin at `AtomTokenizerNext` in
-  `asm/atom-tokenizer.asm` and read `test/tokenizer.test.mjs` beside it.
+- For a lexical problem, use `native/atom-symbols.json` to map
+  `AtomTokenizerNext` to `TK_NEXT`, locate it under `native/`, and read
+  `test/tokenizer.test.mjs` beside it.
 - For expressions or forward arithmetic, begin at `AtomExpressionParseDeferred`
   and the pending-reference rules in `docs/symbolic-parser-abi.md`.
 - For an instruction form, begin with the operand record in `src/abi.mjs`, then
   follow `AtomParserParse`, `AtomValidateForm`, and `AtomEncode`.
-- For labels or capacity, begin in `asm/atom-symbols.asm` and the relevant
-  arena boundary tests.
-- For a directive, begin in `AtomAssemblePart` and
-  `asm/atom-statements.asm`.
-- For forward patches or output lifecycle, begin in `asm/atom-output.asm`,
-  `asm/atom-driver.asm`, and `createMemoryAtomSink()`.
+- For labels or capacity, locate the `SY_` entries under `native/` and read the
+  relevant arena boundary tests.
+- For a directive, begin at the `ST_` implementation of `AtomAssemblePart`.
+- For forward patches or output lifecycle, begin at the `OU_` and `DR_`
+  implementations under `native/` and `createMemoryAtomSink()`.
 - For an artifact issue, begin in `src/host/artifacts/` and the corresponding
   `host-artifacts` or publication tests.
 - For the installed command, begin in `bin/atom.mjs` and trace its calls through
   the public host index.
-- For a self-host mismatch, begin with the source generator, then compare the
+- For a self-host mismatch, begin with the checked native source and core
+  generator, then compare the
   first-generation, second-generation, and translated-AZM checks in
   `test/host-self-host.test.mjs`.
 

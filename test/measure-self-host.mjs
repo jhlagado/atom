@@ -8,7 +8,6 @@ import { parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import {
   assembleResolvedAtomProject,
-  buildSelfHostSource,
   createSelfHostedAtomCore,
   loadNativeAtomCore,
   materializeAtomGeneration,
@@ -16,13 +15,14 @@ import {
   translateResolvedAtomProjectToAzm,
 } from "../src/host/index.mjs";
 
-const generated = await buildSelfHostSource({ root: path.resolve("asm") });
+const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+const source = Object.freeze({ mapping: ledger.symbols, statistics: ledger.statistics });
 const project = await resolveAtomProject({ root: path.resolve("native"), entry: "atom.atm" });
 const limits = { maxInstructions: 200_000_000, maxCycles: 2_000_000_000 };
 const options = { target: { start: 0, capacity: 0x4000 }, ...limits };
 const first = await assembleResolvedAtomProject(project, options);
 const firstImage = materializeAtomGeneration(first.generation);
-const selfHostedCore = createSelfHostedAtomCore(generated, first.generation);
+const selfHostedCore = createSelfHostedAtomCore(source, first.generation);
 const second = await assembleResolvedAtomProject(project, { ...options, nativeCore: selfHostedCore });
 const secondImage = materializeAtomGeneration(second.generation);
 assert.deepEqual(secondImage.bytes, firstImage.bytes);
@@ -72,14 +72,13 @@ console.log(JSON.stringify({
     equivalence: "Measured by byte comparison against the pinned AZM core, translated AZM source, and a second Atom generation.",
   },
   source: {
-    inputFiles: generated.statistics.inputFiles,
-    statements: generated.statistics.statements,
-    generatedParts: generated.statistics.parts,
-    generatedBytes: generated.statistics.sourceBytes,
+    statements: source.statistics.statements,
+    sourceParts: source.statistics.sourceParts,
+    sourceBytes: source.statistics.sourceBytes,
     checkedParts: project.parts.length,
     checkedBytes: project.parts.reduce((sum, part) => sum + part.compilerBytes.length, 0),
-    globalSymbols: generated.statistics.globalSymbols,
-    privateSymbols: generated.statistics.privateSymbols,
+    globalSymbols: source.statistics.globalSymbols,
+    privateSymbols: source.statistics.privateSymbols,
   },
   native: {
     codeAndTables: selfHostedCore.codeBytes,
