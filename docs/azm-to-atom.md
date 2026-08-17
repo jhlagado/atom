@@ -10,27 +10,27 @@ command stops at that source position and does not write an output file.
 Convert one AZM source file beside the original:
 
 ```sh
-azm-to-atom SOURCE.ASM
+azm-to-atom source.asm
 ```
 
-The default output is `SOURCE.ATM`. An existing output file is never
+The default output is `source.atom.asm`. An existing output file is never
 overwritten. Choose another destination with `--output`, or inspect the result
 without creating a file:
 
 ```sh
-azm-to-atom --output MIGRATED/MAIN.ATM SOURCE/MAIN.ASM
-azm-to-atom --stdout SOURCE/MAIN.ASM
+azm-to-atom --output migrated/main.asm source/main.asm
+azm-to-atom --stdout source/main.asm
 ```
 
 The converter reads the complete input before writing anything. A failed
-conversion therefore cannot leave a partial `.atm` file. Command misuse
+conversion therefore cannot leave a partial `.asm` file. Command misuse
 returns status 2, a conversion or filesystem failure returns status 1, and a
 successful conversion returns status 0.
 
 Diagnostics name the AZM input line and column:
 
 ```text
-SOURCE/MAIN.ASM:18:1: AZM directive .INCLUDE has no Atom equivalent
+source/main.asm:18:1: AZM directive .INCLUDE has no Atom equivalent
 ```
 
 ## Direct mappings
@@ -109,7 +109,7 @@ Tools can convert in memory through the package root:
 import { translateAzmSourceToAtom } from "atom-z80";
 
 const atomSource = translateAzmSourceToAtom(azmSource, {
-  sourceName: "SOURCE/MAIN.ASM",
+  sourceName: "source/main.asm",
 });
 ```
 

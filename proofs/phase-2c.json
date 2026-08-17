@@ -1,6 +1,6 @@
 {
   "name": "Atom authoritative concrete instruction parser correctness proof",
-  "source": "../native/atom.atm",
+  "source": "../native/atom.asm",
   "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2c-memory.json",
   "contracts": "strict through automatic Atom-to-AZM translation",

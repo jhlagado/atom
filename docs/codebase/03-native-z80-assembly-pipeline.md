@@ -7,7 +7,7 @@ accepts a commit or abort. Everything between those points runs as Z80 code.
 The compiler uses caller-owned source, symbol, and pending arenas plus 453 bytes
 of fixed non-reentrant workspace linked beside the code and immutable tables.
 
-`native/atom.atm` selects the complete configuration. Its five included `.atm`
+`native/atom.asm` selects the complete configuration. Its five included `.asm`
 parts are split by source size rather than by subsystem, so some modules cross a
 part boundary. The checked core enables deferred expressions, statement
 parsing, output, symbol resolution, and the multipart driver.
@@ -65,7 +65,7 @@ global reference in one part may be defined in a later part.
 
 ## Tokenizer
 
-The tokenizer begins at `TK_CBEG` in `native/atom-01.atm`. It reads one
+The tokenizer begins at `TK_CBEG` in `native/atom-01.asm`. It reads one
 installed source interval from low address to high address.
 `AtomTokenizerReset` records the part ordinal, source cursor, end, and
 zero-based offset. `AtomTokenizerNext` skips horizontal whitespace and comments,
@@ -106,13 +106,13 @@ and its complete declared memory write set.
 ## RADIX-40 and symbols
 
 `AtomRadix40Pack` lives in the encoder section beginning at `EN_CODEB` in
-`native/atom-00.atm` because mnemonic recognition and symbol storage share the
+`native/atom-00.asm` because mnemonic recognition and symbol storage share the
 arithmetic. It accepts one through eight ASCII
 letters, digits, or underscores, folds letters to uppercase, and writes three
 packed words. Failure leaves the destination unchanged.
 
 `AtomPackSymbol` in the symbol section beginning at `SY_CBEG` in
-`native/atom-01.atm` adds symbol syntax and flags. A private name begins with
+`native/atom-01.asm` adds symbol syntax and flags. A private name begins with
 `.`, but the period is not stored in the RADIX-40 payload. One eight-byte symbol
 record contains six packed-name bytes plus a two-byte value.
 Unused high bits in the final packed-name byte record private, defined, and
@@ -172,7 +172,7 @@ drained it.
 
 ## Expression evaluator
 
-The expression section begins at `EX_CBEG` in `native/atom-02.atm`. It
+The expression section begins at `EX_CBEG` in `native/atom-02.asm`. It
 implements precedence parsing with a value stack and an operator stack. Each
 stack has 16 entries. Values use signed 24-bit
 intermediates plus metadata for concrete or deferred state. Operators carry
@@ -209,7 +209,7 @@ state.
 ## Parsed instruction record
 
 `AtomParserParse` in the parser section beginning at `PR_CBEG` in
-`native/atom-03.atm` consumes a mnemonic and up to three operands into the
+`native/atom-03.asm` consumes a mnemonic and up to three operands into the
 encoder's ten-byte record:
 
 | Offset | Field |
@@ -243,7 +243,7 @@ after every instruction byte has been accepted.
 
 ## Patch-field locator
 
-The patch section beginning at `PT_CBEG` in `native/atom-03.atm` is a small
+The patch section beginning at `PT_CBEG` in `native/atom-03.asm` is a small
 bridge between the validated operand record and the output layer.
 `AtomPatchLocate` maps one operand index to a byte offset and patch kind:
 
@@ -262,7 +262,7 @@ depends only on a form that validation has already accepted.
 
 ## Instruction validation and encoding
 
-The encoder section beginning at `EN_CODEB` in `native/atom-00.atm` combines
+The encoder section beginning at `EN_CODEB` in `native/atom-00.asm` combines
 four related facilities:
 
 1. RADIX-40 packing;
@@ -303,7 +303,7 @@ distribution, and canonical hash.
 ## Statements and directives
 
 `AtomAssemblePart` in the statement section beginning at `ST_CBEG` in
-`native/atom-04.atm` consumes tokens until part EOF. At each statement it
+`native/atom-04.asm` consumes tokens until part EOF. At each statement it
 records a diagnostic position, recognizes the first name, and distinguishes
 these source shapes:
 
@@ -344,7 +344,7 @@ byte column.
 
 ## Output state and patches
 
-The output section beginning at `OU_CBEG` in `native/atom-03.atm` owns the
+The output section beginning at `OU_CBEG` in `native/atom-03.asm` owns the
 logical target cursor and remaining capacity. The current profile always uses
 bank zero.
 

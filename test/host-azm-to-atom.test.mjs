@@ -146,7 +146,7 @@ test("converted Atom source is byte-identical to AZM", async (t) => {
     "",
   ].join("\n");
   const azmPath = path.join(root, "program.asm");
-  const atomPath = path.join(root, "program.atm");
+  const atomPath = path.join(root, "program.atom.asm");
   await fs.writeFile(azmPath, azmSource);
   await fs.writeFile(atomPath, translateAzmSourceToAtom(azmSource, { sourceName: "program.asm" }));
 
@@ -163,7 +163,7 @@ test("converted Atom source is byte-identical to AZM", async (t) => {
   const oracleProgram = parseIntelHex(hex.text);
   const assembled = await assembleAtomProject({
     root,
-    entry: "program.atm",
+    entry: "program.atom.asm",
     target: { start: 0x4000, capacity: 0x100 },
   });
   const atomBytes = new Map();
@@ -177,14 +177,14 @@ test("converted Atom source is byte-identical to AZM", async (t) => {
   assert.deepEqual([...atomBytes.values()], oracleAddresses.map((address) => oracleProgram.memory[address]));
 });
 
-test("azm-to-atom CLI writes .atm once and reports positioned failures", async (t) => {
+test("azm-to-atom CLI writes .atom.asm once and reports positioned failures", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "azm-to-atom-cli-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.writeFile(path.join(root, "main.asm"), ".org 0x4000\nSTART: nop\n.end\n");
   const executable = path.resolve("bin/azm-to-atom.mjs");
   const first = await run(executable, ["main.asm"], { cwd: root });
   assert.equal(first.status, 0, first.stderr);
-  assert.equal(await fs.readFile(path.join(root, "main.atm"), "utf8"), "ORG $4000\nSTART: NOP\n\n");
+  assert.equal(await fs.readFile(path.join(root, "main.atom.asm"), "utf8"), "ORG $4000\nSTART: NOP\n\n");
   const second = await run(executable, ["main.asm"], { cwd: root });
   assert.equal(second.status, 1);
   assert.match(second.stderr, /EEXIST/);

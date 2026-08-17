@@ -103,12 +103,12 @@ does not select a partial artifact set.
 The authoritative Atom-syntax representation is checked under `native/`.
 Collision-checked semantic names and their former long ABI names are recorded
 in `native/atom-symbols.json`. The proof runs three complete builds: the pinned
-image assembles the `.atm` source, the resulting Atom image assembles it again,
-and the same prepared `.atm` parts are translated for an independent strict-AZM
+image assembles the `.asm` source, the resulting Atom image assembles it again,
+and the same prepared `.asm` parts are translated for an independent strict-AZM
 build.
 All initialized addresses and all 12,101 resident bytes must agree.
 
-`npm run build:native-core` starts from `native/atom.atm`. Every subsystem proof
+`npm run build:native-core` starts from `native/atom.asm`. Every subsystem proof
 calls the checked core, and the repository contains no second native
 implementation. [The self-hosting design](self-hosting.md) records the authority
 and equivalence checks.

@@ -27,15 +27,15 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
   const source = Object.freeze({ mapping: ledger.symbols, statistics: ledger.statistics });
   const project = await resolveAtomProject({
     root: path.resolve("native"),
-    entry: "atom.atm",
+    entry: "atom.asm",
   });
   assert.deepEqual(project.parts.map(({ logicalIdentity }) => logicalIdentity), [
-    "atom-00.atm",
-    "atom-01.atm",
-    "atom-02.atm",
-    "atom-03.atm",
-    "atom-04.atm",
-    "atom.atm",
+    "atom-00.asm",
+    "atom-01.asm",
+    "atom-02.asm",
+    "atom-03.asm",
+    "atom-04.asm",
+    "atom.asm",
   ]);
 
   const options = {

@@ -18,7 +18,7 @@ const pair = (high, low) => ((high << 8) | low) & 0xffff;
 
 async function createCheckedCoreHarness() {
   const core = await loadNativeAtomCore();
-  assert.equal(core.source, "native/atom.atm");
+  assert.equal(core.source, "native/atom.asm");
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), core.symbols.AtomEncode);
   const memory = runtime.hardware.memory;
   const pristine = memory.slice();
@@ -102,7 +102,7 @@ async function createCheckedCoreHarness() {
 
 const harness = await createCheckedCoreHarness();
 
-test("the authoritative .atm encoder matches AZM across the complete claimed space", () => {
+test("the authoritative .asm encoder matches AZM across the complete claimed space", () => {
   for (const { source, record } of validCases()) {
     const expected = azmBytes(source);
     const length = harness.length(record);
@@ -136,7 +136,7 @@ test("the authoritative .atm encoder matches AZM across the complete claimed spa
   }
 });
 
-test("the authoritative .atm mnemonic recognizer covers every ordinal and case", () => {
+test("the authoritative .asm mnemonic recognizer covers every ordinal and case", () => {
   for (let ordinal = 1; ordinal < MNEMONICS.length; ordinal += 1) {
     const name = MNEMONICS[ordinal];
     for (const spelling of [name, name.toLowerCase(), [...name].map((character, index) =>

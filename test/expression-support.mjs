@@ -54,7 +54,7 @@ export const EXPRESSION = Object.freeze({
 
 export async function createExpressionHarness() {
   const core = await loadNativeAtomCore();
-  assert.equal(core.source, "native/atom.atm");
+  assert.equal(core.source, "native/atom.asm");
   const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomExpressionParse);
   const memory = runtime.hardware.memory;

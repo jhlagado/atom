@@ -1,6 +1,6 @@
 {
   "name": "Atom authoritative expression and forward-symbol correctness proof",
-  "source": "../native/atom.atm",
+  "source": "../native/atom.asm",
   "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2d-memory.json",
   "contracts": "strict through automatic Atom-to-AZM translation",

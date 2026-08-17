@@ -1,6 +1,6 @@
 {
   "name": "Atom authoritative symbolic parser and patch correctness proof",
-  "source": "../native/atom.atm",
+  "source": "../native/atom.asm",
   "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2e-memory.json",
   "contracts": "strict through automatic Atom-to-AZM translation",

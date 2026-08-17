@@ -2,7 +2,7 @@
 
 [← Host execution, artifacts, and interfaces](04-host-execution-artifacts-and-interfaces.md) | [Verification and maintenance →](06-verification-and-maintenance.md)
 
-Atom keeps one authoritative Z80 implementation in `.atm` and derives the
+Atom keeps one authoritative Z80 implementation in `.asm` and derives the
 pinned native image used by the Mac package. The same prepared source is
 translated to AZM syntax for an independent strict-contract build. Core
 generation and translation are part of the correctness boundary.
@@ -14,7 +14,7 @@ hand-maintained assembler implementations.
 ## Native source and link entry
 
 The native implementation is maintained under `native/`. Its link entry is
-`atom.atm`, whose `%INCLUDE` header orders five source parts. Those parts set
+`atom.asm`, whose `%INCLUDE` header orders five source parts. Those parts set
 origin zero, contain the nine native modules in link order, and finish with six
 fail-closed host sink entries.
 
@@ -25,7 +25,7 @@ annotations for the strict oracle build.
 
 ## Building the pinned core
 
-`scripts/generate-native-core.mjs` resolves `native/atom.atm`, runs the checked
+`scripts/generate-native-core.mjs` resolves `native/atom.asm`, runs the checked
 core over the ordered parts, and recovers the long host ABI names through
 `native/atom-symbols.json`. It then translates those same prepared bytes to AZM
 and enables strict register contracts.
@@ -59,14 +59,14 @@ The five content parts remain below the 24 KiB native source-page limit. The
 sixth file is the entry and dependency header:
 
 ```asm
-%INCLUDE "ATOM-00.ATM"
-%INCLUDE "ATOM-01.ATM"
-%INCLUDE "ATOM-02.ATM"
-%INCLUDE "ATOM-03.ATM"
-%INCLUDE "ATOM-04.ATM"
+%INCLUDE "atom-00.asm"
+%INCLUDE "atom-01.asm"
+%INCLUDE "atom-02.asm"
+%INCLUDE "atom-03.asm"
+%INCLUDE "atom-04.asm"
 ```
 
-The host resolver orders those dependencies before `atom.atm`, so the checked
+The host resolver orders those dependencies before `atom.asm`, so the checked
 self-host project presented to the native driver has six parts. The empty
 entry still has its own identity and descriptor.
 
@@ -84,12 +84,12 @@ npm run build:native-core
 npm run verify:native-source
 ```
 
-Changes belong in `native/*.atm`. No bootstrap source generator or second native
+Changes belong in `native/*.asm`. No bootstrap source generator or second native
 implementation remains in the repository.
 
 ## First Atom generation
 
-The self-host proof resolves `native/atom.atm` through the ordinary host
+The self-host proof resolves `native/atom.asm` through the ordinary host
 source packager and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 

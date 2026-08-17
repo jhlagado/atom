@@ -32,7 +32,7 @@ const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
 
 export async function createSymbolHarness() {
   const core = await loadNativeAtomCore();
-  assert.equal(core.source, "native/atom.atm");
+  assert.equal(core.source, "native/atom.asm");
   const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomSymbolReset);
   const memory = runtime.hardware.memory;

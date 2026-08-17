@@ -15,7 +15,7 @@ bytes** in the 16 KiB bank.
 
 ## Source representation
 
-The checked `.atm` files are now the implementation authority. They contain
+The checked `.asm` files are now the implementation authority. They contain
 collision-checked semantic names that fit Atom's eight-significant-character
 format and retain AZM proof annotations as `;@` comments. They are the only
 native implementation retained in the repository.
@@ -73,7 +73,7 @@ provide the TEC-1 operating adapter that reads each source part from storage.
 That adapter belongs to the next deployment phase.
 
 The complete battery passes **Measured: 277 of 277 tests**. AZM's strict
-register-contract check also passes for the translated `.atm` native image.
+register-contract check also passes for the translated `.asm` native image.
 
 ## Reproduction
 

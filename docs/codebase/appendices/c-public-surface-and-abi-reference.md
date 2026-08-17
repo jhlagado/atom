@@ -109,7 +109,7 @@ external engineering tools need them. Ordinary build integration begins with
 ## Command-line surface
 
 ```text
-atom [options] ENTRY.ATM
+atom [options] entry.asm
 atom --self-host [options]
 ```
 

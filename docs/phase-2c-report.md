@@ -3,7 +3,7 @@
 ## Authority migration checkpoint
 
 The concrete parser differential now calls the expression-enabled parser in
-the authoritative `native/atom.atm` core. It no longer assembles the reduced
+the authoritative `native/atom.asm` core. It no longer assembles the reduced
 `asm/parser-proof.asm` variant. Every case starts with fresh symbol and pending
 arenas, so a name operand follows the public expression path before complete
 form validation. `LD Q,A`, for example, reports an invalid form rather than the

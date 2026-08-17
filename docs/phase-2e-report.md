@@ -3,7 +3,7 @@
 ## Authority migration checkpoint
 
 The symbolic parser and patch proof now executes the authoritative
-`native/atom.atm` core instead of a separately linked
+`native/atom.asm` core instead of a separately linked
 `asm/integration-proof.asm` image. Automatic translation checks the same source
 under AZM 0.3.9 strict register and stack contracts. The runtime harness audits
 all 65,536 addresses after every invocation, including all 10,335 operand-site

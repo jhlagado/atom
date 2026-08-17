@@ -1,9 +1,9 @@
 # Self-hosting Atom
 
-Atom’s native source is permanently `.atm`. The checked source under `native/`
+Atom’s native source uses ordinary `.asm` filenames. The checked source under `native/`
 is the input to native-core generation, the self-host proof, the command line’s
 `--self-host` mode, and the npm package. The repository retains no second native
-implementation. AZM consumes an automatic translation of the same `.atm`
+implementation. AZM consumes an automatic translation of the same `.asm`
 source only as an independent development oracle.
 
 This transition has two reasons for being staged. First, Atom stores only the
@@ -98,14 +98,14 @@ PR_PARSE:
 
 The host’s Atom-to-AZM oracle adapter restores these as `.ROUTINE` and
 `.EXPECTOUT` annotations. AZM can therefore continue checking register, flag,
-and stack contracts against the `.atm` source. Atom ignores the comments while
+and stack contracts against the `.asm` source. Atom ignores the comments while
 assembling the same bytes.
 
 ## Authority
 
 The current checkpoint establishes the complete authority path:
 
-- `native/atom.atm` and its five ordered source parts are hand-edited source;
+- `native/atom.asm` and its five ordered source parts are hand-edited source;
 - `npm run build:native-core` uses the checked pinned core to assemble those
   parts and writes the resulting image to `assets/native-core.json`;
 - the same prepared parts are translated to AZM syntax and assembled with
@@ -113,10 +113,10 @@ The current checkpoint establishes the complete authority path:
 - the build compares the exact initialized address set and every resident byte
   between Atom and AZM before publishing the asset;
 - a second Atom generation must reproduce the first; and
-- the encoder differential calls the checked `.atm` core directly across all
+- the encoder differential calls the checked `.asm` core directly across all
   3,445 claimed forms and the complete invalid-record corpus.
 
-A native implementation change belongs in `native/*.atm`. No command
+A native implementation change belongs in `native/*.asm`. No command
 regenerates those files from another source language.
 
 Every subsystem proof now executes the checked core. Encoder, symbols,

@@ -3,7 +3,7 @@
 ## Authority migration checkpoint
 
 The direct tokenizer proof now runs against the authoritative
-`native/atom.atm` core rather than a separately linked
+`native/atom.asm` core rather than a separately linked
 `asm/tokenizer-proof.asm` image. Automatic translation assembles the same
 source under AZM 0.3.9 strict register and stack contracts. The runtime harness
 uses a guarded 512-byte source interval, audits every address after every

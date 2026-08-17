@@ -1,6 +1,6 @@
 {
   "name": "Atom Phase 4 Mac host/native integration proof",
-  "source": "../native/atom.atm",
+  "source": "../native/atom.asm",
   "contracts": "strict",
   "targetCpu": "Zilog Z80",
   "measurements": {

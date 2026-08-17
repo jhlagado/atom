@@ -126,7 +126,7 @@ async function strictOracle(project, ledger, generation, materialized, core) {
 
 async function buildArtifact() {
   const ledger = await readLedger();
-  const project = await resolveAtomProject({ root: nativeRoot, entry: "atom.atm" });
+  const project = await resolveAtomProject({ root: nativeRoot, entry: "atom.asm" });
   const first = await assembleResolvedAtomProject(project, {
     target: { start: 0, capacity: 0x4000 },
     maxInstructions: 200_000_000,
@@ -152,7 +152,7 @@ async function buildArtifact() {
   return {
     format: "atom-native-core",
     version: 1,
-    source: "native/atom.atm",
+    source: "native/atom.asm",
     hexSha256: createHash("sha256").update(hexText, "utf8").digest("hex"),
     artifactSha256,
     hexText,

@@ -32,7 +32,7 @@ atom --self-host
 The result is 12,101 bytes and must match the pinned core byte for byte.
 `--self-host` accepts only `-o`/`--output`, so origin, capacity, fill, entry,
 and preprocessor overrides cannot change the proof build.
-Maintainers edit the checked `.atm` files directly. `npm run build:native-core`
+Maintainers edit the checked `.asm` files directly. `npm run build:native-core`
 assembles them with Atom, and `npm run verify:native-source` repeats that build
 plus the translated strict-AZM comparison.
 
@@ -105,10 +105,10 @@ npm run verify:example
 The package also installs a strict `azm-to-atom` converter:
 
 ```sh
-azm-to-atom SOURCE/MAIN.ASM
+azm-to-atom source/main.asm
 ```
 
-It writes `SOURCE/MAIN.ATM` and refuses to overwrite an existing file. Use
+It writes `source/main.atom.asm` and refuses to overwrite an existing file. Use
 `--output` to choose another path or `--stdout` to inspect the converted text.
 The converter maps only the byte-preserving common language. Unsupported AZM
 features such as includes, imports, conditional assembly, ops, typed layouts,

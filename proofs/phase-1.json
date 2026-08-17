@@ -1,6 +1,6 @@
 {
   "name": "Atom Phase 1 encoder correctness proof",
-  "source": "../native/atom.atm",
+  "source": "../native/atom.asm",
   "memoryProfile": "phase-1-memory.json",
   "contracts": "strict",
   "executionBudgets": {

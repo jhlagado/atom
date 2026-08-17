@@ -81,7 +81,7 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `atom.mjs` | Installed CLI: argument parsing, build options, self-host mode, in-process assembly, artifact rendering, publication, and terminal diagnostics |
-| `azm-to-atom.mjs` | Installed strict source converter with non-overwriting `.atm` output, standard-output mode, and positioned diagnostics |
+| `azm-to-atom.mjs` | Installed strict source converter with non-overwriting `.atom.asm` output, standard-output mode, and positioned diagnostics |
 
 ## `assets/`
 
@@ -93,17 +93,17 @@ the owner of a behavior quickly.
 
 | File | Role |
 | --- | --- |
-| `atom-00.atm` through `atom-04.atm` | Authoritative native Atom source parts |
-| `atom.atm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
+| `atom-00.asm` through `atom-04.asm` | Authoritative native Atom source parts |
+| `atom.asm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
 
-The `.atm` files are the sole editing authority for the native assembler.
+The `.asm` files are the sole editing authority for the native assembler.
 
 ## `scripts/`
 
 | File | Role |
 | --- | --- |
-| `generate-native-core.mjs` | Assembles `native/atom.atm` with Atom, proves exact equality through strict automatic AZM translation, and writes or checks `assets/native-core.json` |
+| `generate-native-core.mjs` | Assembles `native/atom.asm` with Atom, proves exact equality through strict automatic AZM translation, and writes or checks `assets/native-core.json` |
 | `verify-dependencies.mjs` | Pins the sibling Debug80 branch and exact AZM/runtime source trees used by proofs |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 

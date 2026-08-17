@@ -48,7 +48,7 @@ same complete core under strict register contracts before Debug80 executes its
 entry points.
 
 The checked expression, parser/patch, output, statement, and driver lanes execute
-`native/atom.atm` directly. They supply guarded source, record, output, key,
+`native/atom.asm` directly. They supply guarded source, record, output, key,
 symbol, pending, and logical sink regions and audit all 65,536 addresses after
 every invocation. The output and driver harnesses intercept the production
 service entries and return through the native stack; they carry no proof-only
@@ -123,7 +123,7 @@ collision rules that are easy to encode incorrectly.
 
 Every native public routine carries an AZM `.routine` annotation. Call sites may
 use `.expectout` where an inferred output must be explicit. Automatic
-translation assembles the authoritative `.atm` core under strict
+translation assembles the authoritative `.asm` core under strict
 register-contract mode. Runtime harnesses then execute those checked bytes.
 
 The annotations state inputs, outputs, possible outputs, clobbers, and flag

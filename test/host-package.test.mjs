@@ -67,8 +67,8 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   await fs.access(path.join(installedAtom, "docs", "azm-to-atom.md"));
   await fs.access(path.join(installedAtom, "docs", "codebase", "index.md"));
   await fs.access(path.join(installedAtom, "examples", "hello", "main.asm"));
-  await fs.access(path.join(installedAtom, "native", "atom.atm"));
-  await fs.access(path.join(installedAtom, "native", "atom-00.atm"));
+  await fs.access(path.join(installedAtom, "native", "atom.asm"));
+  await fs.access(path.join(installedAtom, "native", "atom-00.asm"));
 
   await fs.writeFile(path.join(projectDirectory, "legacy.asm"), [
     ".org 0x4000",
@@ -81,7 +81,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   const converter = path.join(installDirectory, "node_modules", ".bin", "azm-to-atom");
   const converted = await run(converter, ["legacy.asm"], { cwd: projectDirectory });
   assert.equal(converted.status, 0, converted.stderr);
-  assert.equal(await fs.readFile(path.join(projectDirectory, "legacy.atm"), "utf8"), [
+  assert.equal(await fs.readFile(path.join(projectDirectory, "legacy.atom.asm"), "utf8"), [
     "ORG $4000",
     "START:",
     ".loop: LD a,LOW($1234)",
@@ -93,7 +93,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   const unsupported = await run(converter, ["unsupported.asm"], { cwd: projectDirectory });
   assert.equal(unsupported.status, 1);
   assert.match(unsupported.stderr, /^unsupported\.asm:1:1: AZM directive \.INCLUDE has no Atom equivalent/m);
-  await assert.rejects(fs.access(path.join(projectDirectory, "unsupported.atm")));
+  await assert.rejects(fs.access(path.join(projectDirectory, "unsupported.atom.asm")));
 
   await fs.writeFile(path.join(projectDirectory, "main.asm"), [
     "%define DEBUG 1",

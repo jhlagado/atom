@@ -2,7 +2,7 @@
 
 ## Authority migration checkpoint
 
-The direct symbol proof now runs against the authoritative `native/atom.atm`
+The direct symbol proof now runs against the authoritative `native/atom.asm`
 core rather than a separately linked `asm/symbol-proof.asm` image. Automatic
 translation assembles the same source under AZM 0.3.9 strict register and stack
 contracts. The runtime harness supplies guarded caller-owned arenas, checks the

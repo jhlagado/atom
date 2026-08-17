@@ -33,7 +33,7 @@
     "docs/*.md",
     "docs/codebase",
     "examples",
-    "native/*.atm",
+    "native/*.asm",
     "native/atom-symbols.json",
     "src/abi.mjs",
     "src/host",

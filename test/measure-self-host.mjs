@@ -17,7 +17,7 @@ import {
 
 const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
 const source = Object.freeze({ mapping: ledger.symbols, statistics: ledger.statistics });
-const project = await resolveAtomProject({ root: path.resolve("native"), entry: "atom.atm" });
+const project = await resolveAtomProject({ root: path.resolve("native"), entry: "atom.asm" });
 const limits = { maxInstructions: 200_000_000, maxCycles: 2_000_000_000 };
 const options = { target: { start: 0, capacity: 0x4000 }, ...limits };
 const first = await assembleResolvedAtomProject(project, options);

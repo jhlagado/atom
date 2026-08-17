@@ -1,6 +1,6 @@
 # Symbolic instruction parser ABI
 
-The authoritative `native/atom.atm` core enables expression operands, deferred
+The authoritative `native/atom.asm` core enables expression operands, deferred
 symbol keys, patch-field location, and driver diagnostic anchors. The concrete
 and symbolic parser proofs both call this checked core. Historical Phase 2c and
 Phase 2e reports retain measurements from the earlier mode-specific images.

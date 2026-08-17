@@ -427,7 +427,7 @@ The compression remained in AZM source while the result stabilized:
 The retained result records baseline and result bytes, workspace delta,
 self-assembly instruction and T-state deltas, and the proof commands. Losing
 experiments remain documented so they are not repeated without a changed
-premise. The `.atm` authority flip can resume after review of this checkpoint:
+premise. The native-source authority flip can resume after review of this checkpoint:
 strict contracts, all 3,445 valid instruction forms, all invalid-form tests,
 exact self-host byte comparison, stack and return-PC checks, source ROM guards,
 and the complete memory audit pass.

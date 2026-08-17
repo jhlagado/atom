@@ -19,7 +19,7 @@ preparation entry:
 ```js
 const project = await resolveAtomProject({
   root: "/ABSOLUTE/PROJECT/ROOT",
-  entry: "SRC/MAIN.ATM",
+  entry: "src/main.asm",
   definitions: { DEBUG: 1 },
   placement: {
     defaultBank: 0,
@@ -83,15 +83,15 @@ to the graph.
 Traversal is deterministic depth-first postorder:
 
 ```text
-MAIN.ATM INCLUDES DISPLAY.ATM, INPUT.ATM
-DISPLAY.ATM INCLUDES HARDWARE.ATM
-INPUT.ATM INCLUDES HARDWARE.ATM
+main.asm INCLUDES display.asm, input.asm
+display.asm INCLUDES hardware.asm
+input.asm INCLUDES hardware.asm
 
 ORDERED PARTS:
-  HARDWARE.ATM
-  DISPLAY.ATM
-  INPUT.ATM
-  MAIN.ATM
+  hardware.asm
+  display.asm
+  input.asm
+  main.asm
 ```
 
 The shared dependency appears once. Dependencies precede their importer, and
@@ -139,9 +139,9 @@ Directive and definition names are case-insensitive. The profile accepts:
 ```asm
 %DEFINE DEBUG 1
 %IF DEBUG
-%INCLUDE "LIB/DEBUG.ATM"
+%INCLUDE "lib/debug.asm"
 %ELSE
-%INCLUDE "LIB/RELEASE.ATM"
+%INCLUDE "lib/release.asm"
 %ENDIF
 ```
 
@@ -240,9 +240,9 @@ SP1 is a restricted line-oriented interchange:
 
 ```text
 SP1 3
-P 0 LIB/DEVICE.ATM
-P 0 LIB/CONSOLE.ATM
-P 0 SRC/MAIN.ATM
+P 0 lib/device.asm
+P 0 lib/console.asm
+P 0 src/main.asm
 END
 ```
 

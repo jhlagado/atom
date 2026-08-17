@@ -68,7 +68,7 @@ function parseArguments(arguments_) {
   }
   if (options.selfHost && entry !== undefined) throw new Error("--self-host does not accept an entry source");
   if (entry === undefined && !options.selfHost) throw new Error("entry source is required");
-  if (options.selfHost) entry = "atom.atm";
+  if (options.selfHost) entry = "atom.asm";
   return { ...options, entry };
 }
 

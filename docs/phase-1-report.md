@@ -164,7 +164,7 @@ npm test
 npm run measure
 ```
 
-The strict check translates the authoritative `.atm` source to AZM and requires
+The strict check translates the authoritative `.asm` source to AZM and requires
 all register and stack contracts to pass. The test and measurement commands
 first verify the reviewed dependency identities and rebuild AZM and Debug80
 Runtime from source. They then execute the public ABI, validate the complete

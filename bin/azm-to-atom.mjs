@@ -11,7 +11,7 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 const usage = `Usage: azm-to-atom [options] <input.asm>
 
 Options:
-  -o, --output <file>   Output .atm file (default: input name with .atm)
+  -o, --output <file>   Output .asm file (default: input name with .atom.asm)
   --stdout              Write converted source to standard output
   -h, --help            Show this help
 `;
@@ -54,7 +54,7 @@ async function main() {
     ? undefined
     : path.resolve(options.output ?? path.join(
       path.dirname(input),
-      `${path.basename(input, path.extname(input))}.atm`,
+      `${path.basename(input, path.extname(input))}.atom.asm`,
     ));
   if (output === input) {
     process.stderr.write("azm-to-atom: input and output paths must differ\n");

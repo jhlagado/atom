@@ -19,7 +19,7 @@ The release gate must establish:
 - that first-generation core assembles the same source identically;
 - independent Atom-to-AZM translation produces the same initialized address
   set and complete resident bytes; and
-- the pinned native core matches the authoritative `.atm` source.
+- the pinned native core matches the authoritative `.asm` source.
 
 Before publishing, also perform the repository checks that deliberately require
 network or release authority:

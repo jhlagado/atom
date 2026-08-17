@@ -50,7 +50,7 @@ import { assembleAtomProject } from "atom-z80";
 
 const result = await assembleAtomProject({
   root: "/ABSOLUTE/PROJECT/ROOT",
-  entry: "SRC/MAIN.ATM",
+  entry: "src/main.asm",
   definitions: { DEBUG: 1 },
   placement: { defaultBank: 0, banks: {} },
   target: { start: 0x4000, capacity: 0x2000 },
@@ -88,7 +88,7 @@ exports and avoid importing private files below `src/host/`.
 import { translateAzmSourceToAtom } from "atom-z80";
 
 const atomSource = translateAzmSourceToAtom(azmSource, {
-  sourceName: "SOURCE/MAIN.ASM",
+  sourceName: "source/main.asm",
 });
 ```
 
@@ -240,7 +240,7 @@ shape plus details appropriate to the boundary.
 Native source failures are reconstructed from the original source part:
 
 ```text
-LIB/DEVICE.ATM:14:9: UNDEFINED SYMBOL PORTBASE
+lib/device.asm:14:9: UNDEFINED SYMBOL PORTBASE
 ```
 
 The diagnostic carries logical identity, ordinal, exact byte offset, one-based
@@ -355,7 +355,7 @@ retained; automatic pruning is not implemented.
 The normal command shape is:
 
 ```sh
-atom --origin 4000H SRC/MAIN.ATM
+atom --origin 4000H src/main.asm
 ```
 
 `--self-host` selects the checked source shipped in the package and fixes the

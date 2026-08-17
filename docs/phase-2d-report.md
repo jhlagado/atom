@@ -2,7 +2,7 @@
 
 ## Authority migration checkpoint
 
-The direct expression proof now executes the authoritative `native/atom.atm`
+The direct expression proof now executes the authoritative `native/atom.asm`
 core instead of a separately linked `asm/expression-proof.asm` image. The same
 source is translated automatically for AZM 0.3.9 strict register and stack
 contracts. The runtime proof retains the 1,787-expression differential,

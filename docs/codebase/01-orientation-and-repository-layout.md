@@ -11,7 +11,7 @@ input, artifact rendering, and durable publication.
 That split produces one build path with two execution domains:
 
 ```text
-PROJECT ENTRY (.ATM)
+PROJECT ENTRY (.ASM)
         |
         v
 NODE SOURCE READER AND ATOM PREPROCESSOR
@@ -57,7 +57,7 @@ listing, or D8 logic.
 Consider an entry file with one dependency and one forward reference:
 
 ```asm
-%INCLUDE "LIB/DEVICE.ATM"
+%INCLUDE "lib/device.asm"
 
 ORG 4000H
 START:
@@ -68,7 +68,7 @@ START:
     DW START
 ```
 
-The host resolves `LIB/DEVICE.ATM` relative to the importer and emits the
+The host resolves `lib/device.asm` relative to the importer and emits the
 dependency before the entry. It replaces the `%INCLUDE` line with spaces while
 preserving the line ending and total byte count. Each file remains a separate
 source part with its own logical identity.
@@ -112,7 +112,7 @@ used to verify the Atom-built native image.
 
 ## Native source layout
 
-`native/atom.atm` is the linked Mac-host entry. Its five ordered parts contain
+`native/atom.asm` is the linked Mac-host entry. Its five ordered parts contain
 the native modules in dependency order:
 
 ```text
@@ -190,7 +190,7 @@ the pinned image have explicit rebuild checks:
 | --- | --- | --- |
 | `assets/native-core.json` | `scripts/generate-native-core.mjs` using Atom plus strict AZM comparison | `npm run verify:native-source` |
 
-Native changes belong in `native/*.atm`, followed by
+Native changes belong in `native/*.asm`, followed by
 `npm run build:native-core`. Editing `assets/native-core.json` directly only
 creates drift that the release gate rejects.
 

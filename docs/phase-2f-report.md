@@ -13,7 +13,7 @@ does; there is no proof-only Z80 adapter code.
 Every direct invocation audits all 65,536 addresses. The current proof covers
 3,445 valid instruction forms, 526 invalid forms, all four instruction lengths,
 all patch kinds, capacity boundaries, range failures, and injected sink
-failures. The checked `.atm` source also passes strict register and stack
+failures. The checked `.asm` source also passes strict register and stack
 contracts through the automatic Atom-to-AZM translation.
 
 The current measured account is 467 bytes of output code and 14 bytes of output
