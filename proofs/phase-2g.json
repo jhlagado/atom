@@ -1,7 +1,8 @@
 {
-  "name": "Atom Phase 2g statement assembly correctness proof",
-  "source": "../asm/statements-proof.asm",
-  "contracts": "strict",
+  "name": "Atom authoritative statement assembly correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "executionBudgets": {
     "AtomSymbolReset": {
@@ -35,9 +36,9 @@
       "maxCycles": 2370
     },
     "AtomSymbolReference": {
-      "measuredInstructions": 74,
+      "measuredInstructions": 76,
       "maxInstructions": 190,
-      "measuredCycles": 958,
+      "measuredCycles": 977,
       "maxCycles": 2400
     },
     "AtomSymbolAdvanceScope": {
@@ -58,12 +59,6 @@
       "measuredCycles": 340,
       "maxCycles": 850
     },
-    "AtomProofSinkReset": {
-      "measuredInstructions": 5,
-      "maxInstructions": 30,
-      "measuredCycles": 53,
-      "maxCycles": 140
-    },
     "AtomOutputReset": {
       "measuredInstructions": 4,
       "maxInstructions": 20,
@@ -83,15 +78,15 @@
       "maxCycles": 180
     },
     "AtomOutputEmitByte": {
-      "measuredInstructions": 74,
+      "measuredInstructions": 25,
       "maxInstructions": 190,
-      "measuredCycles": 704,
+      "measuredCycles": 247,
       "maxCycles": 1760
     },
     "AtomOutputEmitWord": {
-      "measuredInstructions": 144,
+      "measuredInstructions": 43,
       "maxInstructions": 360,
-      "measuredCycles": 1357,
+      "measuredCycles": 433,
       "maxCycles": 3400
     },
     "AtomOutputReserve": {
@@ -107,9 +102,9 @@
       "maxCycles": 100
     },
     "AtomAssemblePart": {
-      "measuredInstructions": 34043,
+      "measuredInstructions": 33195,
       "maxInstructions": 70700,
-      "measuredCycles": 339147,
+      "measuredCycles": 331494,
       "maxCycles": 699820
     },
     "AtomTokenizerReset": {

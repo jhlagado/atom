@@ -1,56 +1,143 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { compile } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
-const addressOf = (symbol) => symbol.address ?? symbol.value;
 const word = (memory, address) => memory[address] | (memory[address + 1] << 8);
 const manifest = JSON.parse(fs.readFileSync("proofs/phase-2g.json", "utf8"));
 
+const PROOF_SYMBOLS = Object.freeze({
+  AtomStatementProofAdapterWorkspaceStart: 0x6000,
+  AtomStatementProofLogNext: 0x6000,
+  AtomStatementProofFailAfter: 0x6002,
+  AtomStatementProofAdapterWorkspaceEnd: 0x600a,
+  AtomStatementProofSourceStart: 0x8000,
+  AtomStatementSourceBefore: 0x8000,
+  AtomStatementSource: 0x8001,
+  AtomStatementSourceLimit: 0x8081,
+  AtomStatementSourceAfter: 0x8081,
+  AtomStatementProofSourceEnd: 0x8082,
+  AtomStatementProofRecordStart: 0x8082,
+  AtomStatementRecordBefore: 0x8082,
+  AtomStatementRecord: 0x8083,
+  AtomStatementRecordAfter: 0x808d,
+  AtomStatementProofRecordEnd: 0x808e,
+  AtomStatementProofSymbolStart: 0x9000,
+  AtomStatementSymbolBefore: 0x9000,
+  AtomStatementSymbolArena: 0x9001,
+  AtomStatementSymbolLimit: 0x9081,
+  AtomStatementSymbolAfter: 0x9081,
+  AtomStatementProofSymbolEnd: 0x9082,
+  AtomStatementProofPendingStart: 0x9100,
+  AtomStatementPendingBefore: 0x9100,
+  AtomStatementPendingArena: 0x9101,
+  AtomStatementPendingLimit: 0x9131,
+  AtomStatementPendingAfter: 0x9131,
+  AtomStatementProofPendingEnd: 0x9132,
+  AtomStatementProofLogStart: 0x9200,
+  AtomStatementLogBefore: 0x9200,
+  AtomStatementProofLog: 0x9201,
+  AtomStatementProofLogLimit: 0x9301,
+  AtomStatementLogAfter: 0x9301,
+  AtomStatementProofLogEnd: 0x9302,
+});
+
 export async function createStatementsHarness() {
-  const assembled = await compile("asm/statements-proof.asm", {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: "strict",
-  });
-  const errors = assembled.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `statement proof assembly failed: ${JSON.stringify(errors)}`);
-  const hex = assembled.artifacts.find(({ kind }) => kind === "hex");
-  const d8m = assembled.artifacts.find(({ kind }) => kind === "d8m");
-  assert.equal(hex?.kind, "hex");
-  assert.equal(d8m?.kind, "d8m");
-  const symbols = Object.fromEntries(d8m.json.symbols.flatMap((symbol) => {
-    const value = addressOf(symbol);
-    return value === undefined ? [] : [[symbol.name, value]];
-  }));
-  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomTokenizerReset);
+  const core = await loadNativeAtomCore();
+  assert.equal(core.source, "native/atom.atm");
+  const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
+  const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomTokenizerReset);
   const memory = runtime.hardware.memory;
+  for (const [name, value] of [
+    ["AtomStatementSourceBefore", 0x3c], ["AtomStatementSourceAfter", 0xc3],
+    ["AtomStatementRecordBefore", 0x69], ["AtomStatementRecordAfter", 0x96],
+    ["AtomStatementSymbolBefore", 0x39], ["AtomStatementSymbolAfter", 0x93],
+    ["AtomStatementPendingBefore", 0x4b], ["AtomStatementPendingAfter", 0xb4],
+    ["AtomStatementLogBefore", 0x5a], ["AtomStatementLogAfter", 0xa5],
+  ]) memory[symbols[name]] = value;
   const pristine = memory.slice();
-  const immutable = [
-    [symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd],
-    [symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd],
-    [symbols.AtomTokenizerCodeStart, symbols.AtomTokenizerCodeEnd],
-    [symbols.AtomExpressionCodeStart, symbols.AtomExpressionCodeEnd],
-    [symbols.AtomPatchCodeStart, symbols.AtomPatchCodeEnd],
-    [symbols.AtomParserCodeStart, symbols.AtomParserCodeEnd],
-    [symbols.AtomOutputCodeStart, symbols.AtomOutputCodeEnd],
-    [symbols.AtomStatementCodeStart, symbols.AtomStatementCodeEnd],
-    [symbols.AtomStatementProofAdapterStart, symbols.AtomStatementProofAdapterEnd],
-  ].map(([start, end]) => ({ start, bytes: pristine.slice(start, end) }));
+  const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: pristine.slice(start, end) }));
   const statistics = {};
-  const fullMemoryAudited = new Set();
   let sourceBytes = new Uint8Array();
+  let restartCount = 0;
+  let interceptedWrites = null;
 
   function restart() {
     memory.set(pristine);
     runtime.reset();
     runtime.cpu.halted = false;
     sourceBytes = new Uint8Array();
+    restartCount += 1;
+    for (const [start, end] of [
+      [symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd],
+      [symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd],
+      [symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd],
+      [symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd],
+      [symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd],
+      [symbols.AtomOutputWorkspaceStart, symbols.AtomOutputWorkspaceEnd],
+      [symbols.AtomStatementWorkspaceStart, symbols.AtomStatementWorkspaceEnd],
+      [symbols.AtomStatementProofAdapterWorkspaceStart, symbols.AtomStatementProofAdapterWorkspaceEnd],
+    ]) {
+      for (let address = start; address < end; address += 1) {
+        memory[address] = (restartCount * 73 + address * 29) & 0xff;
+      }
+    }
+  }
+
+  function resetSink() {
+    memory[symbols.AtomStatementProofLogNext] = symbols.AtomStatementProofLog & 0xff;
+    memory[symbols.AtomStatementProofLogNext + 1] = symbols.AtomStatementProofLog >>> 8;
+    memory[symbols.AtomStatementProofFailAfter] = 0;
+  }
+
+  function appendOperation(kind, bank, address, bytes) {
+    const writeByte = (target, value) => {
+      assert.ok(interceptedWrites, "sink write outside an executing native entry");
+      memory[target] = value;
+      interceptedWrites.add(target);
+    };
+    let failAfter = memory[symbols.AtomStatementProofFailAfter];
+    if (failAfter !== 0) {
+      failAfter -= 1;
+      writeByte(symbols.AtomStatementProofFailAfter, failAfter);
+      if (failAfter === 0) return 0xe1;
+    }
+    const next = word(memory, symbols.AtomStatementProofLogNext);
+    const required = 6 + bytes.length;
+    if (next > symbols.AtomStatementProofLogLimit || symbols.AtomStatementProofLogLimit - next < required) return 0xe2;
+    for (const [offset, value] of [kind, bank, address & 0xff, address >>> 8, bytes.length, 0, ...bytes].entries()) {
+      writeByte(next + offset, value);
+    }
+    const end = next + required;
+    writeByte(symbols.AtomStatementProofLogNext, end & 0xff);
+    writeByte(symbols.AtomStatementProofLogNext + 1, end >>> 8);
+    return 0;
+  }
+
+  function interceptService() {
+    const { cpu } = runtime;
+    let status;
+    if (cpu.pc === symbols.AtomSinkImageByte) {
+      status = appendOperation(1, cpu.c, (cpu.h << 8) | cpu.l, [cpu.a]);
+    } else if (cpu.pc === symbols.AtomSinkPatchByte) {
+      status = appendOperation(2, cpu.c, (cpu.h << 8) | cpu.l, [cpu.a]);
+    } else if (cpu.pc === symbols.AtomSinkPatchWord) {
+      status = appendOperation(2, cpu.c, (cpu.d << 8) | cpu.e, [cpu.l, cpu.h]);
+    } else {
+      return false;
+    }
+    const returnAddress = word(memory, cpu.sp);
+    cpu.sp = (cpu.sp + 2) & 0xffff;
+    cpu.pc = returnAddress;
+    cpu.a = status;
+    cpu.flags.C = status === 0 ? 0 : 1;
+    return true;
   }
 
   function execute(entry, setup = () => {}, label = entry) {
@@ -63,11 +150,14 @@ export async function createStatementsHarness() {
     const before = memory.slice();
     runtime.cpu.sp = RETURN_SLOT;
     runtime.cpu.pc = symbols[entry];
+    const serviceWrites = new Set();
+    interceptedWrites = serviceWrites;
     const budget = manifest.executionBudgets[entry];
     assert.ok(budget, `missing execution budget for ${entry}`);
     let instructions = 0;
     let cycles = 0;
     while (runtime.cpu.pc !== RETURN_SENTINEL && instructions < budget.maxInstructions && cycles <= budget.maxCycles) {
+      if (interceptService()) continue;
       const step = runtime.step();
       instructions += 1;
       cycles += step.cycles ?? 0;
@@ -92,41 +182,28 @@ export async function createStatementsHarness() {
     for (const region of immutable) {
       assert.deepEqual(memory.slice(region.start, region.start + region.bytes.length), region.bytes, `${label}: immutable bytes changed`);
     }
-    const auditKey = entry === "AtomAssemblePart" ? [
-      entry,
-      runtime.cpu.a,
-      word(memory, symbols.AtomSymbolGlobalEnd) !== word(before, symbols.AtomSymbolGlobalEnd),
-      word(memory, symbols.AtomSymbolLocalBegin) !== word(before, symbols.AtomSymbolLocalBegin),
-      word(memory, symbols.AtomPendingNext) !== word(before, symbols.AtomPendingNext),
-      word(memory, symbols.AtomStatementProofLogNext) !== word(before, symbols.AtomStatementProofLogNext),
-    ].join(":") : entry;
-    if (!fullMemoryAudited.has(auditKey)) {
-      const inside = (address, start, end) => address >= start && address < end;
-      for (let address = 0; address < memory.length; address += 1) {
-        const allowed =
-          inside(address, symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd) ||
-          inside(address, symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd) ||
-          inside(address, symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd) ||
-          inside(address, symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd) ||
-          inside(address, symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd) ||
-          inside(address, symbols.AtomOutputWorkspaceStart, symbols.AtomOutputWorkspaceEnd) ||
-          inside(address, symbols.AtomStatementWorkspaceStart, symbols.AtomStatementWorkspaceEnd) ||
-          inside(address, symbols.AtomStatementProofAdapterWorkspaceStart, symbols.AtomStatementProofAdapterWorkspaceEnd) ||
-          (entry === "AtomPackSymbol" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 6)) ||
-          (["AtomSymbolDeclare", "AtomSymbolReference", "AtomSymbolDeclareGlobalLabel"].includes(entry) &&
-            inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
-          (entry === "AtomPendingAdd" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
-          (["AtomOutputEmitByte", "AtomOutputEmitWord"].includes(entry) &&
-            inside(address, symbols.AtomStatementProofLog, symbols.AtomStatementProofLogLimit)) ||
-          (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
-          (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
-          (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementProofLog, symbols.AtomStatementProofLogLimit)) ||
-          (entry === "AtomParserParsePublished" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 10)) ||
-          (address > STACK_BEFORE && address < STACK_AFTER);
-        if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
-      }
-      fullMemoryAudited.add(auditKey);
+    const inside = (address, start, end) => address >= start && address < end;
+    for (let address = 0; address < memory.length; address += 1) {
+      const allowed =
+        inside(address, symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd) ||
+        inside(address, symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd) ||
+        inside(address, symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd) ||
+        inside(address, symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd) ||
+        inside(address, symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd) ||
+        inside(address, symbols.AtomOutputWorkspaceStart, symbols.AtomOutputWorkspaceEnd) ||
+        inside(address, symbols.AtomStatementWorkspaceStart, symbols.AtomStatementWorkspaceEnd) ||
+        serviceWrites.has(address) ||
+        (entry === "AtomPackSymbol" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 6)) ||
+        (["AtomSymbolDeclare", "AtomSymbolReference", "AtomSymbolDeclareGlobalLabel"].includes(entry) &&
+          inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
+        (entry === "AtomPendingAdd" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
+        (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementSymbolArena, symbols.AtomStatementSymbolLimit)) ||
+        (entry === "AtomAssemblePart" && inside(address, symbols.AtomStatementPendingArena, symbols.AtomStatementPendingLimit)) ||
+        (entry === "AtomParserParsePublished" && inside(address, symbols.AtomStatementRecord, symbols.AtomStatementRecord + 10)) ||
+        (address > STACK_BEFORE && address < STACK_AFTER);
+      if (!allowed) assert.equal(memory[address], before[address], `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`);
     }
+    interceptedWrites = null;
     const observed = statistics[entry] ?? { instructions: 0, cycles: 0, instructionCase: "", cycleCase: "" };
     if (instructions > observed.instructions) Object.assign(observed, { instructions, instructionCase: label });
     if (cycles > observed.cycles) Object.assign(observed, { cycles, cycleCase: label });
@@ -182,9 +259,8 @@ export async function createStatementsHarness() {
     },
     resetAssembly({ symbolBytes = 128, pendingBytes = 48, address = 0x4000, capacity = 0x100 } = {}) {
       this.reset({ symbolBytes, pendingBytes });
-      let result = execute("AtomProofSinkReset");
-      assert.equal(result.carry, 0);
-      result = execute("AtomOutputReset", (_memory, _names, cpu) => {
+      resetSink();
+      const result = execute("AtomOutputReset", (_memory, _names, cpu) => {
         cpu.h = address >>> 8;
         cpu.l = address & 0xff;
         cpu.d = capacity >>> 8;

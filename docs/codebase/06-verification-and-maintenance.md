@@ -41,12 +41,12 @@ that the public build still observes the intended result.
 
 ## Native proof images
 
-The native subsystems that have not yet moved to the checked core retain proof
-link files under `asm/`:
+Two legacy proof links remain under `asm/`. The encoder link preserves the
+historical Phase 1 proof account; the driver link is the final subsystem still
+awaiting checked-core migration:
 
 ```text
 encoder-proof.asm
-statements-proof.asm
 driver-proof.asm
 ```
 
@@ -55,7 +55,7 @@ records, source buffers, arenas, adapter state, stack, and sentinel return
 addresses. AZM assembles them with strict register contracts before Debug80
 executes their entry points.
 
-The checked expression, parser/patch, and output lanes instead execute
+The checked expression, parser/patch, output, and statement lanes instead execute
 `native/atom.atm` directly. They supply guarded source, record, output, key,
 symbol, pending, and logical sink regions and audit all 65,536 addresses after
 every invocation. The output harness intercepts the production service entries
@@ -88,8 +88,8 @@ pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
 scope transitions, failure atomicity, and record-size boundaries. The tokenizer
 lane supplies a guarded source interval and repeats the complete lexical,
 diagnostic, publication, classifier, and source-boundary corpus against the
-checked core. The expression, parser/patch, and output lanes also use the
-checked core. Statements and driver still use frozen AZM proof images.
+checked core. The expression, parser/patch, output, and statement lanes also use
+the checked core. Only the driver still uses a frozen AZM proof image.
 
 ## Frozen memory profiles
 

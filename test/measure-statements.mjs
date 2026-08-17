@@ -40,6 +40,7 @@ h.assemble("JR Later\nNOP\nLater:\n");
 h.assemble("Unknown thing\n");
 h.assemble("LD BC,A\n");
 h.assemble("Low EQU -32768\nHigh EQU 65535\nCalc EQU ((2+3)*4)|1\nLD HL,Low\nLD DE,High\nLD A,Calc\n");
+h.assemble("ORG 4000H\nDB LOW(TARGET),HIGH(TARGET)\nDW LOW(TARGET),HIGH(TARGET)\nLD A,LOW(TARGET)\nLD HL,HIGH(TARGET)\nTARGET:\nNOP\n");
 h.assemble("Alpha EQU Beta+1\nBeta EQU 16\n");
 h.assemble("ORG $4100\nStart: DB 1,2\nWords: DW Start,Words\nGap: DS 2\nAfter: DB $FF\n");
 h.assemble('DB "A\\n\\x42",0,"\\\\\\\""\n');
@@ -80,24 +81,18 @@ const integratedWorkspace = workspaceThroughParser +
 
 console.log(JSON.stringify({
   labels: {
-    componentsAndExecution: "Measured in the linked Phase 2g proof image.",
+    componentsAndExecution: "Measured in the authoritative checked core.",
   },
   components: {
     symbolCodeAndTables: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd"),
-    statementSymbolCodeIncrement: extent("AtomSymbolCodeStart", "AtomSymbolCodeEnd") - 590,
     parserCodeAndTables: extent("AtomParserCodeStart", "AtomParserCodeEnd"),
     parserWorkspace: extent("AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"),
-    statementContinuationIncrement: extent("AtomParserCodeStart", "AtomParserCodeEnd") - 1978,
     outputCode: extent("AtomOutputCodeStart", "AtomOutputCodeEnd"),
     outputWorkspace: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"),
     statementDispatcherCode: extent("AtomStatementCodeStart", "AtomStatementCodeEnd"),
     statementDispatcherWorkspace: extent("AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd"),
-    statementCodeIncrementSinceLabels: extent("AtomStatementCodeStart", "AtomStatementCodeEnd") - 263,
-    statementWorkspaceIncrementSinceLabels: extent("AtomStatementWorkspaceStart", "AtomStatementWorkspaceEnd") - 22,
-    essentialDirectiveCodeIncrement: extent("AtomStatementCodeStart", "AtomStatementCodeEnd") - 432,
-    signedSymbolExpressionIncrement: extent("AtomExpressionCodeStart", "AtomExpressionCodeEnd") - 1908,
-    directiveOutputCodeIncrement: extent("AtomOutputCodeStart", "AtomOutputCodeEnd") - 359,
-    directiveOutputWorkspaceIncrement: extent("AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd") - 21,
+    hostInterceptedProofAdapterCode: 0,
+    proofAdapterWorkspace: extent("AtomStatementProofAdapterWorkspaceStart", "AtomStatementProofAdapterWorkspaceEnd"),
   },
   integrated: {
     codeAndTablesThroughParser: codeThroughParser,

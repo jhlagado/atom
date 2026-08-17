@@ -1,6 +1,32 @@
 # Atom Phase 2g statement-layer report
 
-## Result
+## Current authority checkpoint
+
+The statement proof now executes the checked Atom-built core from
+`assets/native-core.json`. The standalone `asm/statements-proof.asm` link has
+been removed. Guarded caller-owned source, record, symbol, pending, and
+operation-log regions replace the old proof image. The harness intercepts the
+real image and patch service entries, returns through the native stack, and
+tracks every host-written byte. There is no proof-only Z80 adapter code.
+
+Every direct invocation audits all 65,536 addresses. The current suite covers
+all 3,445 claimed instruction forms plus labels, optional-colon equates, bare
+directives, data and string forms, placement, reservations, alignment, forward
+patches, capacity boundaries, diagnostics, and injected sink failures. Strict
+register and stack contracts pass through automatic Atom-to-AZM translation.
+
+The current measured statement component is 1,345 bytes of code and immutable
+tables with 23 bytes of workspace. Encoder through statements occupies 11,013
+bytes of code and tables plus 444 bytes of fixed workspace. The complete linked
+native core is 12,093 bytes, leaving 4,291 bytes below 16 KiB. The synthetic
+host adapter uses ten bytes of proof state and contributes no resident Z80
+code.
+
+The remainder of this report records the original Phase 2g measurement. Its
+counts and unsupported list describe that historical checkpoint, not the
+current assembler.
+
+## Original Phase 2g result
 
 **Measured: pass.** Atom now assembles case-insensitive instruction, label,
 equate, placement, and data statements from a native source stream. The
@@ -19,7 +45,7 @@ preservation, bounded arenas, complete-address-space writes, direct data-output
 entries, injected capacity failures, and a **Measured: 65,536-byte** memory
 map. The complete repository suite contains **Measured: 193 passing tests**.
 
-## Resident byte account
+## Original Phase 2g resident byte account
 
 Phase 2f measured 10,269 bytes of code and immutable data and 491 bytes of
 fixed workspace. Phase 2g adds 1,436 code/data bytes and 50 workspace bytes.
@@ -54,7 +80,7 @@ The measured code margin below 16 KiB is **Measured: 4,679 bytes**. Caller-owned
 source, symbol records, pending records, sink spools, and stack remain outside
 the fixed-workspace account.
 
-## Supported and unsupported forms
+## Original Phase 2g supported and unsupported forms
 
 Measured positive coverage includes standalone and same-line global/private
 labels, mixed case, immediate and forward equate use, signed equates, all
@@ -76,7 +102,7 @@ The explicit unsupported list is:
 The final undefined-symbol check is not yet present. Part EOF therefore cannot
 commit a generation.
 
-## Execution measurements
+## Original Phase 2g execution measurements
 
 The longest measured `AtomAssemblePart` case executes a six-statement program
 with signed equates and three instructions in **Measured: 24,496 instructions
@@ -85,7 +111,7 @@ entries measure 74 instructions for a byte, 141 for a word, 20 for a
 reservation, and 3 for an origin change. Named proof budgets retain margin
 above each observation.
 
-## Whole-assembler projection
+## Original Phase 2g whole-assembler projection
 
 Remaining native work is smaller than the completed statement layer:
 
@@ -114,6 +140,6 @@ npm run measure:output
 npm run measure:statements
 ```
 
-These commands verify the frozen Debug80/AZM dependency identity, strict
-contracts, historical byte stability, full Phase 2g memory profile, statement
-differentials, and fresh symbol-derived measurements.
+These commands verify the pinned Debug80/AZM dependency identity, strict
+contracts, historical byte stability, the current complete memory profile,
+statement differentials, and fresh symbol-derived measurements.
