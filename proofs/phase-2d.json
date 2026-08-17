@@ -1,8 +1,9 @@
 {
-  "name": "Atom Phase 2d expression and forward-symbol correctness proof",
-  "source": "../asm/expression-proof.asm",
+  "name": "Atom authoritative expression and forward-symbol correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2d-memory.json",
-  "contracts": "strict",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 512,
@@ -56,9 +57,9 @@
       "maxCycles": 1000
     },
     "AtomExpressionParse": {
-      "measuredInstructions": 4369,
+      "measuredInstructions": 4372,
       "maxInstructions": 10930,
-      "measuredCycles": 41488,
+      "measuredCycles": 41520,
       "maxCycles": 103720
     },
     "AtomExpressionQueue": {

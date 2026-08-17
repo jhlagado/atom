@@ -1,5 +1,22 @@
 # Atom Phase 2d expression evaluator report
 
+## Authority migration checkpoint
+
+The direct expression proof now executes the authoritative `native/atom.atm`
+core instead of a separately linked `asm/expression-proof.asm` image. The same
+source is translated automatically for AZM 0.3.9 strict register and stack
+contracts. The runtime proof retains the 1,787-expression differential,
+arithmetic boundary partitions, exact diagnostics, affine forward-symbol
+checks, pending-record handoff, guarded caller-owned arenas, and a complete
+64 KiB write audit after every invocation.
+
+The checked expression evaluator contains **Measured 1,868 bytes** of code and
+**Measured 263 bytes** of fixed workspace: **Measured 160 bytes** for the value
+stack, **Measured 64 bytes** for the operator stack, and **Measured 39 bytes**
+for other state. The complete native core remains **Measured 12,093 resident
+bytes**. The original Phase 2d measurements and projections below are retained
+as the historical account from the earlier prototype checkpoint.
+
 ## Result
 
 **Correctness: Measured pass.** The native evaluator implements AZM's integer

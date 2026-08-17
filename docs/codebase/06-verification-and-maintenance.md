@@ -46,7 +46,6 @@ link files under `asm/`:
 
 ```text
 encoder-proof.asm
-expression-proof.asm
 parser-proof.asm
 output-proof.asm
 statements-proof.asm
@@ -58,6 +57,10 @@ These files choose module flags, origin, workspaces, guarded input and output
 records, source buffers, arenas, adapter state, stack, and sentinel return
 addresses. AZM assembles them with strict register contracts before Debug80
 executes their entry points.
+
+The checked expression lane instead executes `native/atom.atm` directly. It
+supplies guarded source, key, symbol, and pending regions and audits all 65,536
+addresses after every invocation.
 
 The support modules restore pristine memory before each invocation. They seed
 workspaces and guards with varying patterns, install the input records and

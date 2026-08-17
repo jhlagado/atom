@@ -1,16 +1,42 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { compile } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
-const addressOf = (symbol) => symbol.address ?? symbol.value;
 const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
 const manifest = JSON.parse(fs.readFileSync("proofs/phase-2d.json", "utf8"));
+
+const PROOF_SYMBOLS = Object.freeze({
+  AtomExpressionProofSourceStart: 0x8000,
+  AtomExpressionSourceBefore: 0x8000,
+  AtomExpressionSource: 0x8001,
+  AtomExpressionSourceLimit: 0x8201,
+  AtomExpressionSourceAfter: 0x8201,
+  AtomExpressionProofSourceEnd: 0x8202,
+  AtomExpressionProofKeyStart: 0x8202,
+  AtomExpressionProofKeyBefore: 0x8202,
+  AtomExpressionProofKey: 0x8203,
+  AtomExpressionProofKeyAfter: 0x8209,
+  AtomExpressionProofKeyEnd: 0x820a,
+  AtomExpressionProofSymbolStart: 0x9000,
+  AtomExpressionSymbolBefore: 0x9000,
+  AtomExpressionSymbolArena: 0x9001,
+  AtomExpressionSymbolLimit: 0x9081,
+  AtomExpressionSymbolAfter: 0x9081,
+  AtomExpressionProofSymbolEnd: 0x9082,
+  AtomExpressionProofPendingStart: 0x9100,
+  AtomExpressionPendingBefore: 0x9100,
+  AtomExpressionPendingArena: 0x9101,
+  AtomExpressionPendingLimit: 0x9131,
+  AtomExpressionPendingAfter: 0x9131,
+  AtomExpressionProofPendingEnd: 0x9132,
+});
 
 export const EXPRESSION = Object.freeze({
   RESOLVED: 0,
@@ -26,40 +52,41 @@ export const EXPRESSION = Object.freeze({
   INTERNAL: 10,
 });
 
-export async function createExpressionHarness({ contracts = "strict" } = {}) {
-  const assembled = await compile("asm/expression-proof.asm", {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: contracts,
-  });
-  const errors = assembled.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `expression proof assembly failed: ${JSON.stringify(errors)}`);
-  const hex = assembled.artifacts.find(({ kind }) => kind === "hex");
-  const d8m = assembled.artifacts.find(({ kind }) => kind === "d8m");
-  assert.equal(hex?.kind, "hex");
-  assert.equal(d8m?.kind, "d8m");
-  const symbols = Object.fromEntries(d8m.json.symbols.flatMap((symbol) => {
-    const value = addressOf(symbol);
-    return value === undefined ? [] : [[symbol.name, value]];
-  }));
-  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomExpressionParse);
+export async function createExpressionHarness() {
+  const core = await loadNativeAtomCore();
+  assert.equal(core.source, "native/atom.atm");
+  const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
+  const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomExpressionParse);
   const memory = runtime.hardware.memory;
+  for (const [name, value] of [
+    ["AtomExpressionSourceBefore", 0x3c], ["AtomExpressionSourceAfter", 0xc3],
+    ["AtomExpressionProofKeyBefore", 0xa6], ["AtomExpressionProofKeyAfter", 0x6a],
+    ["AtomExpressionSymbolBefore", 0x69], ["AtomExpressionSymbolAfter", 0x96],
+    ["AtomExpressionPendingBefore", 0x5a], ["AtomExpressionPendingAfter", 0xa5],
+  ]) memory[symbols[name]] = value;
   const pristine = memory.slice();
-  const immutable = [
-    [symbols.AtomEncoderCoreStart, symbols.AtomEncoderCoreEnd],
-    [symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd],
-    [symbols.AtomTokenizerCodeStart, symbols.AtomTokenizerCodeEnd],
-    [symbols.AtomParserCodeStart, symbols.AtomParserCodeEnd],
-    [symbols.AtomExpressionCodeStart, symbols.AtomExpressionCodeEnd],
-  ].map(([start, end]) => ({ start, bytes: pristine.slice(start, end) }));
+  const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: pristine.slice(start, end) }));
   const statistics = {};
   let sourceBytes = new Uint8Array();
+  let restartCount = 0;
 
   function restart() {
     memory.set(pristine);
     runtime.reset();
     runtime.cpu.halted = false;
     sourceBytes = new Uint8Array();
+    restartCount += 1;
+    for (const [start, end] of [
+      [symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd],
+      [symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd],
+      [symbols.AtomTokenizerWorkspaceStart, symbols.AtomTokenizerWorkspaceEnd],
+      [symbols.AtomExpressionWorkspaceStart, symbols.AtomExpressionWorkspaceEnd],
+      [symbols.AtomParserWorkspaceStart, symbols.AtomParserWorkspaceEnd],
+    ]) {
+      for (let address = start; address < end; address += 1) {
+        memory[address] = (restartCount * 73 + address * 29) & 0xff;
+      }
+    }
   }
 
   function execute(entry, setup = () => {}, label = entry) {
@@ -87,6 +114,8 @@ export async function createExpressionHarness({ contracts = "strict" } = {}) {
     assert.equal(runtime.cpu.sp, RETURN_SLOT + 2, `${label}: unbalanced stack`);
     assert.equal(memory[STACK_BEFORE], 0xa9, `${label}: stack underrun`);
     assert.equal(memory[STACK_AFTER], 0x9a, `${label}: stack overrun`);
+    assert.ok(instructions <= budget.maxInstructions, `${label}: instruction budget exceeded`);
+    assert.ok(cycles <= budget.maxCycles, `${label}: cycle budget exceeded`);
     for (const region of immutable) assert.deepEqual(memory.slice(region.start, region.start + region.bytes.length), region.bytes, `${label}: immutable bytes changed`);
     for (const [name, expected] of [
       ["AtomExpressionSourceBefore", 0x3c], ["AtomExpressionSourceAfter", 0xc3],

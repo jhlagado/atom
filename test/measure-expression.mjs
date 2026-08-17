@@ -67,7 +67,7 @@ h.queue(unresolved.ix, -3, 0x4567, 2);
 
 const s = h.symbols;
 console.log(JSON.stringify({
-  labels: "All byte, instruction, cycle, and corpus counts are Measured in the Phase 2d proof image.",
+  labels: "All byte, instruction, cycle, and corpus counts are Measured in the authoritative checked core.",
   coverage: {
     concreteAzmDifferentialCases: concrete.size,
     explicitFailureCases: 10,

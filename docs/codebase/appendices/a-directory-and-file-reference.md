@@ -38,7 +38,6 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `encoder-proof.asm` | Direct encoder, recognizer, and RADIX-40 harness with guarded records and stack |
-| `expression-proof.asm` | Expression/token/symbol harness and stack regions |
 | `parser-proof.asm` | Parser, expression, symbol, and instruction-record harness |
 | `output-proof.asm` | Output, pending, encoder, and proof-sink harness |
 | `statements-proof.asm` | Statement parser with source, symbol, pending, output, and sink regions |
