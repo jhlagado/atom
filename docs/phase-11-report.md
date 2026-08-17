@@ -53,6 +53,6 @@ proof covers Measured 12,093 resident bytes and Measured 11,742 initialized
 addresses, and byte identity across the pinned core, translated AZM build, and
 two Atom generations.
 
-The Atom-local suite passes Measured 270 of 270 tests. Package-census values are
+The Atom-local suite passes Measured 272 of 272 tests. Package-census values are
 stored outside the archive in `proofs/phase-11.json` and
 `proofs/package-census.json` to avoid a self-referential packaged size field.

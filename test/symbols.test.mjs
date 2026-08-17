@@ -55,7 +55,7 @@ test("Phase 2a memory profile covers all 64 KiB without gaps or overlap", () => 
 test("symbol records remain eight bytes and pending records remain six", () => {
   assert.equal(s.AtomSymbolRecordBytes, 8);
   assert.equal(s.AtomPendingRecordBytes, 6);
-  assert.equal(s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart, 589);
+  assert.equal(s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart, 727);
   assert.equal(s.AtomSymbolWorkspaceEnd - s.AtomSymbolWorkspaceStart, 20);
 });
 
@@ -189,6 +189,36 @@ test("an unresolved private blocks scope eviction until it is defined", () => {
   assert.equal(h.advanceScope().status, STATUS.OK);
 });
 
+test("global-label declaration validates and commits scope as one transaction", () => {
+  h.reset({ symbolBytes: 16 });
+  assert.equal(h.advanceScope().status, STATUS.OK);
+  const local = h.pack(".later").key;
+  const global = h.pack("NEXT").key;
+  assert.equal(h.reference(local).status, STATUS.OK);
+  const blockedArena = h.symbolArena();
+  const blockedGlobalEnd = h.stateWord("AtomSymbolGlobalEnd");
+  const blockedLocalBegin = h.stateWord("AtomSymbolLocalBegin");
+  const blocked = h.declareGlobalLabel(global, 0x4567);
+  assert.equal(blocked.status, STATUS.UNDEFINED_PRIVATE);
+  assert.deepEqual(h.symbolArena(), blockedArena);
+  assert.equal(h.stateWord("AtomSymbolGlobalEnd"), blockedGlobalEnd);
+  assert.equal(h.stateWord("AtomSymbolLocalBegin"), blockedLocalBegin);
+
+  assert.equal(h.declare(local, 0x2345).status, STATUS.OK);
+  const committed = h.declareGlobalLabel(global, 0x4567);
+  assert.equal(committed.status, STATUS.OK);
+  assert.equal(committed.ix, s.AtomSymbolArena);
+  assert.equal(h.word(committed.ix + 6), 0x4567);
+  assert.equal(h.stateWord("AtomSymbolGlobalEnd"), s.AtomSymbolArena + 8);
+  assert.equal(h.stateWord("AtomSymbolLocalBegin"), s.AtomSymbolArena + 16);
+
+  const duplicateArena = h.symbolArena();
+  assert.equal(h.declareGlobalLabel(global, 0x9999).status, STATUS.DUPLICATE);
+  assert.deepEqual(h.symbolArena(), duplicateArena);
+  assert.equal(h.declareGlobalLabel(local, 0x9999).status, STATUS.PRIVATE_NO_SCOPE);
+  assert.deepEqual(h.symbolArena(), duplicateArena);
+});
+
 test("pending references are bounded, reclaimed, and return exact metadata", () => {
   h.reset({ pendingBytes: 12 });
   const key = h.pack("FORWARD").key;
@@ -224,6 +254,28 @@ test("pending capacity checks one byte below, at, and above one record", () => {
     if (firstStatus === STATUS.PENDING_CAPACITY) assert.deepEqual(h.pendingArena(), before);
     else assert.equal(h.stateWord("AtomPendingNext"), s.AtomPendingArena + 6);
   }
+});
+
+test("pending peek and capacity preflight publish no state", () => {
+  h.reset({ pendingBytes: 6 });
+  const symbol = h.reference(h.pack("PEEK").key);
+  const emptyArena = h.pendingArena();
+  assert.equal(h.pendingCheckCapacity().status, STATUS.OK);
+  assert.deepEqual(h.pendingArena(), emptyArena);
+  assert.equal(h.stateWord("AtomPendingNext"), s.AtomPendingArena);
+
+  assert.equal(h.pendingAdd(symbol.ix, 0x6112, 5, 0x7a).status, STATUS.OK);
+  const fullArena = h.pendingArena();
+  const fullNext = h.stateWord("AtomPendingNext");
+  const peeked = h.pendingPeek(symbol.ix);
+  assert.equal(peeked.status, STATUS.OK);
+  assert.deepEqual([peeked.de, peeked.bc >>> 8, peeked.bc & 0xff], [0x6112, 5, 0x7a]);
+  assert.deepEqual(h.pendingArena(), fullArena);
+  assert.equal(h.stateWord("AtomPendingNext"), fullNext);
+
+  assert.equal(h.pendingCheckCapacity().status, STATUS.PENDING_CAPACITY);
+  assert.deepEqual(h.pendingArena(), fullArena);
+  assert.equal(h.stateWord("AtomPendingNext"), fullNext);
 });
 
 test("defined private symbols cannot be evicted with stale pending entries", () => {

@@ -41,11 +41,11 @@ that the public build still observes the intended result.
 
 ## Native proof images
 
-Each major native subsystem has a proof link file under `asm/`:
+The native subsystems that have not yet moved to the checked core retain proof
+link files under `asm/`:
 
 ```text
 encoder-proof.asm
-symbol-proof.asm
 tokenizer-proof.asm
 expression-proof.asm
 parser-proof.asm
@@ -79,18 +79,22 @@ For a direct entry, the common checks include:
 The full-memory audit covers all 65,536 addresses. A passing status byte cannot
 conceal a write elsewhere in the machine.
 
-During the `.atm` authority migration, each subsystem also needs a checked-core
-lane before its legacy proof image is retired. The encoder lane is complete:
-`test/native-authority.test.mjs` calls the entries in
+During the `.atm` authority migration, each subsystem needs a checked-core lane
+before its legacy proof image is retired. The encoder lane calls the entries in
 `assets/native-core.json` and repeats the full valid and invalid differential.
-The remaining direct lanes still use their frozen AZM proof images.
+The symbol lane calls the same checked core with guarded caller-owned symbol and
+pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
+scope transitions, failure atomicity, and record-size boundaries. Tokenizer,
+expression, parser, output, statements, and driver still use frozen AZM proof
+images.
 
 ## Frozen memory profiles
 
 Files such as `proofs/phase-1-memory.json` describe every region in a direct
-proof map. `test/proof-system.test.mjs` resolves symbolic boundaries from the
-fresh AZM build and checks that the regions begin at zero, meet without a gap or
-overlap, have their exact declared sizes, and end at `$10000`.
+proof map. The corresponding test resolves symbolic boundaries from either the
+fresh legacy AZM image or the checked native core and verifies that the regions
+begin at zero, meet without a gap or overlap, have their exact declared sizes,
+and end at `$10000`.
 
 Later phase profiles apply the same discipline to the symbol, tokenizer,
 expression, parser, output, statement, integration, and driver images. Code,
@@ -123,8 +127,9 @@ collision rules that are easy to encode incorrectly.
 ## Register and stack contracts
 
 Every native public routine carries an AZM `.routine` annotation. Call sites may
-use `.expectout` where an inferred output must be explicit. The linked core and
-every direct proof image assemble under strict register-contract mode.
+use `.expectout` where an inferred output must be explicit. Automatic
+translation assembles the authoritative `.atm` core under strict
+register-contract mode; every remaining direct proof image uses the same mode.
 
 The annotations state inputs, outputs, possible outputs, clobbers, and flag
 effects. Runtime tests remain necessary: a static contract can describe the
@@ -241,10 +246,9 @@ because it can vary with npm and compression tooling.
 
 ## Self-host proof
 
-`test/host-self-host.test.mjs` is the broadest native correctness lane. It
-regenerates the self-host source in memory, checks the committed source files,
-assembles them with the pinned core, constructs a core from that first
-generation, and assembles them again.
+`test/host-self-host.test.mjs` is the broadest native correctness lane. It reads
+the authoritative native source, assembles it with the pinned core, constructs
+a core from that first generation, and assembles the same source again.
 
 It then translates the prepared source to AZM and compares the exact initialized
 address set and every resident byte. Generator statistics, code bytes,

@@ -1,48 +1,73 @@
 import assert from "node:assert/strict";
 
-import { compile } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const RETURN_SLOT = 0xfefe;
 const RETURN_SENTINEL = 0x80fe;
 
-const addressOf = (symbol) => symbol.address ?? symbol.value;
+const PROOF_SYMBOLS = Object.freeze({
+  AtomSymbolProofDataStart: 0x8000,
+  AtomSymbolProofKeyBefore: 0x8000,
+  AtomSymbolProofKey: 0x8001,
+  AtomSymbolProofKeyAfter: 0x8007,
+  AtomSymbolProofTextBefore: 0x8008,
+  AtomSymbolProofText: 0x8009,
+  AtomSymbolProofTextAfter: 0x8013,
+  AtomSymbolProofDataEnd: 0x8014,
+  AtomSymbolArenaBefore: 0x9000,
+  AtomSymbolArena: 0x9001,
+  AtomSymbolArenaLimit: 0x9041,
+  AtomSymbolArenaAfter: 0x9041,
+  AtomSymbolArenaProofEnd: 0x9042,
+  AtomPendingArenaBefore: 0x9100,
+  AtomPendingArena: 0x9101,
+  AtomPendingArenaLimit: 0x9119,
+  AtomPendingArenaAfter: 0x9119,
+  AtomPendingArenaProofEnd: 0x911a,
+});
+
 const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
 
-export async function createSymbolHarness({ contracts = "strict" } = {}) {
-  const assembled = await compile("asm/symbol-proof.asm", {
-    emitHex: true,
-    emitD8m: true,
-    registerContracts: contracts,
-  });
-  const errors = assembled.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `symbol prototype assembly failed: ${JSON.stringify(errors)}`);
-  const hex = assembled.artifacts.find(({ kind }) => kind === "hex");
-  const d8m = assembled.artifacts.find(({ kind }) => kind === "d8m");
-  assert.equal(hex?.kind, "hex");
-  assert.equal(d8m?.kind, "d8m");
-
-  const symbols = Object.fromEntries(
-    d8m.json.symbols.flatMap((symbol) => {
-      const value = addressOf(symbol);
-      return value === undefined ? [] : [[symbol.name, value]];
-    }),
-  );
-  const runtime = createZ80Runtime(parseIntelHex(hex.text), symbols.AtomSymbolReset);
+export async function createSymbolHarness() {
+  const core = await loadNativeAtomCore();
+  assert.equal(core.source, "native/atom.atm");
+  const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
+  const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomSymbolReset);
   const memory = runtime.hardware.memory;
+  memory[symbols.AtomSymbolArenaBefore] = 0x3c;
+  memory[symbols.AtomSymbolArenaAfter] = 0xc3;
+  memory[symbols.AtomPendingArenaBefore] = 0x69;
+  memory[symbols.AtomPendingArenaAfter] = 0x96;
+  memory[symbols.AtomSymbolProofKeyBefore] = 0xa6;
+  memory[symbols.AtomSymbolProofKeyAfter] = 0x6a;
+  memory[symbols.AtomSymbolProofTextBefore] = 0xc5;
+  memory[symbols.AtomSymbolProofTextAfter] = 0x5c;
   const pristine = memory.slice();
-  const immutableCode = pristine.slice(symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd);
-  const fullMemoryAudited = new Set();
+  const immutableCode = core.codeRanges.map(({ start, end }) => pristine.slice(start, end));
   const statistics = {};
+  let restartCount = 0;
 
   function restart() {
     memory.set(pristine);
     runtime.reset();
     runtime.cpu.halted = false;
+    restartCount += 1;
+    for (const [start, end] of [
+      [symbols.AtomEncoderWorkspaceStart, symbols.AtomEncoderWorkspaceEnd],
+      [symbols.AtomSymbolWorkspaceStart, symbols.AtomSymbolWorkspaceEnd],
+    ]) {
+      for (let address = start; address < end; address += 1) {
+        memory[address] = (restartCount * 73 + address * 29) & 0xff;
+      }
+    }
   }
 
   function execute(entry, setup = () => {}, label = entry) {
+    runtime.cpu.iy = 0x6d92;
     setup(memory, symbols, runtime.cpu);
+    const preservedIy = runtime.cpu.iy;
     memory[RETURN_SLOT] = RETURN_SENTINEL & 0xff;
     memory[RETURN_SLOT + 1] = RETURN_SENTINEL >>> 8;
     runtime.cpu.sp = RETURN_SLOT;
@@ -57,11 +82,12 @@ export async function createSymbolHarness({ contracts = "strict" } = {}) {
     }
     assert.equal(runtime.cpu.pc, RETURN_SENTINEL, `${label}: did not return`);
     assert.equal(runtime.cpu.sp, RETURN_SLOT + 2, `${label}: unbalanced stack`);
-    assert.deepEqual(
-      memory.slice(symbols.AtomSymbolCodeStart, symbols.AtomSymbolCodeEnd),
-      immutableCode,
-      `${label}: symbol code changed`,
-    );
+    if (entry !== "AtomSymbolDeclareGlobalLabel") {
+      assert.equal(runtime.cpu.iy, preservedIy, `${label}: IY changed`);
+    }
+    for (const [index, { start, end }] of core.codeRanges.entries()) {
+      assert.deepEqual(memory.slice(start, end), immutableCode[index], `${label}: native code changed`);
+    }
     assert.equal(memory[symbols.AtomSymbolArenaBefore], 0x3c, `${label}: symbol underrun`);
     assert.equal(memory[symbols.AtomSymbolArenaAfter], 0xc3, `${label}: symbol overrun`);
     assert.equal(memory[symbols.AtomPendingArenaBefore], 0x69, `${label}: pending underrun`);
@@ -80,42 +106,39 @@ export async function createSymbolHarness({ contracts = "strict" } = {}) {
       observed.cycleCase = label;
     }
     statistics[entry] = observed;
-    if (!fullMemoryAudited.has(entry)) {
-      const allowed = (address) => {
-        if (address >= 0xfe00 && address < 0xff00) return true;
-        if (address >= symbols.AtomSymbolWorkspaceStart && address < symbols.AtomSymbolWorkspaceEnd) return true;
-        if (
-          entry === "AtomPackSymbol" &&
-          address >= symbols.AtomEncoderWorkspaceStart &&
-          address < symbols.AtomEncoderWorkspaceEnd
-        ) return true;
-        if (
-          entry === "AtomPackSymbol" &&
-          address >= symbols.AtomSymbolProofKey &&
-          address < symbols.AtomSymbolProofKey + 6
-        ) return true;
-        if (
-          ["AtomSymbolDeclare", "AtomSymbolReference"].includes(entry) &&
-          address >= symbols.AtomSymbolArena &&
-          address < symbols.AtomSymbolArenaLimit
-        ) return true;
-        if (
-          ["AtomPendingAdd", "AtomPendingTake"].includes(entry) &&
-          address >= symbols.AtomPendingArena &&
-          address < symbols.AtomPendingArenaLimit
-        ) return true;
-        return false;
-      };
-      for (let address = 0; address < memory.length; address += 1) {
-        if (!allowed(address)) {
-          assert.equal(
-            memory[address],
-            beforeExecution[address],
-            `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`,
-          );
-        }
+    const allowed = (address) => {
+      if (address >= 0xfe00 && address < 0xff00) return true;
+      if (address >= symbols.AtomSymbolWorkspaceStart && address < symbols.AtomSymbolWorkspaceEnd) return true;
+      if (
+        entry === "AtomPackSymbol" &&
+        address >= symbols.AtomEncoderWorkspaceStart &&
+        address < symbols.AtomEncoderWorkspaceEnd
+      ) return true;
+      if (
+        entry === "AtomPackSymbol" &&
+        address >= symbols.AtomSymbolProofKey &&
+        address < symbols.AtomSymbolProofKey + 6
+      ) return true;
+      if (
+        ["AtomSymbolDeclare", "AtomSymbolReference", "AtomSymbolDeclareGlobalLabel"].includes(entry) &&
+        address >= symbols.AtomSymbolArena &&
+        address < symbols.AtomSymbolArenaLimit
+      ) return true;
+      if (
+        ["AtomPendingAdd", "AtomPendingTake"].includes(entry) &&
+        address >= symbols.AtomPendingArena &&
+        address < symbols.AtomPendingArenaLimit
+      ) return true;
+      return false;
+    };
+    for (let address = 0; address < memory.length; address += 1) {
+      if (!allowed(address)) {
+        assert.equal(
+          memory[address],
+          beforeExecution[address],
+          `${label}: unexpected write at $${address.toString(16).padStart(4, "0")}`,
+        );
       }
-      fullMemoryAudited.add(entry);
     }
     return {
       status: runtime.cpu.a,
@@ -199,6 +222,15 @@ export async function createSymbolHarness({ contracts = "strict" } = {}) {
         cpu.l = names.AtomSymbolProofKey & 0xff;
       });
     },
+    declareGlobalLabel(key, value) {
+      setKey(key);
+      return execute("AtomSymbolDeclareGlobalLabel", (_target, names, cpu) => {
+        cpu.h = names.AtomSymbolProofKey >>> 8;
+        cpu.l = names.AtomSymbolProofKey & 0xff;
+        cpu.d = value >>> 8;
+        cpu.e = value & 0xff;
+      });
+    },
     advanceScope() {
       return execute("AtomSymbolAdvanceScope");
     },
@@ -215,6 +247,14 @@ export async function createSymbolHarness({ contracts = "strict" } = {}) {
       return execute("AtomPendingTake", (_target, _names, cpu) => {
         cpu.ix = symbol;
       });
+    },
+    pendingPeek(symbol) {
+      return execute("AtomPendingPeek", (_target, _names, cpu) => {
+        cpu.ix = symbol;
+      });
+    },
+    pendingCheckCapacity() {
+      return execute("AtomPendingCheckCapacity");
     },
     word(address) {
       return memory[address] | (memory[address + 1] << 8);

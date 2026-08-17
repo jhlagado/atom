@@ -21,7 +21,7 @@ the owner of a behavior quickly.
 | --- | --- |
 | `atom-host-runtime.asm` | Complete origin-zero Mac-host link: selects full module modes, includes the native pipeline, and defines six fail-closed sink stubs |
 | `atom-encoder.asm` | RADIX-40 packer, mnemonic binary search, form validation, length calculation, Z80 encoding rules, opcode tables, and four-byte commit buffer |
-| `atom-symbols.asm` | Exact packed symbols, dual-ended global/private arena, scope transitions, and six-byte pending-reference storage |
+| `atom-symbols.asm` | Frozen bootstrap copy of exact packed symbols and pending-reference storage, retained by downstream legacy proof links |
 | `atom-tokenizer.asm` | Streaming source-part tokenizer, numeric and string scanners, token record, line state, and lexical diagnostics |
 | `atom-expression.asm` | Concrete and deferred expression parser, value/operator stacks, precedence reduction, arithmetic, and `LOW`/`HIGH` transforms |
 | `atom-patch.asm` | Maps validated operand fields to byte offsets and patch kinds |
@@ -38,7 +38,6 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `encoder-proof.asm` | Direct encoder, recognizer, and RADIX-40 harness with guarded records and stack |
-| `symbol-proof.asm` | Symbol and pending arena harness |
 | `tokenizer-proof.asm` | Tokenizer source, token, guard, and stack harness |
 | `expression-proof.asm` | Expression/token/symbol harness and stack regions |
 | `parser-proof.asm` | Parser, expression, symbol, and instruction-record harness |
@@ -119,26 +118,24 @@ the owner of a behavior quickly.
 
 | File | Role |
 | --- | --- |
-| `native-core.json` | Checked strict-AZM Intel HEX, symbol map, digests, and source identity loaded by the installed package |
+| `native-core.json` | Atom-built Intel HEX, checked symbol map, digests, and source identity loaded by the installed package |
 
 ## `native/`
 
 | File | Role |
 | --- | --- |
-| `atom-00.atm` through `atom-04.atm` | Checked Atom-valid content parts derived during the AZM-to-Atom migration |
+| `atom-00.atm` through `atom-04.atm` | Authoritative native Atom source parts |
 | `atom.atm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
 
-During the migration checkpoint, `scripts/generate-self-host-source.mjs` is the
-writer and drift checker. These `.atm` files become the editing authority at
-the next self-host checkpoint.
+The `.atm` files are the editing authority. The build never regenerates them
+from the frozen `asm/` tree.
 
 ## `scripts/`
 
 | File | Role |
 | --- | --- |
-| `generate-native-core.mjs` | Builds the linked native image with AZM strict contracts and writes or checks `assets/native-core.json` |
-| `generate-self-host-source.mjs` | Writes or checks the complete transitional `native/` set |
+| `generate-native-core.mjs` | Assembles `native/atom.atm` with Atom, proves exact equality through strict automatic AZM translation, and writes or checks `assets/native-core.json` |
 | `verify-dependencies.mjs` | Pins the sibling Debug80 branch and exact AZM/runtime source trees used by proofs |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 
@@ -147,7 +144,7 @@ the next self-host checkpoint.
 | File | Role |
 | --- | --- |
 | `support.mjs` | Encoder direct-entry AZM assembly, Debug80 stepping, complete memory audit, instruction oracle helpers, and execution statistics |
-| `symbol-support.mjs` | Symbol and pending direct-entry harness |
+| `symbol-support.mjs` | Checked-core symbol and pending direct-entry harness with guarded caller-owned arenas and complete memory auditing |
 | `tokenizer-support.mjs` | Tokenizer direct-entry harness and token/source observations |
 | `expression-support.mjs` | Expression harness, token setup, symbol state, and result extraction |
 | `parser-support.mjs` | Parser harness, destination and reference observations |
@@ -199,7 +196,7 @@ the next self-host checkpoint.
 | `host-artifacts.test.mjs` | NOBJ, materialized binary, Intel HEX, listing, D8, symbols, and source ranges |
 | `host-example.test.mjs` | Runs the shipped example verifier |
 | `host-package.test.mjs` | npm archive census, offline installation, installed CLI, absent AZM, bundled runtime, and installed self-host |
-| `host-self-host.test.mjs` | Generated source drift, first and second Atom generations, pinned core, and translated AZM equality |
+| `host-self-host.test.mjs` | Authoritative source, first and second Atom generations, pinned core, and translated AZM equality |
 | `host-release.test.mjs` | Product documentation links and example case, package/public license policy, and proof/native measurement agreement |
 
 ## Measurement scripts under `test/`

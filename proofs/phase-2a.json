@@ -1,8 +1,9 @@
 {
-  "name": "Atom Phase 2a symbol and pending prototype correctness proof",
-  "source": "../asm/symbol-proof.asm",
+  "name": "Atom authoritative symbol and pending-reference correctness proof",
+  "source": "../native/atom.atm",
+  "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2a-memory.json",
-  "contracts": "strict",
+  "contracts": "strict through automatic Atom-to-AZM translation",
   "proofCapacity": {
     "symbolRecords": 8,
     "pendingRecords": 4
@@ -41,13 +42,13 @@
     "AtomSymbolReference": {
       "measuredInstructions": 216,
       "maxInstructions": 540,
-      "measuredCycles": 2375,
+      "measuredCycles": 2383,
       "maxCycles": 5940
     },
     "AtomSymbolAdvanceScope": {
-      "measuredInstructions": 24,
+      "measuredInstructions": 28,
       "maxInstructions": 60,
-      "measuredCycles": 312,
+      "measuredCycles": 348,
       "maxCycles": 780
     },
     "AtomPendingAdd": {
@@ -61,6 +62,24 @@
       "maxInstructions": 250,
       "measuredCycles": 1214,
       "maxCycles": 3040
+    },
+    "AtomSymbolDeclareGlobalLabel": {
+      "measuredInstructions": 160,
+      "maxInstructions": 400,
+      "measuredCycles": 1994,
+      "maxCycles": 5000
+    },
+    "AtomPendingCheckCapacity": {
+      "measuredInstructions": 19,
+      "maxInstructions": 50,
+      "measuredCycles": 169,
+      "maxCycles": 425
+    },
+    "AtomPendingPeek": {
+      "measuredInstructions": 26,
+      "maxInstructions": 70,
+      "measuredCycles": 359,
+      "maxCycles": 900
     }
   }
 }

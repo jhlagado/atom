@@ -34,6 +34,22 @@ h.pendingAdd(second.ix, 0x7003, 2, 3);
 h.pendingAdd(second.ix, 0x7004, 2, 4);
 h.pendingTake(second.ix);
 
+// Atomic global-label transaction through a populated private scope.
+h.reset({ symbolBytes: 16 });
+h.advanceScope();
+const local = h.reference(key(".LATER"));
+h.declareGlobalLabel(key("NEXT"), 0x7100);
+h.declare(key(".LATER"), 0x7101);
+h.declareGlobalLabel(key("NEXT"), 0x7100);
+
+// Non-destructive pending inspection and exact-capacity preflight.
+h.reset({ pendingBytes: 6 });
+const peeked = h.reference(key("PEEK"));
+h.pendingCheckCapacity();
+h.pendingAdd(peeked.ix, 0x7200, 5, 0x7a);
+h.pendingPeek(peeked.ix);
+h.pendingCheckCapacity();
+
 const s = h.symbols;
 console.log(JSON.stringify({
   labels: "All byte, instruction, and cycle counts are Measured for the fixed proof capacities.",

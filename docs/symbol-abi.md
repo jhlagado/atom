@@ -87,4 +87,4 @@ pending-capacity failure publishes neither state.
 All public routines return `A=AtomStatusOk` with carry clear on success. Failure
 returns a nonzero status with carry set. Unless a routine contract says
 otherwise, registers and flags are clobbered. The routines are non-reentrant
-because they share 28 bytes of fixed workspace.
+because they share 20 bytes of fixed workspace.

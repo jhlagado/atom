@@ -1,5 +1,21 @@
 # Atom Phase 2a symbol and pending-reference report
 
+## Authority migration checkpoint
+
+The direct symbol proof now runs against the authoritative `native/atom.atm`
+core rather than a separately linked `asm/symbol-proof.asm` image. Automatic
+translation assembles the same source under AZM 0.3.9 strict register and stack
+contracts. The runtime harness supplies guarded caller-owned arenas, checks the
+complete 64 KiB write set, and observes the exact return PC and SP on each
+public entry.
+
+The current linked module contains **Measured 727 bytes** of symbol code and
+**Measured 20 bytes** of fixed symbol workspace. Symbol and pending records
+remain **Measured 8 bytes** and **Measured 6 bytes**. The complete native core
+remains **Measured 12,093 resident bytes**. The original Phase 2a measurements
+and projections below are retained as the historical account from the earlier
+prototype checkpoint.
+
 ## Result
 
 **Correctness: Measured pass.** AZM strict register and stack contracts pass.
