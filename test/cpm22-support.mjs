@@ -84,17 +84,44 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
       },
     },
   );
+  const runtimeMemory = runtime.hardware.memory;
   let instructions = 0;
   let cycles = 0;
   let minimumSp = 0xffff;
   const bdosCalls = [];
+  const randomReadRecords = [];
+  const sourceCacheMisses = [];
+  let sourceReadCount = 0;
+  let lastSourceOffset;
   let measureAtom = false;
   const transcript = (from = 0) => Buffer.from(output.slice(from)).toString("latin1");
   const stepUntil = (predicate, description, maximum = 10_000_000) => {
     for (let count = 0; count < maximum; count += 1) {
       if (measureAtom) {
         minimumSp = Math.min(minimumSp, runtime.getRegisters().sp);
-        if (runtime.getPC() === 5) bdosCalls.push(runtime.getRegisters().c);
+        if (runtime.getPC() === census.sourceReadAddress) {
+          lastSourceOffset = (runtime.getRegisters().h << 8) | runtime.getRegisters().l;
+          sourceReadCount += 1;
+        }
+        if (runtime.getPC() === census.sourceCacheMissAddress) {
+          const registers = runtime.getRegisters();
+          sourceCacheMisses.push(Object.freeze({
+            key: (registers.d << 8) | registers.e,
+            sourceOffset: lastSourceOffset,
+          }));
+        }
+        if (runtime.getPC() === 5) {
+          const call = runtime.getRegisters().c;
+          bdosCalls.push(call);
+          if (call === 33) {
+            const fcb = census.inputFcbAddress;
+            randomReadRecords.push(
+              runtimeMemory[fcb + 33] |
+                (runtimeMemory[fcb + 34] << 8) |
+                (runtimeMemory[fcb + 35] << 16),
+            );
+          }
+        }
       }
       const result = runtime.step();
       instructions += 1;
@@ -135,6 +162,9 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     commandCycles,
     atomMinimumSp: minimumSp,
     atomBdosCalls: Object.freeze(bdosCalls.slice()),
+    atomRandomReadRecords: Object.freeze(randomReadRecords.slice()),
+    atomSourceCacheMisses: Object.freeze(sourceCacheMisses.slice()),
+    atomSourceReads: sourceReadCount,
     entrySp,
     returnSp,
     finalDisk,
@@ -142,15 +172,22 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     sourceName,
     outputName,
     command,
+    memory: runtimeMemory,
     runtime,
     platform,
     transcript,
-    runOutput() {
+    runCommand(nextCommand) {
       const start = output.length;
-      const outputCommand = outputName.slice(0, outputName.lastIndexOf("."));
-      platform.terminal.enqueueInput(Buffer.from(`${outputCommand}\r`, "ascii"));
-      stepUntil(() => transcript(start).endsWith("\r\nA>"), `${outputName} completion`);
+      platform.terminal.enqueueInput(Buffer.from(`${nextCommand}\r`, "ascii"));
+      stepUntil(() => transcript(start).endsWith("\r\nA>"), `${nextCommand} completion`);
       return transcript(start);
+    },
+    readCurrentFile(name) {
+      return readCpm22File(platform.disk.exportImage(), name);
+    },
+    runOutput() {
+      const outputCommand = outputName.slice(0, outputName.lastIndexOf("."));
+      return this.runCommand(outputCommand);
     },
   };
 }

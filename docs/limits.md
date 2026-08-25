@@ -121,19 +121,21 @@ current-drive filenames:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Linked COM | Measured | 13,677 |
-| CP/M-specific resident increment | Measured | 1,273 |
-| Source part | Measured boundary | 4,096 |
+| Linked COM | Measured | 13,681 |
+| CP/M-specific resident increment | Measured | 1,282 |
+| Source part | Measured boundary | 65,535 |
+| Source record cache | Measured execution storage | 128 |
 | Symbols | Measured boundary | 12,288 |
 | Pending references | Measured boundary | 4,096 |
 | Output image | Measured boundary | 18,304 |
-| Source overflow probe | Measured | 128 |
 | Stack allocation | Measured map | 3,072 |
 | Stack high-water mark in the representative proof | Measured | 32 |
 
 With no arguments, the source filename is `INPUT.ASM` and the output filename
 is `OUTPUT.COM`. `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive
 8.3 names. The adapter accepts one source part, and CP/M text EOF is `$1A`.
-The output starts at `$0100`, so the 18,304-byte capacity ends at `$487F`. The
+It scans the file once and reads it through a single random-record cache during
+assembly. The output starts at `$0100`, so the 18,304-byte capacity ends at
+`$487F`. The
 [CP/M report](cpm22.md) records the output-path comparison, rollback rules, and
 execution account.

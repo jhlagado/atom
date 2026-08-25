@@ -14,8 +14,10 @@ The native core assembles its own checked source byte for byte and fits in one
 
 The Mac command is usable now. Native CP/M 2.2 Atom also runs inside Debug80
 through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with
-`INPUT.ASM` and `OUTPUT.COM` as the no-argument defaults. The TEC-1 filesystem,
-source service, and output adapter are designed but not yet implemented.
+`INPUT.ASM` and `OUTPUT.COM` as the no-argument defaults. Its bounded BDOS
+source reader accepts one file of up to 65,535 logical bytes. The TEC-1
+filesystem, source service, and output adapter are designed but not yet
+implemented.
 
 ## Install and assemble
 

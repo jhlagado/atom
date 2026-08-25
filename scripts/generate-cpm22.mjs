@@ -21,6 +21,14 @@ async function linkedSource() {
   );
   assert.match(parts[0], /^ORG 0\n/);
   parts[0] = parts[0].replace(/^ORG 0\n/, "ORG $0100\nJP CP_ENTRY\nDS 13\n");
+  const sourceReadStart = parts[1].indexOf("TK_SREAD:\n");
+  const sourceReadEnd = parts[1].indexOf(
+    ";@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY",
+    sourceReadStart,
+  );
+  assert.notEqual(sourceReadStart, -1, "native core omitted the source-read entry");
+  assert.notEqual(sourceReadEnd, -1, "native core omitted the source-read boundary");
+  parts[1] = `${parts[1].slice(0, sourceReadStart)}TK_SREAD:\nJP CP_SOURCE_READ_BYTE\n${parts[1].slice(sourceReadEnd)}`;
   const serviceStart = parts[4].indexOf("HS_SCBEG:\n");
   assert.notEqual(serviceStart, -1, "native core omitted the host service tail");
   parts[4] = parts[4].slice(0, serviceStart);
@@ -69,6 +77,7 @@ async function build() {
     const adapterImmutableBytes = symbols.CP_ADAPTER_IMMUTABLE_END - symbols.CP_ADAPTER_IMMUTABLE_START;
     const outputAdapterCodeBytes = symbols.CP_OUTPUT_CODE_END - symbols.CP_OUTPUT_CODE_START;
     const commandTailCodeBytes = symbols.CP_COMMAND_CODE_END - symbols.CP_COMMAND_CODE_START;
+    const sourceAdapterCodeBytes = symbols.CP_SOURCE_CODE_END - symbols.CP_SOURCE_CODE_START;
     const adapterWorkspaceBytes =
       symbols.CP_ADAPTER_WORKSPACE1_END - symbols.CP_ADAPTER_WORKSPACE1_START +
       symbols.CP_ADAPTER_WORKSPACE2_END - symbols.CP_ADAPTER_WORKSPACE2_START;
@@ -76,40 +85,53 @@ async function build() {
       bytes: binary.bytes,
       report: {
         format: "atom-cpm22-census",
-        version: 2,
+        version: 3,
         nativeCoreHead: "23afbf6cffe0311059e2af7b8db31ee8559bc121",
         loadAddress: 0x100,
         entryAddress: symbols.CP_ENTRY,
         returnAddress: symbols.CP_RETURN,
+        inputFcbAddress: symbols.CP_INPUT_FCB,
+        sourceCacheAddress: symbols.CP_SOURCE_CACHE,
+        sourceCacheKeyAddress: symbols.CP_SOURCE_CACHE_KEY,
+        sourceReadAddress: symbols.CP_SOURCE_READ_BYTE,
+        sourceCacheMissAddress: symbols.CP_SOURCE_CACHE_MISS,
         residentEnd: symbols.CP_RESIDENT_END,
         residentBytes: binary.bytes.length,
         nativeCoreResidentBytes: 12396,
         relocationHeaderBytes: 16,
         replacedHostStubBytes: 8,
-        adapterResidentBytes: binary.bytes.length - 16 - (12396 - 8),
+        replacedSourceFallbackBytes: 5,
+        adapterResidentBytes: binary.bytes.length - 16 - (12396 - 8 - 5),
         adapterCodeBytes,
         adapterImmutableBytes,
         adapterWorkspaceBytes,
         outputAdapterCodeBytes,
         commandTailCodeBytes,
-        sourceBytes: 0x1000,
+        sourceAdapterCodeBytes,
+        sourceCapacityBytes: 0xffff,
+        sourceCacheBytes: 0x80,
         symbolBytes: 0x3000,
         pendingBytes: 0x1000,
         outputBytes: 0x4780,
-        sourceProbeBytes: 0x80,
         stackBytes: 0x0c00,
         representativeGeneratedBytes: 34,
-        representativeInstructions: 70469,
-        representativeTStates: 1103057,
-        representativeCommandInstructions: 115550,
-        representativeCommandTStates: 1799321,
+        representativeInstructions: 78098,
+        representativeTStates: 1166365,
+        representativeCommandInstructions: 123179,
+        representativeCommandTStates: 1862629,
         representativeStackHighWaterBytes: 32,
         representativeBdosCalls: 29,
-        namedRepresentativeInstructions: 72800,
-        namedRepresentativeTStates: 1123607,
-        namedRepresentativeCommandInstructions: 120887,
-        namedRepresentativeCommandTStates: 1845051,
+        namedRepresentativeInstructions: 79420,
+        namedRepresentativeTStates: 1178809,
+        namedRepresentativeCommandInstructions: 127507,
+        namedRepresentativeCommandTStates: 1900253,
         namedRepresentativeBdosCalls: 27,
+        largeRepresentativeSourceBytes: 16535,
+        largeRepresentativeInstructions: 1856634,
+        largeRepresentativeTStates: 18501010,
+        largeRepresentativeCommandInstructions: 1904881,
+        largeRepresentativeCommandTStates: 19223791,
+        largeRepresentativeBdosCalls: 284,
         sha256: createHash("sha256").update(binary.bytes).digest("hex"),
       },
     };

@@ -24,11 +24,12 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
   assert.equal(0xe400 - result.atomMinimumSp, result.census.representativeStackHighWaterBytes);
   assert.equal(result.atomBdosCalls.length, result.census.representativeBdosCalls);
   assert.deepEqual(result.atomBdosCalls, [
-    15, 15, 15, 26, 20, 26, 20, 16,
+    15, 15, 15, 26, 20, 20, 33, 33,
     19, 22, 26, 21, 16,
     19, 23, 23, 19, 9,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9,
   ]);
+  assert.deepEqual(result.atomRandomReadRecords, [0, 1]);
   assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
 });
 
@@ -187,15 +188,108 @@ test("a missing selected source names the failed file and publishes nothing", as
   assert.equal(result.outputFile, undefined);
 });
 
-test("the CP/M source buffer accepts 4096 bytes and rejects the next byte", async () => {
-  const prefix = Buffer.from("ORG $100\r\nRET\r\n;", "ascii");
-  const exact = Buffer.concat([prefix, Buffer.alloc(4096 - prefix.length, 0x78)]);
+test("the CP/M source reader accepts 65,535 bytes and rejects the next byte", async () => {
+  const exact = Buffer.alloc(65_535, 0x78);
+  exact[0] = 0x3b;
   const accepted = await runCpm22Atom(exact);
   assert.match(accepted.atomTranscript, /OUTPUT\.COM written/);
+  assert.equal(accepted.atomRandomReadRecords.length, 512);
+  assert.deepEqual(accepted.atomRandomReadRecords.slice(-2), [510, 511]);
   const prior = Uint8Array.from([0xc9]);
   const rejected = await runCpm22Atom(Buffer.concat([exact, Buffer.from("x")]), prior);
   assert.match(rejected.atomTranscript, /INPUT\.ASM read failed/);
   assert.deepEqual(rejected.outputFile?.bytes.slice(0, prior.length), prior);
+});
+
+test("the source reader preserves exact CP/M record and text EOF boundaries", async () => {
+  for (const length of [127, 128, 129]) {
+    const source = Buffer.alloc(length, 0x78);
+    source[0] = 0x3b;
+    const result = await runCpm22Atom(source);
+    assert.match(result.atomTranscript, /OUTPUT\.COM written/, `${length} bytes`);
+  }
+  const terminated = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nRET\r\n\x1aNOT_AN_INSTRUCTION\r\n", "ascii"),
+  );
+  assert.match(terminated.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(terminated.outputFile?.bytes.slice(0, 1), Uint8Array.from([0xc9]));
+});
+
+test("the source reader accepts sources below, at, and above the retired 4 KiB limit", async () => {
+  for (const length of [4095, 4096, 4097]) {
+    const source = Buffer.alloc(length, 0x78);
+    source[0] = 0x3b;
+    const result = await runCpm22Atom(source);
+    assert.match(result.atomTranscript, /OUTPUT\.COM written/, `${length} bytes`);
+  }
+});
+
+test("the random-record cache supports forward lookahead and backward token rereads", async () => {
+  const lookahead = await runCpm22Atom(
+    Buffer.from(`ORG $100\r\nDB LOW${" ".repeat(300)}($1234)\r\n`, "ascii"),
+  );
+  assert.deepEqual(lookahead.outputFile?.bytes.slice(0, 1), Uint8Array.from([0x34]));
+  assert.deepEqual(lookahead.atomRandomReadRecords, [0, 1, 2, 0, 1, 2]);
+  assert.deepEqual(
+    lookahead.atomSourceCacheMisses.map(({ key }) => key),
+    [0, 0x80, 0x100, 0, 0x80, 0x100],
+  );
+
+  const string = await runCpm22Atom(
+    Buffer.from(`ORG $100\r\nDB "${"A".repeat(200)}"\r\n`, "ascii"),
+  );
+  assert.deepEqual(string.outputFile?.bytes.slice(0, 200), new Uint8Array(200).fill(0x41));
+  assert.deepEqual(string.atomRandomReadRecords, [0, 1, 0, 1, 0, 1]);
+});
+
+test("a malformed source beyond 4 KiB retains its exact offset and rolls back", async () => {
+  const prefix = Buffer.from(`;${"x".repeat(4998)}\r\n`, "ascii");
+  assert.equal(prefix.length, 0x1389);
+  const prior = Uint8Array.from([0xc9]);
+  const result = await runCpm22Atom(
+    Buffer.concat([prefix, Buffer.from("NOT_AN_INSTRUCTION\r\n", "ascii")]),
+    prior,
+  );
+  assert.match(result.atomTranscript, /Atom error 02 00 1389/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.ok(result.atomMinimumSp >= 0xd800);
+});
+
+test("a 16 KiB source assembles through selected files with a measured cache walk", async () => {
+  const padding = Buffer.from(`;${"x".repeat(16_381)}\r\n`, "ascii");
+  const source = Buffer.concat([padding, representativeSource]);
+  assert.equal(source.length, 16_535);
+  const expected = await expectedRepresentativeProgram();
+  const result = await runCpm22Atom(source, undefined, {
+    sourceName: "LARGE.ASM",
+    outputName: "LARGE.COM",
+  });
+  assert.deepEqual(result.outputFile?.bytes.slice(0, expected.bytes.length), expected.bytes);
+  assert.equal(result.atomInstructions, result.census.largeRepresentativeInstructions);
+  assert.equal(result.atomCycles, result.census.largeRepresentativeTStates);
+  assert.equal(result.atomBdosCalls.length, result.census.largeRepresentativeBdosCalls);
+  assert.equal(result.atomRandomReadRecords.length, 130);
+  assert.deepEqual(result.atomRandomReadRecords.slice(-4), [126, 127, 128, 129]);
+  assert.equal(0xe400 - result.atomMinimumSp, 32);
+});
+
+test("two Atom commands in one CP/M session reset their source and output state", async () => {
+  const second = Buffer.from("ORG $100\r\nLD A,42\r\nRET\r\n", "ascii");
+  const result = await runCpm22Atom(representativeSource, undefined, {
+    sourceName: "FIRST.ASM",
+    outputName: "FIRST.COM",
+    files: [["SECOND.ASM", second]],
+  });
+  assert.match(result.atomTranscript, /FIRST\.COM written/);
+  assert.equal(
+    result.runCommand("ATOM SECOND.ASM SECOND.COM"),
+    "ATOM SECOND.ASM SECOND.COM\r\r\n\r\nSECOND.COM written\r\n\r\nA>",
+  );
+  assert.deepEqual(
+    result.readCurrentFile("SECOND.COM")?.bytes.slice(0, 3),
+    Uint8Array.from([0x3e, 42, 0xc9]),
+  );
 });
 
 test("the CP/M target accepts 18,304 bytes and rejects the next byte atomically", async () => {

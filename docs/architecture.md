@@ -20,9 +20,11 @@ host renderers and atomic publisher
 ```
 
 Dependency discovery followed by assembly is a two-stage build, not a
-two-pass assembler. The native core reads each prepared token once and never
-revisits the source. Forward references are held in a resident pending list;
-their final bytes are emitted as PATCH records when the symbol becomes known.
+two-pass assembler. The native parser advances through the prepared source in
+one semantic pass. Token lookahead and token emission may reread bytes through
+the source service; there is no second symbol-resolution pass. Forward
+references are held in a resident pending list, and their final bytes are
+emitted as PATCH records when the symbol becomes known.
 
 ## Responsibility boundary
 
@@ -102,19 +104,20 @@ does not select a partial artifact set.
 ## CP/M execution
 
 The native CP/M build relocates the same Atom core to `$0110` behind a
-sixteen-byte transient-program header. Its adapter loads one file through BDOS,
-supplies the ordinary memory-backed source service, retains the flat image in
-TPA for direct patching, and writes a temporary COM only after native commit.
-No Debug80 hook intercepts BDOS calls.
+sixteen-byte transient-program header. Its adapter scans one file through BDOS
+to establish the logical length, then supplies `AtomSourceReadByte` through a
+128-byte random-record cache. It retains the flat image in TPA for direct
+patching and writes a temporary COM only after native commit. No Debug80 hook
+intercepts BDOS calls.
 
 With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
 `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive 8.3 names. The
 adapter validates the command tail and reserves per-output temporary and backup
 names before loading the source. It does not perform host dependency resolution
-inside CP/M. Its 4 KiB source limit and 18,304-byte output limit are target-map
-choices rather than changes to the native Atom ABI. See [Native Atom on CP/M
-2.2](cpm22.md) for the measured map and comparison with random-record and NOBJ
-output.
+inside CP/M. Its 65,535-byte source limit follows the native one-part ABI. The
+output limit is 18,304 bytes under the target map. The [Native Atom on CP/M
+2.2 report](cpm22.md) contains the measured map and comparison with
+random-record and NOBJ output.
 
 ## Self-hosting
 
