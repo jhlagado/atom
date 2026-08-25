@@ -12,8 +12,9 @@ supports global and `.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
 The native core assembles its own checked source byte for byte and fits in one
 16 KiB bank.
 
-The Mac command is usable now. The TEC-1 filesystem, source-service, and output
-adapter is designed but not yet implemented.
+The Mac command is usable now. A first native CP/M 2.2 vertical slice also runs
+inside Debug80 through real BDOS calls. The TEC-1 filesystem, source-service,
+and output adapter is designed but not yet implemented.
 
 ## Install and assemble
 
@@ -94,8 +95,8 @@ The measured native account is:
 | Margin below 16 KiB | 3,988 |
 
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
-[TEC-1 deployment design](docs/tec-1-deployment.md) separate the measured Mac
-configuration from the remaining hardware-adapter work.
+[CP/M adapter report](docs/cpm22.md) separate the measured host and native CP/M
+configurations from the remaining [TEC-1 adapter work](docs/tec-1-deployment.md).
 
 ## Correctness
 
@@ -134,6 +135,7 @@ The detailed engineering record remains available in the phase reports:
 - [alignment and byte functions](docs/phase-10-report.md)
 - [host-backed binary inclusion](docs/phase-11-report.md)
 - [native compression audit](docs/native-compression-audit.md)
+- [native CP/M 2.2 vertical slice](docs/cpm22.md)
 
 ## License
 

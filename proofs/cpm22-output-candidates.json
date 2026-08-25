@@ -1,0 +1,28 @@
+{
+  "format": "atom-cpm22-output-candidate-measurement",
+  "version": 1,
+  "boundary": "output-specific Z80 kernel; excludes common source loading, diagnostics, FCB names, rollback rename, and user interface",
+  "inTpaComplete": {
+    "classification": "Measured complete retained adapter",
+    "outputCodeBytes": 233,
+    "outputImageWorkspaceBytes": 18304
+  },
+  "randomRecord": {
+    "classification": "Measured lower-bound kernel",
+    "codeBytes": 142,
+    "workspaceBytes": 137,
+    "completeResidentHypothesisBytes": [
+      850,
+      1050
+    ]
+  },
+  "nobjMaterializer": {
+    "classification": "Measured lower-bound kernel",
+    "codeBytes": 165,
+    "workspaceBytes": 135,
+    "completeResidentHypothesisBytes": [
+      1250,
+      1800
+    ]
+  }
+}

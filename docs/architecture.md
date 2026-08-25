@@ -99,6 +99,20 @@ The publisher writes a content-addressed immutable generation, synchronizes it,
 then changes `current` with one atomic rename. A failed build or publication
 does not select a partial artifact set.
 
+## CP/M execution
+
+The native CP/M build relocates the same Atom core to `$0110` behind a
+sixteen-byte transient-program header. Its adapter loads one file through BDOS,
+supplies the ordinary memory-backed source service, retains the flat image in
+TPA for direct patching, and writes a temporary COM only after native commit.
+No Debug80 hook intercepts BDOS calls.
+
+This first profile fixes `INPUT.ASM` and `OUTPUT.COM` and does not perform host
+dependency resolution inside CP/M. Its 4 KiB source limit and 18,304-byte output
+limit are target-map choices rather than changes to the native Atom ABI. See
+[Native Atom on CP/M 2.2](cpm22.md) for the measured map and comparison with
+random-record and NOBJ output.
+
 ## Self-hosting
 
 The authoritative Atom-syntax representation is checked under `native/`.

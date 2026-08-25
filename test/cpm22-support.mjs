@@ -1,0 +1,149 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  installCpm22File,
+  readCpm22File,
+} from "@jhlagado/debug80-runtime/platforms/cpm22/filesystem";
+import { createCpm22PlatformRuntime } from "@jhlagado/debug80-runtime/platforms/cpm22/runtime";
+import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
+
+import {
+  assembleResolvedAtomProject,
+  materializeAtomGeneration,
+} from "../src/host/index.mjs";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = resolve(here, "..");
+const debug80Root = resolve(repositoryRoot, "..", "debug80");
+const cpmRoot = join(debug80Root, "apps", "debug80-vscode", "roms", "cpm22");
+
+export const representativeSource = Buffer.from([
+  "ORG $100",
+  "LD C,9",
+  "LD DE,MESSAGE",
+  "CALL 5",
+  "RET",
+  "MESSAGE:",
+  "DB 72,101,108,108,111,32,102,114,111,109,32,110,97,116,105,118,101,32,65,116,111,109,13,10,36",
+  "",
+].join("\r\n"), "ascii");
+
+function projectFor(bytes) {
+  return Object.freeze({
+    parts: Object.freeze([Object.freeze({
+      ordinal: 0,
+      bank: 0,
+      originalBytes: Uint8Array.from(bytes),
+      compilerBytes: Uint8Array.from(bytes),
+      logicalIdentity: "INPUT.ASM",
+      diagnosticIdentity: "INPUT.ASM",
+      physicalIdentity: "proof:INPUT.ASM",
+      binaryIncludes: Object.freeze([]),
+    })]),
+  });
+}
+
+export async function runCpm22Atom(source = representativeSource, priorOutput) {
+  const [bootstrapBytes, baseDiskBytes, atomBytes, census] = await Promise.all([
+    readFile(join(cpmRoot, "bootstrap.bin")),
+    readFile(join(cpmRoot, "cpm22.img")),
+    readFile(join(repositoryRoot, "assets", "atom-cpm22.com")),
+    readFile(join(repositoryRoot, "proofs", "cpm22-census.json"), "utf8").then(JSON.parse),
+  ]);
+  let diskImage = installCpm22File(new Uint8Array(baseDiskBytes), "ATOM.COM", atomBytes);
+  diskImage = installCpm22File(diskImage, "INPUT.ASM", source);
+  if (priorOutput !== undefined) {
+    diskImage = installCpm22File(diskImage, "OUTPUT.COM", priorOutput);
+  }
+  const memory = new Uint8Array(0x10000);
+  memory.set(bootstrapBytes);
+  const platform = createCpm22PlatformRuntime({ diskImage });
+  const output = [];
+  const runtime = createZ80Runtime(
+    { memory, startAddress: 0 },
+    0,
+    {
+      read: platform.ioHandlers.read,
+      write(port, value) {
+        if ((port & 0xff) === 0) output.push(value & 0xff);
+        platform.ioHandlers.write(port, value);
+      },
+    },
+  );
+  let instructions = 0;
+  let cycles = 0;
+  let minimumSp = 0xffff;
+  const bdosCalls = [];
+  let measureAtom = false;
+  const transcript = (from = 0) => Buffer.from(output.slice(from)).toString("latin1");
+  const stepUntil = (predicate, description, maximum = 10_000_000) => {
+    for (let count = 0; count < maximum; count += 1) {
+      if (measureAtom) {
+        minimumSp = Math.min(minimumSp, runtime.getRegisters().sp);
+        if (runtime.getPC() === 5) bdosCalls.push(runtime.getRegisters().c);
+      }
+      const result = runtime.step();
+      instructions += 1;
+      cycles += result.cycles ?? 0;
+      if (predicate()) return;
+    }
+    throw new Error(`timed out waiting for ${description}: ${JSON.stringify(transcript())}`);
+  };
+  stepUntil(() => transcript().endsWith("A>"), "cold boot");
+  const beforeAtomInstructions = instructions;
+  const beforeAtomCycles = cycles;
+  const atomOutputStart = output.length;
+  platform.terminal.enqueueInput(Buffer.from("ATOM\r", "ascii"));
+  stepUntil(() => runtime.getPC() === census.entryAddress, "Atom entry");
+  const entrySp = runtime.getRegisters().sp;
+  const programInstructions = instructions;
+  const programCycles = cycles;
+  measureAtom = true;
+  stepUntil(() => runtime.getPC() === census.returnAddress, "Atom return tail");
+  stepUntil(() => runtime.getPC() !== census.returnAddress, "Atom stack restoration");
+  stepUntil(() => true, "Atom return instruction");
+  const returnSp = runtime.getRegisters().sp;
+  measureAtom = false;
+  const atomInstructions = instructions - programInstructions;
+  const atomCycles = cycles - programCycles;
+  const commandInstructions = instructions - beforeAtomInstructions;
+  const commandCycles = cycles - beforeAtomCycles;
+  stepUntil(() => transcript(atomOutputStart).endsWith("\r\nA>"), "Atom completion prompt");
+  const finalDisk = platform.disk.exportImage();
+  const outputFile = readCpm22File(finalDisk, "OUTPUT.COM");
+  return {
+    atomBytes,
+    census,
+    atomTranscript: transcript(atomOutputStart),
+    atomInstructions,
+    atomCycles,
+    commandInstructions,
+    commandCycles,
+    atomMinimumSp: minimumSp,
+    atomBdosCalls: Object.freeze(bdosCalls.slice()),
+    entrySp,
+    returnSp,
+    finalDisk,
+    outputFile,
+    runtime,
+    platform,
+    transcript,
+    runOutput() {
+      const start = output.length;
+      platform.terminal.enqueueInput(Buffer.from("OUTPUT\r", "ascii"));
+      stepUntil(() => transcript(start).endsWith("\r\nA>"), "OUTPUT.COM completion");
+      return transcript(start);
+    },
+  };
+}
+
+export async function expectedRepresentativeProgram() {
+  const assembly = await assembleResolvedAtomProject(projectFor(representativeSource), {
+    target: { start: 0x100, capacity: 0x4780 },
+  });
+  assert.equal(assembly.native.carry, 0);
+  return materializeAtomGeneration(assembly.generation);
+}

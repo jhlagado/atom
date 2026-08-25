@@ -113,3 +113,25 @@ density and implement the source service over its storage hardware. The linked
 fallback still supports an ordinary memory interval for small standalone
 harnesses. The deployed capacity is therefore a target configuration, not a
 claim inherited from the Mac runner.
+
+## CP/M 2.2 vertical-slice capacities
+
+The native CP/M transient has one fixed source and output profile:
+
+| Item | Classification | Bytes |
+| --- | --- | ---: |
+| Linked COM | Measured | 13,199 |
+| CP/M-specific resident increment | Measured | 795 |
+| Source part | Measured boundary | 4,096 |
+| Symbols | Measured boundary | 12,288 |
+| Pending references | Measured boundary | 4,096 |
+| Output image | Measured boundary | 18,304 |
+| Source overflow probe | Measured | 128 |
+| Stack allocation | Measured map | 3,072 |
+| Stack high-water mark in the representative proof | Measured | 32 |
+
+The source filename is `INPUT.ASM`, the output filename is `OUTPUT.COM`, and
+the adapter accepts one source part. CP/M text EOF is `$1A`. The output starts
+at `$0100`, so the 18,304-byte capacity ends at `$487F`. The
+[CP/M report](cpm22.md) records the output-path comparison, rollback rules, and
+execution account.
