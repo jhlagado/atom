@@ -116,15 +116,22 @@ claim inherited from the Mac runner.
 
 ## CP/M 2.2 vertical-slice capacities
 
-The native CP/M transient has one source and output profile with selectable
-current-drive filenames:
+The native CP/M transient has single-file and source-plan input modes with one
+flat output profile:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Linked COM | Measured | 13,681 |
-| CP/M-specific resident increment | Measured | 1,282 |
-| Source part | Measured boundary | 65,535 |
+| Linked COM | Measured | 14,133 |
+| Free margin below the `$4000` source cache | Measured | 1,995 |
+| CP/M-specific resident increment | Measured | 1,734 |
+| Source parts | Measured boundary | 255 |
+| One source part | Measured boundary | 65,535 |
+| Maximum described source | Derived boundary | 16,711,425 |
 | Source record cache | Measured execution storage | 128 |
+| Source-plan cache | Measured execution storage | 128 |
+| Complete source descriptor array | Measured execution storage | 1,275 |
+| Source-plan FCB and state | Measured execution storage | 40 |
+| Complete source execution storage | Measured | 1,571 |
 | Symbols | Measured boundary | 12,288 |
 | Pending references | Measured boundary | 4,096 |
 | Output image | Measured boundary | 18,304 |
@@ -133,9 +140,11 @@ current-drive filenames:
 
 With no arguments, the source filename is `INPUT.ASM` and the output filename
 is `OUTPUT.COM`. `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive
-8.3 names. The adapter accepts one source part, and CP/M text EOF is `$1A`.
-It scans the file once and reads it through a single random-record cache during
-assembly. The output starts at `$0100`, so the 18,304-byte capacity ends at
-`$487F`. The
+8.3 names. Adding a trailing `@` treats the source as a one-name-per-line plan.
+The plan accepts 1–255 ordered current-drive files; each part retains the exact
+65,535-byte boundary. CP/M text EOF is `$1A`. The adapter preflights every part
+and reads the selected part through one random-record cache during assembly.
+The practical combined-source limit also depends on mounted disk capacity. The
+output starts at `$0100`, so the 18,304-byte capacity ends at `$487F`. The
 [CP/M report](cpm22.md) records the output-path comparison, rollback rules, and
 execution account.

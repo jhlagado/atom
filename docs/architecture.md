@@ -104,20 +104,27 @@ does not select a partial artifact set.
 ## CP/M execution
 
 The native CP/M build relocates the same Atom core to `$0110` behind a
-sixteen-byte transient-program header. Its adapter scans one file through BDOS
-to establish the logical length, then supplies `AtomSourceReadByte` through a
-128-byte random-record cache. It retains the flat image in TPA for direct
-patching and writes a temporary COM only after native commit. No Debug80 hook
-intercepts BDOS calls.
+sixteen-byte transient-program header. Its adapter scans source files through
+BDOS to establish their logical lengths, then supplies `AtomSourceReadByte`
+through a 128-byte random-record cache. It retains the flat image in TPA for
+direct patching and writes a temporary COM only after native commit. No
+Debug80 hook intercepts BDOS calls.
 
 With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
 `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive 8.3 names. The
-adapter validates the command tail and reserves per-output temporary and backup
-names before loading the source. It does not perform host dependency resolution
-inside CP/M. Its 65,535-byte source limit follows the native one-part ABI. The
-output limit is 18,304 bytes under the target map. The [Native Atom on CP/M
-2.2 report](cpm22.md) contains the measured map and comparison with
-random-record and NOBJ output.
+same command followed by `@` treats `SOURCE` as a plain source plan containing
+one CP/M 8.3 name per line. The adapter validates the command tail, reserves
+the output's temporary and backup names, and preflights every listed source
+before native assembly begins. It derives the ordinary five-byte source
+descriptors and reparses the plan as the native driver advances through up to
+255 parts. Each part retains the 65,535-byte ABI boundary and exact diagnostic
+ordinal and offset.
+
+The CP/M plan contains an order, not a dependency graph. It has no SP1 header,
+path hierarchy, bank field, preprocessing, or host codec. The output limit
+remains 18,304 bytes under the target map. The [Native Atom on CP/M 2.2
+report](cpm22.md) contains the measured map, representation comparison, and
+output-path comparison.
 
 ## Self-hosting
 

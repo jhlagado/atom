@@ -31,18 +31,18 @@ export const representativeSource = Buffer.from([
   "",
 ].join("\r\n"), "ascii");
 
-function projectFor(bytes) {
+function projectForParts(parts) {
   return Object.freeze({
-    parts: Object.freeze([Object.freeze({
-      ordinal: 0,
+    parts: Object.freeze(parts.map((bytes, ordinal) => Object.freeze({
+      ordinal,
       bank: 0,
       originalBytes: Uint8Array.from(bytes),
       compilerBytes: Uint8Array.from(bytes),
-      logicalIdentity: "INPUT.ASM",
-      diagnosticIdentity: "INPUT.ASM",
-      physicalIdentity: "proof:INPUT.ASM",
+      logicalIdentity: `PART${ordinal}.ASM`,
+      diagnosticIdentity: `PART${ordinal}.ASM`,
+      physicalIdentity: `proof:PART${ordinal}.ASM`,
       binaryIncludes: Object.freeze([]),
-    })]),
+    }))),
   });
 }
 
@@ -90,6 +90,8 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   let minimumSp = 0xffff;
   const bdosCalls = [];
   const randomReadRecords = [];
+  let planSequentialReads = 0;
+  let sourceSequentialReads = 0;
   const sourceCacheMisses = [];
   let sourceReadCount = 0;
   let lastSourceOffset;
@@ -111,8 +113,12 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
           }));
         }
         if (runtime.getPC() === 5) {
-          const call = runtime.getRegisters().c;
+          const registers = runtime.getRegisters();
+          const call = registers.c;
           bdosCalls.push(call);
+          const fcb = (registers.d << 8) | registers.e;
+          if (call === 20 && fcb === census.planFcbAddress) planSequentialReads += 1;
+          if (call === 20 && fcb === census.inputFcbAddress) sourceSequentialReads += 1;
           if (call === 33) {
             const fcb = census.inputFcbAddress;
             randomReadRecords.push(
@@ -131,6 +137,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     throw new Error(`timed out waiting for ${description}: ${JSON.stringify(transcript())}`);
   };
   stepUntil(() => transcript().endsWith("A>"), "cold boot");
+  options.initializeMemory?.(runtimeMemory);
   const beforeAtomInstructions = instructions;
   const beforeAtomCycles = cycles;
   const atomOutputStart = output.length;
@@ -163,6 +170,8 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     atomMinimumSp: minimumSp,
     atomBdosCalls: Object.freeze(bdosCalls.slice()),
     atomRandomReadRecords: Object.freeze(randomReadRecords.slice()),
+    atomPlanSequentialReads: planSequentialReads,
+    atomSourceSequentialReads: sourceSequentialReads,
     atomSourceCacheMisses: Object.freeze(sourceCacheMisses.slice()),
     atomSourceReads: sourceReadCount,
     entrySp,
@@ -193,7 +202,11 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
 }
 
 export async function expectedRepresentativeProgram() {
-  const assembly = await assembleResolvedAtomProject(projectFor(representativeSource), {
+  return expectedMultipartProgram([representativeSource]);
+}
+
+export async function expectedMultipartProgram(parts) {
+  const assembly = await assembleResolvedAtomProject(projectForParts(parts), {
     target: { start: 0x100, capacity: 0x4780 },
   });
   assert.equal(assembly.native.carry, 0);
