@@ -23,9 +23,9 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomSymbolArenaProofEnd: 0x9042,
   AtomPendingArenaBefore: 0x9100,
   AtomPendingArena: 0x9101,
-  AtomPendingArenaLimit: 0x9119,
-  AtomPendingArenaAfter: 0x9119,
-  AtomPendingArenaProofEnd: 0x911a,
+  AtomPendingArenaLimit: 0x911d,
+  AtomPendingArenaAfter: 0x911d,
+  AtomPendingArenaProofEnd: 0x911e,
 });
 
 const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
@@ -162,7 +162,7 @@ export async function createSymbolHarness() {
     statistics,
     restart,
     execute,
-    reset({ symbolBytes = 64, pendingBytes = 24 } = {}) {
+    reset({ symbolBytes = 64, pendingBytes = 28 } = {}) {
       restart();
       let result = execute("AtomSymbolReset", (_target, names, cpu) => {
         cpu.h = names.AtomSymbolArena >>> 8;
@@ -234,8 +234,9 @@ export async function createSymbolHarness() {
     advanceScope() {
       return execute("AtomSymbolAdvanceScope");
     },
-    pendingAdd(symbol, patch, kind, aux) {
+    pendingAdd(symbol, patch, kind, aux, part = 0) {
       return execute("AtomPendingAdd", (_target, _names, cpu) => {
+        cpu.a = part;
         cpu.ix = symbol;
         cpu.d = patch >>> 8;
         cpu.e = patch & 0xff;

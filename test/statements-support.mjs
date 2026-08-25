@@ -37,9 +37,9 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomStatementProofPendingStart: 0x9100,
   AtomStatementPendingBefore: 0x9100,
   AtomStatementPendingArena: 0x9101,
-  AtomStatementPendingLimit: 0x9131,
-  AtomStatementPendingAfter: 0x9131,
-  AtomStatementProofPendingEnd: 0x9132,
+  AtomStatementPendingLimit: 0x9139,
+  AtomStatementPendingAfter: 0x9139,
+  AtomStatementProofPendingEnd: 0x913a,
   AtomStatementProofLogStart: 0x9200,
   AtomStatementLogBefore: 0x9200,
   AtomStatementProofLog: 0x9201,
@@ -238,7 +238,7 @@ export async function createStatementsHarness() {
     symbols,
     memory,
     statistics,
-    reset({ symbolBytes = 128, pendingBytes = 48 } = {}) {
+    reset({ symbolBytes = 128, pendingBytes = 56 } = {}) {
       restart();
       let result = execute("AtomSymbolReset", (_memory, names, cpu) => {
         cpu.h = names.AtomStatementSymbolArena >>> 8;
@@ -257,7 +257,7 @@ export async function createStatementsHarness() {
       });
       assert.equal(result.carry, 0);
     },
-    resetAssembly({ symbolBytes = 128, pendingBytes = 48, address = 0x4000, capacity = 0x100 } = {}) {
+    resetAssembly({ symbolBytes = 128, pendingBytes = 56, address = 0x4000, capacity = 0x100 } = {}) {
       this.reset({ symbolBytes, pendingBytes });
       resetSink();
       const result = execute("AtomOutputReset", (_memory, _names, cpu) => {
@@ -318,8 +318,9 @@ export async function createStatementsHarness() {
     advanceScope() {
       return execute("AtomSymbolAdvanceScope");
     },
-    pendingAdd(symbol, patch, kind = 1, aux = 0) {
+    pendingAdd(symbol, patch, kind = 1, aux = 0, part = 0) {
       return execute("AtomPendingAdd", (_memory, _names, cpu) => {
+        cpu.a = part;
         cpu.ix = symbol;
         cpu.d = patch >>> 8;
         cpu.e = patch & 0xff;

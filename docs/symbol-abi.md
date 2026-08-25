@@ -48,7 +48,7 @@ constants do not change private-label scope.
 ## Pending records
 
 `AtomPendingReset` takes a separate caller-owned half-open arena in `HL..DE`.
-Each six-byte entry contains:
+Each seven-byte entry contains:
 
 | Offset | Field |
 | ---: | --- |
@@ -56,14 +56,15 @@ Each six-byte entry contains:
 | 2–3 | Patch address |
 | 4 | Patch kind and optional diagnostic anchor |
 | 5 | Auxiliary byte |
+| 6 | Source-part ordinal |
 
 In the complete driver build, bits 0–2 of byte 4 retain patch kinds 1–5. One
-pending record for each undefined symbol sets bit 7 as its diagnostic anchor;
-bits 3–6 contain the zero-based source-part ordinal. The undefined symbol's
+pending record for each undefined symbol sets bit 7 as its diagnostic anchor.
+Byte 6 contains the complete source-part ordinal. The undefined symbol's
 otherwise-unused value word contains that reference's source offset. Definition
 overwrites the word with the symbol value, and successful patch resolution
 removes every pending record for the symbol. This encoding retains the settled
-record sizes while supporting exact diagnostics across 16 source parts.
+record layout supports exact diagnostics across the full byte-valued part domain.
 
 `AtomPendingAdd` accepts only an undefined symbol. `AtomPendingTake` finds one
 entry for a newly defined symbol, returns its patch metadata, and fills the
@@ -78,7 +79,8 @@ submits final patch bytes through the Nucleus sink boundary, then calls
 this entry and retain their measured bytes exactly.
 
 `AtomPendingPeek` returns the complete byte 4 in B. Driver-enabled output masks
-it with `AtomPendingKindMask` before dispatching the patch rule.
+it with `AtomPendingKindMask` before dispatching the patch rule. Code scanning
+pending records directly reads the part ordinal at `AtomPendingPartOffset`.
 
 The Phase 2g build exposes `AtomPendingCheckCapacity`. Data directives use it
 before inserting a missing symbol or emitting a placeholder, so a one-record

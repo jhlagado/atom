@@ -25,17 +25,17 @@
   },
   "native": {
     "growthBytes": 0,
-    "codeAndTables": 11648,
-    "fixedWorkspace": 453,
-    "linkedResidentExtent": 12101,
-    "codeMarginBelow16KiB": 4736,
-    "physicalMarginBelow16KiB": 4283,
+    "codeAndTables": 11682,
+    "fixedWorkspace": 714,
+    "linkedResidentExtent": 12396,
+    "codeMarginBelow16KiB": 4702,
+    "physicalMarginBelow16KiB": 3988,
     "strictRegisterContracts": true
   },
   "selfHost": {
     "sourceParts": 5,
-    "sourceBytes": 101177,
-    "initializedBytes": 11750,
+    "sourceBytes": 101492,
+    "initializedBytes": 11789,
     "pinnedAzmCore": true,
     "translatedAzmSource": true,
     "secondAtomGeneration": true

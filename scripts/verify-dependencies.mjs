@@ -5,8 +5,8 @@ import path from "node:path";
 const repository = path.resolve("../debug80");
 const expected = {
   branch: "main",
-  azmTree: "7889245c380334768f62805e73c13e979aa9f8c8",
-  runtimeTree: "a921abc89dcbd88211dd008e705b69d646cfb9bb",
+  azmTree: "c75c76e2f0de66592917679de0974bb64fcbdd55",
+  runtimeTree: "7372ed452ce4acc20eeaf44d7af4351e3780c84d",
 };
 
 function git(...args) {

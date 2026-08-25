@@ -82,17 +82,18 @@ claiming Nucleus-specific runtime-map fields.
 The npm package contains the pinned native core and the Debug80 runtime. AZM is
 used only in development to regenerate the image and to provide the independent
 oracle. The package loader checks the core digest and structural coverage before
-execution. Debug80 marks native code and the source window read-only to Z80
-writes and intercepts six fail-closed sink entry points.
+execution. Debug80 marks native code read-only and intercepts the source-read
+entry plus six fail-closed sink entry points.
 
 For `INCBIN`, the bridge replaces only IMAGE bytes attributed to the lowered
 source line. It checks that the native byte count and snapshotted binary length
 match before commit. Any mismatch aborts the tentative generation.
 
-Small projects share one 24 KiB source window. Larger projects are paged one
-part at a time when the native driver enters `AtomTokenizerReset`; each part
-must still fit the window. The native driver remains unaware of the filesystem
-and sees only ordered memory intervals.
+Prepared source remains in immutable JavaScript snapshots. The tokenizer calls
+`AtomSourceReadByte` with a part ordinal and 16-bit logical offset; the Mac
+runner returns one byte without copying the part into emulated Z80 memory. The
+native driver remains unaware of the filesystem and processes only ordered
+descriptors.
 
 The publisher writes a content-addressed immutable generation, synchronizes it,
 then changes `current` with one atomic rename. A failed build or publication
@@ -106,7 +107,7 @@ in `native/atom-symbols.json`. The proof runs three complete builds: the pinned
 image assembles the `.asm` source, the resulting Atom image assembles it again,
 and the same prepared `.asm` parts are translated for an independent strict-AZM
 build.
-All initialized addresses and all 12,101 resident bytes must agree.
+All initialized addresses and all 12,396 resident bytes must agree.
 
 `npm run build:native-core` starts from `native/atom.asm`. Every subsystem proof
 calls the checked core, and the repository contains no second native

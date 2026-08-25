@@ -62,7 +62,7 @@ tagged result without changing the lower-level functions.
 | `assembleResolvedAtomProject(project, options)` | Run an already prepared project through a pinned or supplied native core |
 | `createMemoryAtomSink()` | Create the default append-only in-memory generation sink |
 | `materializeAtomGeneration(generation, options)` | Produce a new contiguous byte array with IMAGE and PATCH operations applied |
-| `NATIVE_ATOM_LIMITS` | Report native part, page, symbol, pending, and bank limits used by the Mac runner |
+| `NATIVE_ATOM_LIMITS` | Report native part, per-part byte, symbol, pending, and bank limits used by the Mac runner |
 | `ATOM_HOST_SINK_STATUS` | Stable host-adapter status values used by the runner and tests |
 
 `assembleResolvedAtomProject()` accepts a development-only `nativeCore` option
@@ -144,6 +144,7 @@ The complete descriptor and status values are defined in
 | Entry | Contract |
 | --- | --- |
 | `AtomTokenizerReset` | Install one ordinal and half-open source interval |
+| `AtomSourceReadByte` | Read one byte by part ordinal and logical offset |
 | `AtomTokenizerNext` | Return the next token through the fixed nine-byte record |
 
 See [`tokenizer-abi.md`](../../tokenizer-abi.md).
@@ -161,7 +162,7 @@ See [`tokenizer-abi.md`](../../tokenizer-abi.md).
 | `AtomSymbolAdvanceScope` | Validate and evict current private records |
 | `AtomSymbolValidateScope` | Validate the current private scope without eviction |
 | `AtomPendingReset` | Install the caller-owned pending arena |
-| `AtomPendingCheckCapacity` | Preflight one or more six-byte pending records |
+| `AtomPendingCheckCapacity` | Preflight one or more seven-byte pending records |
 | `AtomPendingAdd` | Append one pending record for an undefined symbol |
 | `AtomPendingPeek` | Read one matching pending record without removal |
 | `AtomPendingTake` | Remove one matching record and keep the arena dense |

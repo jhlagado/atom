@@ -2,10 +2,10 @@ import { createDriverHarness } from "./driver-support.mjs";
 
 const h = await createDriverHarness();
 
-h.validate(Array.from({ length: 16 }, () => ""), { label: "AtomDriverValidateDescriptor 16 parts" });
+h.validate(Array.from({ length: 255 }, () => ""), { label: "AtomDriverValidateDescriptor 255 parts" });
 
-const sixteen = Array.from({ length: 16 }, () => "");
-sixteen[15] = [
+const maximum = Array.from({ length: 255 }, () => "");
+maximum[254] = [
   "Low EQU -32768",
   "High EQU 65535",
   "Calc EQU ((2+3)*4)|1",
@@ -14,7 +14,7 @@ sixteen[15] = [
   "LD A,Calc",
   "",
 ].join("\n");
-h.assemble(sixteen, { label: "AtomAssemble 16 parts and six statements" });
+h.assemble(maximum, { label: "AtomAssemble 255 parts and six statements" });
 
 const definitions = Array.from({ length: 32 }, (_, index) => `S${index} EQU ${index}`).join("\n") + "\n";
 h.assemble([definitions], { label: "AtomAssemble 32 definitions" });

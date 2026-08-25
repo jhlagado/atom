@@ -100,8 +100,8 @@ test("the Mac host resolves, masks, and executes one project through native Atom
   assert.equal(result.native.carry, 0);
   assert.equal(result.execution.returnPc, 0xfffe);
   assert.equal(result.execution.finalSp, 0xfeff);
-  assert.equal(result.core.codeBytes, 11_648);
-  assert.equal(result.core.residentExtentBytes, 12_101);
+  assert.equal(result.core.codeBytes, 11_682);
+  assert.equal(result.core.residentExtentBytes, 12_396);
   const proof = JSON.parse(await fs.readFile("proofs/phase-4.json", "utf8"));
   assert.equal(result.execution.instructions, proof.integrationExecution.measuredInstructions);
   assert.equal(result.execution.cycles, proof.integrationExecution.measuredCycles);
@@ -311,11 +311,11 @@ test("the memory sink rejects a second patch to one IMAGE byte", () => {
   assert.equal(sink.abort(), 0);
 });
 
-test("native source-part capacity accepts the exact 24 KiB window and rejects one byte more", async () => {
+test("native source offsets accept 65,535 bytes and reject one byte more", async () => {
   const exact = new Uint8Array(NATIVE_ATOM_LIMITS.sourceBytes).fill(0x20);
   const result = await assembleResolvedAtomProject(resolvedParts([exact]), {
     target: { start: 0, capacity: 0 },
-    maxInstructions: 2_000_000,
+    maxInstructions: 8_000_000,
   });
   assert.equal(result.native.status, 0);
   assert.deepEqual(result.generation.images, []);
@@ -328,42 +328,57 @@ test("native source-part capacity accepts the exact 24 KiB window and rejects on
   );
 });
 
-test("the Mac adapter pages ordered source parts when their total exceeds 24 KiB", async () => {
+test("the Mac adapter streams ordered source parts larger than 24 KiB", async () => {
   const comment = `;${"x".repeat(13_000)}\n`;
   const result = await assembleResolvedAtomProject(resolvedParts([comment, `${comment}NOP\n`]), {
     target: { start: 0x4000, capacity: 0x100 },
   });
-  assert.deepEqual(result.execution.sourcePages, [0, 1]);
+  assert.ok(result.execution.sourceReads > 26_000);
+  assert.equal("sourcePages" in result.execution, false);
   assert.deepEqual(Array.from(materializeAtomGeneration(result.generation).bytes), [0]);
 });
 
-test("the emulated CPU cannot write the source window", async () => {
+test("the host rejects a native source read outside the resolved part", async () => {
   const core = await loadNativeAtomCore();
   const resident = parseIntelHex(core.hexText).memory.slice(0, core.residentExtentBytes);
-  resident.set([0x3e, 0x2a, 0x32, 0x00, 0x80, 0xaf, 0xc9], core.symbols.AtomAssemble);
-  const writingCore = {
+  resident.set([
+    0x3e, 0x00,
+    0x21, 0xff, 0xff,
+    0xcd, core.symbols.AtomSourceReadByte & 0xff, core.symbols.AtomSourceReadByte >>> 8,
+    0xc9,
+  ], core.symbols.AtomAssemble);
+  const readingCore = {
     ...core,
     hexText: writeIntelHex({ base: 0, bytes: resident }),
   };
-  const error = await assemblyError(
+  await assemblyError(
     () => assembleResolvedAtomProject(resolvedParts(["NOP\n"]), {
       target: { start: 0, capacity: 1 },
-      nativeCore: writingCore,
+      nativeCore: readingCore,
     }),
-    "output",
-    "missing-generation",
+    "runtime",
+    "source-read",
   );
-  assert.match(error.message, /without one committed host generation/);
 });
 
-test("native part capacity accepts sixteen and rejects seventeen", async () => {
-  const sixteen = Array.from({ length: 16 }, () => "");
-  const result = await assembleResolvedAtomProject(resolvedParts(sixteen), {
+test("native part capacity accepts 255 and rejects 256", async () => {
+  const maximum = Array.from({ length: 255 }, () => "");
+  maximum[254] = "DB Missing\n";
+  const undefinedError = await assemblyError(
+    () => assembleResolvedAtomProject(resolvedParts(maximum), {
+      target: { start: 0, capacity: 2 },
+    }),
+    "source",
+    "undefined-symbol",
+  );
+  assert.equal(undefinedError.native.part, 254);
+  assert.equal(undefinedError.diagnostic.ordinal, 254);
+  const result = await assembleResolvedAtomProject(resolvedParts(Array.from({ length: 255 }, () => "")), {
     target: { start: 0, capacity: 0 },
   });
   assert.equal(result.native.status, 0);
   await assemblyError(
-    () => assembleResolvedAtomProject(resolvedParts([...sixteen, ""]), { target: { start: 0, capacity: 0 } }),
+    () => assembleResolvedAtomProject(resolvedParts(Array.from({ length: 256 }, () => "")), { target: { start: 0, capacity: 0 } }),
     "configuration",
     "part-capacity",
   );

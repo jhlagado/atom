@@ -17,7 +17,7 @@
       "name": "symbol-code",
       "start": "AtomSymbolCodeStart",
       "end": "AtomSymbolCodeEnd",
-      "exactBytes": 727
+      "exactBytes": 732
     },
     {
       "name": "symbol-workspace",
@@ -29,19 +29,19 @@
       "name": "tokenizer-code",
       "start": "AtomTokenizerCodeStart",
       "end": "AtomTokenizerCodeEnd",
-      "exactBytes": 1346
+      "exactBytes": 1376
     },
     {
       "name": "tokenizer-workspace",
       "start": "AtomTokenizerWorkspaceStart",
       "end": "AtomTokenizerWorkspaceEnd",
-      "exactBytes": 26
+      "exactBytes": 286
     },
     {
       "name": "expression-code",
       "start": "AtomExpressionCodeStart",
       "end": "AtomExpressionCodeEnd",
-      "exactBytes": 1868
+      "exactBytes": 1877
     },
     {
       "name": "expression-workspace",
@@ -59,7 +59,7 @@
       "name": "parser-code",
       "start": "AtomParserCodeStart",
       "end": "AtomParserCodeEnd",
-      "exactBytes": 2061
+      "exactBytes": 2048
     },
     {
       "name": "parser-workspace",
@@ -83,19 +83,19 @@
       "name": "statement-code",
       "start": "AtomStatementCodeStart",
       "end": "AtomStatementCodeEnd",
-      "exactBytes": 1345
+      "exactBytes": 1358
     },
     {
       "name": "statement-workspace",
       "start": "AtomStatementWorkspaceStart",
       "end": "AtomStatementWorkspaceEnd",
-      "exactBytes": 23
+      "exactBytes": 24
     },
     {
       "name": "driver-code",
       "start": "AtomDriverCodeStart",
       "end": "AtomDriverCodeEnd",
-      "exactBytes": 627
+      "exactBytes": 617
     },
     {
       "name": "driver-workspace",
@@ -113,13 +113,19 @@
       "name": "resident-free",
       "start": "AtomHostResidentEnd",
       "end": 16384,
-      "exactBytes": 4283
+      "exactBytes": 3988
     },
     {
-      "name": "host-descriptors",
+      "name": "host-build-descriptor",
       "start": 16384,
+      "end": 16399,
+      "exactBytes": 15
+    },
+    {
+      "name": "host-build-gap",
+      "start": 16399,
       "end": 16640,
-      "exactBytes": 256
+      "exactBytes": 241
     },
     {
       "name": "symbol-arena",
@@ -130,26 +136,26 @@
     {
       "name": "pending-arena",
       "start": 29952,
-      "end": 32512,
-      "exactBytes": 2560
+      "end": 34816,
+      "exactBytes": 4864
     },
     {
-      "name": "arena-source-gap",
-      "start": 32512,
-      "end": 32768,
-      "exactBytes": 256
+      "name": "descriptor-gap",
+      "start": 34816,
+      "end": 36864,
+      "exactBytes": 2048
     },
     {
-      "name": "source-window",
-      "start": 32768,
-      "end": 57344,
-      "exactBytes": 24576
+      "name": "part-descriptors",
+      "start": 36864,
+      "end": 38139,
+      "exactBytes": 1275
     },
     {
-      "name": "upper-free",
-      "start": 57344,
+      "name": "host-free",
+      "start": 38139,
       "end": 65024,
-      "exactBytes": 7680
+      "exactBytes": 26885
     },
     {
       "name": "proof-stack",
@@ -209,7 +215,7 @@
           "AtomHostServiceCodeEnd"
         ]
       ],
-      "exactBytes": 11648
+      "exactBytes": 11682
     },
     {
       "name": "native-fixed-workspace",
@@ -247,13 +253,13 @@
           "AtomDriverWorkspaceEnd"
         ]
       ],
-      "exactBytes": 453
+      "exactBytes": 714
     },
     {
       "name": "linked-resident-extent",
       "start": "AtomEncoderCoreStart",
       "end": "AtomHostResidentEnd",
-      "exactBytes": 12101
+      "exactBytes": 12396
     }
   ]
 }

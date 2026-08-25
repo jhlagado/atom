@@ -12,7 +12,7 @@ public entry.
 The current linked module contains **Measured 727 bytes** of symbol code and
 **Measured 20 bytes** of fixed symbol workspace. Symbol and pending records
 remain **Measured 8 bytes** and **Measured 6 bytes**. The complete native core
-remains **Measured 12,101 resident bytes**. The original Phase 2a measurements
+is **Measured 12,396 resident bytes**. The original Phase 2a measurements
 and projections below are retained as the historical account from the earlier
 prototype checkpoint.
 

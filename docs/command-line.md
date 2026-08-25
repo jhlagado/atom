@@ -29,7 +29,7 @@ assembles that source with the installed native core and writes
 atom --self-host
 ```
 
-The result is 12,101 bytes and must match the pinned core byte for byte.
+The result is 12,396 bytes and must match the pinned core byte for byte.
 `--self-host` accepts only `-o`/`--output`, so origin, capacity, fill, entry,
 and preprocessor overrides cannot change the proof build.
 Maintainers edit the checked `.asm` files directly. `npm run build:native-core`
@@ -132,11 +132,11 @@ boundary and the programmatic API.
 
 Atom currently accepts bank zero only. The native descriptor represents a
 non-wrapping half-open range whose end is no greater than `$FFFF`, so a target
-starting at zero has a maximum capacity of 65,535 bytes. Each native source
-part must fit the 24 KiB source window, with at most 16 ordered parts. The Mac
-adapter pages parts through that window at part boundaries. Atom's self-host
-build uses six ordered parts and does not retain the whole 101,326-byte
-source stream in Z80 RAM.
+starting at zero has a maximum capacity of 65,535 bytes. Atom accepts at most
+255 ordered source parts, each no longer than 65,535 bytes. The Mac runner keeps
+the prepared buffers outside Z80 memory and returns bytes through the native
+source service. Atom's self-host build uses six ordered parts totalling 101,641
+checked bytes and retains none of that stream in Z80 source-page RAM.
 
 ## Artifact publication
 

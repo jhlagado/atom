@@ -103,9 +103,9 @@ category in A:
 
 `AtomStatementDetail` contains the nested component status.
 `AtomStatementErrorPart` and `AtomStatementErrorOffset` identify the captured
-source position when one exists. The statement module uses 48 bytes of fixed
-workspace, including its ten-byte parsed-instruction record and six-byte
-packed symbol key.
+source position when one exists. The statement module uses 24 bytes of fixed
+workspace. Mutually exclusive instruction, equate, and data paths share one
+20-byte union; source diagnostics occupy the remaining bytes.
 
 ## Current limits
 

@@ -36,15 +36,14 @@ nine-byte reference contains:
 The list is valid until the next `AtomParserParse` call. It contains no source
 pointer or symbol spelling.
 
-The source-part ordinal is 0 through 15. A forward reference carrying ordinal
-16 or greater fails with `AtomParserStatusPartCapacity` before the destination,
-reference list, or symbol arena changes.
+The source-part ordinal retains the complete byte domain, 0 through 255. A
+native multipart build has at most 255 parts and therefore assigns ordinals 0
+through 254.
 
 The complete driver build marks the first reference that inserted an undefined
 symbol as its diagnostic anchor. The low three bits of the kind field remain
-the patch kind; bit 7 marks the anchor and bits 3–6 contain the source-part
-ordinal. `AtomParserQueueReferences` copies that byte into the unchanged
-six-byte pending record.
+the patch kind and bit 7 marks the anchor. `AtomParserQueueReferences` writes
+the kind and the full source-part byte into a seven-byte pending record.
 
 Forward references are accepted only when the operand class fixes a byte field
 before the symbol value is known. `IM`, `RST`, and bit-number expressions
@@ -67,12 +66,12 @@ in A. Success returns the patch kind in A and the field's byte offset in B.
 | High byte | 7 | Store bits 8–15 of the final word. |
 
 The low-byte and high-byte kinds retain an outer `LOW()` or `HIGH()` transform
-without enlarging the six-byte pending record. They cannot be combined with a
+within the seven-byte pending record. They cannot be combined with a
 relative or index-displacement patch rule.
 
 `AtomParserQueueReferences` accepts the logical instruction output address in
 DE. It preflights the complete pending-list requirement, converts each byte
-offset to a logical patch address, and appends the existing six-byte pending
+offset to a logical patch address, and appends seven-byte pending
 records. Failure from insufficient pending capacity appends nothing.
 
 The Phase 2f build exposes the same preflight separately as

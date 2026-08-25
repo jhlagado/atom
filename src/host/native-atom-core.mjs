@@ -47,6 +47,7 @@ async function readNativeAtomCore() {
     "AtomSinkPatchWord",
     "AtomSinkCommit",
     "AtomSinkAbort",
+    "AtomSourceReadByte",
   ];
   for (const name of required) {
     if (!Number.isInteger(symbols[name])) bootstrap("missing-symbol", `native Atom core omits ${name}`);

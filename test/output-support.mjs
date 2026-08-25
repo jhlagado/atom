@@ -42,9 +42,9 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomOutputProofPendingStart: 0x9100,
   AtomOutputPendingBefore: 0x9100,
   AtomOutputPendingArena: 0x9101,
-  AtomOutputPendingLimit: 0x9131,
-  AtomOutputPendingAfter: 0x9131,
-  AtomOutputProofPendingEnd: 0x9132,
+  AtomOutputPendingLimit: 0x9139,
+  AtomOutputPendingAfter: 0x9139,
+  AtomOutputProofPendingEnd: 0x913a,
   AtomOutputProofLogStart: 0x9200,
   AtomOutputLogBefore: 0x9200,
   AtomOutputProofLog: 0x9201,
@@ -257,7 +257,7 @@ export async function createOutputHarness() {
     memory,
     statistics,
     execute,
-    reset({ symbolBytes = 128, pendingBytes = 48, address = 0x4000, capacity = 0x100 } = {}) {
+    reset({ symbolBytes = 128, pendingBytes = 56, address = 0x4000, capacity = 0x100 } = {}) {
       restart();
       let result = execute("AtomSymbolReset", (_memory, names, cpu) => {
         cpu.h = names.AtomOutputSymbolArena >>> 8;
@@ -337,10 +337,10 @@ export async function createOutputHarness() {
     },
     pendingRecords() {
       const end = word(memory, symbols.AtomPendingNext);
-      const count = (end - symbols.AtomOutputPendingArena) / 6;
+      const count = (end - symbols.AtomOutputPendingArena) / symbols.AtomPendingRecordBytes;
       return Array.from({ length: count }, (_, index) => Array.from(memory.slice(
-        symbols.AtomOutputPendingArena + index * 6,
-        symbols.AtomOutputPendingArena + (index + 1) * 6,
+        symbols.AtomOutputPendingArena + index * symbols.AtomPendingRecordBytes,
+        symbols.AtomOutputPendingArena + (index + 1) * symbols.AtomPendingRecordBytes,
       )));
     },
     operations() {

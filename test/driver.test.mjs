@@ -94,11 +94,11 @@ test("undefined global reports its exact source part, offset, and packed name", 
 });
 
 test("undefined diagnostics retain the maximum native part ordinal", () => {
-  const parts = Array.from({ length: 16 }, () => "");
-  parts[15] = "DB Missing\n";
-  const result = h.assemble(parts, { label: "AtomAssemble undefined part 15" });
+  const parts = Array.from({ length: 255 }, () => "");
+  parts[254] = "DB Missing\n";
+  const result = h.assemble(parts, { label: "AtomAssemble undefined part 254" });
   assert.equal(result.status, STATUS.UNDEFINED);
-  assert.equal(result.part, 15);
+  assert.equal(result.part, 254);
   assert.equal(result.offset, 3);
   assert.deepEqual(h.undefinedKey(result.undefinedSymbol), packedName("Missing"));
 });
@@ -123,7 +123,6 @@ test("current-scope private undefined references report their exact token", () =
 test("descriptor failures are preflighted before sink begin", () => {
   const cases = [
     [[], { partCount: 0 }, CONFIG.PART_COUNT],
-    [Array.from({ length: 16 }, () => ""), { partCount: 17 }, CONFIG.PART_COUNT],
     [[""], { partsPointer: 0xfffc }, CONFIG.TABLE_RANGE],
     [["NOP\n"], { ordinals: [1] }, CONFIG.PART_ORDINAL],
     [["NOP\n"], { reversedSourceIndex: 0 }, CONFIG.SOURCE_RANGE],
@@ -149,14 +148,14 @@ test("descriptor failures are preflighted before sink begin", () => {
   }
 });
 
-test("descriptor capacities pass exactly at one and sixteen parts", () => {
+test("descriptor capacities pass exactly at one and 255 parts", () => {
   let result = h.assemble([""]);
   assert.equal(result.status, STATUS.OK);
-  const parts = Array.from({ length: 16 }, (_, index) => index === 15 ? "NOP\n" : "");
-  const validation = h.validate(parts, { label: "AtomDriverValidateDescriptor 16 parts" });
+  const parts = Array.from({ length: 255 }, (_, index) => index === 254 ? "NOP\n" : "");
+  const validation = h.validate(parts, { label: "AtomDriverValidateDescriptor 255 parts" });
   assert.equal(validation.status, STATUS.OK);
   result = h.assemble(parts, {
-    label: "AtomAssemble 16 parts",
+    label: "AtomAssemble 255 parts",
   });
   assert.equal(result.status, STATUS.OK);
   assert.deepEqual(h.finalBytes(), [0x00]);

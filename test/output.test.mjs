@@ -91,7 +91,7 @@ test("rejects output and pending capacity before the first image operation", () 
   assert.deepEqual(h.operations(), []);
   assert.deepEqual(h.outputState(), { cursor: 0x4000, remaining: 3 });
 
-  h.reset({ pendingBytes: 11 });
+  h.reset({ pendingBytes: 13 });
   assert.equal(h.parse("LD (IX+Disp),Forward").carry, 0);
   emitted = h.emit();
   assert.equal(emitted.carry, 1);
@@ -163,9 +163,9 @@ test("queues both unresolved fields only after every image byte succeeds", () =>
   assert.equal(emitted.carry, 0);
   assert.deepEqual(h.operations().map(({ bytes }) => bytes[0]), [0xdd, 0x36, 0x00, 0x00]);
   assert.equal(h.pendingRecords().length, 2);
-  assert.deepEqual(h.pendingRecords().map((record) => [record[2] | (record[3] << 8), record[4], record[5]]), [
-    [0x4002, 0xb8 | 4, 0],
-    [0x4003, 0xb8 | 1, 0],
+  assert.deepEqual(h.pendingRecords().map((record) => [record[2] | (record[3] << 8), record[4], record[5], record[6]]), [
+    [0x4002, 0x80 | 4, 0, 7],
+    [0x4003, 0x80 | 1, 0, 7],
   ]);
 });
 
@@ -178,7 +178,7 @@ test("pending peek returns exact metadata without reclaiming the record", () => 
   const peeked = h.pendingPeek(symbol);
   assert.equal(peeked.carry, 0);
   assert.equal(peeked.de, 0x4001);
-  assert.equal(peeked.b, 0xb8 | 2);
+  assert.equal(peeked.b, 0x80 | 2);
   assert.equal(peeked.c, 5);
   assert.deepEqual(h.pendingRecords(), before);
   const missing = h.pendingPeek(0x1234);

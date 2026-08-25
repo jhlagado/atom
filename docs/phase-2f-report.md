@@ -17,9 +17,9 @@ failures. The checked `.asm` source also passes strict register and stack
 contracts through the automatic Atom-to-AZM translation.
 
 The current measured account is 467 bytes of output code and 14 bytes of output
-workspace. Encoder through output occupies 9,668 bytes of code and immutable
-tables plus 421 bytes of fixed workspace. The complete linked native core is
-12,101 bytes, leaving 4,283 bytes below 16 KiB. The host-intercepted proof
+workspace. Encoder through output occupies 9,707 bytes of code and immutable
+tables plus 681 bytes of fixed workspace. The complete linked native core is
+12,396 bytes, leaving 3,988 bytes below 16 KiB. The host-intercepted proof
 adapter contributes no resident Z80 code and uses ten bytes of synthetic proof
 state.
 

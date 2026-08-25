@@ -4,8 +4,9 @@
 
 The native pipeline begins at `AtomAssemble` and ends when the output adapter
 accepts a commit or abort. Everything between those points runs as Z80 code.
-The compiler uses caller-owned source, symbol, and pending arenas plus 453 bytes
-of fixed non-reentrant workspace linked beside the code and immutable tables.
+The compiler uses a caller-supplied source service plus caller-owned symbol and
+pending arenas. Its fixed non-reentrant workspace occupies 714 bytes beside the
+code and immutable tables.
 
 `native/atom.asm` selects the complete configuration. Its five included `.asm`
 parts are split by source size rather than by subsystem, so some modules cross a
@@ -18,7 +19,7 @@ parsing, output, symbol resolution, and the multipart driver.
 
 | Offset | Bytes | Field |
 | ---: | ---: | --- |
-| 0 | 1 | Source-part count, 1 through 16 |
+| 0 | 1 | Source-part count, 1 through 255 |
 | 1 | 2 | Pointer to the first part descriptor |
 | 3 | 2 | Symbol-arena start |
 | 5 | 2 | Symbol-arena end |
@@ -28,8 +29,9 @@ parsing, output, symbol resolution, and the multipart driver.
 | 13 | 2 | Mathematical target capacity |
 
 Each five-byte part descriptor contains an exact ordinal followed by a
-half-open source start and end address. Source and descriptor memory remain
-immutable until the routine returns.
+half-open source start and end address. The interval establishes the part
+length and the base used by the linked memory-backed source routine.
+Descriptors remain immutable until the routine returns.
 
 The first driver action is validation. `AtomDriverValidateDescriptor` checks:
 
@@ -65,11 +67,12 @@ global reference in one part may be defined in a later part.
 
 ## Tokenizer
 
-The tokenizer begins at `TK_CBEG` in `native/atom-01.asm`. It reads one
-installed source interval from low address to high address.
-`AtomTokenizerReset` records the part ordinal, source cursor, end, and
-zero-based offset. `AtomTokenizerNext` skips horizontal whitespace and comments,
-then dispatches by the next source byte.
+The tokenizer begins at `TK_CBEG` in `native/atom-01.asm`.
+`AtomTokenizerReset` records the part ordinal, base, length, and zero-based
+logical offset. `AtomTokenizerNext` calls `AtomSourceReadByte`, skips horizontal
+whitespace and comments, then dispatches by the returned byte. The Mac runner
+serves each call from an immutable JavaScript snapshot. The linked fallback
+reads from the installed memory interval.
 
 The fixed nine-byte token record contains:
 
@@ -82,10 +85,10 @@ The fixed nine-byte token record contains:
 | 6 | 1 | Raw lexeme length |
 | 7 | 2 | Decoded numeric value, or zero |
 
-Names retain their source spelling and point into the caller's source buffer.
-Consumers pass the pointer and length to mnemonic or RADIX-40 routines that
-perform case folding. No token pointer enters the symbol table or output
-stream.
+Names retain their source spelling in a fixed 256-byte lexeme buffer. Consumers
+pass the pointer and length to mnemonic or RADIX-40 routines that perform case
+folding before the next tokenizer call. No token pointer enters the symbol
+table or output stream.
 
 The tokenizer recognizes names, private names, decimal and hexadecimal or
 binary numeric forms, current location `$`, character literals, strings,
@@ -144,18 +147,19 @@ and return the live record so the output module can resolve its pending uses.
 
 ## Pending references
 
-The separate pending arena grows upward in six-byte records:
+The separate pending arena grows upward in seven-byte records:
 
 | Offset | Bytes | Field |
 | ---: | ---: | --- |
 | 0 | 2 | Symbol-record pointer |
 | 2 | 2 | Logical patch address |
-| 4 | 1 | Patch kind, part ordinal, and diagnostic-anchor flag |
+| 4 | 1 | Patch kind and diagnostic-anchor flag |
 | 5 | 1 | Signed addend or auxiliary byte |
+| 6 | 1 | Source-part ordinal |
 
 The first pending record for a newly inserted undefined symbol carries a
-diagnostic anchor. Its kind byte also retains the source-part ordinal, while
-the undefined symbol's unused value field retains the reference's source
+diagnostic anchor. Its final byte retains the source-part ordinal, while the
+undefined symbol's unused value field retains the reference's source
 offset. Definition replaces that field with the real value, and successful
 patch resolution removes all pending records for the symbol.
 
@@ -196,7 +200,7 @@ wider retained expression.
 
 `LOW()` and `HIGH()` may wrap one deferred affine expression. Their state is
 carried to the parser as a distinct patch transform. Further arithmetic outside
-the function is rejected because the six-byte pending record has nowhere to
+the function is rejected because the compact pending record has nowhere to
 store that expression tree.
 
 Concrete arithmetic uses signed 24-bit intermediates. The final word domain is

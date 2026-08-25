@@ -11,7 +11,7 @@ IX points to a 15-byte descriptor:
 
 | Offset | Bytes | Field |
 | ---: | ---: | --- |
-| 0 | 1 | Source-part count, 1–16 |
+| 0 | 1 | Source-part count, 1–255 |
 | 1 | 2 | Pointer to the first source-part descriptor |
 | 3 | 2 | Symbol-arena start |
 | 5 | 2 | Symbol-arena end |
@@ -21,9 +21,12 @@ IX points to a 15-byte descriptor:
 | 13 | 2 | Mathematical target byte capacity |
 
 Each five-byte source-part descriptor contains its zero-based ordinal, source
-start, and source end. The source interval is half-open. Ordinals must be the
-exact sequence 0 through count-1. Source bytes, descriptors, and the build
-descriptor remain immutable and addressable until `AtomAssemble` returns.
+start, and source end. The half-open interval establishes the part length and
+the base used by the default memory-backed `AtomSourceReadByte` routine.
+Ordinals must be the exact sequence 0 through count-1. The Mac profile uses
+start zero and end equal to the part length; its host interception reads the
+source snapshot outside Z80 memory. Descriptors and the build descriptor remain
+immutable and addressable until `AtomAssemble` returns.
 
 The driver validates count, descriptor-table arithmetic, ordinals, every source
 range, both arena ranges, and the target extent before `AtomSinkBegin`. A
@@ -49,9 +52,9 @@ it.
 ## Undefined-symbol diagnostics
 
 The first pending record for each newly inserted undefined symbol contains a
-diagnostic anchor. Its high kind bits store the part ordinal, while the
-undefined symbol's value word stores the source offset. This uses the existing
-six-byte pending and eight-byte symbol records.
+diagnostic anchor. Bit 7 of its kind byte marks the anchor, its seventh byte
+stores the complete source-part ordinal, and the undefined symbol's value word
+stores the source offset.
 
 `AtomAssembleFinish` returns `AtomStatementStatusUndefined` with carry set when
 an anchor remains. It writes `AtomStatementErrorPart` and
@@ -78,5 +81,6 @@ no abort because no generation opened. Every later failure receives one abort;
 the driver preserves the original category and detail across that call.
 
 The driver itself uses nine fixed workspace bytes. Its caller-owned build
-descriptor occupies 15 bytes, and the complete 16-part descriptor array
-occupies 80 bytes.
+descriptor occupies 15 bytes, and the complete 255-part descriptor array
+occupies 1,275 bytes. A build count of 255 assigns ordinals 0 through 254;
+direct parser calls retain the complete byte domain, 0 through 255.

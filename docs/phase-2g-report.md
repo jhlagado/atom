@@ -15,10 +15,10 @@ directives, data and string forms, placement, reservations, alignment, forward
 patches, capacity boundaries, diagnostics, and injected sink failures. Strict
 register and stack contracts pass through automatic Atom-to-AZM translation.
 
-The current measured statement component is 1,345 bytes of code and immutable
-tables with 23 bytes of workspace. Encoder through statements occupies 11,013
-bytes of code and tables plus 444 bytes of fixed workspace. The complete linked
-native core is 12,101 bytes, leaving 4,283 bytes below 16 KiB. The synthetic
+The current measured statement component is 1,373 bytes of code and immutable
+tables with 24 bytes of workspace. Encoder through statements occupies 11,080
+bytes of code and tables plus 705 bytes of fixed workspace. The complete linked
+native core is 12,396 bytes, leaving 3,988 bytes below 16 KiB. The synthetic
 host adapter uses ten bytes of proof state and contributes no resident Z80
 code.
 

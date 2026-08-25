@@ -54,9 +54,9 @@
       "maxCycles": 6150
     },
     "AtomPendingAdd": {
-      "measuredInstructions": 38,
+      "measuredInstructions": 42,
       "maxInstructions": 100,
-      "measuredCycles": 340,
+      "measuredCycles": 374,
       "maxCycles": 850
     },
     "AtomOutputReset": {
@@ -102,21 +102,21 @@
       "maxCycles": 100
     },
     "AtomAssemblePart": {
-      "measuredInstructions": 33195,
+      "measuredInstructions": 36463,
       "maxInstructions": 70700,
-      "measuredCycles": 331494,
+      "measuredCycles": 367630,
       "maxCycles": 699820
     },
     "AtomTokenizerReset": {
-      "measuredInstructions": 22,
+      "measuredInstructions": 24,
       "maxInstructions": 60,
-      "measuredCycles": 248,
+      "measuredCycles": 270,
       "maxCycles": 620
     },
     "AtomTokenizerNext": {
-      "measuredInstructions": 240,
+      "measuredInstructions": 305,
       "maxInstructions": 600,
-      "measuredCycles": 2421,
+      "measuredCycles": 3155,
       "maxCycles": 6060
     },
     "AtomRecognizeMnemonic": {
@@ -126,9 +126,9 @@
       "maxCycles": 16670
     },
     "AtomParserParsePublished": {
-      "measuredInstructions": 1358,
+      "measuredInstructions": 1459,
       "maxInstructions": 3400,
-      "measuredCycles": 13637,
+      "measuredCycles": 14729,
       "maxCycles": 34100
     }
   }

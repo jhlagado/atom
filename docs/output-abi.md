@@ -5,7 +5,7 @@ image bytes and final patch bytes to an operating adapter. The adapter retains
 the image and patch spools and owns NOBJ framing, CRC, `BEGIN`, `MAP`,
 `COMMIT`, abort, storage capacity, and publication.
 
-Phase 2f is flat bank zero. The settled six-byte pending record has no bank
+Phase 2f is flat bank zero. The seven-byte pending record has no bank
 field.
 
 ## Sink entries
@@ -105,8 +105,9 @@ spool and disappear when the driver aborts that generation.
 accepts IX pointing to a symbol and returns `DE=patch address`, `B=kind`, and
 `C=signed addend`. `AtomStatusNotFound` means the symbol has no remaining
 pending record. In the complete driver build, the low three bits of B hold the
-patch kind. The upper bits retain the source-part ordinal and diagnostic-anchor
-flag; the resolver masks those bits before selecting the patch calculation.
+patch kind and bit 7 retains the diagnostic-anchor flag. The resolver masks the
+flag before selecting the patch calculation; the source-part ordinal remains
+in byte 6 of the record.
 
 The label and equate handlers call `AtomSymbolDeclare` or
 `AtomSymbolDeclareGlobalLabel`, then `AtomOutputResolveSymbol`. The final driver

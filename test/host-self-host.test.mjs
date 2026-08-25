@@ -81,12 +81,12 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
   assert.deepEqual(oracleProgram.memory.slice(0, firstImage.bytes.length), firstImage.bytes);
 
   assert.deepEqual(source.statistics, {
-    statements: 7153,
-    sourceBytes: 101177,
+    statements: 7166,
+    sourceBytes: 101492,
     sourceParts: 5,
     checkedParts: 6,
-    checkedBytes: 101326,
-    globalSymbols: 872,
+    checkedBytes: 101641,
+    globalSymbols: 876,
     privateSymbols: 440,
   });
   assert.equal(first.generation.images.length, proof.native.initializedBytes);
@@ -96,7 +96,7 @@ test("checked Atom source rebuilds the AZM core and then rebuilds itself byte-id
   assert.equal(first.execution.instructions, proof.execution.instructions);
   assert.equal(first.execution.cycles, proof.execution.cycles);
   assert.equal(first.execution.serviceCalls, proof.execution.serviceCalls);
-  assert.deepEqual(first.execution.sourcePages, proof.execution.sourcePages);
+  assert.equal(first.execution.sourceReads, proof.execution.sourceReads);
   assert.equal(firstImage.bytes.length, proof.native.linkedResidentExtent);
 });
 

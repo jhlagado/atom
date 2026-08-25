@@ -60,13 +60,13 @@ const result = await assembleAtomProject({
 The optional execution controls are `maxInstructions`, `maxCycles`, and a
 custom sink. The default budgets are 200,000,000 instructions and
 2,000,000,000 T-states. `limits` may lower source-packager capacities, but this
-entry always caps parts at 16 and banks at zero to match the native driver.
+entry caps parts at 255 and banks at zero to match the native driver.
 
 The function returns the resolved `project` together with:
 
 ```text
 generation   COMMITTED IMAGE, PATCH, LAYOUT, SYMBOL, AND TARGET DATA
-execution    INSTRUCTION, CYCLE, SERVICE, STACK, RETURN, AND PAGING OBSERVATIONS
+execution    INSTRUCTION, CYCLE, SERVICE, SOURCE-READ, STACK, AND RETURN OBSERVATIONS
 native       DRIVER STATUS AND NESTED NATIVE STATUS FIELDS
 core         CODE-BYTE AND RESIDENT-EXTENT MEASUREMENTS
 ```
@@ -114,42 +114,39 @@ the installed converter has no AZM runtime dependency.
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
-| Linked core, workspace, and sink stubs | `$0000..$2F45` | 12,101 |
-| Free space below descriptor boundary | `$2F45..$4000` | 4,283 |
-| Build and part descriptors | `$4000..$4100` | 256 |
+| Linked core, workspace, and sink stubs | `$0000..$306C` | 12,396 |
+| Free space below descriptor boundary | `$306C..$4000` | 3,988 |
+| Build descriptor | `$4000..$400F` | 15 |
+| Free descriptor gap | `$400F..$4100` | 241 |
 | Symbol arena | `$4100..$7500` | 13,312 |
-| Pending arena | `$7500..$7F00` | 2,560 |
-| Guard gap | `$7F00..$8000` | 256 |
-| Source page | `$8000..$E000` | 24,576 |
-| Free space below proof stack | `$E000..$FE00` | 7,680 |
+| Pending arena | `$7500..$8800` | 4,864 |
+| Free arena gap | `$8800..$9000` | 2,048 |
+| Maximum part descriptors | `$9000..$94FB` | 1,275 |
+| Host-free memory below proof stack | `$94FB..$FE00` | 26,885 |
 | Proof stack | `$FE00..$FF00` | 256 |
 | Reserved top page | `$FF00..$10000` | 256 |
 
 This is a test and Mac execution map, not a proposed TEC-1 RAM layout. A TEC
-adapter must choose its own caller-owned source, symbol, pending, descriptor,
+adapter must choose its own symbol, pending, descriptor, source-service state,
 and stack regions.
 
-## Source snapshot and paging
+## Source snapshots and byte service
 
-The runner validates and copies every prepared part before constructing Z80
+The runner validates and snapshots every prepared part before constructing Z80
 memory. It requires:
 
-- one through 16 parts in ordinal order;
+- one through 255 parts in ordinal order;
 - bank zero;
 - matching original and compiler byte lengths;
-- at most 24 KiB in each part; and
+- at most 65,535 bytes in each part; and
 - structurally valid `INCBIN` metadata.
 
-If all compiler bytes fit in the source page together, the runner lays the parts
-out consecutively and points each descriptor at its interval. If the total is
-larger, every descriptor points at the same source page. The runner installs the
-requested part whenever native execution reaches `AtomTokenizerReset`.
-
-The source page is read-only to CPU writes. Host paging writes the underlying
-memory array directly. Before replacing a page and after the final return, the
-runner checks the entire 24 KiB window, including `$A5` padding after the source
-bytes. It also checks nonpaged source, the complete descriptor interval, and
-every immutable native code or table range.
+Each native descriptor records start zero and end equal to the part length.
+When execution reaches `AtomSourceReadByte`, A selects the part and HL selects
+the logical offset. The runner returns the byte from the immutable snapshot and
+rejects an unknown part or out-of-range offset. Source occupies no emulated Z80
+page. The runner still checks the complete descriptor interval and every
+immutable native code or table range after execution.
 
 ## Calling the Z80 core
 
@@ -163,11 +160,15 @@ The loop stops with a structured failure when:
 - the CPU halts before returning;
 - the native core returns through the wrong PC or with an unbalanced stack;
 - either stack canary changes;
-- source, descriptors, code, or immutable tables change; or
+- descriptors, code, or immutable tables change; or
 - the sink lifecycle cannot be closed safely.
 
 Execution statistics retain the instruction count, T-states, service count,
-service trace, final SP, return PC, and paged part order.
+service trace, source-read count, final SP, and return PC.
+
+The source-read entry has a linked memory-backed implementation for direct
+native harnesses and hardware configurations that keep a part in memory. The
+Mac runner intercepts the entry before that fallback executes.
 
 ## Host sink interception
 

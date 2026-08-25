@@ -10,7 +10,7 @@ image. The harness intercepts all six production service entries and tracks
 the exact bytes written by begin, image, patch, commit, and abort operations.
 
 Every direct invocation audits all 65,536 addresses. The current suite covers
-descriptor boundaries, all sixteen source-part ordinals, cross-part private
+descriptor boundaries, the 255-part boundary, cross-part private
 scope, forward patches, undefined diagnostics, hole-filled pending records,
 begin/image/patch/commit failures, exact abort counts, and recovery after an
 aborted build. Strict register and stack contracts pass through automatic
@@ -21,10 +21,10 @@ an uninitialized source-part field. `DR_ASM` now clears its three diagnostic
 position bytes at generation start. The fix costs eight bytes and makes the
 existing part-zero failure contract independent of prior RAM contents.
 
-The current driver is 627 bytes with nine bytes of workspace. Encoder through
-driver occupies 11,640 bytes of code and tables plus 453 bytes of workspace.
-Including the eight fail-closed host stubs, the linked native core is 12,101
-bytes and leaves 4,283 bytes below 16 KiB. The host-intercepted proof adapter
+The current driver is 617 bytes with nine bytes of workspace. Encoder through
+driver occupies 11,674 bytes of code and tables plus 714 bytes of workspace.
+Including the eight fail-closed host stubs, the linked native core is 12,396
+bytes and leaves 3,988 bytes below 16 KiB. The host-intercepted proof adapter
 uses 24 bytes of synthetic state and contributes no resident Z80 code.
 
 The remainder of this report records the original Phase 3 measurement. Its

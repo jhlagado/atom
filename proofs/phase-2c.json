@@ -25,15 +25,15 @@
       "maxCycles": 170
     },
     "AtomTokenizerReset": {
-      "measuredInstructions": 22,
+      "measuredInstructions": 24,
       "maxInstructions": 60,
-      "measuredCycles": 248,
+      "measuredCycles": 270,
       "maxCycles": 620
     },
     "AtomParserParse": {
-      "measuredInstructions": 4853,
+      "measuredInstructions": 5365,
       "maxInstructions": 10480,
-      "measuredCycles": 48595,
+      "measuredCycles": 54286,
       "maxCycles": 101640
     },
     "AtomEncode": {

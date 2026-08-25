@@ -1,5 +1,9 @@
 # Atom Phase 11 host-backed binary inclusion
 
+This report preserves the Phase 11 checkpoint account. Later source-service
+work changed the native measurements without changing `INCBIN`; the current
+numbers are in [`limits.md`](limits.md).
+
 The Mac command now accepts `INCBIN "PATH"` as a whole-file binary inclusion.
 The path is relative to the containing source file and passes through the same
 project-root, symlink, exact-case, and snapshot checks used for source input.
@@ -48,7 +52,7 @@ the binary, filesystem mutation after snapshot, root escape, missing input,
 malformed syntax, the 65,535-byte boundary, inactive conditional source,
 listing text, D8 range classification, and injected bridge-count disagreement.
 
-`INCBIN` itself changes no native instruction. The current compressed-core
+`INCBIN` itself changed no native instruction. The Phase 11 compressed-core
 proof covers Measured 12,101 resident bytes and Measured 11,750 initialized
 addresses, and byte identity across the pinned core, translated AZM build, and
 two Atom generations.

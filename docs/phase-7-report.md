@@ -1,5 +1,10 @@
 # Atom Phase 7 product and release report
 
+This is the Phase 7 checkpoint account. Later native compression and the
+source-service change supersede its size and TEC-memory numbers; see
+[`limits.md`](limits.md) and [`tec-1-deployment.md`](tec-1-deployment.md) for
+the current measured account.
+
 ## Result
 
 **Measured: pass.** Atom is a working Mac command-line assembler with a public

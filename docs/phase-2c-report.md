@@ -13,9 +13,9 @@ symbol state unchanged.
 The checked parser contains **Measured 1,980 bytes** of rule code, **Measured
 81 bytes** of operand-table data, and **Measured 92 bytes** of fixed workspace.
 The full parser path through the encoder, symbols, tokenizer, expression
-evaluator, and patch locator contains **Measured 9,201 bytes** of code and
-tables plus **Measured 407 bytes** of workspace. The complete native core
-remains **Measured 12,101 resident bytes**. The original Phase 2c measurements
+evaluator, and patch locator contains **Measured 9,240 bytes** of code and
+tables plus **Measured 667 bytes** of workspace. The complete native core
+is **Measured 12,396 resident bytes**. The original Phase 2c measurements
 and projections below remain as the historical prototype account.
 
 ## Result

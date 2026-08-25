@@ -509,7 +509,7 @@ test("directive resolution and capacity failures preserve preflight atomicity", 
   assert.deepEqual(h.operations(), []);
   assert.equal(h.find(h.pack("Forward").key).status, STATUS.NOT_FOUND);
 
-  result = h.assemble("DB Forward\n", { pendingBytes: 5 });
+  result = h.assemble("DB Forward\n", { pendingBytes: 6 });
   assert.equal(result.status, STATEMENT.SYMBOL);
   assert.deepEqual(h.operations(), []);
   assert.equal(h.find(h.pack("Forward").key).status, STATUS.NOT_FOUND);
@@ -536,7 +536,7 @@ test("dot-prefixed words are private symbols, never assembler directives", () =>
 });
 
 test("directive output helpers return directly and enforce exact capacities", () => {
-  h.resetAssembly({ pendingBytes: 5, capacity: 2 });
+  h.resetAssembly({ pendingBytes: 6, capacity: 2 });
   assert.equal(h.pendingCheckCapacity().carry, 1);
   assert.equal(h.outputCheckCapacity(2).carry, 0);
   assert.equal(h.outputCheckCapacity(3).carry, 1);

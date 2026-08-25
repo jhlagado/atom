@@ -33,9 +33,9 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomExpressionProofPendingStart: 0x9100,
   AtomExpressionPendingBefore: 0x9100,
   AtomExpressionPendingArena: 0x9101,
-  AtomExpressionPendingLimit: 0x9131,
-  AtomExpressionPendingAfter: 0x9131,
-  AtomExpressionProofPendingEnd: 0x9132,
+  AtomExpressionPendingLimit: 0x9139,
+  AtomExpressionPendingAfter: 0x9139,
+  AtomExpressionProofPendingEnd: 0x913a,
 });
 
 export const EXPRESSION = Object.freeze({
@@ -247,8 +247,9 @@ export async function createExpressionHarness() {
     advanceScope() {
       return execute("AtomSymbolAdvanceScope");
     },
-    queue(symbol, addend, patch, kind) {
+    queue(symbol, addend, patch, kind, part = 0) {
       return execute("AtomExpressionQueue", (_memory, _names, cpu) => {
+        cpu.a = part;
         cpu.ix = symbol;
         cpu.h = addend < 0 ? 0xff : 0;
         cpu.l = addend & 0xff;
@@ -258,8 +259,8 @@ export async function createExpressionHarness() {
       }, `queue symbol=$${symbol.toString(16)} addend=${addend}`);
     },
     pendingRecord(index = 0) {
-      const start = symbols.AtomExpressionPendingArena + index * 6;
-      return Array.from(memory.slice(start, start + 6));
+      const start = symbols.AtomExpressionPendingArena + index * symbols.AtomPendingRecordBytes;
+      return Array.from(memory.slice(start, start + symbols.AtomPendingRecordBytes));
     },
   };
 }

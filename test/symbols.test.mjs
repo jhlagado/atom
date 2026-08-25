@@ -52,10 +52,11 @@ test("Phase 2a memory profile covers all 64 KiB without gaps or overlap", () => 
   }
 });
 
-test("symbol records remain eight bytes and pending records remain six", () => {
+test("symbol records remain eight bytes and pending records carry a full part byte", () => {
   assert.equal(s.AtomSymbolRecordBytes, 8);
-  assert.equal(s.AtomPendingRecordBytes, 6);
-  assert.equal(s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart, 727);
+  assert.equal(s.AtomPendingRecordBytes, 7);
+  assert.equal(s.AtomPendingPartOffset, 6);
+  assert.equal(s.AtomSymbolCodeEnd - s.AtomSymbolCodeStart, 732);
   assert.equal(s.AtomSymbolWorkspaceEnd - s.AtomSymbolWorkspaceStart, 20);
 });
 
@@ -220,12 +221,12 @@ test("global-label declaration validates and commits scope as one transaction", 
 });
 
 test("pending references are bounded, reclaimed, and return exact metadata", () => {
-  h.reset({ pendingBytes: 12 });
+  h.reset({ pendingBytes: 14 });
   const key = h.pack("FORWARD").key;
   const symbol = h.reference(key);
   assert.equal(symbol.status, STATUS.OK);
   assert.equal(h.pendingAdd(symbol.ix, 0x5001, 2, 0x11).status, STATUS.OK);
-  assert.equal(h.pendingAdd(symbol.ix, 0x6002, 3, 0x22).status, STATUS.OK);
+  assert.equal(h.pendingAdd(symbol.ix, 0x6002, 3, 0x22, 0xff).status, STATUS.OK);
   const before = h.pendingArena();
   const nextBefore = h.stateWord("AtomPendingNext");
   const full = h.pendingAdd(symbol.ix, 0x7003, 4, 0x33);
@@ -245,26 +246,27 @@ test("pending references are bounded, reclaimed, and return exact metadata", () 
 
 test("pending capacity checks one byte below, at, and above one record", () => {
   const key = expectedKey("PATCH");
-  for (const [bytes, firstStatus] of [[5, STATUS.PENDING_CAPACITY], [6, STATUS.OK], [7, STATUS.OK]]) {
+  for (const [bytes, firstStatus] of [[6, STATUS.PENDING_CAPACITY], [7, STATUS.OK], [8, STATUS.OK]]) {
     h.reset({ pendingBytes: bytes });
     const symbol = h.reference(key);
     const before = h.pendingArena();
     const result = h.pendingAdd(symbol.ix, 0x6111, 2, 3);
     assert.equal(result.status, firstStatus, `${bytes} bytes`);
     if (firstStatus === STATUS.PENDING_CAPACITY) assert.deepEqual(h.pendingArena(), before);
-    else assert.equal(h.stateWord("AtomPendingNext"), s.AtomPendingArena + 6);
+    else assert.equal(h.stateWord("AtomPendingNext"), s.AtomPendingArena + 7);
   }
 });
 
 test("pending peek and capacity preflight publish no state", () => {
-  h.reset({ pendingBytes: 6 });
+  h.reset({ pendingBytes: 7 });
   const symbol = h.reference(h.pack("PEEK").key);
   const emptyArena = h.pendingArena();
   assert.equal(h.pendingCheckCapacity().status, STATUS.OK);
   assert.deepEqual(h.pendingArena(), emptyArena);
   assert.equal(h.stateWord("AtomPendingNext"), s.AtomPendingArena);
 
-  assert.equal(h.pendingAdd(symbol.ix, 0x6112, 5, 0x7a).status, STATUS.OK);
+  assert.equal(h.pendingAdd(symbol.ix, 0x6112, 5, 0x7a, 0xff).status, STATUS.OK);
+  assert.equal(h.pendingArena()[s.AtomPendingPartOffset], 0xff);
   const fullArena = h.pendingArena();
   const fullNext = h.stateWord("AtomPendingNext");
   const peeked = h.pendingPeek(symbol.ix);

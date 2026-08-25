@@ -10,12 +10,20 @@
 - Failure: carry set and `A=AtomTokenStatusBadSourceRange`. A reversed interval
   changes no tokenizer state.
 
-The tokenizer reads the interval once from low address to high address. Source
-bytes remain unchanged and must remain addressable until the parser has
-consumed the current token. A flat-manifest adapter may call
+The interval establishes the part length and the default memory-backed source.
+The tokenizer then advances a 16-bit logical offset and calls
+`AtomSourceReadByte` for each source byte. A flat-manifest adapter calls
 `AtomTokenizerReset` for each ordered part. A non-empty part without a physical
 line ending produces one synthetic EOL before EOF, so adjacent parts cannot
 join two source words accidentally.
+
+`AtomSourceReadByte` receives the part ordinal in A and the logical byte offset
+in HL. It returns the byte in A with carry clear. The linked fallback adds the
+offset to the interval start supplied to `AtomTokenizerReset` and reads memory
+directly. The Mac runner intercepts the same entry and reads an immutable
+JavaScript snapshot, so prepared source consumes no Z80 source-page RAM. A TEC
+adapter may intercept or replace this entry with a filesystem, serial, or
+banked-storage reader.
 
 `AtomTokenizerNext` returns one token in the fixed record.
 
@@ -42,14 +50,15 @@ The record is nine bytes:
 | 6 | 1 | raw lexeme length |
 | 7 | 2 | decoded numeric value, otherwise zero |
 
-Private-name lexemes include the leading period. All lexeme pointers start at
-the first source byte of the token. A synthetic EOL and EOF have zero
-length and point at the end of the source part.
+Private-name lexemes include the leading period. The tokenizer copies the raw
+token into a fixed 256-byte buffer, and the lexeme pointer addresses that
+buffer. The pointer remains valid until the next call to `AtomTokenizerNext`.
+A synthetic EOL and EOF have zero length.
 
-Names retain their source spelling. The parser passes the pointer and length
-directly to `AtomRecognizeMnemonic`, `AtomRadix40Pack`, or `AtomPackSymbol`.
-Those routines perform case-insensitive classification; the tokenizer does not
-copy or fold a name.
+Names retain their source spelling. The parser passes the buffered pointer and
+length directly to `AtomRecognizeMnemonic`, `AtomRadix40Pack`, or
+`AtomPackSymbol`. Those routines perform case-insensitive classification; the
+tokenizer does not fold a name.
 
 ## Phase 2b lexical surface
 

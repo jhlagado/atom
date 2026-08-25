@@ -83,7 +83,7 @@ be the outermost operation and may retain one affine symbol, as in
 `HIGH(TARGET+5)`. Further arithmetic such as `LOW(TARGET)+1` is rejected.
 Forward byte functions are valid in fixed immediate or absolute fields and in
 `DB` or `DW`; they are rejected for relative branches and IX/IY displacements,
-whose range calculation cannot be retained in the six-byte pending record.
+whose range calculation cannot be retained in the compact pending record.
 `LOW` and `HIGH` remain legal symbol names when they are not followed by `(`.
 
 ## Instructions

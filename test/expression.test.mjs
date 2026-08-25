@@ -266,14 +266,14 @@ test("private forward references require an active global scope", () => {
   assert.equal(result.afterLocalBegin, result.beforeLocalBegin - 8);
 });
 
-test("unresolved results queue the exact existing six-byte pending record", () => {
+test("unresolved results queue the exact seven-byte pending record", () => {
   h.reset();
   const result = h.evaluate("Target-3");
   assert.equal(result.carry, 0);
   assert.equal(result.status, EXPRESSION.UNRESOLVED);
-  const queued = h.queue(result.ix, -3, 0x4567, 2);
+  const queued = h.queue(result.ix, -3, 0x4567, 2, 0xff);
   assert.equal(queued.carry, 0);
-  assert.deepEqual(h.pendingRecord(), [result.ix & 0xff, result.ix >>> 8, 0x67, 0x45, 2, 0xfd]);
+  assert.deepEqual(h.pendingRecord(), [result.ix & 0xff, result.ix >>> 8, 0x67, 0x45, 2, 0xfd, 0xff]);
 });
 
 test("range, divide, syntax, lexical, and nesting failures are distinct and positioned", () => {

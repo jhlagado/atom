@@ -40,6 +40,11 @@ test("Phase 2b memory profile covers exactly 64 KiB without gaps or overlap", ()
 
 test("mixed-case instruction source composes directly with mnemonic recognition", () => {
   const source = "  lD a,(Ix-$80) ; note\r\n.Again: dB \"A\\n\", %1010 << 1\n";
+  h.reset(source, { part: 19 });
+  const firstToken = h.next();
+  const mnemonic = h.recognize(firstToken.record);
+  assert.equal(mnemonic.carry, 0);
+  assert.equal(mnemonic.status, M.LD);
   const result = h.tokenize(source, { part: 19 });
   assert.equal(result.error, undefined);
   const tokens = result.tokens;
@@ -56,9 +61,6 @@ test("mixed-case instruction source composes directly with mnemonic recognition"
   assert.ok(tokens.every(({ part }) => part === 19));
   assert.equal(tokens[6].value, 0x80);
   assert.equal(tokens[14].value, 10);
-  const mnemonic = h.recognize(tokens[0]);
-  assert.equal(mnemonic.carry, 0);
-  assert.equal(mnemonic.status, M.LD);
 });
 
 test("comments and blank lines disappear while a final non-empty line gets one synthetic EOL", () => {

@@ -1,5 +1,9 @@
 # Native compression audit
 
+This audit predates the host-backed source service. Its measurements remain a
+historical compression account; [`limits.md`](limits.md) contains the current
+linked size and workspace totals.
+
 This document records the compression audit and its measured implementation
 before Atom source becomes authoritative. The retained changes do not alter the
 language, native ABI, diagnostics, capacity rules, or assembled output bytes.

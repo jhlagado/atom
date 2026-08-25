@@ -11,15 +11,15 @@
     "pendingRecords": 8,
     "referencesPerInstruction": 2,
     "maximumInstructionBytes": 4,
-    "maximumPartOrdinal": 15,
+    "maximumPartOrdinal": 255,
     "pendingKindMask": 7,
     "diagnosticAnchorBit": 128
   },
   "executionBudgets": {
     "AtomTokenizerReset": {
-      "measuredInstructions": 22,
+      "measuredInstructions": 24,
       "maxInstructions": 60,
-      "measuredCycles": 248,
+      "measuredCycles": 270,
       "maxCycles": 620
     },
     "AtomSymbolReset": {
@@ -53,9 +53,9 @@
       "maxCycles": 1000
     },
     "AtomParserParse": {
-      "measuredInstructions": 6375,
+      "measuredInstructions": 6875,
       "maxInstructions": 15700,
-      "measuredCycles": 63404,
+      "measuredCycles": 70160,
       "maxCycles": 158430
     },
     "AtomPatchLocate": {
@@ -71,9 +71,9 @@
       "maxCycles": 6200
     },
     "AtomParserQueueReferences": {
-      "measuredInstructions": 224,
+      "measuredInstructions": 245,
       "maxInstructions": 550,
-      "measuredCycles": 1974,
+      "measuredCycles": 2176,
       "maxCycles": 4850
     }
   }

@@ -55,8 +55,8 @@ that consumes stale bytes.
 
 ## Native source ledger
 
-The five content parts remain below the 24 KiB native source-page limit. The
-sixth file is the entry and dependency header:
+The five content parts remain below the 65,535-byte per-part logical-offset
+limit. The sixth file is the entry and dependency header:
 
 ```asm
 %INCLUDE "atom-00.asm"
@@ -95,7 +95,7 @@ a 16 KiB target.
 
 The pinned Atom-built native core assembles all six parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
-events, execution measurements, and a complete 12,101-byte materialized image.
+events, execution measurements, and a complete 12,396-byte materialized image.
 
 The proof compares that image with the memory initialized by the pinned core's
 Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
@@ -166,20 +166,20 @@ The checked measurement records:
 
 | Observation | Measured value |
 | --- | ---: |
-| Flattened native statements | 7,153 |
+| Flattened native statements | 7,166 |
 | Native content parts | 5 |
 | Checked resolver parts, including entry | 6 |
-| Checked source bytes | 101,326 |
-| Ledger global symbols | 872 |
+| Checked source bytes | 101,641 |
+| Ledger global symbols | 876 |
 | Ledger private symbols | 440 |
-| Initialized resident bytes | 11,750 |
-| Reserved resident bytes | 351 |
-| Forward PATCH records | 1,929 |
-| Declared symbols | 1,312 |
-| Linked resident extent | 12,101 bytes |
+| Initialized resident bytes | 11,789 |
+| Reserved resident bytes | 607 |
+| Forward PATCH records | 1,938 |
+| Declared symbols | 1,315 |
+| Linked resident extent | 12,396 bytes |
 
-The first generation currently executes 99,498,360 instructions and
-1,060,106,568 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 101,840,573 instructions and
+1,086,338,471 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

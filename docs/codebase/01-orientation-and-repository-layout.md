@@ -145,20 +145,21 @@ The current pinned strict-contract image divides into these measured ranges:
 | Native module | Code and immutable bytes | Fixed workspace bytes |
 | --- | ---: | ---: |
 | Encoder, validation, recognition, and tables | 3,132 | 6 |
-| Symbols and pending references | 727 | 20 |
-| Tokenizer | 1,346 | 26 |
-| Expression evaluator | 1,868 | 263 |
+| Symbols and pending references | 732 | 20 |
+| Tokenizer and source-service fallback | 1,376 | 286 |
+| Expression evaluator | 1,877 | 263 |
 | Patch-field locator | 67 | 0 |
-| Operand parser | 2,061 | 92 |
+| Operand parser | 2,048 | 92 |
 | Output and patch submission | 467 | 14 |
-| Statements and directives | 1,345 | 23 |
-| Multipart driver | 627 | 9 |
+| Statements and directives | 1,358 | 24 |
+| Multipart driver | 617 | 9 |
 | Fail-closed host sink stubs | 8 | 0 |
-| **Total** | **11,648** | **453** |
+| **Total** | **11,682** | **714** |
 
-The linked resident extent is measured at 12,101 bytes, leaving 4,283 bytes
-below a 16 KiB boundary. Caller-owned source, symbol, pending, descriptor, and
-stack storage are separate accounts. The values above come from
+The linked resident extent is measured at 12,396 bytes, leaving 3,988 bytes
+below a 16 KiB boundary. Host-backed source occupies no Z80 source page;
+caller-owned symbol, pending, descriptor, and stack storage remain separate
+accounts. The values above come from
 `assets/native-core.json` and the workspace symbols used by
 `test/measure-host-native.mjs`.
 

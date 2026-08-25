@@ -29,7 +29,7 @@ the owner of a behavior quickly.
 | `assemble-atom-project.mjs` | High-level composition of Atom project resolution and native execution; lowers general resolver limits to the native profile |
 | `resolve-atom-project.mjs` | Atom-specific source preparation: reader, profile, neutral resolver, placement, and `INCBIN` lowering |
 | `native-atom-core.mjs` | Loads the checked core, verifies both digests and required symbols, and derives immutable code ranges and size accounts |
-| `native-atom-runner.mjs` | Snapshots prepared projects, builds Z80 memory and descriptors, pages source, intercepts sink calls, enforces runtime invariants, and returns committed generations |
+| `native-atom-runner.mjs` | Snapshots prepared projects, builds Z80 descriptors, serves logical source reads, intercepts sink calls, enforces runtime invariants, and returns committed generations |
 | `atom-assembly-error.mjs` | Structured error used by native execution, artifacts, translation, self-host helpers, and publication |
 
 ## `src/host/atom/`
@@ -161,7 +161,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 
 | File | Role |
 | --- | --- |
-| `host-native-atom-runner.test.mjs` | Complete prepared-source execution, paging, memory protection, sink bridge, errors, budgets, and replacement cores |
+| `host-native-atom-runner.test.mjs` | Complete prepared-source execution, source-service boundaries, memory protection, sink bridge, errors, budgets, and replacement cores |
 | `host-artifacts.test.mjs` | NOBJ, materialized binary, Intel HEX, listing, D8, symbols, and source ranges |
 | `host-example.test.mjs` | Runs the shipped example verifier |
 | `host-package.test.mjs` | npm archive census, offline installation, installed CLI, absent AZM, bundled runtime, and installed self-host |

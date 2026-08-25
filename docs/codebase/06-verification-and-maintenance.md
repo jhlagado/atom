@@ -192,14 +192,15 @@ entry file or an anonymous concatenated stream.
 ## Native host-runner proofs
 
 `test/host-native-atom-runner.test.mjs` exercises the complete 64 KiB Mac map.
-It checks descriptor construction, source paging, read-only code and source,
-stack canaries, execution budgets, sink status propagation, service exceptions,
-target boundaries, IMAGE order, PATCH targets, layout high-water, and exact
-source diagnostics.
+It checks descriptor construction, the 65,535-byte source boundary, invalid
+source-service reads, read-only code, stack canaries, execution budgets, sink
+status propagation, service exceptions, target boundaries, IMAGE order, PATCH
+targets, layout high-water, and exact source diagnostics.
 
 Replacement-core tests reject empty, truncated, out-of-range, or structurally
-incomplete HEX before execution. A malicious core that attempts to write the
-source page provides a discriminator for the runtime's read-only range.
+incomplete HEX before execution. A malicious core that requests offset
+`$FFFF` from a short part provides a discriminator for the source-service
+range check.
 
 `INCBIN` bridge tests compare every substituted byte and inject metadata count
 mismatches in both directions. Listing and D8 tests then verify that those bytes
@@ -247,8 +248,9 @@ a core from that first generation, and assembles the same source again.
 
 It then translates the prepared source to AZM and compares the exact initialized
 address set and every resident byte. Generator statistics, code bytes,
-workspace, resident extent, patch count, instruction count, T-states, service
-calls, and source-page order are checked against the frozen proof record.
+workspace, resident extent, patch count, instruction count, T-states, output
+service calls, and source-read count are checked against the frozen proof
+record.
 
 ## Measurements and proof records
 

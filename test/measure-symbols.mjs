@@ -43,7 +43,7 @@ h.declare(key(".LATER"), 0x7101);
 h.declareGlobalLabel(key("NEXT"), 0x7100);
 
 // Non-destructive pending inspection and exact-capacity preflight.
-h.reset({ pendingBytes: 6 });
+h.reset({ pendingBytes: 7 });
 const peeked = h.reference(key("PEEK"));
 h.pendingCheckCapacity();
 h.pendingAdd(peeked.ix, 0x7200, 5, 0x7a);

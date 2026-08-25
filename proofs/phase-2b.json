@@ -26,15 +26,15 @@
   },
   "executionBudgets": {
     "AtomTokenizerReset": {
-      "measuredInstructions": 22,
+      "measuredInstructions": 24,
       "maxInstructions": 60,
-      "measuredCycles": 248,
+      "measuredCycles": 270,
       "maxCycles": 620
     },
     "AtomTokenizerNext": {
-      "measuredInstructions": 24619,
+      "measuredInstructions": 36908,
       "maxInstructions": 61550,
-      "measuredCycles": 277004,
+      "measuredCycles": 408083,
       "maxCycles": 692510
     }
   }

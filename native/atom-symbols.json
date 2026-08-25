@@ -2,12 +2,12 @@
   "format": "atom-native-symbol-ledger",
   "version": 2,
   "statistics": {
-    "statements": 7153,
-    "sourceBytes": 101177,
+    "statements": 7166,
+    "sourceBytes": 101492,
     "sourceParts": 5,
     "checkedParts": 6,
-    "checkedBytes": 101326,
-    "globalSymbols": 872,
+    "checkedBytes": 101641,
+    "globalSymbols": 876,
     "privateSymbols": 440
   },
   "symbols": [
@@ -2264,7 +2264,7 @@
       "module": "SY"
     },
     {
-      "original": "AtomPendingPartMask",
+      "original": "AtomPendingPartOffset",
       "short": "SY_PMASK",
       "private": false,
       "module": "SY"
@@ -3092,6 +3092,12 @@
       "module": "TK"
     },
     {
+      "original": "AtomSourceReadByte",
+      "short": "TK_SREAD",
+      "private": false,
+      "module": "TK"
+    },
+    {
       "original": "_AtomTokenRestoreBadSourceRange",
       "short": ".RBSRANGE",
       "private": true,
@@ -3777,6 +3783,12 @@
       "module": "TK"
     },
     {
+      "original": "AtomTokenSourceBase",
+      "short": "TK_SRCBA",
+      "private": false,
+      "module": "TK"
+    },
+    {
       "original": "AtomTokenSourceCursor",
       "short": "TK_SCURS",
       "private": false,
@@ -3815,6 +3827,18 @@
     {
       "original": "AtomTokenScanPointer",
       "short": "TK_SPTR",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenBufferCount",
+      "short": "TK_BCNT",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenPreviousByte",
+      "short": "TK_PREV",
       "private": false,
       "module": "TK"
     },
@@ -3863,6 +3887,12 @@
     {
       "original": "AtomTokenRecord",
       "short": "TK_REC",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomTokenBuffer",
+      "short": "TK_TBUF",
       "private": false,
       "module": "TK"
     },
@@ -6259,12 +6289,6 @@
       "module": "PR"
     },
     {
-      "original": "AtomParserReferencePartFailure",
-      "short": "PR_RPFAI",
-      "private": false,
-      "module": "PR"
-    },
-    {
       "original": "AtomParserCompareReferenceKeys",
       "short": "PR_CRKEY",
       "private": false,
@@ -7586,12 +7610,6 @@
       "module": "ST"
     },
     {
-      "original": "AtomStatementSymbolPartFailure",
-      "short": "ST_SPFAI",
-      "private": false,
-      "module": "ST"
-    },
-    {
       "original": "AtomStatementInstructionFailure",
       "short": "ST_IFAIL",
       "private": false,
@@ -7834,6 +7852,12 @@
     {
       "original": "AtomStatementErrorOffset",
       "short": "ST_EOFF",
+      "private": false,
+      "module": "ST"
+    },
+    {
+      "original": "AtomStatementStringPart",
+      "short": "ST_SPART",
       "private": false,
       "module": "ST"
     },

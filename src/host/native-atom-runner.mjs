@@ -4,21 +4,19 @@ import { AtomAssemblyError } from "./atom-assembly-error.mjs";
 import { loadNativeAtomCore } from "./native-atom-core.mjs";
 
 const BUILD_DESCRIPTOR = 0x4000;
-const PART_DESCRIPTORS = 0x400f;
+const PART_DESCRIPTORS = 0x9000;
 const SYMBOL_START = 0x4100;
 const SYMBOL_END = 0x7500;
 const PENDING_START = 0x7500;
-const PENDING_END = 0x7f00;
-const SOURCE_START = 0x8000;
-const SOURCE_END = 0xe000;
+const PENDING_END = 0x8800;
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0xfffe;
 
 export const NATIVE_ATOM_LIMITS = Object.freeze({
-  sourceParts: 16,
-  sourceBytes: SOURCE_END - SOURCE_START,
+  sourceParts: 255,
+  sourceBytes: 0xffff,
   symbolBytes: SYMBOL_END - SYMBOL_START,
   pendingBytes: PENDING_END - PENDING_START,
   targetBanks: 1,
@@ -69,6 +67,7 @@ const RUNNER_SYMBOL_NAMES = Object.freeze([
   "AtomSinkImageByte",
   "AtomSinkPatchByte",
   "AtomSinkPatchWord",
+  "AtomSourceReadByte",
   "AtomStatementDetail",
   "AtomStatementErrorOffset",
   "AtomStatementErrorPart",
@@ -92,6 +91,7 @@ const RUNNER_CODE_SYMBOL_NAMES = Object.freeze([
   "AtomSinkImageByte",
   "AtomSinkPatchByte",
   "AtomSinkPatchWord",
+  "AtomSourceReadByte",
   "AtomSymbolDeclare",
   "AtomSymbolDeclareGlobalLabel",
   "AtomTokenizerReset",
@@ -208,7 +208,7 @@ function snapshotProject(project) {
     fail("invalid-project", "resolved Atom project must contain an ordered parts array");
   }
   if (project.parts.length < 1 || project.parts.length > NATIVE_ATOM_LIMITS.sourceParts) {
-    fail("part-capacity", "resolved Atom project exceeds the native 16-part limit");
+    fail("part-capacity", "resolved Atom project exceeds the native 255-part limit");
   }
   let totalBytes = 0;
   const parts = project.parts.map((part, ordinal) => {
@@ -225,7 +225,7 @@ function snapshotProject(project) {
       fail("invalid-part", `resolved Atom source part ${ordinal} is not a flat, equal-length native part`);
     }
     if (part.compilerBytes.length > NATIVE_ATOM_LIMITS.sourceBytes) {
-      fail("source-capacity", `resolved Atom source part ${ordinal} exceeds the native ${NATIVE_ATOM_LIMITS.sourceBytes}-byte window`);
+      fail("source-capacity", `resolved Atom source part ${ordinal} exceeds Atom's 16-bit source-offset range`);
     }
     const binaryIncludes = part.binaryIncludes ?? [];
     if (!Array.isArray(binaryIncludes)) {
@@ -267,7 +267,6 @@ function snapshotProject(project) {
   return Object.freeze({
     parts: Object.freeze(parts),
     totalBytes,
-    paged: totalBytes > NATIVE_ATOM_LIMITS.sourceBytes,
   });
 }
 
@@ -552,23 +551,18 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   }
   const romRanges = [
     ...core.codeRanges.map(({ start, end }) => ({ start, end: end - 1 })),
-    { start: SOURCE_START, end: SOURCE_END - 1 },
   ];
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomAssemble, undefined, { romRanges });
   const memory = runtime.hardware.memory;
   const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: memory.slice(start, end) }));
 
   memory.fill(0xa5, BUILD_DESCRIPTOR, SYMBOL_START);
-  let sourceCursor = SOURCE_START;
-  if (snapshot.paged) memory.fill(0xa5, SOURCE_START, SOURCE_END);
+  memory.fill(0xa5, PART_DESCRIPTORS, PART_DESCRIPTORS + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes);
   for (const part of snapshot.parts) {
-    const partStart = snapshot.paged ? SOURCE_START : sourceCursor;
-    if (!snapshot.paged) memory.set(part.compilerBytes, partStart);
     const descriptor = PART_DESCRIPTORS + part.ordinal * symbols.AtomDriverPartDescriptorBytes;
     memory[descriptor] = part.ordinal;
-    writeWord(memory, descriptor + 1, partStart);
-    writeWord(memory, descriptor + 3, partStart + part.compilerBytes.length);
-    if (!snapshot.paged) sourceCursor += part.compilerBytes.length;
+    writeWord(memory, descriptor + 1, 0);
+    writeWord(memory, descriptor + 3, part.compilerBytes.length);
   }
   memory[BUILD_DESCRIPTOR] = snapshot.parts.length;
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorParts, PART_DESCRIPTORS);
@@ -578,8 +572,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorPendingEnd, PENDING_END);
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorTargetStart, target.start);
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorTargetBytes, target.capacity);
-  const sourceBefore = snapshot.paged ? undefined : memory.slice(SOURCE_START, sourceCursor);
-  const descriptorsBefore = memory.slice(BUILD_DESCRIPTOR, PART_DESCRIPTORS + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes);
+  const buildDescriptorBefore = memory.slice(BUILD_DESCRIPTOR, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorBytes);
+  const partDescriptorsBefore = memory.slice(
+    PART_DESCRIPTORS,
+    PART_DESCRIPTORS + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes,
+  );
 
   memory[STACK_BEFORE] = 0x87;
   memory[RETURN_SLOT] = RETURN_SENTINEL & 0xff;
@@ -612,19 +609,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       });
     }
   }
-  let pagedSource;
-  let pagedSourceChanged = false;
-  const sourcePages = [];
-  const verifyPagedSource = () => {
-    if (pagedSource === undefined) return;
-    for (let index = 0; index < NATIVE_ATOM_LIMITS.sourceBytes; index += 1) {
-      const expected = index < pagedSource.bytes.length ? pagedSource.bytes[index] : 0xa5;
-      if (memory[SOURCE_START + index] !== expected) {
-        pagedSourceChanged = true;
-        return;
-      }
-    }
-  };
+  let sourceReads = 0;
   const currentDiagnostic = () => {
     const ordinal = memory[symbols.AtomStatementErrorPart];
     const part = snapshot.parts[ordinal];
@@ -703,16 +688,19 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   };
 
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
-    if (snapshot.paged && runtime.cpu.pc === symbols.AtomTokenizerReset) {
-      verifyPagedSource();
+    if (runtime.cpu.pc === symbols.AtomSourceReadByte) {
       const part = snapshot.parts[runtime.cpu.a];
-      if (part === undefined) {
-        throw runtimeFailure("source-page", "native Atom requested an unknown source part");
+      const offset = pair(runtime.cpu.h, runtime.cpu.l);
+      if (part === undefined || offset >= part.compilerBytes.length) {
+        throw runtimeFailure("source-read", "native Atom requested a source byte outside the resolved part");
       }
-      memory.fill(0xa5, SOURCE_START, SOURCE_END);
-      memory.set(part.compilerBytes, SOURCE_START);
-      pagedSource = Object.freeze({ ordinal: part.ordinal, bytes: part.compilerBytes });
-      sourcePages.push(part.ordinal);
+      const returnAddress = word(memory, runtime.cpu.sp);
+      runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
+      runtime.cpu.pc = returnAddress;
+      runtime.cpu.a = part.compilerBytes[offset];
+      runtime.cpu.flags.C = 0;
+      sourceReads += 1;
+      continue;
     }
     if (runtime.cpu.pc === symbols.AtomOutputSetOrigin) {
       const address = pair(runtime.cpu.h, runtime.cpu.l);
@@ -755,7 +743,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   }
 
   const sinkState = sink.snapshot();
-  verifyPagedSource();
   const execution = Object.freeze({
     instructions,
     cycles,
@@ -763,16 +750,14 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     serviceTrace: Object.freeze(serviceTrace),
     finalSp: runtime.cpu.sp,
     returnPc: runtime.cpu.pc,
-    sourcePages: Object.freeze(sourcePages.slice()),
+    sourceReads,
   });
   const invariants = [
     [runtime.cpu.sp === RETURN_SLOT + 2, "native Atom returned with an unbalanced stack"],
     [memory[STACK_BEFORE] === 0x87, "native Atom crossed the lower stack canary"],
     [memory[STACK_AFTER] === 0x78, "native Atom crossed the upper stack canary"],
-    [snapshot.paged
-      ? !pagedSourceChanged
-      : sourceBefore.every((byte, index) => memory[SOURCE_START + index] === byte), "native Atom changed source bytes"],
-    [descriptorsBefore.every((byte, index) => memory[BUILD_DESCRIPTOR + index] === byte), "native Atom changed descriptor bytes"],
+    [buildDescriptorBefore.every((byte, index) => memory[BUILD_DESCRIPTOR + index] === byte), "native Atom changed build descriptor bytes"],
+    [partDescriptorsBefore.every((byte, index) => memory[PART_DESCRIPTORS + index] === byte), "native Atom changed part descriptor bytes"],
     [immutable.every(({ start, bytes }) => bytes.every((byte, index) => memory[start + index] === byte)), "native Atom changed immutable code or tables"],
   ];
   const broken = invariants.find(([ok]) => !ok);

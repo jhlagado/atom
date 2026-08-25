@@ -41,8 +41,8 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomDriverDescriptorBefore: 0x8302,
   AtomDriverBuildDescriptor: 0x8303,
   AtomDriverPartDescriptors: 0x8312,
-  AtomDriverDescriptorAfter: 0x8362,
-  AtomDriverProofDescriptorEnd: 0x8363,
+  AtomDriverDescriptorAfter: 0x880d,
+  AtomDriverProofDescriptorEnd: 0x880e,
   AtomDriverProofSymbolStart: 0x9000,
   AtomDriverSymbolBefore: 0x9000,
   AtomDriverSymbolArena: 0x9001,
@@ -52,9 +52,9 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomDriverProofPendingStart: 0x9200,
   AtomDriverPendingBefore: 0x9200,
   AtomDriverPendingArena: 0x9201,
-  AtomDriverPendingLimit: 0x9261,
-  AtomDriverPendingAfter: 0x9261,
-  AtomDriverProofPendingEnd: 0x9262,
+  AtomDriverPendingLimit: 0x9271,
+  AtomDriverPendingAfter: 0x9271,
+  AtomDriverProofPendingEnd: 0x9272,
   AtomDriverProofLogStart: 0x9400,
   AtomDriverLogBefore: 0x9400,
   AtomDriverProofLog: 0x9401,
@@ -302,7 +302,7 @@ export async function createDriverHarness() {
     writeWord(memory, build + symbols.AtomDriverDescriptorSymbolStart, options.symbolStart ?? symbols.AtomDriverSymbolArena);
     writeWord(memory, build + symbols.AtomDriverDescriptorSymbolEnd, options.symbolEnd ?? (symbols.AtomDriverSymbolArena + (options.symbolBytes ?? 256)));
     writeWord(memory, build + symbols.AtomDriverDescriptorPendingStart, options.pendingStart ?? symbols.AtomDriverPendingArena);
-    writeWord(memory, build + symbols.AtomDriverDescriptorPendingEnd, options.pendingEnd ?? (symbols.AtomDriverPendingArena + (options.pendingBytes ?? 96)));
+    writeWord(memory, build + symbols.AtomDriverDescriptorPendingEnd, options.pendingEnd ?? (symbols.AtomDriverPendingArena + (options.pendingBytes ?? 112)));
     writeWord(memory, build + symbols.AtomDriverDescriptorTargetStart, options.address ?? 0x4000);
     writeWord(memory, build + symbols.AtomDriverDescriptorTargetBytes, options.capacity ?? 0x100);
     sourceSnapshot = memory.slice(symbols.AtomDriverSource, symbols.AtomDriverSourceLimit);

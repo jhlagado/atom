@@ -79,10 +79,8 @@ The default Node limits are:
 Callers may lower these limits. Every exact limit is accepted; the first value
 beyond it is rejected during preparation.
 
-The Phase 3 native Atom driver accepts 1 through 16 parts. A host invoking that
-driver therefore resolves and validates the project with `maxParts: 16`. The
-SP1 wire format retains its 255-part limit for other consumers and future
-targets.
+The native Atom driver and SP1 wire format both accept 1 through 255 parts.
+The host rejects a 256th part during preparation, before the Z80 runtime starts.
 
 The current Atom output ABI is flat bank zero. `assembleAtomProject` sets the
 resolver's maximum bank to zero, so a nonzero placement fails before the Z80

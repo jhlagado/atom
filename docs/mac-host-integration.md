@@ -28,21 +28,19 @@ the installed command.
 
 ## Execution boundary
 
-The host snapshots each prepared compiler buffer before it writes Z80 memory.
-It constructs the 15-byte native build descriptor and one five-byte descriptor
-per source part, then enters `AtomAssemble` with IX pointing at the build
-descriptor. Projects up to 24 KiB remain resident in one source window. For a
-larger project, every part must fit that window and the Mac adapter installs
-the next part when the native driver calls `AtomTokenizerReset`. The native
-driver still processes an ordered descriptor stream and contains no filesystem
-logic.
+The host snapshots each prepared compiler buffer, constructs the 15-byte native
+build descriptor and one five-byte descriptor per source part, then enters
+`AtomAssemble` with IX pointing at the build descriptor. Source bytes remain in
+the JavaScript snapshots. When native execution reaches `AtomSourceReadByte`,
+the runner returns the byte selected by A, the part ordinal, and HL, the
+logical offset. The native driver processes an ordered descriptor stream and
+contains no filesystem logic.
 
 The runner checks the return PC, final SP, stack canaries, descriptors, and
-every immutable code/table interval after the call. For paged input it also
-checks the complete 24 KiB window, including the `$A5` padding after the source
-part, before installing the next page and after the final return. Debug80 marks
-the source window read-only to CPU writes. The Mac adapter installs pages by
-writing the host memory array directly.
+every immutable code/table interval after the call. It rejects an unknown part
+or an offset outside the immutable snapshot before returning control to native
+code. The execution account records the number of source reads separately from
+the output-service trace.
 
 The native image contains six fail-closed sink stubs. Debug80 stops at each
 entry address and transfers the register arguments to the host memory sink:
@@ -118,22 +116,23 @@ The Debug80 integration uses this measured layout:
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
-| Linked native core, fixed workspace, and host stubs | `$0000..$2F45` | 12,101 |
-| Free space below the descriptor bank boundary | `$2F45..$4000` | 4,283 |
-| Build and part-descriptor allocation | `$4000..$4100` | 256 |
+| Linked native core, fixed workspace, and host stubs | `$0000..$306C` | 12,396 |
+| Free space below the descriptor bank boundary | `$306C..$4000` | 3,988 |
+| Build descriptor | `$4000..$400F` | 15 |
+| Free descriptor gap | `$400F..$4100` | 241 |
 | Symbol arena | `$4100..$7500` | 13,312 |
-| Pending-reference arena | `$7500..$7F00` | 2,560 |
-| Guard gap | `$7F00..$8000` | 256 |
-| Source window | `$8000..$E000` | 24,576 |
-| Free space below the proof stack | `$E000..$FE00` | 7,680 |
+| Pending-reference arena | `$7500..$8800` | 4,864 |
+| Free arena gap | `$8800..$9000` | 2,048 |
+| Maximum part descriptors | `$9000..$94FB` | 1,275 |
+| Host-free memory below the proof stack | `$94FB..$FE00` | 26,885 |
 | Proof stack | `$FE00..$FF00` | 256 |
 | Reserved top page | `$FF00..$10000` | 256 |
 
 The symbol arena holds at most 1,664 simultaneous eight-byte records. Private
-records remain transient across global scopes. The pending arena holds 426
-complete six-byte records. These are Mac-host proof capacities, not a proposed
-TEC-1 deployment map; the TEC operating layer will choose its own caller-owned
-source, symbol, pending, and stack regions.
+records remain transient across global scopes. The pending arena holds 694
+complete seven-byte records. These are Mac-host proof capacities, not a proposed
+TEC-1 deployment map; the TEC operating layer will choose its own symbol,
+pending, adapter-state, and stack regions.
 
 ## Public modules
 
@@ -166,9 +165,10 @@ npm run measure:self-host
 The focused integration tests cover host preprocessing through native output,
 forward patch timing, exact included-file and undefined-name diagnostics,
 nonzero bank rejection, sink status and exception failures, append-only `ORG`
-behavior, target commit bounds, exact source and part capacities, deterministic
-fresh runs, `DS` high-water retention, intermediate `ORG` and `DS` range
-failures, fail-closed stubs, the complete 64 KiB map, and runtime-budget cleanup.
+behavior, target commit bounds, the 65,535-byte source boundary, invalid source
+service reads, deterministic fresh runs, `DS` high-water retention,
+intermediate `ORG` and `DS` range failures, fail-closed stubs, the complete 64
+KiB map, and runtime-budget cleanup.
 The binary-inclusion proofs additionally cover snapshot stability, path and
 size failures, exact initialized bytes, native address calculation, bridge
 count mismatches, listing text, and D8 data ranges.

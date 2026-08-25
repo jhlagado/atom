@@ -49,8 +49,11 @@ console.log(JSON.stringify({
     physicalMarginTo16KiB: 0x4000 - core.residentExtentBytes,
     hostServiceStubs: core.symbols.AtomHostServiceCodeEnd - core.symbols.AtomHostServiceCodeStart,
   },
+  hostSource: {
+    maxPartBytes: NATIVE_ATOM_LIMITS.sourceBytes,
+    residentZ80Bytes: 0,
+  },
   callerOwnedRam: {
-    sourceBytes: NATIVE_ATOM_LIMITS.sourceBytes,
     symbolBytes: NATIVE_ATOM_LIMITS.symbolBytes,
     pendingBytes: NATIVE_ATOM_LIMITS.pendingBytes,
     descriptorBytesAtMaximumParts: core.symbols.AtomDriverDescriptorBytes +

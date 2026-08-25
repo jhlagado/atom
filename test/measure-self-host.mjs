@@ -33,7 +33,7 @@ const summarizeExecution = (execution) => ({
   serviceCalls: execution.serviceCalls,
   finalSp: execution.finalSp,
   returnPc: execution.returnPc,
-  sourcePages: execution.sourcePages,
+  sourceReads: execution.sourceReads,
 });
 
 const pinned = await loadNativeAtomCore();

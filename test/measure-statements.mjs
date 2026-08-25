@@ -45,7 +45,7 @@ h.assemble("Alpha EQU Beta+1\nBeta EQU 16\n");
 h.assemble("ORG $4100\nStart: DB 1,2\nWords: DW Start,Words\nGap: DS 2\nAfter: DB $FF\n");
 h.assemble('DB "A\\n\\x42",0,"\\\\\\\""\n');
 
-h.resetAssembly({ pendingBytes: 5, capacity: 2 });
+h.resetAssembly({ pendingBytes: 6, capacity: 2 });
 h.pendingCheckCapacity();
 h.outputCheckCapacity(2);
 h.outputCheckCapacity(3);

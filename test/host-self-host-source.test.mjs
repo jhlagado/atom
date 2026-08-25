@@ -17,7 +17,7 @@ test("the authoritative native symbol ledger is exact, scoped, and readable", as
   const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
   assert.equal(ledger.format, "atom-native-symbol-ledger");
   assert.equal(ledger.version, 2);
-  assert.equal(ledger.symbols.length, 1312);
+  assert.equal(ledger.symbols.length, 1316);
 
   const globalNames = new Set();
   const privateNames = new Set();

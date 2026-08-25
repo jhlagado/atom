@@ -52,9 +52,9 @@
       "maxCycles": 780
     },
     "AtomPendingAdd": {
-      "measuredInstructions": 38,
+      "measuredInstructions": 42,
       "maxInstructions": 100,
-      "measuredCycles": 340,
+      "measuredCycles": 374,
       "maxCycles": 850
     },
     "AtomPendingTake": {

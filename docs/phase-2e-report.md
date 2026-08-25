@@ -9,12 +9,12 @@ under AZM 0.3.9 strict register and stack contracts. The runtime harness audits
 all 65,536 addresses after every invocation, including all 10,335 operand-site
 locator calls.
 
-The checked path contains **Measured 1,868 bytes** of expression code,
+The checked path contains **Measured 1,877 bytes** of expression code,
 **Measured 67 bytes** of patch-locator code, and **Measured 2,061 bytes** of
 parser code and tables. Expression and parser workspace total **Measured 355
-bytes**. The complete encoder-through-parser account is **Measured 9,201 bytes**
-of code and tables plus **Measured 407 bytes** of workspace; the complete native
-core remains **Measured 12,101 resident bytes**.
+bytes**. The complete encoder-through-parser account is **Measured 9,240 bytes**
+of code and tables plus **Measured 667 bytes** of workspace; the complete native
+core is **Measured 12,396 resident bytes**.
 
 The production driver adds two rules that the earlier proof image compiled
 out. Forward references accept source-part ordinals 0 through 15 and reject 16

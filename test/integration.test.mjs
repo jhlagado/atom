@@ -139,13 +139,13 @@ test("forward expressions publish exact metadata only after full-form validation
   ];
   for (const [source, expected] of cases) {
     h.reset();
-    const parsed = h.parse(source, { part: 15 });
+    const parsed = h.parse(source, { part: 255 });
     assert.equal(parsed.carry, 0, source);
     assert.equal(parsed.references.length, expected.length, source);
     assert.deepEqual(parsed.references.map(({ symbol: _symbol, part, rawKind: _rawKind, ...reference }) => ({ ...reference, part })),
-      expected.map((reference) => ({ ...reference, part: 15 })), source);
+      expected.map((reference) => ({ ...reference, part: 255 })), source);
     assert.deepEqual(parsed.references.map(({ kind, rawKind }) => rawKind),
-      expected.map(({ kind }) => 0xf8 | kind), `${source}: diagnostic anchors`);
+      expected.map(({ kind }) => 0x80 | kind), `${source}: diagnostic anchors`);
     assert.equal(parsed.afterGlobalEnd, parsed.beforeGlobalEnd + expected.length * 8, source);
     assert.equal(parsed.references.every(({ symbol }) => symbol >= h.symbols.AtomIntegrationSymbolArena), true, source);
   }
@@ -166,11 +166,11 @@ test("two-field pending handoff is exact and capacity failure is atomic", () => 
   assert.equal(queued.carry, 0);
   assert.equal(queued.status, 0);
   assert.deepEqual(h.pendingRecords(), [
-    [parsed.references[0].symbol & 0xff, parsed.references[0].symbol >>> 8, 0x02, 0x40, 0xb8 | PATCH_KIND.DISPLACEMENT, 0],
-    [parsed.references[1].symbol & 0xff, parsed.references[1].symbol >>> 8, 0x03, 0x40, 0xb8 | PATCH_KIND.BYTE, 0],
+    [parsed.references[0].symbol & 0xff, parsed.references[0].symbol >>> 8, 0x02, 0x40, 0x80 | PATCH_KIND.DISPLACEMENT, 0, 7],
+    [parsed.references[1].symbol & 0xff, parsed.references[1].symbol >>> 8, 0x03, 0x40, 0x80 | PATCH_KIND.BYTE, 0, 7],
   ]);
 
-  h.reset({ pendingBytes: 11 });
+  h.reset({ pendingBytes: 13 });
   parsed = h.parse("LD (IY+Disp),Forward");
   assert.equal(parsed.carry, 0);
   const before = h.pendingRecords();
@@ -221,22 +221,13 @@ test("symbol publication preflight is atomic and private scope remains exact", (
   assert.equal(parsed.afterLocalBegin, parsed.beforeLocalBegin - 8);
 });
 
-test("forward-reference part ordinals stop exactly at the native capacity", () => {
+test("forward-reference part ordinals retain the complete byte domain", () => {
   h.reset();
-  let parsed = h.parse("JP Forward", { part: 15 });
+  let parsed = h.parse("JP Forward", { part: 255 });
   assert.equal(parsed.carry, 0);
   assert.equal(parsed.references.length, 1);
-  assert.equal(parsed.references[0].part, 15);
-  assert.equal(parsed.references[0].rawKind, 0xf8 | PATCH_KIND.WORD);
-
-  h.reset();
-  parsed = h.parse("JP Forward", { part: 16 });
-  assert.equal(parsed.carry, 1);
-  assert.equal(parsed.status, STATUS.PART_CAPACITY);
-  assert.equal(parsed.error.part, 16);
-  assert.equal(parsed.error.offset, 3);
-  assert.deepEqual(parsed.record, parsed.before);
-  assert.deepEqual(parsed.references, []);
-  assert.equal(parsed.afterGlobalEnd, parsed.beforeGlobalEnd);
-  assert.equal(parsed.afterLocalBegin, parsed.beforeLocalBegin);
+  assert.equal(parsed.references[0].part, 255);
+  assert.equal(parsed.references[0].rawKind, 0x80 | PATCH_KIND.WORD);
+  assert.equal(h.queueReferences(0x4000).carry, 0);
+  assert.equal(h.pendingRecords()[0][h.symbols.AtomPendingPartOffset], 255);
 });

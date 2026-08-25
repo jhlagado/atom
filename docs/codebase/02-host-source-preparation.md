@@ -8,7 +8,8 @@ conditionals, masks host-owned syntax, snapshots binary inputs, assigns source
 ordinals, and retains enough provenance for native diagnostics and later
 artifacts.
 
-The native assembler receives the resulting byte intervals. It does not read a
+The native assembler receives the resulting ordered parts through its source
+service. It does not read a
 manifest, open a path, evaluate a host conditional, or concatenate files.
 
 ## Composition entry point
@@ -273,8 +274,9 @@ diagnostic name and source byte length
 ```
 
 The native runner requires ordinal order, bank zero, equal original/compiler
-lengths, and no part larger than the 24 KiB source page. It snapshots the data
-again before writing Z80 memory.
+lengths, and no part larger than the 65,535-byte logical-offset range. It takes
+another immutable snapshot before execution. Source bytes remain in host
+memory and are returned through `AtomSourceReadByte`.
 
 ## Changing source preparation
 

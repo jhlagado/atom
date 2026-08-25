@@ -43,9 +43,9 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomIntegrationProofPendingStart: 0x9100,
   AtomIntegrationPendingBefore: 0x9100,
   AtomIntegrationPendingArena: 0x9101,
-  AtomIntegrationPendingLimit: 0x9131,
-  AtomIntegrationPendingAfter: 0x9131,
-  AtomIntegrationProofPendingEnd: 0x9132,
+  AtomIntegrationPendingLimit: 0x9139,
+  AtomIntegrationPendingAfter: 0x9139,
+  AtomIntegrationProofPendingEnd: 0x913a,
 });
 
 export const PATCH_KIND = Object.freeze({ BYTE: 1, WORD: 2, RELATIVE: 3, DISPLACEMENT: 4 });
@@ -218,7 +218,7 @@ export async function createIntegrationHarness({ proofManifest = manifest } = {}
     memory,
     statistics,
     execute,
-    reset({ symbolBytes = 128, pendingBytes = 48 } = {}) {
+    reset({ symbolBytes = 128, pendingBytes = 56 } = {}) {
       restart();
       let result = execute("AtomSymbolReset", (_memory, names, cpu) => {
         cpu.h = names.AtomIntegrationSymbolArena >>> 8;
@@ -303,10 +303,10 @@ export async function createIntegrationHarness({ proofManifest = manifest } = {}
     },
     pendingRecords() {
       const end = memory[symbols.AtomPendingNext] | (memory[symbols.AtomPendingNext + 1] << 8);
-      const count = (end - symbols.AtomIntegrationPendingArena) / 6;
+      const count = (end - symbols.AtomIntegrationPendingArena) / symbols.AtomPendingRecordBytes;
       return Array.from({ length: count }, (_, index) => Array.from(memory.slice(
-        symbols.AtomIntegrationPendingArena + index * 6,
-        symbols.AtomIntegrationPendingArena + (index + 1) * 6,
+        symbols.AtomIntegrationPendingArena + index * symbols.AtomPendingRecordBytes,
+        symbols.AtomIntegrationPendingArena + (index + 1) * symbols.AtomPendingRecordBytes,
       )));
     },
     setRecord(record) {
