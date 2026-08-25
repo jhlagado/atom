@@ -134,11 +134,12 @@ measured route to one flat CP/M COM.
 ## Proof account
 
 The representative program contains a forward reference and produces a
-34-byte COM. With the default command, transient entry through the final `RET`
-uses 78,098 instructions and 1,166,365 T-states. CCP command load through the
-return tail uses 123,179 instructions and 1,862,629 T-states. The named command
-`ATOM HELLO.ASM MADE.COM` uses 79,420 instructions and 1,178,809 T-states in
-the transient, or 127,507 instructions and 1,900,253 T-states from the CCP.
+34-byte COM. With the current Debug80 acceptance disk, the default command's
+transient entry through the final `RET` uses 83,867 instructions and 1,219,689
+T-states. CCP command load through the return tail uses 128,948 instructions
+and 1,915,953 T-states. The named command `ATOM HELLO.ASM MADE.COM` uses 85,189
+instructions and 1,232,133 T-states in the transient, or 133,276 instructions
+and 1,953,577 T-states from the CCP.
 The measured stack high-water mark remains 32 bytes below `$E400`.
 
 The default success path makes 29 BDOS calls; the named path makes 27 because
