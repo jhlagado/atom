@@ -1,10 +1,10 @@
 {
   "format": "atom-cpm22-output-candidate-measurement",
-  "version": 1,
+  "version": 2,
   "boundary": "output-specific Z80 kernel; excludes common source loading, diagnostics, FCB names, rollback rename, and user interface",
   "inTpaComplete": {
     "classification": "Measured complete retained adapter",
-    "outputCodeBytes": 233,
+    "outputCodeBytes": 370,
     "outputImageWorkspaceBytes": 18304
   },
   "randomRecord": {

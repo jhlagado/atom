@@ -46,7 +46,13 @@ function projectFor(bytes) {
   });
 }
 
-export async function runCpm22Atom(source = representativeSource, priorOutput) {
+export async function runCpm22Atom(source = representativeSource, priorOutput, options = {}) {
+  const sourceName = options.sourceName ?? "INPUT.ASM";
+  const outputName = options.outputName ?? "OUTPUT.COM";
+  const command = options.command ??
+    (sourceName === "INPUT.ASM" && outputName === "OUTPUT.COM"
+      ? "ATOM"
+      : `ATOM ${sourceName} ${outputName}`);
   const [bootstrapBytes, baseDiskBytes, atomBytes, census] = await Promise.all([
     readFile(join(cpmRoot, "bootstrap.bin")),
     readFile(join(cpmRoot, "cpm22.img")),
@@ -54,9 +60,14 @@ export async function runCpm22Atom(source = representativeSource, priorOutput) {
     readFile(join(repositoryRoot, "proofs", "cpm22-census.json"), "utf8").then(JSON.parse),
   ]);
   let diskImage = installCpm22File(new Uint8Array(baseDiskBytes), "ATOM.COM", atomBytes);
-  diskImage = installCpm22File(diskImage, "INPUT.ASM", source);
+  if (options.installSource !== false) {
+    diskImage = installCpm22File(diskImage, sourceName, source);
+  }
   if (priorOutput !== undefined) {
-    diskImage = installCpm22File(diskImage, "OUTPUT.COM", priorOutput);
+    diskImage = installCpm22File(diskImage, outputName, priorOutput);
+  }
+  for (const [name, bytes] of options.files ?? []) {
+    diskImage = installCpm22File(diskImage, name, bytes);
   }
   const memory = new Uint8Array(0x10000);
   memory.set(bootstrapBytes);
@@ -96,7 +107,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput) {
   const beforeAtomInstructions = instructions;
   const beforeAtomCycles = cycles;
   const atomOutputStart = output.length;
-  platform.terminal.enqueueInput(Buffer.from("ATOM\r", "ascii"));
+  platform.terminal.enqueueInput(Buffer.from(`${command}\r`, "ascii"));
   stepUntil(() => runtime.getPC() === census.entryAddress, "Atom entry");
   const entrySp = runtime.getRegisters().sp;
   const programInstructions = instructions;
@@ -113,7 +124,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput) {
   const commandCycles = cycles - beforeAtomCycles;
   stepUntil(() => transcript(atomOutputStart).endsWith("\r\nA>"), "Atom completion prompt");
   const finalDisk = platform.disk.exportImage();
-  const outputFile = readCpm22File(finalDisk, "OUTPUT.COM");
+  const outputFile = readCpm22File(finalDisk, outputName);
   return {
     atomBytes,
     census,
@@ -128,13 +139,17 @@ export async function runCpm22Atom(source = representativeSource, priorOutput) {
     returnSp,
     finalDisk,
     outputFile,
+    sourceName,
+    outputName,
+    command,
     runtime,
     platform,
     transcript,
     runOutput() {
       const start = output.length;
-      platform.terminal.enqueueInput(Buffer.from("OUTPUT\r", "ascii"));
-      stepUntil(() => transcript(start).endsWith("\r\nA>"), "OUTPUT.COM completion");
+      const outputCommand = outputName.slice(0, outputName.lastIndexOf("."));
+      platform.terminal.enqueueInput(Buffer.from(`${outputCommand}\r`, "ascii"));
+      stepUntil(() => transcript(start).endsWith("\r\nA>"), `${outputName} completion`);
       return transcript(start);
     },
   };

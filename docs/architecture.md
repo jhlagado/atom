@@ -107,11 +107,14 @@ supplies the ordinary memory-backed source service, retains the flat image in
 TPA for direct patching, and writes a temporary COM only after native commit.
 No Debug80 hook intercepts BDOS calls.
 
-This first profile fixes `INPUT.ASM` and `OUTPUT.COM` and does not perform host
-dependency resolution inside CP/M. Its 4 KiB source limit and 18,304-byte output
-limit are target-map choices rather than changes to the native Atom ABI. See
-[Native Atom on CP/M 2.2](cpm22.md) for the measured map and comparison with
-random-record and NOBJ output.
+With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
+`ATOM SOURCE OUTPUT.COM` selects another pair of current-drive 8.3 names. The
+adapter validates the command tail and reserves per-output temporary and backup
+names before loading the source. It does not perform host dependency resolution
+inside CP/M. Its 4 KiB source limit and 18,304-byte output limit are target-map
+choices rather than changes to the native Atom ABI. See [Native Atom on CP/M
+2.2](cpm22.md) for the measured map and comparison with random-record and NOBJ
+output.
 
 ## Self-hosting
 

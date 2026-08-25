@@ -68,6 +68,7 @@ async function build() {
     const adapterCodeBytes = symbols.CP_ADAPTER_CODE_END - symbols.CP_ADAPTER_CODE_START;
     const adapterImmutableBytes = symbols.CP_ADAPTER_IMMUTABLE_END - symbols.CP_ADAPTER_IMMUTABLE_START;
     const outputAdapterCodeBytes = symbols.CP_OUTPUT_CODE_END - symbols.CP_OUTPUT_CODE_START;
+    const commandTailCodeBytes = symbols.CP_COMMAND_CODE_END - symbols.CP_COMMAND_CODE_START;
     const adapterWorkspaceBytes =
       symbols.CP_ADAPTER_WORKSPACE1_END - symbols.CP_ADAPTER_WORKSPACE1_START +
       symbols.CP_ADAPTER_WORKSPACE2_END - symbols.CP_ADAPTER_WORKSPACE2_START;
@@ -75,7 +76,7 @@ async function build() {
       bytes: binary.bytes,
       report: {
         format: "atom-cpm22-census",
-        version: 1,
+        version: 2,
         nativeCoreHead: "23afbf6cffe0311059e2af7b8db31ee8559bc121",
         loadAddress: 0x100,
         entryAddress: symbols.CP_ENTRY,
@@ -90,6 +91,7 @@ async function build() {
         adapterImmutableBytes,
         adapterWorkspaceBytes,
         outputAdapterCodeBytes,
+        commandTailCodeBytes,
         sourceBytes: 0x1000,
         symbolBytes: 0x3000,
         pendingBytes: 0x1000,
@@ -97,12 +99,17 @@ async function build() {
         sourceProbeBytes: 0x80,
         stackBytes: 0x0c00,
         representativeGeneratedBytes: 34,
-        representativeInstructions: 65205,
-        representativeTStates: 1046209,
-        representativeCommandInstructions: 109140,
-        representativeCommandTStates: 1723975,
+        representativeInstructions: 70469,
+        representativeTStates: 1103057,
+        representativeCommandInstructions: 115550,
+        representativeCommandTStates: 1799321,
         representativeStackHighWaterBytes: 32,
-        representativeBdosCalls: 16,
+        representativeBdosCalls: 29,
+        namedRepresentativeInstructions: 72800,
+        namedRepresentativeTStates: 1123607,
+        namedRepresentativeCommandInstructions: 120887,
+        namedRepresentativeCommandTStates: 1845051,
+        namedRepresentativeBdosCalls: 27,
         sha256: createHash("sha256").update(binary.bytes).digest("hex"),
       },
     };

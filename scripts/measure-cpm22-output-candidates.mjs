@@ -8,6 +8,7 @@ import { compile } from "@jhlagado/azm";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = join(repositoryRoot, "proofs", "cpm22-output-candidates.json");
+const censusPath = join(repositoryRoot, "proofs", "cpm22-census.json");
 
 const candidates = {
   randomRecord: `
@@ -267,14 +268,15 @@ async function measure(name, source) {
   }
 }
 
+const census = JSON.parse(await readFile(censusPath, "utf8"));
 const result = {
   format: "atom-cpm22-output-candidate-measurement",
-  version: 1,
+  version: 2,
   boundary: "output-specific Z80 kernel; excludes common source loading, diagnostics, FCB names, rollback rename, and user interface",
   inTpaComplete: {
     classification: "Measured complete retained adapter",
-    outputCodeBytes: 233,
-    outputImageWorkspaceBytes: 18304,
+    outputCodeBytes: census.outputAdapterCodeBytes,
+    outputImageWorkspaceBytes: census.outputBytes,
   },
   randomRecord: {
     classification: "Measured lower-bound kernel",
