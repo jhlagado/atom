@@ -1,6 +1,6 @@
 # Source-packager boundary
 
-This directory contains Atom's language-neutral host services for source
+This directory contains Atom's language-neutral tool services for source
 identity, dependency resolution, source plans, placement, and provenance.
 The modules may import Node built-ins and other files in this directory. They
 must not import Atom-specific syntax or resident assembler code.

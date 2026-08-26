@@ -17,6 +17,11 @@ export {
 export { translateAzmSourceToAtom } from "./translation/azm-to-atom.mjs";
 export { createSelfHostedAtomCore } from "./self-host/create-self-hosted-core.mjs";
 export {
+  ATOM_TOOL_SERVICE,
+  ATOM_TOOL_STATUS,
+  createAtomToolServiceGateway,
+} from "./tool-service-gateway.mjs";
+export {
   assembleResolvedAtomProject,
   ATOM_HOST_SINK_STATUS,
   createMemoryAtomSink,

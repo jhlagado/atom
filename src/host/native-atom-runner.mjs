@@ -2,6 +2,10 @@ import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import { AtomAssemblyError } from "./atom-assembly-error.mjs";
 import { loadNativeAtomCore } from "./native-atom-core.mjs";
+import {
+  ATOM_TOOL_SERVICE,
+  createAtomToolServiceGateway,
+} from "./tool-service-gateway.mjs";
 
 const BUILD_DESCRIPTOR = 0x4000;
 const PART_DESCRIPTORS = 0x9000;
@@ -623,8 +627,22 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       bridgeFailure = Object.freeze({ message, diagnostic: currentDiagnostic() });
     }
   };
+  const toolServices = createAtomToolServiceGateway({
+    sink,
+    sourceRead({ part, offset }) {
+      const sourcePart = snapshot.parts[part];
+      if (sourcePart === undefined || offset >= sourcePart.compilerBytes.length) {
+        throw runtimeFailure(
+          "source-read",
+          "native Atom requested a source byte outside the resolved part",
+        );
+      }
+      sourceReads += 1;
+      return sourcePart.compilerBytes[offset];
+    },
+  });
   const serviceAt = new Map([
-    [symbols.AtomSinkBegin, Object.freeze({ kind: "begin", action: () => sink.begin(Object.freeze({ descriptor: runtime.cpu.ix, target })) })],
+    [symbols.AtomSinkBegin, Object.freeze({ kind: "begin", action: () => toolServices.dispatch(ATOM_TOOL_SERVICE.begin, { descriptor: runtime.cpu.ix, target }).status })],
     [symbols.AtomSinkImageByte, Object.freeze({ kind: "image", action: () => {
       const address = pair(runtime.cpu.h, runtime.cpu.l);
       const source = currentDiagnostic();
@@ -638,15 +656,15 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       }
       const byte = binary === undefined ? runtime.cpu.a : binary.bytes[binary.index++];
       recordExtent(address + 1, "IMAGE lies outside the target range");
-      return sink.image(Object.freeze({
+      return toolServices.dispatch(ATOM_TOOL_SERVICE.image, {
         bank: runtime.cpu.c,
         address,
         bytes: Object.freeze([byte]),
         source,
-      }));
+      }).status;
     } })],
-    [symbols.AtomSinkPatchByte, Object.freeze({ kind: "patch-byte", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.h, runtime.cpu.l), bytes: Object.freeze([runtime.cpu.a]), source: currentDiagnostic() })) })],
-    [symbols.AtomSinkPatchWord, Object.freeze({ kind: "patch-word", action: () => sink.patch(Object.freeze({ bank: runtime.cpu.c, address: pair(runtime.cpu.d, runtime.cpu.e), bytes: Object.freeze([runtime.cpu.l, runtime.cpu.h]), source: currentDiagnostic() })) })],
+    [symbols.AtomSinkPatchByte, Object.freeze({ kind: "patch-byte", action: () => toolServices.dispatch(ATOM_TOOL_SERVICE.patch, { bank: runtime.cpu.c, address: pair(runtime.cpu.h, runtime.cpu.l), bytes: Object.freeze([runtime.cpu.a]), source: currentDiagnostic() }).status })],
+    [symbols.AtomSinkPatchWord, Object.freeze({ kind: "patch-word", action: () => toolServices.dispatch(ATOM_TOOL_SERVICE.patch, { bank: runtime.cpu.c, address: pair(runtime.cpu.d, runtime.cpu.e), bytes: Object.freeze([runtime.cpu.l, runtime.cpu.h]), source: currentDiagnostic() }).status })],
     [symbols.AtomSinkCommit, Object.freeze({ kind: "commit", action: () => {
       const incompleteBinary = [...binaryIncludes.values()].find(({ bytes, index }) => index !== bytes.length);
       if (incompleteBinary !== undefined) {
@@ -657,14 +675,14 @@ export async function assembleResolvedAtomProject(project, options = {}) {
         return ATOM_HOST_SINK_STATUS.BINARY_INCLUDE;
       }
       if (bridgeFailure !== undefined) return ATOM_HOST_SINK_STATUS.TARGET_RANGE;
-      return sink.commit(Object.freeze({
+      return toolServices.dispatch(ATOM_TOOL_SERVICE.commit, {
         descriptor: runtime.cpu.ix,
         finalCursor: pair(runtime.cpu.h, runtime.cpu.l),
         remaining: pair(runtime.cpu.d, runtime.cpu.e),
         highWater: logicalHighWater,
-      }));
+      }).status;
     } })],
-    [symbols.AtomSinkAbort, Object.freeze({ kind: "abort", action: () => sink.abort() })],
+    [symbols.AtomSinkAbort, Object.freeze({ kind: "abort", action: () => toolServices.dispatch(ATOM_TOOL_SERVICE.abort).status })],
   ]);
 
   const runtimeFailure = (code, message) => {
@@ -689,17 +707,19 @@ export async function assembleResolvedAtomProject(project, options = {}) {
 
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
     if (runtime.cpu.pc === symbols.AtomSourceReadByte) {
-      const part = snapshot.parts[runtime.cpu.a];
       const offset = pair(runtime.cpu.h, runtime.cpu.l);
-      if (part === undefined || offset >= part.compilerBytes.length) {
-        throw runtimeFailure("source-read", "native Atom requested a source byte outside the resolved part");
+      const response = toolServices.dispatch(ATOM_TOOL_SERVICE.sourceRead, {
+        part: runtime.cpu.a,
+        offset,
+      });
+      if (response.status !== 0 || response.value === undefined) {
+        throw runtimeFailure("source-read", "native Atom tool services rejected a source byte");
       }
       const returnAddress = word(memory, runtime.cpu.sp);
       runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
       runtime.cpu.pc = returnAddress;
-      runtime.cpu.a = part.compilerBytes[offset];
+      runtime.cpu.a = response.value;
       runtime.cpu.flags.C = 0;
-      sourceReads += 1;
       continue;
     }
     if (runtime.cpu.pc === symbols.AtomOutputSetOrigin) {

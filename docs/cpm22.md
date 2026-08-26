@@ -98,8 +98,8 @@ The measured TPA map is:
 
 | Range | Bytes | Use |
 | --- | ---: | --- |
-| `$0100..$3834` | 14,133 | relocation header, native Atom, adapter code and resident state |
-| `$3835..$3FFF` | 1,995 | free resident-partition margin |
+| `$0100..$3840` | 14,145 | relocation header, native Atom, adapter code and resident state |
+| `$3841..$3FFF` | 1,983 | free resident-partition margin |
 | `$4000..$407F` | 128 | source random-record cache |
 | `$4080..$40FF` | 128 | source-plan sequential-record cache |
 | `$4100..$45FA` | 1,275 | complete 255-part descriptor array |
@@ -114,9 +114,9 @@ The measured TPA map is:
 | `$D800..$E3FF` | 3,072 | stack allocation |
 
 The linked image contains the 12,396-byte native core account, a 16-byte COM
-entry and relocation header, and 1,734 CP/M-specific resident bytes after the
+entry and relocation header, and 1,746 CP/M-specific resident bytes after the
 eight host-service stub bytes and five bytes of the memory-backed source
-fallback have been replaced. The adapter increment divides into 1,421 code
+fallback have been replaced. The adapter increment divides into 1,433 code
 bytes, 206 immutable bytes, and 107 resident writable bytes. The command-tail
 path uses 303 code bytes. The complete output portion uses 366 code bytes,
 including dynamic FCB construction and rollback. The complete source portion
@@ -156,6 +156,13 @@ feature pass reduced it to 14,133 bytes by sharing descriptor construction, FCB
 clearing, plan setup, and diagnostic tails. That pass saved 92 resident bytes
 without changing capacities or moving resident bytes into another account.
 
+The portable tool-service pass adds one shared 12-byte wrapper around public
+BDOS calls. CP/M does not standardize IX or IY, so the wrapper preserves both
+registers for Atom's compact source and publication entries. The current
+transient is therefore 14,145 bytes. The native core, immutable adapter data,
+writable adapter data, source and output capacities, and generated programs do
+not change.
+
 ## Source-plan comparison
 
 Three plan representations were assembled as independent parser kernels before
@@ -180,7 +187,7 @@ Three output paths were considered against the same Atom sink contract.
 
 | Path | Evidence | Resident result | Workspace result |
 | --- | --- | ---: | ---: |
-| In-TPA image, then sequential COM write | Measured complete retained implementation | 1,734-byte current adapter increment; 366 output-specific code bytes | 18,304-byte image |
+| In-TPA image, then sequential COM write | Measured complete retained implementation | 1,746-byte current adapter increment; 366 output-specific code bytes | 18,304-byte image |
 | Sequential COM plus random-record patching | Measured lower-bound Z80 kernel; complete total remains a hypothesis | 142-byte kernel; estimated 850–1,050-byte complete adapter | 137-byte kernel workspace |
 | NOBJ spools plus separate materializer | Measured lower-bound Z80 kernel; complete total remains a hypothesis | 165-byte kernel; estimated 1,250–1,800-byte complete producer and materializer | 135-byte kernel workspace plus disk spools |
 
@@ -205,11 +212,11 @@ is not the smallest measured route to one flat CP/M COM.
 
 The representative program contains a forward reference and produces a
 34-byte COM. With the current Debug80 acceptance disk, the default command's
-transient entry through the final `RET` uses 84,883 instructions and 1,227,658
-T-states. CCP command load through the return tail uses 131,492 instructions
-and 1,948,586 T-states. The named command `ATOM HELLO.ASM MADE.COM` uses 86,205
-instructions and 1,240,107 T-states in the transient, or 135,820 instructions
-and 1,986,215 T-states from the CCP.
+transient entry through the final `RET` uses 117,340 instructions and 1,530,287
+T-states. CCP command load through the return tail uses 163,949 instructions
+and 2,251,215 T-states. The named command `ATOM HELLO.ASM MADE.COM` uses
+118,650 instructions and 1,542,566 T-states in the transient, or 168,265
+instructions and 2,288,674 T-states from the CCP.
 The measured stack high-water mark remains 32 bytes below `$E400`.
 
 The default success path makes 29 BDOS calls; the named path makes 27 because
@@ -221,25 +228,25 @@ console output. CP/M has no operating-system-side open handle, so the adapter
 may abandon the read-only source FCB after its last random read; only written
 files require close processing.
 
-The 16,535-byte representative source uses 1,923,190 transient instructions,
-19,131,614 T-states, 284 BDOS calls, and 130 random-record cache fills. CCP load
-through return uses 1,972,965 instructions and 19,879,059 T-states. The
+The 16,535-byte representative source uses 1,957,177 transient instructions,
+19,455,918 T-states, 284 BDOS calls, and 130 random-record cache fills. CCP load
+through return uses 2,006,952 instructions and 20,203,363 T-states. The
 proof compares the published logical COM bytes with the checked Mac Atom
 result, executes the selected COM under CP/M, and checks its terminal output.
 
 The two-part representative contains 31 source bytes and produces four program
-bytes. It uses 80,083 transient instructions, 1,176,001 T-states, 39 BDOS calls,
+bytes. It uses 130,764 transient instructions, 1,660,154 T-states, 39 BDOS calls,
 two plan-record reads, two source preflight reads, and two source random reads.
-CCP load through return uses 129,969 instructions and 1,924,447 T-states. The
+CCP load through return uses 180,650 instructions and 2,408,600 T-states. The
 test asserts the complete BDOS call sequence, exact bytes `C3 03 01 C9`, both
 part transitions, return address, and restored stack.
 
 The large multipart proof combines two 33,000-byte comment parts with the
 151-byte representative program, for 66,151 logical source bytes. It produces
-the same 34 initialized bytes as the single-file program and uses 7,538,718
-transient instructions, 73,843,189 T-states, 1,075 BDOS calls, two plan reads,
+the same 34 initialized bytes as the single-file program and uses 7,624,728
+transient instructions, 74,698,444 T-states, 1,075 BDOS calls, two plan reads,
 518 sequential source reads, and 518 random source reads. CCP load through
-return uses 7,588,604 instructions and 74,591,635 T-states. Its stack
+return uses 7,674,614 instructions and 75,446,890 T-states. Its stack
 high-water mark is also 32 bytes.
 
 Capacity proofs accept 255 parts, 65,535 bytes in each part, and 18,304 target

@@ -38,10 +38,11 @@ proofs: kind, bank, target address, byte count, and final bytes. It executes the
 checked Atom-built core and adds no proof-only Z80 adapter code.
 
 The Mac adapter intercepts these six entry addresses in Debug80 before their
-stub instructions execute. It reads the documented Z80 registers, performs the
-host operation, pops the native return address, and supplies A and carry as the
-routine result. Each linked stub returns `$FF` with carry set when interception
-is absent, so a missing host service fails at `AtomSinkBegin`.
+stub instructions execute. It reads the documented Z80 registers and routes
+the request through Atom's private tool-service gateway. The adapter pops the
+native return address and supplies A and carry as the routine result. Each
+linked stub returns `$FF` with carry set when interception is absent, so a
+missing provider fails at `AtomSinkBegin`.
 
 The current memory sink accepts only bank zero. IMAGE addresses may advance or
 leave gaps but may not descend or overlap. Each PATCH byte must name an earlier

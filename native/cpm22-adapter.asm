@@ -5,7 +5,7 @@
 ; BDOS through one random-record cache; output is patched in TPA and published
 ; through a temporary file only after Atom commits.
 
-CP_BDOS             EQU $0005
+CP_BDOS_ENTRY       EQU $0005
 CP_SYMBOL_START     EQU $5000
 CP_SYMBOL_END       EQU $8000
 CP_PENDING_START    EQU $8000
@@ -41,6 +41,17 @@ CP_COMMAND_LENGTH   EQU $0080
 CP_COMMAND_START    EQU $0081
 
 CP_ADAPTER_CODE_START:
+; CP/M standardizes only the 8080 register set. Preserve the Z80 index
+; registers promised by Atom's private tool-service client adapter.
+;@ROUTINE IN C,DE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
+CP_BDOS:
+PUSH IX
+PUSH IY
+CALL CP_BDOS_ENTRY
+POP  IY
+POP  IX
+RET
+
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_ENTRY:
 LD   (CP_SAVED_SP),SP

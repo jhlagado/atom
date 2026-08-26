@@ -314,9 +314,11 @@ test("source lists distinguish missing plans, missing parts, and malformed recor
   const prior = Uint8Array.from([0x00, 0xc9]);
   const missingPlan = await runMultipart("P0.ASM\n", multipartParts, {
     installPlan: false,
+    planName: "MISSING.LST",
+    command: "ATOM MISSING.LST MADE.COM @",
     priorOutput: prior,
   });
-  assert.match(missingPlan.atomTranscript, /BUILD\.LST read failed/);
+  assert.match(missingPlan.atomTranscript, /MISSING\.LST read failed/);
   assert.deepEqual(missingPlan.outputFile?.bytes.slice(0, prior.length), prior);
 
   const missingPart = await runMultipart("MISSING.ASM\n", [], {

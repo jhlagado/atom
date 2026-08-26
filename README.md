@@ -101,6 +101,8 @@ The measured native account is:
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [CP/M adapter report](docs/cpm22.md) separate the measured host and native CP/M
 configurations from the remaining [TEC-1 adapter work](docs/tec-1-deployment.md).
+The [private tool-service boundary](docs/tool-services.md) records how Node,
+CP/M, Debug80, and later providers sit beneath the unchanged resident core.
 
 ## Correctness
 

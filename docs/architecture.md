@@ -85,7 +85,9 @@ The npm package contains the pinned native core and the Debug80 runtime. AZM is
 used only in development to regenerate the image and to provide the independent
 oracle. The package loader checks the core digest and structural coverage before
 execution. Debug80 marks native code read-only and intercepts the source-read
-entry plus six fail-closed sink entry points.
+entry plus six fail-closed sink entry points. Those compact entries reach the
+private Atom provider dispatch. Only this direct-host profile uses that route;
+it does not intercept arbitrary Z80 calls or memory.
 
 For `INCBIN`, the bridge replaces only IMAGE bytes attributed to the lowered
 source line. It checks that the native byte count and snapshotted binary length
@@ -108,7 +110,9 @@ sixteen-byte transient-program header. Its adapter scans source files through
 BDOS to establish their logical lengths, then supplies `AtomSourceReadByte`
 through a 128-byte random-record cache. It retains the flat image in TPA for
 direct patching and writes a temporary COM only after native commit. No
-Debug80 hook intercepts BDOS calls.
+Debug80 hook intercepts BDOS calls. A shared adapter wrapper preserves IX and
+IY around the public `$0005` entry because CP/M standardizes only the 8080
+register set.
 
 With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
 `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive 8.3 names. The
