@@ -21,6 +21,16 @@ export {
   ATOM_TOOL_STATUS,
   createAtomToolServiceGateway,
 } from "./tool-service-gateway.mjs";
+export { createNamedObjectAtomAdapter } from "./named-object-atom-adapter.mjs";
+export {
+  MemoryNamedObjectServices,
+  NAMED_OBJECT_ABI_VERSION,
+  NAMED_OBJECT_OPERATION,
+  NAMED_OBJECT_REQUEST,
+  NAMED_OBJECT_REQUEST_SIZE,
+  NAMED_OBJECT_STATUS,
+  NamedObjectClient,
+} from "./named-object-services.mjs";
 export {
   assembleResolvedAtomProject,
   ATOM_HOST_SINK_STATUS,

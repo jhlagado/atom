@@ -42,9 +42,21 @@ and disk devices. A direct Debug80-hosted Atom run instead selects the private
 Node gateway explicitly; it does not intercept arbitrary BIOS calls, BDOS
 calls, or memory accesses.
 
-TECM8, MON3, and TEC-FS providers remain deployment work. They may replace the
-transport below the adapter without changing Atom's source language or native
-core.
+The optional named-object profile routes those same compact callbacks through
+the common 16-byte named-object request used by Nucleus. It keeps one source
+handle live, seeks only when Atom rereads a source position, and publishes one
+flat binary object transactionally. Gaps before IMAGE bytes and the final
+logical high-water mark are written as zeroes; PATCH bytes seek into already
+written data and then restore the append cursor. This remains compatible with
+the bounded TEC-FS provider, which deliberately does not support sparse seeks.
+
+TECM8 now provides the common request beneath private selector `$91`. Atom's
+`createNamedObjectAtomAdapter()` can therefore use the same service meanings
+through a direct Debug80 bridge or a later native launcher without changing
+the assembler core. The checked host reference provider exercises the exact
+request block, eight-bit transfers, bounded handles, tentative generations,
+commit, and abort. Installing Atom itself as a complete TecMate application,
+including its launcher and RAM arenas, remains separate deployment work.
 
 ## Contract
 
@@ -68,6 +80,12 @@ by the source program.
 
 The Node gateway adds no resident Z80 bytes. The native core remains 12,396
 bytes, including its existing 24-byte fail-closed service-stub tail.
+
+The named-object adapter also adds no resident Z80 bytes. Its reference client
+uses a 512-byte host-only request/transfer window and transfers at most 256
+bytes per call. This memory is neither Atom workspace nor TECM8 workspace; an
+in-machine launcher supplies its own always-visible 16-byte request and bounded
+transfer buffer.
 
 The CP/M provider now preserves IX and IY around BDOS with one shared 12-byte
 wrapper. The linked transient is 14,145 bytes, with 1,983 bytes free below the

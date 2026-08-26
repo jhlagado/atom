@@ -1,8 +1,10 @@
 # TEC-1 deployment design
 
-Atom's native assembler is complete and fits one 16 KiB bank. The current
-repository does not yet contain a TEC-1 filesystem and output adapter. This
-document defines what that adapter must provide and identifies the memory
+Atom's native assembler is complete and fits one 16 KiB bank. TECM8 now exposes
+the shared named-object request through its private tool-service gateway, and
+Atom has a proved host adapter from its compact callbacks to that request. A
+complete TEC-1 launcher, source-plan loader, bank placement, and RAM allocation
+are still deployment work. This document identifies the remaining memory
 decision that must be measured before hardware deployment.
 
 ## Portable native core
@@ -27,6 +29,11 @@ in A with carry clear. The linked fallback reads a memory interval directly;
 an adapter may route the same entry to a filesystem, serial stream, or banked
 storage cache. The native tokenizer retains only its 256-byte lexeme buffer.
 
+The checked named-object adapter demonstrates one portable implementation: a
+launcher associates each ordinal with a named source object, the adapter keeps
+one read handle active, and non-sequential lookahead uses absolute seek. This
+fits TECM8's eight-handle provider without exposing TEC-FS records to Atom.
+
 A TEC adapter must provide the six sink calls documented in `output-abi.md`:
 
 - begin one tentative generation;
@@ -41,9 +48,12 @@ return failure when executed directly. A hardware build must replace or route
 those entries to real operating services; copying the pinned Mac image to the
 TEC-1 is not enough.
 
-The sink can use sequential storage. IMAGE and PATCH records are append-only,
-and a PATCH contains final bytes rather than a symbol name. Intel HEX, listings,
-D8 maps, and a flat binary can be rendered later by a filesystem-aware layer.
+The sink can use sequential storage. The retained named-object profile writes a
+flat target image: it fills forward gaps with zero bytes, applies PATCH data by
+bounded seek, restores the append cursor, and commits only after filling to the
+observed high-water mark. IMAGE and PATCH remain ordered compiler callbacks;
+they do not become public filesystem operations. NOBJ, Intel HEX, listings, and
+D8 maps remain optional renderings above the object service.
 
 ## Source loading
 

@@ -17,8 +17,9 @@ through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with
 `INPUT.ASM` and `OUTPUT.COM` as the no-argument defaults. Its bounded BDOS
 source reader accepts one file of up to 65,535 logical bytes. A trailing `@`
 selects a plain source plan containing up to 255 ordered CP/M 8.3 filenames,
-with the same 65,535-byte boundary for every part. The TEC-1 filesystem, source
-service, and output adapter are designed but not yet implemented.
+with the same 65,535-byte boundary for every part. The TECM8 named-object
+provider and Atom adapter now exist; a complete TecMate launcher and target
+memory map remain deployment work.
 
 ## Install and assemble
 

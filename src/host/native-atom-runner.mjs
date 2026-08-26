@@ -591,7 +591,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   runtime.cpu.ix = BUILD_DESCRIPTOR;
   runtime.cpu.halted = false;
 
-  const sink = options.sink ?? createMemoryAtomSink();
+  const profile = options.toolProfile;
+  if (profile !== undefined && (typeof profile?.sourceRead !== "function" || profile?.sink === undefined)) {
+    fail("invalid-tool-profile", "Atom tool profile requires sourceRead() and sink");
+  }
+  const sink = profile?.sink ?? options.sink ?? createMemoryAtomSink();
   for (const method of ["begin", "image", "patch", "commit", "abort", "snapshot"]) {
     if (typeof sink?.[method] !== "function") fail("invalid-sink", `Atom sink omits ${method}()`);
   }
@@ -629,7 +633,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   };
   const toolServices = createAtomToolServiceGateway({
     sink,
-    sourceRead({ part, offset }) {
+    sourceRead: profile?.sourceRead ?? (({ part, offset }) => {
       const sourcePart = snapshot.parts[part];
       if (sourcePart === undefined || offset >= sourcePart.compilerBytes.length) {
         throw runtimeFailure(
@@ -639,7 +643,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       }
       sourceReads += 1;
       return sourcePart.compilerBytes[offset];
-    },
+    }),
   });
   const serviceAt = new Map([
     [symbols.AtomSinkBegin, Object.freeze({ kind: "begin", action: () => toolServices.dispatch(ATOM_TOOL_SERVICE.begin, { descriptor: runtime.cpu.ix, target }).status })],
