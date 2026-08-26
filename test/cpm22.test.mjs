@@ -83,6 +83,16 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
   assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
 });
 
+test("the CP/M publication path preserves representative eight-bit binary bytes", async () => {
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDB 0,$1A,$7F,$80,$FF\r\n", "ascii"),
+  );
+  assert.deepEqual(
+    result.outputFile?.bytes.slice(0, 5),
+    Uint8Array.of(0x00, 0x1a, 0x7f, 0x80, 0xff),
+  );
+});
+
 test("a rejected assembly preserves an earlier OUTPUT.COM and removes its temp", async () => {
   const prior = Uint8Array.from([0xc9]);
   const result = await runCpm22Atom(Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"), prior);
