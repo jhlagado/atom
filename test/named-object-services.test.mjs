@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { runNamedObjectConformance } from "@jhlagado/z80-tool-services";
+
 import {
   assembleResolvedAtomProject,
   createNamedObjectAtomAdapter,
@@ -11,6 +13,14 @@ import {
 } from "../src/host/index.mjs";
 
 const encoder = new TextEncoder();
+
+test("Atom's compatibility surface passes the shared named-object vectors", () => {
+  assert.equal(Object.isFrozen(NAMED_OBJECT_OPERATION), true);
+  assert.equal(Object.isFrozen(NAMED_OBJECT_STATUS), true);
+  assert.deepEqual(runNamedObjectConformance({
+    create: (objects, options) => new MemoryNamedObjectServices(objects, options),
+  }), { vectors: 4, assertions: 29 });
+});
 
 function project(source) {
   const bytes = encoder.encode(source);

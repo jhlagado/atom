@@ -54,7 +54,7 @@
     "verify:self-host-source": "npm run verify:native-source",
     "verify:example": "node scripts/verify-example.mjs",
     "annotate:contracts": "npm run verify:strict-contracts",
-    "build:dependencies": "npm run build -w @jhlagado/azm && npm run build -w @jhlagado/debug80-runtime",
+    "build:dependencies": "npm run build -w @jhlagado/azm && npm run build -w @jhlagado/debug80-runtime && npm run build -w @jhlagado/z80-tool-services",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "prepare:proof": "npm run verify:dependencies && npm run build:dependencies",
     "pretest": "npm run prepare:proof && npm run verify:native-source && npm run verify:cpm22 && npm run verify:cpm22-output-candidates && npm run verify:cpm22-plan-candidates",
@@ -77,18 +77,20 @@
     "measure:cpm22-output-candidates": "node scripts/measure-cpm22-output-candidates.mjs",
     "measure:cpm22-plan-candidates": "node scripts/measure-cpm22-plan-candidates.mjs",
     "release:check": "npm test && npm run verify:strict-contracts && node test/measure-host-native.mjs && node test/measure-self-host.mjs",
-    "prepack": "npm run verify:native-source && npm run verify:cpm22 && node scripts/bundled-runtime.mjs prepare",
-    "postpack": "node scripts/bundled-runtime.mjs cleanup",
+    "prepack": "npm run verify:native-source && npm run verify:cpm22 && node scripts/bundled-dependencies.mjs prepare",
+    "postpack": "node scripts/bundled-dependencies.mjs cleanup",
     "prepublishOnly": "npm run release:check"
   },
   "dependencies": {
-    "@jhlagado/debug80-runtime": "file:../debug80-runtime"
+    "@jhlagado/debug80-runtime": "file:../debug80-runtime",
+    "@jhlagado/z80-tool-services": "file:../z80-tool-services"
   },
   "devDependencies": {
     "@jhlagado/azm": "file:../azm"
   },
   "bundledDependencies": [
-    "@jhlagado/debug80-runtime"
+    "@jhlagado/debug80-runtime",
+    "@jhlagado/z80-tool-services"
   ],
   "engines": {
     "node": ">=20"

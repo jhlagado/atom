@@ -58,6 +58,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   await assert.rejects(fs.access(path.join(installDirectory, "node_modules", "@jhlagado", "azm")));
   await assert.rejects(fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "azm")));
   await fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "debug80-runtime"));
+  await fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "z80-tool-services"));
   const metadata = JSON.parse(await fs.readFile(path.join(installedAtom, "package.json"), "utf8"));
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(metadata.private, undefined);
