@@ -27,6 +27,7 @@ Name the outputs you want after the input:
 atom src/main.asm build/main.bin build/main.hex
 atom src/main.asm build/main.nobj build/main.lst build/main.d8.json
 atom --target cpm22 src/main.asm build/main.com
+atom src/main.asm build/main.com
 ```
 
 Each path selects one format by suffix. Atom recognizes `.bin`, `.hex`, `.com`,
@@ -103,8 +104,9 @@ and enters at `$0100`.
 
 A COM file has no header. Atom therefore accepts `.com` only when the rendered
 load base and entry are both `$0100`, the output is flat bank zero, and the
-image fits the CP/M address range. An explicit incompatible target or source
-placement is an error; choosing a suffix never silently moves labels.
+image fits the CP/M address range. If no target is named, a `.com` output
+selects the `cpm22` target. An explicit incompatible target or source placement
+is an error; choosing a suffix never silently moves labels.
 
 ## Self-hosting
 

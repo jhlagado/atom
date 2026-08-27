@@ -136,9 +136,18 @@ test("CLI v1 renders a validated CP/M COM", async (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(await fs.readFile(path.join(root, "program.com")), Buffer.from([0xc9]));
 
+  const implicit = await run(["main.asm", "implicit.com"], root);
+  assert.equal(implicit.status, 0, implicit.stderr);
+  assert.deepEqual(await fs.readFile(path.join(root, "implicit.com")), Buffer.from([0xc9]));
+
   await fs.writeFile(path.join(root, "wrong.asm"), "ORG 200H\nRET\n");
   const rejected = await run(["wrong.asm", "wrong.com"], root);
   assert.equal(rejected.status, 2);
   assert.match(rejected.stderr, /COM output requires load and entry address/);
   await assert.rejects(fs.access(path.join(root, "wrong.com")));
+
+  const explicitGeneric = await run(["--target", "generic", "main.asm", "generic.com"], root);
+  assert.equal(explicitGeneric.status, 2);
+  assert.match(explicitGeneric.stderr, /COM output requires load and entry address/);
+  await assert.rejects(fs.access(path.join(root, "generic.com")));
 });

@@ -77,6 +77,13 @@ function targetProfile(name) {
   throw new Error(`unknown target profile: ${name}`);
 }
 
+function targetProfileForOutputs(requestedTarget, outputs) {
+  if (requestedTarget === undefined && outputs.some(({ format }) => format === "com")) {
+    return targetProfile("cpm22");
+  }
+  return targetProfile(requestedTarget);
+}
+
 function outputFormat(filename) {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".d8.json")) return "d8";
@@ -155,12 +162,13 @@ async function loadBuild(options) {
     const defaults = outputNames.length === 0
       ? [`build/${path.basename(project.entry, path.extname(project.entry))}.bin`]
       : outputNames;
+    const outputs = validateOutputs(defaults, root);
     return {
       root,
       entry: project.entry,
-      target: targetProfile(options.target ?? project.target),
+      target: targetProfileForOutputs(options.target ?? project.target, outputs),
       definitions: { ...projectDefinitions(project.definitions), ...options.definitions },
-      outputs: validateOutputs(defaults, root),
+      outputs,
     };
   }
 
@@ -168,12 +176,13 @@ async function loadBuild(options) {
   const [entry, ...requestedOutputs] = options.positional;
   const root = process.cwd();
   const stem = path.basename(entry, path.extname(entry));
+  const outputs = validateOutputs(requestedOutputs.length === 0 ? [`build/${stem}.bin`] : requestedOutputs, root);
   return {
     root,
     entry,
-    target: targetProfile(options.target),
+    target: targetProfileForOutputs(options.target, outputs),
     definitions: options.definitions,
-    outputs: validateOutputs(requestedOutputs.length === 0 ? [`build/${stem}.bin`] : requestedOutputs, root),
+    outputs,
   };
 }
 
