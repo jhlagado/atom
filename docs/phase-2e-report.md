@@ -41,8 +41,8 @@ execution budgets, and the complete **Measured: 65,536-byte address space** on
 every forward-reference and failure path.
 
 Phase 2e stops at pending metadata. It does not construct resolved patch bytes,
-serialize IMAGE or PATCH records, process labels or directives, or iterate a
-source manifest.
+serialize IMAGE or PATCH records, process labels or directives, or advance to
+another source part.
 
 ## Byte account
 
@@ -154,16 +154,15 @@ implementation. The remaining resident work is:
 
 | Remaining component | Classification | Bytes |
 | --- | --- | ---: |
-| Flat-manifest source-part iterator | Projected | 100–250 |
 | Labels, equates, and required directives | Projected | 300–800 |
 | Append-only NOBJ image and patch output | Projected | 800–1,200 |
 | Control, diagnostics, and final integration | Projected | 1,000–1,500 |
-| **Remaining subtotal** | **Projected** | **2,200–3,750** |
+| **Remaining subtotal** | **Projected** | **2,100–3,500** |
 
 Adding that range to the **Measured: 9,840-byte** resident account gives a
-**Projected: whole-assembler total of 12,040–13,590 bytes**, or about
-**Projected: 11.8–13.3 KiB**. The projected margin below the **Target: 16 KiB
-bank** is **Projected: 2,794–4,344 bytes**. Symbol and pending arenas remain RAM
+**Projected: whole-assembler total of 11,940–13,340 bytes**, or about
+**Projected: 11.7–13.0 KiB**. The projected margin below the **Target: 16 KiB
+bank** is **Projected: 3,044–4,444 bytes**. Symbol and pending arenas remain RAM
 data rather than resident code.
 
 ## Reproduction

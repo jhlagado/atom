@@ -36,7 +36,7 @@ scratch, diagnostic state, and the nine-byte token record. Caller-owned source,
 symbol and pending arenas, proof source, stack, AZM, and Debug80 remain separate
 accounts.
 
-The measurement does not include the flat-manifest iterator, a hardware input
-service, expression parsing, directive semantics, operand classification,
+The measurement does not include source preparation, a hardware input service,
+expression parsing, directive semantics, operand classification,
 symbol insertion, patch creation, or output. The memory-backed part boundary
 keeps those costs visible instead of hiding them inside the tokenizer result.

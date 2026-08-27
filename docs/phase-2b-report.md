@@ -52,8 +52,8 @@ classification writes the existing ten-byte parsed-instruction record, and
 are known.
 
 The source part must remain addressable until the current token has been
-consumed. Phase 2b measures the memory-backed source path. A flat-manifest
-iterator or hardware input service remains a separate, unmeasured component.
+consumed. Phase 2b measures the memory-backed source path. Source preparation
+and hardware input remain separate components.
 
 ## Execution measurement
 
@@ -91,23 +91,21 @@ encoder's complete AZM byte differential remains unchanged.
 
 The previous source-adapter and tokenizer estimate was **Projected 1,300–1,800
 bytes**. The measured memory-backed tokenizer is 126 bytes below the low end.
-A flat-manifest iterator is still **Projected 100–250 bytes**, so the complete
-source layer is **Projected 1,274–1,424 bytes** until that iterator is measured.
+Source preparation remains outside the resident assembler account.
 
 Replacing the old tokenizer estimate with the measured result gives:
 
 | Remaining component | Classification | Bytes |
 | --- | --- | ---: |
-| Flat-manifest source-part iterator | Projected | 100–250 |
 | Operand expressions and directives | Projected | 1,600–2,200 |
 | Symbol integration and diagnostics beyond Phase 2a | Projected | 100–400 |
 | Append-only NOBJ image and patch output | Projected | 800–1,200 |
 | Control, diagnostics, and integration | Projected | 1,000–1,500 |
-| **Remaining subtotal** | **Projected** | **3,600–5,550** |
+| **Remaining subtotal** | **Projected** | **3,500–5,300** |
 
-The whole assembler is now **Projected 9,430–11,380 bytes**, or about
-**9.2–11.1 KiB**, before symbol and pending arenas. That leaves **Projected
-4.9–6.8 KiB** in a 16 KiB code bank. The range remains a projection; expression
+The whole assembler is now **Projected 9,330–11,130 bytes**, or about
+**9.1–10.9 KiB**, before symbol and pending arenas. That leaves **Projected
+5.1–6.9 KiB** in a 16 KiB code bank. The range remains a projection; expression
 and directive parsing is now the widest unmeasured resident-code component.
 
 ## Reproduction
