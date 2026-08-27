@@ -100,6 +100,35 @@ test("CLI v1 project files are Node-only defaults overridden by command outputs 
   assert.match(await fs.readFile(path.join(root, "build", "override.hex"), "utf8"), /07/);
 });
 
+test("CLI v1 project files fall back to BIN when no positive output is configured", async (t) => {
+  const root = await workspace(t);
+  await fs.mkdir(path.join(root, "src"));
+  await fs.writeFile(path.join(root, "src", "tool.asm"), "ORG 4000H\nDB 4,5,6\n");
+  await fs.writeFile(path.join(root, "atom.json"), JSON.stringify({
+    entry: "src/tool.asm",
+  }));
+
+  const result = await run(["--project", "atom.json"], root);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(await fs.readFile(path.join(root, "build", "tool.bin")), Buffer.from([4, 5, 6]));
+  assert.deepEqual(await fs.readdir(path.join(root, "build")), ["tool.bin"]);
+});
+
+test("CLI v1 output suffix selection is case-insensitive", async (t) => {
+  const root = await workspace(t);
+  await fs.writeFile(path.join(root, "main.asm"), "ORG 4000H\nDB 1\n");
+
+  const result = await run(["main.asm", "out/PROGRAM.BIN", "out/PROGRAM.D8.JSON"], root);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual((await fs.readdir(path.join(root, "out"))).sort(), [
+    "PROGRAM.BIN",
+    "PROGRAM.D8.JSON",
+  ]);
+  assert.deepEqual(await fs.readFile(path.join(root, "out", "PROGRAM.BIN")), Buffer.from([1]));
+});
+
 test("CLI v1 renders a validated CP/M COM", async (t) => {
   const root = await workspace(t);
   await fs.writeFile(path.join(root, "main.asm"), "RET\n");
