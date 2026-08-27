@@ -33,7 +33,7 @@ installed AZM 0.3.9 or later to link strict-contract platform profiles.
 tools may select a link origin, a separate common-RAM workspace origin, a
 gateway implementation, and register-contract interface files. The function
 returns the immutable bank bytes, fixed-state initialization bytes, measured
-addresses, entries, capacities, and hashes.
+addresses, entries, capacities, hashes, and complete D8 build map.
 
 This subpath is a build interface, not part of Atom's runtime host API. A
 platform launcher still owns source preparation, descriptors, memory arenas,

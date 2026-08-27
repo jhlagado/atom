@@ -168,6 +168,7 @@ export async function buildNativeObjectHarness({
     ].map((name) => [name, symbols[name]]));
     return {
       bytes,
+      debugMap: debugMap.json,
       report: {
         format: "atom-native-object-harness-census",
         version: 1,

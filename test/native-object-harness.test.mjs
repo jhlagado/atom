@@ -234,6 +234,8 @@ test("native named-object harness separates fixed workspace from a 16 KiB ROM ba
   assert.equal(harness.report.fixedWorkspaceBytes, 741);
   assert.equal(harness.report.nativeCoreFixedWorkspaceBytes, 714);
   assert.equal(harness.report.adapterFixedWorkspaceBytes, 27);
+  assert.equal(harness.debugMap.format, "d8-debug-map");
+  assert.ok(Object.keys(harness.debugMap.files).length > 0);
   const run = await runProject([
     "ORG $100\nJR LATER\n",
     "LATER:\nDB $5A\n",
