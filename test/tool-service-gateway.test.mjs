@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { runOneByteGatewayConformance } from "@jhlagado/z80-tool-services";
 
 import {
   ATOM_TOOL_SERVICE,
@@ -115,4 +116,61 @@ test("the gateway reports unavailable and malformed operations without effects",
     status: ATOM_TOOL_STATUS.unavailable,
   });
   assert.deepEqual(lifecycle, []);
+});
+
+test("the direct-host gateway passes the shared one-byte conformance vectors", () => {
+  const result = runOneByteGatewayConformance(
+    {
+      create: (fixtures) => {
+        const effects = [];
+        const gateway = createAtomToolServiceGateway({
+          sourceRead: ({ offset }) =>
+            typeof offset === "number"
+              ? fixtures.sourceBytes[offset]
+              : fixtures.sourceReadMalformedValue,
+          sink: {
+            begin() {
+              effects.push("begin");
+              return fixtures.sinkMalformedStatus;
+            },
+            image(operation) {
+              effects.push(`image:${[...operation.bytes]}`);
+            },
+            patch() {},
+            commit() {
+              effects.push("commit");
+            },
+            abort() {
+              fixtures.thrownHostOperation();
+            },
+          },
+          console: {
+            read: () => fixtures.consoleReadMalformedValue,
+          },
+        });
+        return { gateway, effects };
+      },
+    },
+    {
+      operations: {
+        sourceRead: ATOM_TOOL_SERVICE.sourceRead,
+        consoleRead: ATOM_TOOL_SERVICE.consoleRead,
+        consoleWrite: ATOM_TOOL_SERVICE.consoleWrite,
+        exitFailure: ATOM_TOOL_SERVICE.exitFailure,
+        begin: ATOM_TOOL_SERVICE.begin,
+        image: ATOM_TOOL_SERVICE.image,
+        commit: ATOM_TOOL_SERVICE.commit,
+        abort: ATOM_TOOL_SERVICE.abort,
+        unknown: "unknown",
+      },
+      policy: {
+        success: ATOM_TOOL_STATUS.success,
+        unavailable: ATOM_TOOL_STATUS.unavailable,
+        invalid: ATOM_TOOL_STATUS.invalid,
+        exception: 0xef,
+      },
+    },
+  );
+
+  assert.deepEqual(result, { vectors: 3, assertions: 14 });
 });
