@@ -9,8 +9,8 @@ ordinals, and retains enough provenance for native diagnostics and later
 artifacts.
 
 The native assembler receives the resulting ordered parts through its source
-service. It does not read a
-manifest, open a path, evaluate a host conditional, or concatenate files.
+service. It does not open paths, evaluate host conditions, or concatenate
+files.
 
 ## Composition entry point
 

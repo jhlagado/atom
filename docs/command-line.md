@@ -141,8 +141,8 @@ ATOM ?
 ```
 
 `ATOM` reads `INPUT.ASM` and writes `OUTPUT.COM`. `ATOM HELLO` reads
-`HELLO.ASM` and writes `HELLO.COM`. Native source composition also uses leading
-`%INCLUDE` directives; there is no separate order file or project JSON.
+`HELLO.ASM` and writes `HELLO.COM`. Native source composition uses leading
+`%INCLUDE` directives. Native profiles do not parse project JSON.
 
 See [Native Atom on CP/M 2.2](cpm22.md) for its filesystem rules, limits, and
 transactional COM publication.
