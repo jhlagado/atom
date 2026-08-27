@@ -1,0 +1,29 @@
+{
+  "format": "atom-native-object-harness-census",
+  "version": 1,
+  "loadAddress": 0,
+  "assembleEntry": 11757,
+  "adapterInitEntry": 12383,
+  "gatewayEntry": 13480,
+  "sourceReadEntry": 12774,
+  "residentEnd": 13511,
+  "residentBytes": 13511,
+  "nativeCoreResidentBytes": 12396,
+  "adapterResidentDeltaBytes": 1115,
+  "commonWorkspaceBytes": 399,
+  "transferBufferBytes": 128,
+  "maximumSourceParts": 255,
+  "sourceNameTableBytes": 765,
+  "maximumObjectNameBytes": 255,
+  "maximumSourceObjectBytes": 65535,
+  "maximumOutputObjectBytes": 65535,
+  "sha256": "a2f8ffe4c3ab7e2568e713c810df1800effb33f9324a1bb336d89d62c3cd7795",
+  "symbols": {
+    "DR_DETAI": 12380,
+    "ST_DETAI": 11743,
+    "ST_EPART": 11753,
+    "ST_EOFF": 11754,
+    "TK_ESTAT": 5278,
+    "NA_TRANS": 12618
+  }
+}

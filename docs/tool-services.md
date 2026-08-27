@@ -42,21 +42,21 @@ and disk devices. A direct Debug80-hosted Atom run instead selects the private
 Node gateway explicitly; it does not intercept arbitrary BIOS calls, BDOS
 calls, or memory accesses.
 
-The optional named-object profile routes those same compact callbacks through
-the common 16-byte named-object request used by Nucleus. It keeps one source
-handle live, seeks only when Atom rereads a source position, and publishes one
-flat binary object transactionally. Gaps before IMAGE bytes and the final
-logical high-water mark are written as zeroes; PATCH bytes seek into already
-written data and then restore the append cursor. This remains compatible with
-the bounded TEC-FS provider, which deliberately does not support sparse seeks.
+The named-object profile routes those same compact callbacks through the common
+16-byte request. It keeps one source handle live, reads source through a
+128-byte cache, and publishes one flat binary object transactionally. Gaps
+before IMAGE bytes and the final logical high-water mark are written as zeroes;
+PATCH bytes seek into already written data and then restore the append cursor.
+The source and output selectors are separate, so a small machine can read its
+ordinary project filesystem and use a different transactional output store.
 
-TECM8 now provides the common request beneath private selector `$91`. Atom's
-`createNamedObjectAtomAdapter()` can therefore use the same service meanings
-through a direct Debug80 bridge or a later native launcher without changing
-the assembler core. The checked host reference provider exercises the exact
-request block, eight-bit transfers, bounded handles, tentative generations,
-commit, and abort. Installing Atom itself as a complete TecMate application,
-including its launcher and RAM arenas, remains separate deployment work.
+TECM8 provides the common request beneath private selector `$91` for its
+bounded transactional store. Atom's host and Z80 adapters use the same service
+meanings without changing the assembler core. The Z80 proof assembles through
+two selectors, exercises gap filling and forward patches, injects a poisoned
+write, and runs all 255 source ordinals while keeping only one source handle
+open. Installing the ordinary TEC-FS read provider, resolver, launcher, and RAM
+map remains deployment work.
 
 ## Contract
 
@@ -81,11 +81,12 @@ by the source program.
 The Node gateway adds no resident Z80 bytes. The native core remains 12,396
 bytes, including its existing 24-byte fail-closed service-stub tail.
 
-The named-object adapter also adds no resident Z80 bytes. Its reference client
-uses a 512-byte host-only request/transfer window and transfers at most 256
-bytes per call. This memory is neither Atom workspace nor TECM8 workspace; an
-in-machine launcher supplies its own always-visible 16-byte request and bounded
-transfer buffer.
+The Z80 named-object composition is Measured 13,511 resident bytes: the
+12,396-byte core with its memory fallback and fail-closed sink tail replaced by the
+adapter. The measured adapter delta is 1,115 bytes, leaving 2,873 bytes below a
+16 KiB boundary. Its caller supplies 399 bytes of always-visible workspace: a
+16-byte request, a 255-byte copied-name area, and a 128-byte transfer cache.
+The workspace is not part of the resident image.
 
 The CP/M provider now preserves IX and IY around BDOS with one shared 12-byte
 wrapper. The linked transient is 14,145 bytes, with 1,983 bytes free below the

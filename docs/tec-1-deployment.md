@@ -1,11 +1,10 @@
 # TEC-1 deployment design
 
-Atom's native assembler is complete and fits one 16 KiB bank. TECM8 now exposes
-the shared named-object request through its private tool-service gateway, and
-Atom has a proved host adapter from its compact callbacks to that request. A
-complete TEC-1 launcher, include resolver, bank placement, and RAM allocation
-are still deployment work. This document identifies the remaining memory
-decision that must be measured before hardware deployment.
+Atom's native assembler is complete and fits one 16 KiB bank. It now has a
+proved Z80 adapter from its compact callbacks to the shared named-object
+request, while TECM8 exposes that request for transactional output. A TEC-FS
+source provider, include resolver, launcher, bank placement, and final RAM map
+are still deployment work.
 
 ## Portable native core
 
@@ -29,10 +28,18 @@ in A with carry clear. The linked fallback reads a memory interval directly;
 an adapter may route the same entry to a filesystem, serial stream, or banked
 storage cache. The native tokenizer retains only its 256-byte lexeme buffer.
 
-The checked named-object adapter demonstrates one portable implementation: a
-launcher associates each ordinal with a named source object, the adapter keeps
-one read handle active, and non-sequential lookahead uses absolute seek. This
-fits TECM8's eight-handle provider without exposing TEC-FS records to Atom.
+The checked named-object adapter associates each ordinal with a named source
+object, keeps one read handle active, and uses a 128-byte cache with absolute
+seek for non-sequential reads. Source and output calls can use different
+selectors. This distinction matters on TECM8: the existing eight-slot private
+object arena is suitable for transactional output but cannot define Atom's
+source capacity.
+
+The TEC source provider will expose ordinary TEC-FS catalogue files through
+the read operations of the shared ABI. After resolving an include path, the
+resolver can retain the catalogue's one-byte file ID. The final assembly stage
+therefore needs one byte per source ordinal, not a copy of every path. This
+preserves Atom's 255-part driver domain within a bounded native memory account.
 
 A TEC adapter must provide the six sink calls documented in `output-abi.md`:
 
@@ -86,11 +93,12 @@ careful sizing. The 714-byte fixed workspace, symbol arena, pending arena,
 maximum descriptors, and 256-byte stack consume Measured 20,436 bytes. A 24
 KiB budget leaves 4,140 bytes for source-service state and the output adapter.
 
-The source service removes the former whole-part residency problem. A TEC
-implementation may read storage one byte at a time or retain a small measured
-cache. The cache size, filesystem state, sink implementation, and target arena
-sizes remain deployment decisions. It is a Hypothesis, not a projection, that
-the complete source and sink adapter will fit the 3,988-byte resident margin.
+The source service removes the former whole-part residency problem. The proved
+adapter uses a 128-byte cache and 399 bytes of caller-owned common workspace.
+The composed core and adapter occupy Measured 13,511 bytes, leaving Measured
+2,873 bytes in the bank. TEC-FS catalogue lookup, dependency resolution, and
+the launcher remain separate unmeasured accounts; they must not be squeezed
+into that margin without a fresh linked measurement.
 
 A TEC filesystem adapter must also implement the measured Mac `INCBIN`
 contract: confined snapshot reads relative to the containing source, whole-file

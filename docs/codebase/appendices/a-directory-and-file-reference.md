@@ -86,6 +86,7 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `native-core.json` | Atom-built Intel HEX, checked symbol map, digests, and source identity loaded by the installed package |
+| `atom-object-harness.bin` | Strict-contract native core composed with the portable named-object adapter and fail-closed transport |
 
 ## `native/`
 
@@ -94,6 +95,7 @@ the owner of a behavior quickly.
 | `atom-00.asm` through `atom-04.asm` | Authoritative native Atom source parts |
 | `atom.asm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
+| `named-object-adapter.asm` | Z80 adapter from Atom source and sink callbacks to the shared named-object request |
 
 The `.asm` files are the sole editing authority for the native assembler.
 
@@ -102,6 +104,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | File | Role |
 | --- | --- |
 | `generate-native-core.mjs` | Assembles `native/atom.asm` with Atom, proves exact equality through strict automatic AZM translation, and writes or checks `assets/native-core.json` |
+| `generate-native-object-harness.mjs` | Links the shared ABI constants and Z80 object adapter, checks strict contracts and the one-bank gate, and freezes the binary and census |
 | `verify-dependencies.mjs` | Pins the sibling Debug80 branch and exact AZM/runtime source trees used by proofs |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 
@@ -135,6 +138,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `integration.test.mjs` | Cross-module single-part programs and failure propagation |
 | `driver.test.mjs` | Descriptor validation, multipart order, finalization, and lifecycle |
 | `proof-system.test.mjs` | Complete 64 KiB region coverage and independently frozen instruction census |
+| `native-object-harness.test.mjs` | Full Z80 object-adapter execution, 255-part capacity, cache, patch, commit, and poisoned-write abort proof |
 
 ## `test/` host source and preparation suites
 
@@ -188,6 +192,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `phase-1.json` through `phase-11.json` | Reviewed correctness, size, capacity, execution, package, and product observations by checkpoint |
 | `phase-*-memory.json` | Exact symbolic 64 KiB memory maps and declared subsystem extents |
 | `package-census.json` | Frozen npm unpacked byte and entry counts after packaged files settle |
+| `native-object-harness-census.json` | Linked adapter size, workspace, entry, capacity, symbol, and digest account |
 
 ## `docs/`
 

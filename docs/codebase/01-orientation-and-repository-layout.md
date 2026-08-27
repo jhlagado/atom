@@ -190,6 +190,7 @@ the pinned image have explicit rebuild checks:
 | Generated file | Generator | Drift check |
 | --- | --- | --- |
 | `assets/native-core.json` | `scripts/generate-native-core.mjs` using Atom plus strict AZM comparison | `npm run verify:native-source` |
+| `assets/atom-object-harness.bin` | `scripts/generate-native-object-harness.mjs` using the shared ABI constants and strict contracts | `npm run verify:native-object` |
 
 Native changes belong in `native/*.asm`, followed by
 `npm run build:native-core`. Editing `assets/native-core.json` directly only

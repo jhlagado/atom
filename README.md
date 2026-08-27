@@ -17,9 +17,9 @@ through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with `INPUT.ASM`
 and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
 `HELLO.ASM` and `HELLO.COM`. Leading `%INCLUDE` directives
 form a dependency graph of up to 255 CP/M 8.3 source names, with a 65,535-byte
-boundary for every part. The TECM8 named-object provider and Atom adapter now
-exist; a complete TecMate launcher and target memory map remain deployment
-work.
+boundary for every part. The native named-object harness and TECM8
+transactional provider now exist; the ordinary TEC-FS source provider,
+complete TecMate launcher, and target memory map remain deployment work.
 
 ## Install and assemble
 
@@ -83,6 +83,10 @@ The measured native account is:
 | Fixed workspace | 714 |
 | Linked resident extent | 12,396 |
 | Margin below 16 KiB | 3,988 |
+
+The optional Z80 named-object harness replaces the memory source fallback and
+host sink stubs. That composition is 13,511 resident bytes and uses 399 bytes
+of caller-owned common workspace, leaving 2,873 bytes in its 16 KiB bank.
 
 [Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [CP/M adapter report](docs/cpm22.md) separate the measured host and native CP/M
