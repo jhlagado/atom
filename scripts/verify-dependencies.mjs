@@ -8,8 +8,8 @@ const repository = path.resolve(packageRoot, "../..");
 const expected = {
   branch: "main",
   azmTree: "c75c76e2f0de66592917679de0974bb64fcbdd55",
-  runtimeTree: "7372ed452ce4acc20eeaf44d7af4351e3780c84d",
-  toolServicesTree: "89ed1ca0adbda936421e64f6dfce0def23ed9f8d",
+  runtimeTree: "e754cd4a895586665d267dbc881ebcbfaf3e4d41",
+  toolServicesTree: "60e52dd75c849e92ead4dede87acf631f8707e57",
 };
 
 function git(...args) {

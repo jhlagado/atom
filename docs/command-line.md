@@ -34,6 +34,11 @@ Each path selects one format by suffix. Atom recognizes `.bin`, `.hex`, `.com`,
 repeat a format or destination path. Atom renders and stages every requested
 file before replacing an earlier output; a failed build publishes none.
 
+Output selection is affirmative: Atom writes the files you name. It does not
+enable every artifact by default and then ask you to suppress unwanted files.
+If you want only HEX, name only a `.hex` path. If you want BIN, listing, and
+D8, name those three paths.
+
 ## Includes, conditions, and binary data
 
 The Node preparation stage resolves `%INCLUDE` relative to the importing file.

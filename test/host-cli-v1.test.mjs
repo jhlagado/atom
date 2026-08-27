@@ -39,9 +39,23 @@ test("CLI v1 defaults to one trimmed BIN and publishes only named formats", asyn
   assert.deepEqual(await fs.readFile(path.join(root, "build", "main.bin")), Buffer.from([1, 2, 3]));
   assert.deepEqual(await fs.readdir(path.join(root, "build")), ["main.bin"]);
 
-  const selected = await run(["main.asm", "out/program.hex", "out/program.d8.json"], root);
+  const selected = await run([
+    "main.asm",
+    "out/program.bin",
+    "out/program.hex",
+    "out/program.nobj",
+    "out/program.lst",
+    "out/program.d8.json",
+  ], root);
   assert.equal(selected.status, 0, selected.stderr);
-  assert.deepEqual((await fs.readdir(path.join(root, "out"))).sort(), ["program.d8.json", "program.hex"]);
+  assert.deepEqual((await fs.readdir(path.join(root, "out"))).sort(), [
+    "program.bin",
+    "program.d8.json",
+    "program.hex",
+    "program.lst",
+    "program.nobj",
+  ]);
+  assert.deepEqual(await fs.readFile(path.join(root, "out", "program.bin")), Buffer.from([1, 2, 3]));
 });
 
 test("CLI version follows package metadata", async (t) => {
@@ -59,6 +73,8 @@ test("CLI v1 validates positive output selection and rejects removed switches", 
     [["main.asm", "a.bin", "b.bin"], /output format is repeated/],
     [["main.asm", "output"], /recognized format suffix/],
     [["--origin", "4000H", "main.asm"], /unknown option/],
+    [["--no-bin", "main.asm"], /unknown option/],
+    [["--hex", "main.asm"], /unknown option/],
   ]) {
     const result = await run(arguments_, root);
     assert.equal(result.status, 2);
