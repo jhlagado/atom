@@ -303,13 +303,26 @@ npm run release:check
 native and host tests, strict core and authoritative-source checks, and the final
 host and self-host measurements. `prepublishOnly` invokes the same gate.
 
+The exact npm archive census is a separate release audit, not a unit test. Run
+it only after packaged files are frozen:
+
+```sh
+npm run verify:package-census
+```
+
+If the package contents intentionally changed, update the ledger explicitly:
+
+```sh
+npm run update:package-census
+```
+
 Network and release-authority checks remain explicit:
 
 ```sh
 git fetch origin
 git status --short --branch
 gh repo view jhlagado/atom --json visibility,licenseInfo
-npm pack --dry-run
+npm run verify:package-census
 ```
 
 ## Change workflow

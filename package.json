@@ -65,6 +65,8 @@
     "annotate:contracts": "npm run verify:strict-contracts",
     "build:dependencies": "npm run build -w @jhlagado/azm && npm run build -w @jhlagado/debug80-runtime && npm run build -w @jhlagado/z80-tool-services",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
+    "verify:package-census": "node scripts/package-census.mjs --check",
+    "update:package-census": "node scripts/package-census.mjs --update",
     "prepare:proof": "npm run verify:dependencies && npm run build:dependencies",
     "pretest": "npm run prepare:proof && npm run verify:native-source && npm run verify:native-object && npm run verify:cpm22 && npm run verify:cpm22-output-candidates",
     "test": "node --test test/*.test.mjs",

@@ -30,21 +30,10 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   await fs.mkdir(packageDirectory);
   await fs.mkdir(projectDirectory);
 
-  const censusResult = await run("npm", ["pack", "--dry-run", "--json"], { cwd: process.cwd() });
-  assert.equal(censusResult.status, 0, censusResult.stderr);
-  const [census] = JSON.parse(censusResult.stdout);
-  const packageCensus = JSON.parse(await fs.readFile("proofs/package-census.json", "utf8"));
-  assert.deepEqual({
-    unpackedBytes: census.unpackedSize,
-    entries: census.entryCount,
-  }, {
-    unpackedBytes: packageCensus.unpackedBytes,
-    entries: packageCensus.entries,
-  });
-
-  const packed = await run("npm", ["pack", "--pack-destination", packageDirectory], { cwd: process.cwd() });
+  const packed = await run("npm", ["pack", "--pack-destination", packageDirectory, "--json"], { cwd: process.cwd() });
   assert.equal(packed.status, 0, packed.stderr);
-  const archive = path.join(packageDirectory, `atom-z80-${census.version}.tgz`);
+  const [census] = JSON.parse(packed.stdout);
+  const archive = path.join(packageDirectory, census.filename);
   const installed = await run("npm", [
     "install",
     "--offline",

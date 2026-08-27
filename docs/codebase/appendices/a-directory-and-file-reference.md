@@ -218,7 +218,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `azm-form-census.json` | Independent instruction-form denominator, per-mnemonic counts, and canonical hash |
 | `phase-1.json` through `phase-11.json` | Reviewed correctness, size, capacity, execution, package, and product observations by checkpoint |
 | `phase-*-memory.json` | Exact symbolic 64 KiB memory maps and declared subsystem extents |
-| `package-census.json` | Frozen npm unpacked byte and entry counts after packaged files settle |
+| `package-census.json` | Frozen npm unpacked byte and entry counts for the explicit package-census audit |
 | `native-object-harness-census.json` | Linked adapter size, workspace, entry, capacity, symbol, and digest account |
 
 ## `docs/`
