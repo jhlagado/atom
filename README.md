@@ -14,7 +14,8 @@ The native core assembles its own checked source byte for byte and fits in one
 
 The Mac command is usable now. Native CP/M 2.2 Atom also runs inside Debug80
 through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with `INPUT.ASM`
-and `OUTPUT.COM` as the no-argument defaults. Leading `%INCLUDE` directives
+and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
+`HELLO.ASM` and `HELLO.COM`. Leading `%INCLUDE` directives
 form a dependency graph of up to 255 CP/M 8.3 source names, with a 65,535-byte
 boundary for every part. The TECM8 named-object provider and Atom adapter now
 exist; a complete TecMate launcher and target memory map remain deployment
@@ -30,22 +31,18 @@ npm pack
 npm install --global ./atom-z80-0.1.0.tgz
 ```
 
-Assemble an entry file from its project root:
+Assemble an entry file from its project root. With no explicit output, Atom
+writes `build/main.bin`:
 
 ```sh
-atom --origin 4000H src/main.asm
+atom src/main.asm
 ```
 
-Atom publishes one immutable bundle under
-`build/main.atom/current` containing:
+Request additional formats with positive output paths:
 
-```text
-main.nobj
-main.bin
-main.hex
-main.lst
-main.d8.json
-manifest.json
+```sh
+atom src/main.asm build/main.bin build/main.hex build/main.d8.json
+atom --target cpm22 src/main.asm build/main.com
 ```
 
 The shipped example exercises host conditionals and dependency resolution,
@@ -53,7 +50,7 @@ then native labels, instructions, data, reservations, and a forward patch:
 
 ```sh
 cd examples/hello
-atom --origin 4000H main.asm
+atom main.asm
 ```
 
 See [the command-line guide](docs/command-line.md) for every option and

@@ -232,7 +232,7 @@ that:
 - the public CLI assembles valid source and `INCBIN`;
 - invalid source returns a positioned diagnostic and publishes nothing;
 - all five artifacts are present;
-- `atom --self-host` reproduces the installed native core; and
+- `atom self-host` reproduces the installed native core; and
 - tampering with the checked core or symbol map is detected.
 
 The same test records an exact unpacked byte count and package entry count after

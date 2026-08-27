@@ -6,11 +6,13 @@ export { loadNativeAtomCore } from "./native-atom-core.mjs";
 export { crc16CcittFalse, parseAtomNobj, writeAtomNobj } from "./artifacts/atom-nobj.mjs";
 export {
   renderAtomArtifacts,
+  writeAtomCom,
   writeAtomD8,
   writeAtomListing,
   writeIntelHex,
 } from "./artifacts/render-artifacts.mjs";
 export { publishAtomArtifacts } from "./artifacts/publish-artifacts.mjs";
+export { publishAtomOutputFiles } from "./artifacts/publish-output-files.mjs";
 export {
   translateAtomLineToAzm,
   translateResolvedAtomProjectToAzm,

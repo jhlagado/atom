@@ -21,6 +21,16 @@ export function writeIntelHex(materialized, { lineEnding = "\n" } = {}) {
   return `${lines.join(lineEnding)}${lineEnding}`;
 }
 
+export function writeAtomCom(materialized, { entryAddress = 0x100 } = {}) {
+  if (materialized.base !== 0x100 || entryAddress !== 0x100) {
+    throw new RangeError("COM output requires load and entry address $0100");
+  }
+  if (materialized.end > 0x10000 || materialized.bytes.length > 0xff00) {
+    throw new RangeError("COM output exceeds the 65,280-byte CP/M address range");
+  }
+  return materialized.bytes;
+}
+
 function sourceLines(project) {
   return project.parts.flatMap((part) => {
     const text = decoder.decode(part.originalBytes);
@@ -149,7 +159,11 @@ export function writeAtomListing(project, generation, { fill = 0 } = {}) {
   return `${output.join("\n")}\n`;
 }
 
-export function writeAtomD8(project, generation, { entryAddress = generation.target.start, fill = 0 } = {}) {
+export function writeAtomD8(
+  project,
+  generation,
+  { entryAddress = generation.target.start, fill = 0, base = generation.target.start } = {},
+) {
   const { byLine } = sourceRanges(project, generation, fill);
   const listingLines = new Map();
   let listingCursor = 1;
@@ -200,9 +214,9 @@ export function writeAtomD8(project, generation, { entryAddress = generation.tar
       ...(segments.length === 0 ? {} : { segments }),
     }];
   }));
-  const topSegments = generation.highWater > generation.target.start
-    ? [{ start: generation.target.start, end: generation.highWater }]
-    : [{ start: generation.target.start, end: generation.target.start }];
+  const topSegments = generation.highWater > base
+    ? [{ start: base, end: generation.highWater }]
+    : [{ start: base, end: base }];
   return {
     format: "d8-debug-map",
     version: 1,
@@ -226,8 +240,8 @@ export function writeAtomD8(project, generation, { entryAddress = generation.tar
 export function renderAtomArtifacts(result, options = {}) {
   const fill = options.fill ?? 0;
   const entryAddress = options.entryAddress ?? result.generation.target.start;
-  const materialized = materializeAtomGeneration(result.generation, { fill });
-  const d8 = writeAtomD8(result.project, result.generation, { fill, entryAddress });
+  const materialized = materializeAtomGeneration(result.generation, { fill, base: options.base });
+  const d8 = writeAtomD8(result.project, result.generation, { fill, entryAddress, base: materialized.base });
   return Object.freeze({
     nobj: writeAtomNobj(result.generation, result.project, { fill, entryAddress }),
     bin: materialized.bytes,

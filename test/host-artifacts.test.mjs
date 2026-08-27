@@ -8,7 +8,9 @@ import {
   assembleResolvedAtomProject,
   parseAtomNobj,
   publishAtomArtifacts,
+  publishAtomOutputFiles,
   renderAtomArtifacts,
+  writeAtomCom,
 } from "../src/host/index.mjs";
 
 const encoder = new TextEncoder();
@@ -126,6 +128,54 @@ test("an empty assembly still renders a valid empty flat Atom object", async () 
   assert.equal(artifacts.bin.length, 0);
   assert.equal(artifacts.hex, ":00000001FF\n");
   assert.equal(parseAtomNobj(artifacts.nobj).imageRecords, 0);
+});
+
+test("selected flat outputs may begin at the first emitted address and COM validates $0100", async () => {
+  const input = project("ORG 100H\nDB 1,2,3\n");
+  const assembled = await assembleResolvedAtomProject(input, {
+    target: { start: 0, capacity: 0xffff },
+  });
+  const artifacts = renderAtomArtifacts({ project: input, ...assembled }, { base: 0x100, entryAddress: 0x100 });
+  assert.deepEqual(artifacts.bin, Uint8Array.of(1, 2, 3));
+  assert.equal(artifacts.hex, ":03010000010203F6\n:00000001FF\n");
+  assert.strictEqual(
+    writeAtomCom({ base: 0x100, end: 0x103, bytes: artifacts.bin }, { entryAddress: 0x100 }),
+    artifacts.bin,
+  );
+  assert.throws(
+    () => writeAtomCom({ base: 0, end: 3, bytes: artifacts.bin }, { entryAddress: 0x100 }),
+    /load and entry address/,
+  );
+});
+
+test("selected output publication stages every file and rolls back a failed replacement", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "atom-selected-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const binary = path.join(directory, "program.bin");
+  const listing = path.join(directory, "program.lst");
+  await publishAtomOutputFiles([
+    { path: binary, bytes: Uint8Array.of(1) },
+    { path: listing, bytes: "first\n" },
+  ]);
+  assert.deepEqual(await fs.readFile(binary), Buffer.from([1]));
+  assert.equal(await fs.readFile(listing, "utf8"), "first\n");
+
+  const injected = {
+    ...fs,
+    async rename(source, target) {
+      if (source.endsWith(".tmp") && target === listing) throw Object.assign(new Error("injected"), { code: "EIO" });
+      return fs.rename(source, target);
+    },
+  };
+  await assert.rejects(
+    () => publishAtomOutputFiles([
+      { path: binary, bytes: Uint8Array.of(2) },
+      { path: listing, bytes: "second\n" },
+    ], { filesystem: injected }),
+    (error) => error?.category === "publication" && error?.code === "output-transaction",
+  );
+  assert.deepEqual(await fs.readFile(binary), Buffer.from([1]));
+  assert.equal(await fs.readFile(listing, "utf8"), "first\n");
 });
 
 test("D8 retains distinct identities for reused private symbols after native eviction", async () => {

@@ -46,6 +46,7 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
   assert.deepEqual(result.outputFile.bytes.slice(0, expected.bytes.length), expected.bytes);
   assert.ok(result.atomMinimumSp >= 0xd800, "Atom crossed its $D800 stack floor");
   assert.equal(result.returnSp, (result.entrySp + 2) & 0xffff, "Atom returned with an unbalanced stack");
+  assert.equal(result.returnA, 0);
   assert.equal(result.atomInstructions, result.census.representativeInstructions);
   assert.equal(result.atomCycles, result.census.representativeTStates);
   assert.equal(result.commandInstructions, result.census.representativeCommandInstructions);
@@ -80,6 +81,7 @@ test("a rejected assembly preserves an earlier OUTPUT.COM and removes its temp",
   const prior = Uint8Array.from([0xc9]);
   const result = await runCpm22Atom(Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"), prior);
   assert.match(result.atomTranscript, /Atom error 02 00 000A/);
+  assert.equal(result.returnA, 1);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(
     (await import("@jhlagado/debug80-runtime/platforms/cpm22/filesystem"))
@@ -106,6 +108,24 @@ test("command-tail filenames select a different source and output COM", async ()
   assert.equal(result.atomBdosCalls.length, result.census.namedRepresentativeBdosCalls);
   assert.equal(result.atomRandomReadRecords.length, result.census.namedRepresentativeSourceRandomReads);
   assert.equal(result.runOutput(), "MADE\r\r\nHello from native Atom\r\n\r\nA>");
+});
+
+test("one native source argument derives ASM input and COM output names", async () => {
+  const result = await runCpm22Atom(representativeSource, undefined, {
+    sourceName: "HELLO.ASM",
+    outputName: "HELLO.COM",
+    command: "ATOM HELLO",
+  });
+  assert.match(result.atomTranscript, /HELLO\.COM written/);
+  assert.ok(result.outputFile);
+  assert.equal(result.returnA, 0);
+});
+
+test("native question-mark help returns success without assembling", async () => {
+  const result = await runCpm22Atom(representativeSource, undefined, { command: "ATOM ?" });
+  assert.match(result.atomTranscript, /Usage: ATOM \[SOURCE \[OUTPUT\.COM\]\]/);
+  assert.equal(result.outputFile, undefined);
+  assert.equal(result.returnA, 0);
 });
 
 test("command-tail parsing accepts maximum 8.3 names, lowercase, and extra spaces", async () => {
@@ -146,9 +166,8 @@ test("a blank command tail retains INPUT.ASM and OUTPUT.COM defaults", async () 
 
 test("command-tail parsing reports exact usage and filename diagnostics", async () => {
   for (const [command, diagnostic] of [
-    ["ATOM INPUT.ASM", "Usage: ATOM [SOURCE OUTPUT.COM]"],
-    ["ATOM INPUT.ASM OUTPUT.COM EXTRA", "Usage: ATOM [SOURCE OUTPUT.COM]"],
-    ["ATOM INPUT.ASM OUTPUT.COM @", "Usage: ATOM [SOURCE OUTPUT.COM]"],
+    ["ATOM INPUT.ASM OUTPUT.COM EXTRA", "Usage: ATOM [SOURCE [OUTPUT.COM]]"],
+    ["ATOM INPUT.ASM OUTPUT.COM @", "Usage: ATOM [SOURCE [OUTPUT.COM]]"],
     ["ATOM TOOLONGGG.ASM MADE.COM", "Invalid source name"],
     ["ATOM INPUT.ASMX MADE.COM", "Invalid source name"],
     ["ATOM .ASM MADE.COM", "Invalid source name"],
@@ -172,6 +191,7 @@ test("command-tail parsing reports exact usage and filename diagnostics", async 
       command,
     );
     assert.equal(result.outputFile, undefined, command);
+    assert.equal(result.returnA, 2, command);
   }
 });
 

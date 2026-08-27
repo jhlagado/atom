@@ -2,7 +2,7 @@
 
 Atom’s native source uses ordinary `.asm` filenames. The checked source under `native/`
 is the input to native-core generation, the self-host proof, the command line’s
-`--self-host` mode, and the npm package. The repository retains no second native
+`atom self-host`, and the npm package. The repository retains no second native
 implementation. AZM consumes an automatic translation of the same `.asm`
 source only as an independent development oracle.
 

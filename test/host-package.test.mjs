@@ -106,46 +106,58 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
     "",
   ].join("\n"));
   const executable = path.join(installDirectory, "node_modules", ".bin", "atom");
-  const assembled = await run(executable, ["--origin", "4000H", "main.asm"], { cwd: projectDirectory });
+  const assembled = await run(executable, [
+    "main.asm",
+    "build/main.bin",
+    "build/main.hex",
+    "build/main.d8.json",
+  ], { cwd: projectDirectory });
   assert.equal(assembled.status, 0, assembled.stderr);
   assert.match(assembled.stdout, /Atom assembled 1 part\(s\), 4 byte\(s\)/);
-  const current = path.join(projectDirectory, "build", "main.atom", "current");
-  assert.deepEqual(await fs.readFile(path.join(current, "main.bin")), Buffer.from([0x3e, 42, 0x18, 0xfc]));
-  for (const suffix of ["nobj", "bin", "hex", "lst", "d8.json"]) {
-    await fs.access(path.join(current, `main.${suffix}`));
-  }
+  assert.deepEqual(await fs.readFile(path.join(projectDirectory, "build", "main.bin")), Buffer.from([0x3e, 42, 0x18, 0xfc]));
+  await fs.access(path.join(projectDirectory, "build", "main.hex"));
+  await fs.access(path.join(projectDirectory, "build", "main.d8.json"));
+  await assert.rejects(fs.access(path.join(projectDirectory, "build", "main.nobj")));
+  await assert.rejects(fs.access(path.join(projectDirectory, "build", "main.lst")));
 
   await fs.writeFile(path.join(projectDirectory, "payload.bin"), Buffer.from([0xde, 0xad, 0xbe, 0xef]));
   await fs.writeFile(path.join(projectDirectory, "binary.asm"), 'ORG 4100H\nPAYLOAD: INCBIN "payload.bin"\n');
-  const included = await run(executable, ["--origin", "4100H", "binary.asm"], { cwd: projectDirectory });
+  const included = await run(executable, ["binary.asm"], { cwd: projectDirectory });
   assert.equal(included.status, 0, included.stderr);
   assert.deepEqual(
-    await fs.readFile(path.join(projectDirectory, "build", "binary.atom", "current", "binary.bin")),
+    await fs.readFile(path.join(projectDirectory, "build", "binary.bin")),
     Buffer.from([0xde, 0xad, 0xbe, 0xef]),
   );
 
+  await fs.writeFile(path.join(projectDirectory, "program.asm"), "RET\n");
+  const com = await run(executable, ["--target", "cpm22", "program.asm", "build/program.com"], {
+    cwd: projectDirectory,
+  });
+  assert.equal(com.status, 0, com.stderr);
+  assert.deepEqual(await fs.readFile(path.join(projectDirectory, "build", "program.com")), Buffer.from([0xc9]));
+
   await fs.writeFile(path.join(projectDirectory, "bad.asm"), "LD BC,A\n");
-  const rejected = await run(executable, ["--origin", "4000H", "bad.asm"], { cwd: projectDirectory });
+  const rejected = await run(executable, ["bad.asm"], { cwd: projectDirectory });
   assert.equal(rejected.status, 1);
   assert.match(rejected.stderr, /^bad\.asm:1:1: Atom rejected a source statement/m);
-  await assert.rejects(fs.access(path.join(projectDirectory, "build", "bad.atom")));
+  await assert.rejects(fs.access(path.join(projectDirectory, "build", "bad.bin")));
 
-  const selfHosted = await run(executable, ["--self-host"], { cwd: projectDirectory });
+  const selfHosted = await run(executable, ["self-host"], { cwd: projectDirectory });
   assert.equal(selfHosted.status, 0, selfHosted.stderr);
   assert.match(selfHosted.stdout, /Atom assembled 6 part\(s\), 12396 byte\(s\)/);
-  const selfHostBinary = await fs.readFile(path.join(projectDirectory, "build", "atom.atom", "current", "atom.bin"));
+  const selfHostBinary = await fs.readFile(path.join(projectDirectory, "build", "atom.bin"));
   const installedCore = JSON.parse(await fs.readFile(path.join(installedAtom, "assets", "native-core.json"), "utf8"));
   const expectedSelfHost = parseIntelHex(installedCore.hexText).memory.slice(0, installedCore.symbols.AtomHostResidentEnd);
   assert.deepEqual(selfHostBinary, Buffer.from(expectedSelfHost));
-  const customizedSelfHost = await run(executable, ["--self-host", "--fill", "1"], { cwd: projectDirectory });
+  const customizedSelfHost = await run(executable, ["self-host", "--target", "cpm22"], { cwd: projectDirectory });
   assert.equal(customizedSelfHost.status, 2);
-  assert.match(customizedSelfHost.stderr, /--self-host accepts only -o\/--output/);
+  assert.match(customizedSelfHost.stderr, /self-host does not accept project, target, or definition options/);
 
   const corePath = path.join(installedAtom, "assets", "native-core.json");
   const core = JSON.parse(await fs.readFile(corePath, "utf8"));
   core.symbols.AtomAssemble ^= 1;
   await fs.writeFile(corePath, `${JSON.stringify(core, null, 2)}\n`);
-  const corrupted = await run(executable, ["--origin", "4000H", "main.asm"], { cwd: projectDirectory });
+  const corrupted = await run(executable, ["main.asm"], { cwd: projectDirectory });
   assert.equal(corrupted.status, 1);
   assert.match(corrupted.stderr, /native Atom core symbol map failed its SHA-256 check/);
 });

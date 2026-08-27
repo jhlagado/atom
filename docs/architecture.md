@@ -97,9 +97,11 @@ runner returns one byte without copying the part into emulated Z80 memory. The
 native driver remains unaware of the filesystem and processes only ordered
 descriptors.
 
-The publisher writes a content-addressed immutable generation, synchronizes it,
-then changes `current` with one atomic rename. A failed build or publication
-does not select a partial artifact set.
+The CLI stages every positively selected output before replacing any target.
+If a replacement fails, it restores the preceding files from transaction
+backups. The programming API also retains the content-addressed immutable
+generation publisher for consumers that want one atomic `current` pointer over
+a complete artifact family.
 
 ## CP/M execution
 
@@ -113,8 +115,9 @@ IY around the public `$0005` entry because CP/M standardizes only the 8080
 register set.
 
 With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
-`ATOM SOURCE OUTPUT.COM` selects another pair of current-drive 8.3 names. The
-root and its included files use leading `%INCLUDE` directives with quoted
+`ATOM SOURCE` derives `.ASM` and `.COM` names; `ATOM SOURCE OUTPUT.COM` selects
+another pair of current-drive 8.3 names. The root and its included files use
+leading `%INCLUDE` directives with quoted
 current-drive 8.3 names. The provider resolves the graph, imports each file
 once, rejects cycles, and emits dependencies before importers. It validates the
 command tail, reserves the output's temporary and backup names, and preflights

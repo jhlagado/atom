@@ -24,13 +24,21 @@ A>ATOM HELLO.ASM MADE.COM
 MADE.COM written
 ```
 
+One source argument supplies conventional extensions:
+
+```text
+A>ATOM HELLO
+
+HELLO.COM written
+```
+
 The compact native command has one form:
 
 ```text
-ATOM [SOURCE OUTPUT.COM]
+ATOM [SOURCE [OUTPUT.COM]]
 ```
 
-Both names must be current-drive CP/M 8.3 names. The output extension must be
+Names must be current-drive CP/M 8.3 names. The output extension must be
 `.COM`. Drive prefixes, wildcards, incomplete argument pairs, extra arguments,
 and invalid filename characters are rejected. CP/M canonicalises lowercase
 command input, so `atom hello.asm made.com` is equivalent to the uppercase
@@ -100,8 +108,8 @@ The current checked image has this TPA layout:
 
 | Range | Bytes | Use |
 | --- | ---: | --- |
-| `$0100..$39F6` | 14,583 | native core, CP/M provider, and resident state |
-| `$39F7..$3E7F` | 1,161 | free resident-partition margin |
+| `$0100..$3A43` | 14,660 | native core, CP/M provider, and resident state |
+| `$3A44..$3E7F` | 1,084 | free resident-partition margin |
 | `$3E80..$3EFF` | 128 | source random-record cache |
 | `$3F00..$3FFF` | 256 | dependency-first part order |
 | `$4000..$4AF4` | 2,805 | 255 retained CP/M 8.3 names |

@@ -121,9 +121,9 @@ one flat output profile:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Linked COM | Measured | 14,583 |
-| Free margin below the `$3E80` source cache | Measured | 1,161 |
-| CP/M-specific resident increment | Measured | 2,184 |
+| Linked COM | Measured | 14,660 |
+| Free margin below the `$3E80` source cache | Measured | 1,084 |
+| CP/M-specific resident increment | Measured | 2,261 |
 | Source parts | Measured boundary | 255 |
 | One source part | Measured boundary | 65,535 |
 | Maximum described source | Derived boundary | 16,711,425 |

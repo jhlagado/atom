@@ -1,175 +1,148 @@
 # Atom command-line assembler
 
-The `atom` command runs the host preprocessor and the native Z80 assembler,
-then publishes a complete artifact set. Node.js 20 or later is required on the
-Mac. AZM is a development dependency and is absent from the installed Atom
-package.
+The `atom` command prepares a project, runs the native Z80 assembler, renders
+the requested files, and publishes them. Node.js 20 or later is required.
 
-## Installation
+## Basic use
 
-From an Atom checkout:
+Name one root source file:
 
 ```sh
-npm install
-npm pack
-npm install --global ./atom-z80-0.1.0.tgz
+atom src/main.asm
 ```
 
-The package bundles the Debug80 Z80 runtime used to execute Atom's native core.
-The core itself is the checked `assets/native-core.json` image. Its SHA-256 is
-verified before execution. Maintainers regenerate it with
-`npm run build:native-core`; `npm run verify:native-core` fails when source and
-the checked image differ.
-
-The package also contains Atom's authoritative native source. This command
-assembles that source with the installed native core and writes
-`build/atom.atom/current/atom.bin` in the current directory:
-
-```sh
-atom --self-host
-```
-
-The result is 12,396 bytes and must match the pinned core byte for byte.
-`--self-host` accepts only `-o`/`--output`, so origin, capacity, fill, entry,
-and preprocessor overrides cannot change the proof build.
-Maintainers edit the checked `.asm` files directly. `npm run build:native-core`
-assembles them with Atom, and `npm run verify:native-source` repeats that build
-plus the translated strict-AZM comparison.
-
-## Basic build
-
-Run Atom from the project root and name the entry source:
-
-```sh
-atom --origin 4000H src/main.asm
-```
-
-The default bundle is `build/main.atom`. The `current` symlink inside that
-directory names the committed generation:
+With no output path, Atom writes one file:
 
 ```text
-build/main.atom/current/main.nobj
-build/main.atom/current/main.bin
-build/main.atom/current/main.hex
-build/main.atom/current/main.lst
-build/main.atom/current/main.d8.json
-build/main.atom/current/manifest.json
+build/main.bin
 ```
 
-The host resolves `%INCLUDE` paths relative to each importing file. Included
-files remain separate source parts and appear before their importer in the
-native input order. `%DEFINE` and `%IF` evaluation happens before Atom receives
-the equal-length masked source.
+Source `ORG` directives determine placement. The flat BIN begins at the lowest
+generated or reserved address, so an `ORG 4000H` program does not acquire a
+16 KiB zero prefix.
 
-Binary data uses a project-relative path resolved from the containing source
-file:
+Name the outputs you want after the input:
+
+```sh
+atom src/main.asm build/main.bin build/main.hex
+atom src/main.asm build/main.nobj build/main.lst build/main.d8.json
+atom --target cpm22 src/main.asm build/main.com
+```
+
+Each path selects one format by suffix. Atom recognizes `.bin`, `.hex`, `.com`,
+`.nobj`, `.lst`, and `.d8.json`, without case sensitivity. A command cannot
+repeat a format or destination path. Atom renders and stages every requested
+file before replacing an earlier output; a failed build publishes none.
+
+## Includes, conditions, and binary data
+
+The Node preparation stage resolves `%INCLUDE` relative to the importing file.
+Each exact source identity is imported once, including repeated direct imports
+and dependency diamonds. Included files remain distinct source parts and are
+assembled before their importer.
+
+Use `-D` for command definitions:
+
+```sh
+atom -DDEBUG -DMODE=2 src/main.asm build/main.bin
+```
+
+Values accept decimal, `$FFFF`, `%1010`, `0FFFFH`, and `1010B` forms. Quote or
+escape `$` forms when the shell would expand them.
+
+`INCBIN` paths are relative to the containing source file:
 
 ```asm
 FONT: INCBIN "assets/font.bin"
 ```
 
-The same root-confinement, exact-case, symlink, and snapshot rules used for
-source dependencies apply to the binary. Atom emits the entire file; it does
-not accept offset or length operands.
+Source and binary paths are confined to the project root, checked for exact
+case, and snapshotted before assembly.
 
-Project definitions use `-D`:
+## Node project files
 
-```sh
-atom --origin $4000 -DDEBUG -DMODE=2 src/main.asm
+A JSON project records repeatable desktop build policy:
+
+```json
+{
+  "entry": "src/main.asm",
+  "target": "cpm22",
+  "outputs": ["build/main.com", "build/main.d8.json"],
+  "definitions": {
+    "DEBUG": 0
+  }
+}
 ```
 
-Shells normally expand `$4000`; quote or escape that spelling when necessary,
-or use `4000H`. Command-line numbers accept decimal, `$` hexadecimal, `%`
-binary, and Intel `H` and `B` suffixes.
-
-## Shipped example
-
-The package includes `examples/hello`. From that directory:
+Run it with:
 
 ```sh
-atom --origin 4000H main.asm
+atom --project atom.json
 ```
 
-The host selects and resolves `layout.asm` from the preprocessing header. The
-native core then emits an exact 19-byte image beginning at `$4000`, including a
-forward branch patch and both initialized and uninitialized `DS` storage.
-Maintainers can reproduce the checked result without publishing files into the
-checkout:
+Project paths are relative to the JSON file. Command output paths replace the
+project output list, and command definitions override project definitions:
 
 ```sh
-npm run verify:example
+atom --project atom.json -DDEBUG=1 build/debug.com
 ```
 
-## Converting AZM source
+JSON belongs to the Node-hosted frontend. Native CP/M and TEC profiles do not
+contain a JSON parser.
 
-The package also installs a strict `azm-to-atom` converter:
+## Targets and COM files
+
+The built-in targets are `generic` and `cpm22`. The generic target starts at
+zero and leaves placement to source `ORG` directives. The `cpm22` target starts
+and enters at `$0100`.
+
+A COM file has no header. Atom therefore accepts `.com` only when the rendered
+load base and entry are both `$0100`, the output is flat bank zero, and the
+image fits the CP/M address range. An explicit incompatible target or source
+placement is an error; choosing a suffix never silently moves labels.
+
+## Self-hosting
+
+The installed package contains Atom's authoritative native sources. Assemble
+them with:
 
 ```sh
-azm-to-atom source/main.asm
+atom self-host
 ```
 
-It writes `source/main.atom.asm` and refuses to overwrite an existing file. Use
-`--output` to choose another path or `--stdout` to inspect the converted text.
-The converter maps only the byte-preserving common language. Unsupported AZM
-features such as includes, imports, conditional assembly, ops, typed layouts,
-exports, and string equates produce a positioned error instead of approximate
-Atom source. The [AZM conversion guide](azm-to-atom.md) defines the exact
-boundary and the programmatic API.
+The default output is `build/atom.bin` in the current directory. Another
+positive output path can be supplied after `self-host`. Project, target, and
+definition options are disabled for this fixed proof build.
 
 ## Options
 
 ```text
--o, --output <dir>       artifact bundle
---root <dir>             project root
---origin <number>        initial target address
---capacity <number>      target byte capacity
---entry <number>         entry address recorded in NOBJ and D8
---fill <number>          binary/HEX gap and DS fill byte
---self-host              assemble the checked Atom source shipped in the package
--DNAME[=value]           host preprocessor definition
--h, --help               command help
+-p, --project FILE     Node project file
+-t, --target NAME      generic or cpm22
+-DNAME[=VALUE]         preprocessor definition; default value 1
+-h, --help             command help
+-V, --version          package version
 ```
 
-Atom currently accepts bank zero only. The native descriptor represents a
-non-wrapping half-open range whose end is no greater than `$FFFF`, so a target
-starting at zero has a maximum capacity of 65,535 bytes. Atom accepts at most
-255 ordered source parts, each no longer than 65,535 bytes. The Mac runner keeps
-the prepared buffers outside Z80 memory and returns bytes through the native
-source service. Atom's self-host build uses six ordered parts totalling 101,641
-checked bytes and retains none of that stream in Z80 source-page RAM.
+Invalid command syntax returns status 2. Preparation, assembly, rendering, or
+publication failure returns status 1. Success, help, and version return zero.
+Diagnostics go to standard error; successful output paths go to standard
+output.
 
-## Artifact publication
+## Native CP/M command
 
-The publisher writes an immutable generation directory, synchronizes every
-file and directory entry, then replaces one `current` symlink with an atomic
-rename. A build or publication error leaves the previous `current` generation
-selected. The manifest records each filename, byte count, and SHA-256. Existing
-content-addressed generations are verified before reuse.
-
-Consumers should open files through `current`; generation directories are an
-implementation detail. Atom retains old generations so no successful build is
-removed during publication. Automatic pruning is not implemented yet.
-
-## Diagnostics
-
-Native source failures use the original logical path, line, and byte column:
+The native CP/M image uses the smaller positional form:
 
 ```text
-lib/device.asm:14:9: undefined symbol PORTBASE
+ATOM
+ATOM SOURCE
+ATOM SOURCE OUTPUT.COM
+ATOM ?
 ```
 
-Dependency and preprocessing failures also occur before artifact publication.
-No `current` directory is created for a failed first build, and a failed later
-build leaves the previously selected generation unchanged.
+`ATOM` reads `INPUT.ASM` and writes `OUTPUT.COM`. `ATOM HELLO` reads
+`HELLO.ASM` and writes `HELLO.COM`. Native source composition also uses leading
+`%INCLUDE` directives; there is no separate order file or project JSON.
 
-## Maintainer release gate
-
-```sh
-npm run release:check
-```
-
-This runs the complete native and host tests, strict register-contract build,
-offline package/install proof, example proof, and two-generation self-host
-measurement. `npm publish` invokes the same command through `prepublishOnly`.
-See [`release-checklist.md`](release-checklist.md) for the repository and
-licensing checks that require network or publishing authority.
+See [Native Atom on CP/M 2.2](cpm22.md) for its filesystem rules, limits, and
+transactional COM publication.

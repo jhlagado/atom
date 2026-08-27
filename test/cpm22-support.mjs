@@ -147,6 +147,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   stepUntil(() => runtime.getPC() !== census.returnAddress, "Atom stack restoration");
   stepUntil(() => true, "Atom return instruction");
   const returnSp = runtime.getRegisters().sp;
+  const returnA = runtime.getRegisters().a;
   measureAtom = false;
   const atomInstructions = instructions - programInstructions;
   const atomCycles = cycles - programCycles;
@@ -170,6 +171,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     atomSourceReads: sourceReadCount,
     entrySp,
     returnSp,
+    returnA,
     finalDisk,
     outputFile,
     sourceName,

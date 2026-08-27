@@ -199,7 +199,7 @@ All three are required. Passing one does not imply the others.
 The installed command exposes the first-generation build as:
 
 ```sh
-atom --self-host
+atom self-host
 ```
 
 It resolves the checked source shipped in the package, assembles it with the

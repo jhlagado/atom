@@ -31,8 +31,9 @@ required by an installed build.
 | --- | --- |
 | `assembleAtomProject(options)` | Resolve a filesystem project, preprocess it, lower `INCBIN`, and execute native Atom |
 | `resolveAtomProject(options)` | Run only filesystem preparation and return ordered source parts |
-| `renderAtomArtifacts(result, options)` | Render NOBJ, BIN, HEX, listing, and D8 in memory |
+| `renderAtomArtifacts(result, options)` | Render NOBJ, BIN, HEX, listing, and D8 in memory, with an optional flat base |
 | `publishAtomArtifacts(destination, baseName, artifacts)` | Publish one content-addressed artifact generation and atomically select it through `current` |
+| `publishAtomOutputFiles(outputs)` | Stage and transactionally replace a positive set of explicit output files |
 
 The current main build option shape is:
 
@@ -77,6 +78,7 @@ the first Atom generation.
 | `parseAtomNobj()` | Validate and summarize Atom NOBJ framing, order, map, count, and CRC |
 | `crc16CcittFalse()` | Compute the object stream CRC |
 | `writeIntelHex()` | Render a materialized flat image as Intel HEX |
+| `writeAtomCom()` | Validate `$0100` load and entry constraints and return COM bytes |
 | `writeAtomListing()` | Render original source, final bytes, reservations, and symbols |
 | `writeAtomD8()` | Render Debug80 source and symbol metadata |
 
@@ -109,26 +111,23 @@ external engineering tools need them. Ordinary build integration begins with
 ## Command-line surface
 
 ```text
-atom [options] entry.asm
-atom --self-host [options]
+atom [options] entry.asm [output...]
+atom --project project.json [output...]
+atom self-host [output...]
 ```
 
 The current options are:
 
 ```text
--o, --output DIR
---root DIR
---origin NUMBER
---capacity NUMBER
---entry NUMBER
---fill NUMBER
---self-host
+-p, --project FILE
+-t, --target NAME
 -DNAME[=VALUE]
 -h, --help
+-V, --version
 ```
 
-The command publishes NOBJ, BIN, HEX, LST, D8 JSON, and a manifest under one
-`current` symlink.
+Output paths positively select BIN, HEX, COM, NOBJ, LST, or D8 JSON by suffix.
+With no output path, a direct build publishes one BIN file.
 
 ## Native top-level entry
 

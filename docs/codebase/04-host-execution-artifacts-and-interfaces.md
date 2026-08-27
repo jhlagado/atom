@@ -356,10 +356,10 @@ retained; automatic pruning is not implemented.
 The normal command shape is:
 
 ```sh
-atom --origin 4000H src/main.asm
+atom src/main.asm build/main.bin
 ```
 
-`--self-host` selects the checked source shipped in the package and fixes the
+`atom self-host` selects the checked source shipped in the package and fixes the
 proof target. It permits only an output-directory override.
 
 Command misuse returns status 2. A failed build or publication returns status

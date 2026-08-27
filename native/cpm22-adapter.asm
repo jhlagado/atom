@@ -64,8 +64,10 @@ LD   (CP_SAVED_SP),SP
 LD   SP,CP_STACK_TOP
 CALL CP_PARSE_COMMAND
 JR   C,CP_COMMAND_FAILED
+OR   A
+JR   NZ,CP_SUCCESS
 CALL CP_RESOLVE_SOURCE
-JR   C,CP_RETURN
+JR   C,CP_BUILD_FAILED
 LD   HL,CP_OUTPUT_START
 LD   DE,CP_OUTPUT_START+1
 LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1
@@ -80,9 +82,12 @@ LD   HL,CP_OUTPUT_NAME
 CALL CP_PRINT_NAME
 LD   DE,CP_WRITTEN_TEXT
 CALL CP_PRINT
+CP_SUCCESS:
+XOR  A
 JR   CP_RETURN
 CP_COMMAND_FAILED:
 CALL CP_PRINT
+LD   A,2
 JR   CP_RETURN
 CP_ASSEMBLY_FAILED:
 PUSH AF
@@ -105,6 +110,8 @@ LD   A,L
 CALL CP_PRINT_HEX
 LD   DE,CP_NEWLINE_TEXT
 CALL CP_PRINT
+CP_BUILD_FAILED:
+LD   A,1
 CP_RETURN:
 LD   SP,(CP_SAVED_SP)
 RET
@@ -121,19 +128,49 @@ LD   B,A
 LD   HL,CP_COMMAND_START
 CALL CP_SKIP_SPACES
 JP   Z,CP_CHECK_AUXILIARY_NAMES
+LD   A,B
+CP   1
+JR   NZ,CP_COMMAND_SOURCE
+LD   A,(HL)
+CP   '?'
+JR   NZ,CP_COMMAND_SOURCE
+LD   DE,CP_USAGE_TEXT
+CALL CP_PRINT
+XOR  A
+INC  A
+RET
+CP_COMMAND_SOURCE:
 CALL CP_PARSE_FILENAME
-JR   C,CP_BAD_SOURCE_NAME
+JP   C,CP_BAD_SOURCE_NAME
 CALL CP_SKIP_SPACES
-JR   Z,CP_BAD_USAGE
+JR   Z,CP_SINGLE_NAME
 CALL CP_PARSE_FILENAME
-JR   C,CP_BAD_OUTPUT_NAME
+JP   C,CP_BAD_OUTPUT_NAME
 CALL CP_SKIP_SPACES
-JR   NZ,CP_BAD_USAGE
+JP   NZ,CP_BAD_USAGE
+JR   CP_COMMAND_NAMES_READY
+CP_SINGLE_NAME:
+LD   HL,$005C
+LD   DE,$006C
+LD   BC,12
+LDIR
+LD   HL,CP_COM_EXTENSION
+LD   DE,$006C+9
+LD   BC,3
+LDIR
 CP_COMMAND_NAMES_READY:
 LD   HL,$005C
 LD   DE,CP_INPUT_FCB
 LD   BC,12
 LDIR
+LD   A,(CP_INPUT_FCB+9)
+CP   ' '
+JR   NZ,CP_INPUT_TYPE_READY
+LD   HL,CP_ASM_EXTENSION
+LD   DE,CP_INPUT_FCB+9
+LD   BC,3
+LDIR
+CP_INPUT_TYPE_READY:
 LD   HL,$006C
 LD   DE,CP_OUTPUT_NAME
 LD   BC,12
@@ -1227,7 +1264,7 @@ CP_WRITTEN_TEXT: DB ' ','w','r','i','t','t','e','n',13,10,'$'
 CP_READ_FAILED_TEXT: DB ' ','r','e','a','d',' ','f','a','i','l','e','d',13,10,'$'
 CP_ASSEMBLY_TEXT: DB 13,10,'A','t','o','m',' ','e','r','r','o','r',' ','$'
 CP_NEWLINE_TEXT: DB 13,10,'$'
-CP_USAGE_TEXT: DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' ','[','S','O','U','R','C','E',' ','O','U','T','P','U','T','.','C','O','M',']',13,10,'$'
+CP_USAGE_TEXT: DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' ','[','S','O','U','R','C','E',' ','[','O','U','T','P','U','T','.','C','O','M',']',']',13,10,'$'
 CP_SOURCE_NAME_TEXT: DB 13,10,'I','n','v','a','l','i','d',' ','s','o','u','r','c','e',' ','n','a','m','e',13,10,'$'
 CP_OUTPUT_NAME_TEXT: DB 13,10,'I','n','v','a','l','i','d',' ','o','u','t','p','u','t',' ','n','a','m','e',13,10,'$'
 CP_NAME_CONFLICT_TEXT: DB 13,10,'S','o','u','r','c','e','/','o','u','t','p','u','t',' ','c','o','n','f','l','i','c','t',13,10,'$'
@@ -1236,6 +1273,7 @@ CP_INVALID_INCLUDE_TEXT: DB 13,10,'I','n','v','a','l','i','d',' ','%','I','N','C
 CP_INCLUDE_CYCLE_TEXT: DB 13,10,'I','n','c','l','u','d','e',' ','c','y','c','l','e',13,10,'$'
 CP_SOURCE_CAPACITY_TEXT: DB 13,10,'T','o','o',' ','m','a','n','y',' ','s','o','u','r','c','e','s',13,10,'$'
 CP_INCLUDE_WORD: DB 'I','N','C','L','U','D','E'
+CP_ASM_EXTENSION: DB 'A','S','M'
 CP_COM_EXTENSION: DB 'C','O','M'
 CP_ADAPTER_IMMUTABLE_END:
 CP_ADAPTER_WORKSPACE2_START:

@@ -419,18 +419,25 @@ export function createMemoryAtomSink() {
   return Object.freeze(sink);
 }
 
-export function materializeAtomGeneration(generation, { fill = 0 } = {}) {
+export function materializeAtomGeneration(generation, { fill = 0, base: requestedBase } = {}) {
   integer(fill, "fill", 0, 0xff);
   if (generation === null || typeof generation !== "object") {
     fail("invalid-generation", "Atom generation is missing");
   }
-  const base = generation.target.start;
+  const base = requestedBase ?? generation.target.start;
+  integer(base, "materialization base", 0, 0xffff);
   let end = Math.max(base, generation.finalCursor, generation.highWater ?? generation.finalCursor);
   for (const operation of generation.images) end = Math.max(end, operation.address + operation.bytes.length);
   const bytes = new Uint8Array(end - base);
   bytes.fill(fill);
-  for (const operation of generation.images) bytes.set(operation.bytes, operation.address - base);
-  for (const operation of generation.patches) bytes.set(operation.bytes, operation.address - base);
+  for (const operation of generation.images) {
+    if (operation.address < base) fail("materialization-base", "Atom image begins below the materialization base");
+    bytes.set(operation.bytes, operation.address - base);
+  }
+  for (const operation of generation.patches) {
+    if (operation.address < base) fail("materialization-base", "Atom patch begins below the materialization base");
+    bytes.set(operation.bytes, operation.address - base);
+  }
   return Object.freeze({ base, end, bytes });
 }
 
