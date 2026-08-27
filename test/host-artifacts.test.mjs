@@ -217,6 +217,34 @@ test("D8 classifies string directives as data and colon equates as constants", a
   );
 });
 
+test("D8 classifies translated data from the original source directive", async () => {
+  const originalBytes = encoder.encode("DATA: .DB 1\n");
+  const compilerBytes = encoder.encode("DATA: DB 1 \n");
+  const input = {
+    parts: [{
+      ordinal: 0,
+      bank: 0,
+      logicalIdentity: "module.asm",
+      originalBytes,
+      compilerBytes,
+    }],
+  };
+  const assembled = await assembleResolvedAtomProject(input, {
+    target: { start: 0x4000, capacity: 0x100 },
+  });
+  const artifacts = renderAtomArtifacts({ project: input, ...assembled });
+
+  assert.deepEqual(artifacts.d8.files["module.asm"].segments, [{
+    start: 0x4000,
+    end: 0x4001,
+    lstLine: 1,
+    line: 1,
+    column: 1,
+    kind: "data",
+    confidence: "high",
+  }]);
+});
+
 test("D8 classifies ALIGN padding as source-provenanced data", async () => {
   const { artifacts } = await render([
     "ORG 4001H",
