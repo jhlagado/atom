@@ -50,6 +50,7 @@
     "README.md"
   ],
   "scripts": {
+    "build": "npm run build:native-core && npm run build:native-object && npm run build:cpm22",
     "build:native-core": "node scripts/generate-native-core.mjs",
     "build:native-object": "node scripts/generate-native-object-harness.mjs",
     "build:cpm22": "node scripts/generate-cpm22.mjs",
