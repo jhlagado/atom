@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { compile } from "@jhlagado/azm";
+import { parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import { translateAtomLineToAzm } from "../src/host/translation/atom-to-azm.mjs";
 
@@ -13,6 +14,7 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
 const monorepoRoot = resolve(repositoryRoot, "../..");
 const nativeRoot = join(repositoryRoot, "native");
+const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
 const unavailableGateway = [
   "; Fail-closed transport replaced by a concrete platform binding.",
   ";@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY",
@@ -27,7 +29,39 @@ function originSource(origin) {
   return `ORG $${origin.toString(16).toUpperCase().padStart(4, "0")}`;
 }
 
-async function linkedSource({ origin, gatewaySource }) {
+function markAdapterWorkspace(adapterText) {
+  const start = adapterText.indexOf("NA_CFG: DW 0\n");
+  const end = adapterText.indexOf("NA_REND:\n", start);
+  assert.notEqual(start, -1, "native adapter workspace start changed");
+  assert.notEqual(end, -1, "native adapter workspace end changed");
+  return `${adapterText.slice(0, start)}NA_WBEG:\n${adapterText.slice(start, end)}NA_WEND:\n${adapterText.slice(end)}`;
+}
+
+function relocateFixedWorkspace(sourceText, workspaceOrigin) {
+  const code = [];
+  const workspace = [];
+  const found = new Set();
+  let active;
+  for (const line of sourceText.split("\n")) {
+    const start = /^([A-Z][A-Z0-9]*)_WBEG:$/.exec(line);
+    if (active === undefined && start !== null && fixedWorkspacePrefixes.has(start[1])) {
+      active = start[1];
+      assert.ok(!found.has(active), `duplicate ${active} fixed workspace`);
+      found.add(active);
+    }
+    if (active === undefined) {
+      code.push(line);
+      continue;
+    }
+    workspace.push(line);
+    if (line === `${active}_WEND:`) active = undefined;
+  }
+  assert.equal(active, undefined, "unterminated fixed workspace");
+  assert.deepEqual(found, fixedWorkspacePrefixes, "native fixed-workspace markers changed");
+  return `${code.join("\n")}\n${originSource(workspaceOrigin)}\n${workspace.join("\n")}\n`;
+}
+
+async function linkedSource({ origin, gatewaySource, workspaceOrigin }) {
   const parts = await Promise.all(
     ["atom-00.asm", "atom-01.asm", "atom-02.asm", "atom-03.asm", "atom-04.asm"]
       .map((name) => readFile(join(nativeRoot, name), "utf8")),
@@ -53,24 +87,28 @@ async function linkedSource({ origin, gatewaySource }) {
     readFile(join(nativeRoot, "named-object-adapter.asm"), "utf8"),
   ]);
   assert.ok(adapterText.includes(unavailableGateway), "native adapter gateway seam changed");
-  const adapter = adapterText.replace(unavailableGateway, gatewaySource ?? unavailableGateway);
-  const atomSource = `${parts.join("\n")}\n${sharedAbi}\n${adapter}`;
+  let adapter = adapterText.replace(unavailableGateway, gatewaySource ?? unavailableGateway);
+  if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
+  let atomSource = `${parts.join("\n")}\n${sharedAbi}\n${adapter}`;
+  if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin);
   return `${atomSource.split(/\r\n|\n|\r/).map(translateAtomLineToAzm).join("\n")}\n.end\n`;
 }
 
 export async function buildNativeObjectHarness({
   origin = 0,
+  workspaceOrigin,
   gatewaySource,
   registerContractsInterfaces = [],
 } = {}) {
-  const sourceText = await linkedSource({ origin, gatewaySource });
+  if (workspaceOrigin !== undefined) originSource(workspaceOrigin);
+  const sourceText = await linkedSource({ origin, gatewaySource, workspaceOrigin });
   const temporary = await mkdtemp(join(tmpdir(), "atom-object-harness-"));
   try {
     const sourcePath = join(temporary, "atom-object-harness.asm");
     await writeFile(sourcePath, sourceText);
     const result = await compile(sourcePath, {
-      emitBin: true,
-      emitHex: false,
+      emitBin: workspaceOrigin === undefined,
+      emitHex: workspaceOrigin !== undefined,
       emitD8m: true,
       emitLst: false,
       registerContracts: "strict",
@@ -83,8 +121,8 @@ export async function buildNativeObjectHarness({
         `${sourceName}:${line}:${column}: ${message}\n> ${sourceText.split("\n")[line - 1] ?? ""}`).join("\n"));
     }
     const binary = result.artifacts.find(({ kind }) => kind === "bin");
+    const hex = result.artifacts.find(({ kind }) => kind === "hex");
     const debugMap = result.artifacts.find(({ kind }) => kind === "d8m");
-    assert.equal(binary?.kind, "bin");
     assert.equal(debugMap?.kind, "d8m");
     const symbols = Object.fromEntries(debugMap.json.symbols.flatMap((symbol) => {
       const value = symbol.address ?? symbol.value;
@@ -92,8 +130,35 @@ export async function buildNativeObjectHarness({
     }));
     const residentBytes = symbols.NA_REND - origin;
     assert.ok(residentBytes <= 0x4000, "named-object harness exceeds one 16 KiB bank");
-    assert.equal(binary.bytes.length, residentBytes);
-    const nativeCoreBytes = 12_396;
+    let bytes;
+    let workspaceBytes;
+    let fixedWorkspace;
+    if (workspaceOrigin === undefined) {
+      assert.equal(binary?.kind, "bin");
+      assert.equal(binary.bytes.length, residentBytes);
+      bytes = binary.bytes;
+    } else {
+      assert.equal(hex?.kind, "hex");
+      const program = parseIntelHex(hex.text);
+      bytes = program.memory.slice(origin, symbols.NA_REND);
+      const workspaceEnd = symbols.NA_WEND;
+      assert.equal(symbols.EN_WBEG, workspaceOrigin);
+      assert.ok(workspaceEnd > workspaceOrigin, "native fixed workspace is empty");
+      assert.ok(
+        symbols.NA_REND <= workspaceOrigin || workspaceEnd <= origin,
+        "native code and fixed workspace overlap",
+      );
+      workspaceBytes = program.memory.slice(workspaceOrigin, workspaceEnd);
+      fixedWorkspace = {
+        fixedWorkspaceStart: workspaceOrigin,
+        fixedWorkspaceEnd: workspaceEnd,
+        fixedWorkspaceBytes: workspaceEnd - workspaceOrigin,
+        nativeCoreFixedWorkspaceBytes: symbols.NA_WBEG - workspaceOrigin,
+        adapterFixedWorkspaceBytes: workspaceEnd - symbols.NA_WBEG,
+        workspaceSha256: createHash("sha256").update(workspaceBytes).digest("hex"),
+      };
+    }
+    const nativeCoreBytes = workspaceOrigin === undefined ? 12_396 : symbols.DR_CEND - origin;
     const proofSymbols = Object.fromEntries([
       "DR_DETAI",
       "ST_DETAI",
@@ -103,7 +168,7 @@ export async function buildNativeObjectHarness({
       "NA_TRANS",
     ].map((name) => [name, symbols[name]]));
     return {
-      bytes: binary.bytes,
+      bytes,
       report: {
         format: "atom-native-object-harness-census",
         version: 1,
@@ -123,9 +188,11 @@ export async function buildNativeObjectHarness({
         maximumObjectNameBytes: 255,
         maximumSourceObjectBytes: 65_535,
         maximumOutputObjectBytes: 65_535,
-        sha256: createHash("sha256").update(binary.bytes).digest("hex"),
+        sha256: createHash("sha256").update(bytes).digest("hex"),
         symbols: proofSymbols,
+        ...fixedWorkspace,
       },
+      ...(workspaceBytes === undefined ? {} : { workspaceBytes }),
     };
   } finally {
     await rm(temporary, { recursive: true, force: true });

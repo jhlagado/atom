@@ -88,6 +88,11 @@ adapter. The measured adapter delta is 1,115 bytes, leaving 2,873 bytes below a
 16-byte request, a 255-byte copied-name area, and a 128-byte transfer cache.
 The workspace is not part of the resident image.
 
+For an immutable expansion bank, the harness builder separates the image into
+12,770 bytes of code and tables and 741 bytes of fixed state. The fixed state
+joins the 399-byte service workspace in common RAM; the bank remains unchanged
+during a proved multipart assembly.
+
 The CP/M provider now preserves IX and IY around BDOS with one shared 12-byte
 wrapper. The linked transient is 14,145 bytes, with 1,983 bytes free below the
 `$4000` source cache. The CP/M-specific resident account is 1,746 bytes:

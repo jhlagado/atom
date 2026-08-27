@@ -99,7 +99,16 @@ async function runProject(sources, options = {}) {
 
   const initialMemory = new Uint8Array(0x10000);
   initialMemory.set(bytes, loadAddress);
-  const runtime = createZ80Runtime({ memory: initialMemory, startAddress: loadAddress }, loadAddress);
+  if (harness.workspaceBytes !== undefined) {
+    initialMemory.set(harness.workspaceBytes, census.fixedWorkspaceStart);
+  }
+  const residentBefore = initialMemory.slice(loadAddress, census.residentEnd);
+  const runtime = createZ80Runtime(
+    { memory: initialMemory, startAddress: loadAddress },
+    loadAddress,
+    undefined,
+    options.romRanges === undefined ? undefined : { romRanges: options.romRanges },
+  );
   const memory = runtime.hardware.memory;
 
   memory[CONFIG + 0] = SOURCE_SELECTOR;
@@ -195,6 +204,7 @@ async function runProject(sources, options = {}) {
     instructions,
     cycles,
     census,
+    residentUnchanged: Buffer.from(memory.slice(loadAddress, census.residentEnd)).equals(residentBefore),
   };
 }
 
@@ -214,27 +224,34 @@ test("native named-object harness assembles parts, fills gaps, patches, and comm
   assert.ok(run.census.residentBytes <= 0x4000);
 });
 
-test("native named-object harness relocates into a writable 16 KiB target bank", async () => {
-  const harness = await buildNativeObjectHarness({ origin: 0x8000 });
+test("native named-object harness separates fixed workspace from a 16 KiB ROM bank", async () => {
+  const harness = await buildNativeObjectHarness({ origin: 0x8000, workspaceOrigin: 0x1800 });
   assert.equal(harness.report.loadAddress, 0x8000);
-  assert.equal(harness.report.residentBytes, 13_511);
-  assert.equal(harness.report.residentEnd, 0xb4c7);
+  assert.equal(harness.report.residentBytes, 12_770);
+  assert.equal(harness.report.residentEnd, 0xb1e2);
+  assert.equal(harness.report.fixedWorkspaceStart, 0x1800);
+  assert.equal(harness.report.fixedWorkspaceEnd, 0x1ae5);
+  assert.equal(harness.report.fixedWorkspaceBytes, 741);
+  assert.equal(harness.report.nativeCoreFixedWorkspaceBytes, 714);
+  assert.equal(harness.report.adapterFixedWorkspaceBytes, 27);
   const run = await runProject([
     "ORG $100\nJR LATER\n",
     "LATER:\nDB $5A\n",
   ], {
     harness,
-    commonWorkspace: 0x6000,
+    commonWorkspace: 0x1b00,
     symbolStart: 0x4000,
     symbolEnd: 0x5000,
     pendingStart: 0x5000,
     pendingEnd: 0x5800,
     stack: 0x7ff0,
+    romRanges: [{ start: 0x8000, end: 0xb1e1 }],
   });
   assert.deepEqual(run.result, { status: 0, carry: 0 });
   assert.deepEqual([...run.output], [0x18, 0x00, 0x5a]);
   assert.equal(run.sourceOpenHandles, 0);
   assert.equal(run.outputOpenHandles, 0);
+  assert.equal(run.residentUnchanged, true);
 });
 
 test("native named-object harness validates its complete common workspace range", async () => {

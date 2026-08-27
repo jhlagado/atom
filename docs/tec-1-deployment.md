@@ -17,15 +17,16 @@ descriptors and caller-owned symbol and pending arenas.
 The current checked core image is linked at `$0000` for Debug80. Its linked
 extent is Measured 12,396 bytes, leaving Measured 3,988 bytes below `$4000`.
 The native object harness builder can instead link the same core and adapter at
-a target-selected origin. A proof build at `$8000` occupies Measured 13,511
-bytes and ends at `$B4C7`; it assembles a multipart program successfully from
-that address under strict register contracts.
+a target-selected origin. Its TEC profile places Measured 12,770 bytes of code
+and immutable tables at `$8000..$B1E1`, then places Measured 741 bytes of fixed
+state at `$1800..$1AE4`. A complete multipart assembly succeeds with the bank
+marked read-only, and every bank byte remains unchanged.
 
-The linked image contains fixed writable workspace as well as code and
-immutable tables. It must therefore run in a writable bank, or be loaded into
-writable RAM before use. An immutable ROM cannot hold the image unchanged.
-Relinking must be followed by the complete strict-contract and runtime proof
-battery; the Debug80 address is not a portable absolute contract.
+This split lets Atom execute directly from expansion ROM. The 741-byte state
+image must be copied or cleared in common RAM before execution. Relinking and
+workspace placement must be followed by the complete strict-contract and
+runtime proof battery; the Debug80 address is not a portable absolute
+contract.
 
 ## Required operating services
 
@@ -109,11 +110,12 @@ is not a prescribed TEC memory map.
 
 The source service removes any need to keep a complete source part in Z80 RAM.
 The proved named-object adapter uses a 128-byte transfer buffer within 399 bytes
-of caller-owned common workspace. The composed core and adapter occupy Measured
-13,511 bytes, leaving Measured 2,873 bytes in a 16 KiB writable bank. The TEC-FS
-providers are separately measured in TECM8; dependency resolution and the
-launcher remain unmeasured accounts and must not be squeezed into that margin
-without a fresh linked measurement.
+of caller-owned common workspace. The ROM profile leaves Measured 3,614 bytes
+free in bank 7. Its 741-byte fixed state and 399-byte service workspace consume
+Measured 1,140 bytes of common RAM before descriptors, source IDs, symbols,
+pending references, and stack are added. The TEC-FS providers are separately
+measured in TECM8; dependency resolution and the launcher remain unmeasured
+accounts and need their own linked measurements.
 
 A TEC filesystem adapter must also implement the measured Mac `INCBIN`
 contract: confined snapshot reads relative to the containing source, whole-file

@@ -61,15 +61,17 @@ and the gateway implementation that carries requests to the operating
 environment. `scripts/generate-native-object-harness.mjs` calls the builder at
 origin zero with a fail-closed gateway to produce the checked package asset.
 
-The relocation proof also builds the harness at `$8000`. The resulting image
-ends at `$B4C7`, occupies 13,511 bytes, and executes a complete multipart
-assembly through independent source and output providers. This is a link-time
-choice, not a runtime relocation table.
+For an immutable-bank profile, the builder also accepts a common-RAM workspace
+origin. The TEC proof places 12,770 bytes of code and tables at
+`$8000..$B1E1`, and 741 bytes of fixed state at `$1800..$1AE4`. It then executes
+a complete multipart assembly through independent source and output providers
+with the bank marked read-only. This is a link-time layout choice, not a runtime
+relocation table.
 
-The image includes fixed writable workspace. A platform must place it in a
-writable 16 KiB bank or load it into writable RAM before execution. The gateway
-binding, symbol arena, pending arena, descriptors, service workspace, and stack
-remain platform-owned parts of the final memory map.
+The gateway binding, 399-byte service workspace, symbol arena, pending arena,
+descriptors, source-name table, and stack remain platform-owned parts of the
+final memory map. A launcher must initialize the fixed-state image in common
+RAM before entering the assembler.
 
 ## Native source ledger
 
