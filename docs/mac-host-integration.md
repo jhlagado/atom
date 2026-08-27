@@ -1,4 +1,4 @@
-# Mac host and native Atom integration
+# Node host and native Atom integration
 
 `assembleAtomProject` is the first complete host-to-Z80 assembly entry. The Mac
 host reads the project, resolves `%INCLUDE` dependencies and `INCBIN` inputs,
@@ -25,6 +25,30 @@ const { base, bytes } = materializeAtomGeneration(result.generation);
 The `atom` executable wraps this API with deterministic artifact rendering and
 atomic generation publication. [`command-line.md`](command-line.md) documents
 the installed command.
+
+## Debug80 programming API integration
+
+Debug80 uses the same package API rather than starting the command-line
+program. Atom and AZM both use normal `.asm` filenames, so set the target's
+assembler explicitly:
+
+```json
+{
+  "targets": {
+    "app": {
+      "sourceFile": "src/main.asm",
+      "assembler": "atom"
+    }
+  }
+}
+```
+
+The backend calls `assembleAtomProject()`, renders the committed generation
+with `renderAtomArtifacts()`, validates the D8 JSON, and publishes HEX, BIN,
+D8, and listing outputs with `publishAtomOutputFiles()`. The command-line
+parser is not part of this path. Preparation and assembly errors retain their
+source identity, line, and column, including errors in files reached through
+`%INCLUDE`.
 
 ## Execution boundary
 
