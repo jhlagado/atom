@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+import { runGenerationLifecycleConformance } from "@jhlagado/z80-tool-services";
 
 import {
   assembleAtomProject,
@@ -309,6 +310,57 @@ test("the memory sink rejects a second patch to one IMAGE byte", () => {
   assert.notEqual(sink.patch({ bank: 0, address: 0x4000, bytes: [2] }), 0);
   assert.equal(sink.snapshot().failure.code, "patch-target");
   assert.equal(sink.abort(), 0);
+});
+
+test("the memory sink passes the shared generation lifecycle conformance vectors", () => {
+  const result = runGenerationLifecycleConformance(() => {
+    const sink = createMemoryAtomSink();
+    const target = { start: 0x4000, capacity: 0x100 };
+    const descriptor = 0x4000;
+    let imageLength = 0;
+
+    const requireStatusOk = (status) => {
+      if (status !== 0) throw new Error(`Atom sink status ${status}`);
+    };
+
+    return {
+      get active() {
+        return sink.snapshot().open;
+      },
+      begin() {
+        imageLength = 0;
+        requireStatusOk(sink.begin({ descriptor, target }));
+      },
+      image() {
+        requireStatusOk(
+          sink.image({
+            bank: 0,
+            address: target.start + imageLength,
+            bytes: [1, 2],
+          }),
+        );
+        imageLength += 2;
+      },
+      patch() {
+        requireStatusOk(sink.patch({ bank: 0, address: target.start + 1, bytes: [9] }));
+      },
+      commit() {
+        requireStatusOk(
+          sink.commit({
+            descriptor,
+            finalCursor: target.start + imageLength,
+            highWater: target.start + imageLength,
+            remaining: target.capacity - imageLength,
+          }),
+        );
+      },
+      abort() {
+        requireStatusOk(sink.abort());
+      },
+    };
+  });
+
+  assert.deepEqual(result, { vectors: 4, assertions: 16 });
 });
 
 test("native source offsets accept 65,535 bytes and reject one byte more", async () => {
