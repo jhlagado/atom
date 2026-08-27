@@ -140,7 +140,7 @@ not derived by subtracting from the failed estimate.
 
 | Remaining component | Classification | Bytes |
 | --- | --- | ---: |
-| Flat-manifest source-part iterator | Projected | 100–250 |
+| Multipart source iterator | Projected | 100–250 |
 | Labels, equates, and required directives | Projected | 300–800 |
 | Symbol integration and additional diagnostics | Projected | 100–400 |
 | Append-only NOBJ image and patch output | Projected | 800–1,200 |

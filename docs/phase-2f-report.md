@@ -46,7 +46,7 @@ injected adapter failures, named execution budgets, and the complete
 **Measured: 65,536-byte address space** on every exercised output and
 resolution failure path.
 
-Phase 2f does not add labels, equates, directives, source-manifest iteration,
+Phase 2f does not add labels, equates, directives, multipart source iteration,
 final undefined-symbol checks, map construction, or sink commit and abort
 calls.
 
@@ -172,7 +172,7 @@ measured implementation. Remaining Atom-resident work is:
 
 | Remaining component | Classification | Bytes |
 | --- | --- | ---: |
-| Flat-manifest source-part iterator | Projected | 100–250 |
+| Multipart source iterator | Projected | 100–250 |
 | Labels, equates, and required directives | Projected | 300–800 |
 | Control, diagnostics, sink lifecycle, and final integration | Projected | 1,000–1,500 |
 | **Remaining subtotal** | **Projected** | **1,400–2,550** |

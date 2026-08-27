@@ -150,7 +150,7 @@ and carries the same estimation risk as the earlier combined range.
 
 | Remaining component | Classification | Bytes |
 | --- | --- | ---: |
-| Flat-manifest source-part iterator | Projected | 100–250 |
+| Multipart source iterator | Projected | 100–250 |
 | General expressions and directives | Projected | 252–852 |
 | Symbol integration and additional diagnostics | Projected | 100–400 |
 | Append-only NOBJ image and patch output | Projected | 800–1,200 |
