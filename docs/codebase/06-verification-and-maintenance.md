@@ -275,13 +275,13 @@ do not copy an earlier total into a new report.
 
 ## Dependency pin
 
-Atom's development proofs depend on the AZM oracle and Debug80 Runtime in the
-sibling Debug80 repository. `scripts/verify-dependencies.mjs` checks the
-required Debug80 branch, exact AZM and runtime tree identities, and a clean
-dependency worktree before the normal npm test preparation rebuilds them.
+Atom's development proofs depend on a pinned AZM reference build and Debug80
+Runtime in the sibling Debug80 repository. `scripts/verify-dependencies.mjs`
+checks the required Debug80 branch, exact AZM and runtime tree identities, and a
+clean dependency worktree before the normal npm test preparation rebuilds them.
 
-This pin protects the oracle denominator and emulator semantics. Updating it is
-a separate reviewed dependency checkpoint with fresh native and differential
+This pin protects the comparison set and emulator semantics. Updating it is a
+separate reviewed dependency checkpoint with fresh native and differential
 evidence.
 
 ## Maintainer commands

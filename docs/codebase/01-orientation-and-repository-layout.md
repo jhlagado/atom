@@ -107,8 +107,8 @@ atom/
 
 The package uses JavaScript ESM and requires Node 20 or later. AZM and Debug80
 Runtime are local development dependencies. The published package bundles
-Debug80 Runtime but omits AZM; AZM remains the independent development oracle
-used to verify the Atom-built native image.
+Debug80 Runtime but omits AZM. Development verification still compares Atom's
+native image against the checked reference build.
 
 ## Native source layout
 

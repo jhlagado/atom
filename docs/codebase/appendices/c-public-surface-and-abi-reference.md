@@ -123,7 +123,7 @@ the files it wants, and Atom publishes exactly those paths transactionally.
 | Export | Use |
 | --- | --- |
 | `translateAtomLineToAzm()` | Translate one prepared Atom source line into AZM syntax |
-| `translateResolvedAtomProjectToAzm()` | Produce one AZM oracle source from ordered prepared parts |
+| `translateResolvedAtomProjectToAzm()` | Produce one AZM comparison source from ordered prepared parts |
 | `createSelfHostedAtomCore()` | Recover a runner-compatible native core from one Atom generation |
 | `AtomAssemblyError` | Structured error class for execution, artifacts, translation, self-hosting, and publication |
 

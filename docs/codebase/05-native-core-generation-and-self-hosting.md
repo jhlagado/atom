@@ -21,7 +21,7 @@ fail-closed host sink entries.
 The source uses Atom's bare directives and eight-character symbols. Comments
 beginning with `;@ROUTINE` and `;@EXPECTOUT` retain register-contract metadata.
 Atom ignores those comments. The Atom-to-AZM translator restores them as AZM
-annotations for the strict oracle build.
+annotations for the independent strict-contract build.
 
 ## Building the pinned core
 
@@ -156,9 +156,9 @@ wrong symbol map or entry address were attached to otherwise equal bytes.
 
 ## Independent AZM translation
 
-`translateResolvedAtomProjectToAzm()` supplies a separate oracle path. It joins
-the already prepared Atom parts into one temporary AZM source while preserving
-part markers and performs the syntax rewrites needed by AZM:
+`translateResolvedAtomProjectToAzm()` supplies a separate comparison path. It
+joins the already prepared Atom parts into one temporary AZM source while
+preserving part markers and performs the syntax rewrites needed by AZM:
 
 - bare Atom directives become dotted AZM directives;
 - both accepted `EQU` shapes become AZM equates;

@@ -92,7 +92,7 @@ The modules below are exported by
 
 | File | Role |
 | --- | --- |
-| `atom-to-azm.mjs` | Quote-aware and comment-aware conversion of prepared Atom directives, equates, and byte functions into one AZM oracle source |
+| `atom-to-azm.mjs` | Quote-aware and comment-aware conversion of prepared Atom directives, equates, and byte functions into one AZM comparison source |
 | `azm-to-atom.mjs` | Strict AZM common-subset conversion, symbol and source checks, positioned rejection, and deterministic Atom source output |
 
 ## `src/host/self-host/`
@@ -139,7 +139,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 
 | File | Role |
 | --- | --- |
-| `support.mjs` | Encoder direct-entry AZM assembly, Debug80 stepping, complete memory audit, instruction oracle helpers, and execution statistics |
+| `support.mjs` | Encoder direct-entry AZM assembly, Debug80 stepping, complete memory audit, instruction comparison helpers, and execution statistics |
 | `symbol-support.mjs` | Checked-core symbol and pending direct-entry harness with guarded caller-owned arenas and complete memory auditing |
 | `tokenizer-support.mjs` | Checked-core tokenizer harness with guarded source, exact token/error observations, and complete memory auditing |
 | `expression-support.mjs` | Expression harness, token setup, symbol state, and result extraction |
@@ -209,7 +209,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `measure-integration.mjs` | Linked cross-module native account |
 | `measure-driver.mjs` | Multipart driver account and lifecycle observations |
 | `measure-host-native.mjs` | Complete linked Mac image, caller-owned regions, and host execution |
-| `measure-self-host.mjs` | Source generation, two Atom generations, AZM oracle comparison, and execution totals |
+| `measure-self-host.mjs` | Source generation, two Atom generations, AZM comparison, and execution totals |
 
 ## `proofs/`
 

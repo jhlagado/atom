@@ -105,8 +105,8 @@ and prevents a syntax rewrite from silently changing output bytes.
 
 `bin/azm-to-atom.mjs` adds filesystem policy around the pure function. It reads
 the complete input first, refuses to overwrite a destination, and writes no
-partial output after a translation failure. AZM remains a development oracle;
-the installed converter has no AZM runtime dependency.
+partial output after a translation failure. The installed converter has no AZM
+runtime dependency.
 
 ## Native proof memory map
 
