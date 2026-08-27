@@ -60,7 +60,7 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin) {
   return `${code.join("\n")}\n${originSource(workspaceOrigin)}\n${workspace.join("\n")}\n`;
 }
 
-async function linkedSource({ origin, gatewaySource, workspaceOrigin }) {
+async function linkedSource({ origin, gatewaySource, workspaceOrigin, preludeSource }) {
   const parts = await Promise.all(
     ["atom-00.asm", "atom-01.asm", "atom-02.asm", "atom-03.asm", "atom-04.asm"]
       .map((name) => readFile(join(nativeRoot, name), "utf8")),
@@ -88,19 +88,24 @@ async function linkedSource({ origin, gatewaySource, workspaceOrigin }) {
   assert.ok(adapterText.includes(unavailableGateway), "native adapter gateway seam changed");
   let adapter = adapterText.replace(unavailableGateway, gatewaySource ?? unavailableGateway);
   if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
-  let atomSource = `${parts.join("\n")}\n${sharedAbi}\n${adapter}`;
+  let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${parts.join("\n")}\n${sharedAbi}\n${adapter}`;
   if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin);
   return `${atomSource.split(/\r\n|\n|\r/).map(translateAtomLineToAzm).join("\n")}\n.end\n`;
 }
 
 export async function buildNativeObjectHarness({
   origin = 0,
+  imageOrigin = origin,
   workspaceOrigin,
+  preludeSource,
   gatewaySource,
+  registerContractsProfile,
   registerContractsInterfaces = [],
 } = {}) {
+  originSource(imageOrigin);
+  assert.ok(imageOrigin <= origin, "native harness image origin follows its core origin");
   if (workspaceOrigin !== undefined) originSource(workspaceOrigin);
-  const sourceText = await linkedSource({ origin, gatewaySource, workspaceOrigin });
+  const sourceText = await linkedSource({ origin, gatewaySource, workspaceOrigin, preludeSource });
   const temporary = await mkdtemp(join(tmpdir(), "atom-object-harness-"));
   try {
     const sourcePath = join(temporary, "atom-object-harness.asm");
@@ -111,6 +116,7 @@ export async function buildNativeObjectHarness({
       emitD8m: true,
       emitLst: false,
       registerContracts: "strict",
+      ...(registerContractsProfile === undefined ? {} : { registerContractsProfile }),
       registerContractsInterfaces,
       symbolCase: "insensitive",
     });
@@ -127,7 +133,7 @@ export async function buildNativeObjectHarness({
       const value = symbol.address ?? symbol.value;
       return value === undefined ? [] : [[symbol.name.toUpperCase(), value]];
     }));
-    const residentBytes = symbols.NA_REND - origin;
+    const residentBytes = symbols.NA_REND - imageOrigin;
     assert.ok(residentBytes <= 0x4000, "named-object harness exceeds one 16 KiB bank");
     let bytes;
     let workspaceBytes;
@@ -139,12 +145,12 @@ export async function buildNativeObjectHarness({
     } else {
       assert.equal(hex?.kind, "hex");
       const program = parseIntelHex(hex.text);
-      bytes = program.memory.slice(origin, symbols.NA_REND);
+      bytes = program.memory.slice(imageOrigin, symbols.NA_REND);
       const workspaceEnd = symbols.NA_WEND;
       assert.equal(symbols.EN_WBEG, workspaceOrigin);
       assert.ok(workspaceEnd > workspaceOrigin, "native fixed workspace is empty");
       assert.ok(
-        symbols.NA_REND <= workspaceOrigin || workspaceEnd <= origin,
+        symbols.NA_REND <= workspaceOrigin || workspaceEnd <= imageOrigin,
         "native code and fixed workspace overlap",
       );
       workspaceBytes = program.memory.slice(workspaceOrigin, workspaceEnd);
@@ -172,7 +178,8 @@ export async function buildNativeObjectHarness({
       report: {
         format: "atom-native-object-harness-census",
         version: 1,
-        loadAddress: origin,
+        loadAddress: imageOrigin,
+        ...(imageOrigin === origin ? {} : { coreOrigin: origin }),
         assembleEntry: symbols.DR_ASM,
         adapterInitEntry: symbols.NA_INIT,
         gatewayEntry: symbols.NA_GATE,

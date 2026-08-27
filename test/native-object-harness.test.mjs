@@ -225,10 +225,21 @@ test("native named-object harness assembles parts, fills gaps, patches, and comm
 });
 
 test("native named-object harness separates fixed workspace from a 16 KiB ROM bank", async () => {
-  const harness = await buildNativeObjectHarness({ origin: 0x8000, workspaceOrigin: 0x1800 });
+  const harness = await buildNativeObjectHarness({
+    origin: 0x8100,
+    imageOrigin: 0x8000,
+    workspaceOrigin: 0x1800,
+    preludeSource: [
+      "ORG $8000",
+      ";@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY",
+      "PL_ENTRY:",
+      "JP NA_INIT",
+    ].join("\n"),
+  });
   assert.equal(harness.report.loadAddress, 0x8000);
-  assert.equal(harness.report.residentBytes, 12_770);
-  assert.equal(harness.report.residentEnd, 0xb1e2);
+  assert.equal(harness.report.coreOrigin, 0x8100);
+  assert.equal(harness.report.residentBytes, 13_026);
+  assert.equal(harness.report.residentEnd, 0xb2e2);
   assert.equal(harness.report.fixedWorkspaceStart, 0x1800);
   assert.equal(harness.report.fixedWorkspaceEnd, 0x1ae5);
   assert.equal(harness.report.fixedWorkspaceBytes, 741);
@@ -247,7 +258,7 @@ test("native named-object harness separates fixed workspace from a 16 KiB ROM ba
     pendingStart: 0x5000,
     pendingEnd: 0x5800,
     stack: 0x7ff0,
-    romRanges: [{ start: 0x8000, end: 0xb1e1 }],
+    romRanges: [{ start: 0x8000, end: 0xb2e1 }],
   });
   assert.deepEqual(run.result, { status: 0, carry: 0 });
   assert.deepEqual([...run.output], [0x18, 0x00, 0x5a]);

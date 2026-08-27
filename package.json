@@ -27,7 +27,10 @@
   },
   "exports": {
     ".": "./src/host/index.mjs",
-    "./native-builder": "./scripts/native-object-harness-builder.mjs"
+    "./native-builder": {
+      "types": "./scripts/native-object-harness-builder.d.mts",
+      "import": "./scripts/native-object-harness-builder.mjs"
+    }
   },
   "files": [
     "assets/native-core.json",
@@ -40,6 +43,7 @@
     "native/*.asm",
     "native/atom-symbols.json",
     "scripts/native-object-harness-builder.mjs",
+    "scripts/native-object-harness-builder.d.mts",
     "src/abi.mjs",
     "src/host",
     "LICENSE",
