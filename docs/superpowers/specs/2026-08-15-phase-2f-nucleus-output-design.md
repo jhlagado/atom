@@ -24,7 +24,7 @@ It drains pending references when a symbol becomes defined and releases each
 six-byte pending record after the corresponding patch sink call succeeds.
 
 Phase 2f remains a flat bank-zero measurement. The settled pending record has
-no bank field. Labels, equates, directives, source-manifest iteration, final
+no bank field. Labels, equates, directives, multipart source iteration, final
 undefined-symbol checks, sink lifecycle, `MAP`, and complete object commit
 remain later work.
 
