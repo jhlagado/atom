@@ -214,12 +214,12 @@ and validate D8 files, segments, symbols, source units, and entry metadata.
 Publication tests inject failures during staging, synchronization, generation
 promotion, and `current` selection. They prove that the prior selected
 generation survives, owned temporary paths are removed, and an existing
-content-addressed generation is reused only after complete byte and manifest
-verification.
+content-addressed generation is reused only after complete byte and artifact
+metadata verification.
 
 The shipped example supplies a small stable acceptance program. Its verifier
 checks an exact 19-byte image, Intel HEX, listing provenance, D8 structure,
-NOBJ and manifest presence, and every manifest byte count and SHA-256.
+NOBJ and artifact metadata presence, and every recorded byte count and SHA-256.
 
 ## Package proof
 

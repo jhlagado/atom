@@ -5,7 +5,7 @@
 **Measured: pass.** The packed Atom command installs offline on the Mac and
 assembles a project without AZM, an Atom source checkout, or a neighbouring
 Debug80 checkout. One invocation publishes NOBJ, raw binary, Intel HEX,
-listing, D8 map, and manifest files as a single selected generation.
+listing, D8 map, and artifact metadata as a single selected generation.
 
 The installed package contains a pinned native core and the Debug80 Z80 runtime.
 The core loader verifies the committed HEX text with SHA-256 before execution.
@@ -52,14 +52,15 @@ earlier scopes.
 ## Publication evidence
 
 Artifact sets use content-addressed immutable directories. The publisher
-synchronizes every artifact and its manifest, renames the complete generation
-into place, then atomically renames a temporary symlink over `current`. A
+synchronizes every artifact and its metadata file, renames the complete
+generation into place, then atomically renames a temporary symlink over `current`. A
 fault injected at the pointer rename leaves every path through the previous
 `current` generation unchanged. A later successful publication selects all
 files from the new generation together.
 
-The publisher verifies an existing generation before reuse. The manifest has
-the generation digest and a SHA-256 plus byte count for each artifact.
+The publisher verifies an existing generation before reuse. The artifact
+metadata records the generation digest and a SHA-256 plus byte count for each
+artifact.
 
 ## Package evidence
 

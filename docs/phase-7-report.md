@@ -11,7 +11,7 @@ the current measured account.
 language reference, architecture and capacity account, end-to-end example,
 release gate, and TEC-1 deployment design. The installed package runs without
 AZM or a neighbouring source checkout and publishes deterministic NOBJ,
-binary, Intel HEX, listing, D8, and manifest files as one atomic generation.
+binary, Intel HEX, listing, D8, and artifact metadata as one atomic generation.
 
 The assembler's source and output claims did not change. Native Atom still
 matches frozen AZM for **Measured: 3,445 of 3,445 supported instruction forms**
