@@ -1,3 +1,8 @@
+import {
+  normalizeOneByteStatus,
+  oneByteValue,
+} from "@jhlagado/z80-tool-services";
+
 export const ATOM_TOOL_SERVICE = Object.freeze({
   consoleRead: "consoleRead",
   consoleWrite: "consoleWrite",
@@ -17,18 +22,14 @@ export const ATOM_TOOL_STATUS = Object.freeze({
   invalid: 0xfe,
 });
 
-function status(value) {
-  const result = value === undefined ? ATOM_TOOL_STATUS.success : value;
-  return Number.isInteger(result) && result >= 0 && result <= 0xff
-    ? result
-    : ATOM_TOOL_STATUS.invalid;
-}
+const ATOM_STATUS_POLICY = Object.freeze({
+  success: ATOM_TOOL_STATUS.success,
+  invalid: ATOM_TOOL_STATUS.invalid,
+  exception: ATOM_TOOL_STATUS.invalid,
+});
 
-function byte(value) {
-  return Number.isInteger(value) && value >= 0 && value <= 0xff
-    ? value
-    : undefined;
-}
+const status = (value) => normalizeOneByteStatus(value, ATOM_STATUS_POLICY);
+const byte = (value) => oneByteValue(value);
 
 /**
  * Build Atom's private direct-host tool-service gateway. The resident core

@@ -1,4 +1,5 @@
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+import { invokeOneByteStatus } from "@jhlagado/z80-tool-services";
 
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 import { loadNativeAtomCore } from "../core/native-atom-core.mjs";
@@ -581,16 +582,11 @@ function nativeFailure(result, project, memory, symbols, memoryLayout, sinkState
 }
 
 function invokeService(runtime, kind, action, trace) {
-  let status = 0;
-  let cause;
-  try {
-    const returned = action();
-    status = returned === undefined ? 0 : returned;
-    if (!Number.isInteger(status) || status < 0 || status > 0xff) status = ATOM_HOST_SINK_STATUS.HOST_EXCEPTION;
-  } catch (error) {
-    status = ATOM_HOST_SINK_STATUS.HOST_EXCEPTION;
-    cause = error;
-  }
+  const { status, cause } = invokeOneByteStatus(action, {
+    success: 0,
+    invalid: ATOM_HOST_SINK_STATUS.HOST_EXCEPTION,
+    exception: ATOM_HOST_SINK_STATUS.HOST_EXCEPTION,
+  });
   trace.push(Object.freeze({ method: kind, status }));
   const { cpu } = runtime;
   const returnAddress = word(runtime.hardware.memory, cpu.sp);
