@@ -1,7 +1,7 @@
 import {
   NAMED_OBJECT_STATUS,
   NamedObjectClient,
-} from "./named-object-services.mjs";
+} from "../providers/named-object-services.mjs";
 
 const frozen = (bytes) => Object.freeze(Array.from(bytes));
 

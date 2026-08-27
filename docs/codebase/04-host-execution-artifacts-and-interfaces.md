@@ -20,7 +20,7 @@ artifact in memory. Filesystem publication is optional.
 
 ## Pinned native core
 
-`src/host/native-atom-core.mjs` loads `assets/native-core.json`. The checked
+`src/host/core/native-atom-core.mjs` loads `assets/native-core.json`. The checked
 artifact contains:
 
 - Intel HEX for the linked native image;
@@ -110,7 +110,7 @@ the installed converter has no AZM runtime dependency.
 
 ## Native proof memory map
 
-`native-atom-runner.mjs` uses a fixed 64 KiB Mac proof map:
+`src/host/harness/native-atom-runner.mjs` uses a fixed 64 KiB Mac proof map:
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
@@ -347,10 +347,10 @@ retained; automatic pruning is not implemented.
 `bin/atom.mjs` is a thin filesystem-facing wrapper. It:
 
 1. parses command arguments and `-D` definitions;
-2. chooses the root, target, entry, fill, and bundle path;
+2. chooses the root, target, entry, definitions, and requested output paths;
 3. calls `assembleAtomProject()`;
-4. renders all artifacts;
-5. publishes the generation; and
+4. renders the requested artifact formats;
+5. stages every selected file before replacing any previous output; and
 6. prints one success summary or one positioned failure.
 
 The normal command shape is:
@@ -360,7 +360,7 @@ atom src/main.asm build/main.bin
 ```
 
 `atom self-host` selects the checked source shipped in the package and fixes the
-proof target. It permits only an output-directory override.
+proof target. It accepts only positive output paths.
 
 Command misuse returns status 2. A failed build or publication returns status
 1. A successful published build returns status 0.

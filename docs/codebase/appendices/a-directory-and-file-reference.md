@@ -21,16 +21,40 @@ the owner of a behavior quickly.
 | --- | --- |
 | `src/abi.mjs` | JavaScript mnemonic and operand ordinals, parsed-record constructor, and reference RADIX-40 packer used by tests and host tooling |
 
-## `src/host/` composition and execution
+## `src/host/` public surface
 
 | File | Role |
 | --- | --- |
 | `index.mjs` | Root package export surface for host assembly, artifacts, native runner, translation, and self-host helpers |
+| `atom-assembly-error.mjs` | Structured error used by native execution, artifacts, translation, self-host helpers, and publication |
+| `package-metadata.mjs` | Single package-version authority used by the CLI and generated D8 metadata |
+
+## `src/host/application/`
+
+| File | Role |
+| --- | --- |
 | `assemble-atom-project.mjs` | High-level composition of Atom project resolution and native execution; lowers general resolver limits to the native profile |
 | `resolve-atom-project.mjs` | Atom-specific source preparation: reader, profile, neutral resolver, placement, and `INCBIN` lowering |
+
+## `src/host/core/`
+
+| File | Role |
+| --- | --- |
 | `native-atom-core.mjs` | Loads the checked core, verifies both digests and required symbols, and derives immutable code ranges and size accounts |
+
+## `src/host/harness/`
+
+| File | Role |
+| --- | --- |
 | `native-atom-runner.mjs` | Snapshots prepared projects, builds Z80 descriptors, serves logical source reads, intercepts sink calls, enforces runtime invariants, and returns committed generations |
-| `atom-assembly-error.mjs` | Structured error used by native execution, artifacts, translation, self-host helpers, and publication |
+| `named-object-atom-adapter.mjs` | Adapts Atom's source and output callbacks to the shared named-object provider contract |
+
+## `src/host/providers/`
+
+| File | Role |
+| --- | --- |
+| `tool-service-gateway.mjs` | Dispatches the direct Node source, output, console, and exit service calls through one checked boundary |
+| `named-object-services.mjs` | Re-exports the shared named-object provider constants and client under Atom's public compatibility names |
 
 ## `src/host/atom/`
 

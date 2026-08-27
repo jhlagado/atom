@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import { AtomAssemblyError } from "./atom-assembly-error.mjs";
+import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 
-const artifactPath = fileURLToPath(new URL("../../assets/native-core.json", import.meta.url));
+const artifactPath = fileURLToPath(new URL("../../../assets/native-core.json", import.meta.url));
 let cachedCore;
 
 function bootstrap(code, message, details = {}) {

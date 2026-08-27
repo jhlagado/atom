@@ -44,6 +44,14 @@ test("CLI v1 defaults to one trimmed BIN and publishes only named formats", asyn
   assert.deepEqual((await fs.readdir(path.join(root, "out"))).sort(), ["program.d8.json", "program.hex"]);
 });
 
+test("CLI version follows package metadata", async (t) => {
+  const root = await workspace(t);
+  const metadata = JSON.parse(await fs.readFile(new URL("../package.json", import.meta.url), "utf8"));
+  const result = await run(["--version"], root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, `${metadata.version}\n`);
+});
+
 test("CLI v1 validates positive output selection and rejects removed switches", async (t) => {
   const root = await workspace(t);
   await fs.writeFile(path.join(root, "main.asm"), "NOP\n");

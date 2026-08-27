@@ -165,22 +165,27 @@ accounts. The values above come from
 
 ## Host source layout
 
-The host implementation has five main responsibilities:
+The host implementation is divided by responsibility:
 
 1. `src/host/project-preparation/` provides the language-neutral source reader,
    dependency resolver, placement join, and provenance records.
 2. `src/host/atom/` implements Atom preprocessing, numeric syntax, and
    host-backed `INCBIN` lowering.
-3. `native-atom-core.mjs` and `native-atom-runner.mjs` load and execute the
-   pinned Z80 image through Debug80 Runtime.
-4. `src/host/artifacts/` materializes and publishes NOBJ, binary, HEX, listing,
+3. `src/host/core/` loads and validates the pinned Z80 image.
+4. `src/host/harness/` executes that image or adapts its compact callbacks to
+   the named-object service.
+5. `src/host/providers/` implements the Node and named-object service
+   providers below those harnesses.
+6. `src/host/application/` composes Atom preparation and execution into the
+   public assembly entry.
+7. `src/host/artifacts/` materializes and publishes NOBJ, binary, HEX, listing,
    and D8 output.
-5. `src/host/self-host/` and `src/host/translation/` support the independent
+8. `src/host/self-host/` and `src/host/translation/` support the independent
    self-host and AZM comparison paths.
 
-`assemble-atom-project.mjs` composes the first three responsibilities into the
-main programmatic entry. `bin/atom.mjs` adds argument parsing, rendering, and
-publication.
+`src/host/application/assemble-atom-project.mjs` composes preparation and
+execution into the main programmatic entry. `bin/atom.mjs` adds argument
+parsing, rendering, and publication.
 
 ## Generated and hand-edited files
 
@@ -201,7 +206,7 @@ creates drift that the release gate rejects.
 The best entry point depends on the change:
 
 - For source dependency or conditional behaviour, begin in
-  `resolve-atom-project.mjs`, then follow the Atom source profile into
+  `src/host/application/resolve-atom-project.mjs`, then follow the Atom source profile into
   `project-preparation/resolver.mjs`.
 - For a lexical problem, use `native/atom-symbols.json` to map
   `AtomTokenizerNext` to `TK_NEXT`, locate it under `native/`, and read

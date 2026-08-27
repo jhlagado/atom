@@ -5,7 +5,7 @@ import {
   ATOM_TOOL_SERVICE,
   ATOM_TOOL_STATUS,
   createAtomToolServiceGateway,
-} from "../src/host/tool-service-gateway.mjs";
+} from "../src/host/providers/tool-service-gateway.mjs";
 
 test("the direct-host gateway preserves source, publication, and console bytes", () => {
   const binary = Uint8Array.of(0x00, 0x1a, 0x7f, 0x80, 0xff);

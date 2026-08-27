@@ -24,7 +24,7 @@ identical resident call sequence.
 ## Providers
 
 The Node profile routes the source and publication entries through one private
-gateway in `src/host/tool-service-gateway.mjs`. Node path handling, dependency
+gateway in `src/host/providers/tool-service-gateway.mjs`. Node path handling, dependency
 discovery, filesystem descriptors, rendering, and artifact-set publication
 remain outside the Z80 core. The gateway also defines optional console read,
 console write, successful exit, and failed exit operations for a direct-host
@@ -93,8 +93,9 @@ For an immutable expansion bank, the harness builder separates the image into
 joins the 399-byte service workspace in common RAM; the bank remains unchanged
 during a proved multipart assembly.
 
-The CP/M provider now preserves IX and IY around BDOS with one shared 12-byte
-wrapper. The linked transient is 14,145 bytes, with 1,983 bytes free below the
-`$4000` source cache. The CP/M-specific resident account is 1,746 bytes:
-1,433 code bytes, 206 immutable bytes, and 107 writable bytes. No capacity or
-generated-program byte changed.
+The CP/M provider preserves IX and IY around BDOS with one shared wrapper. The
+linked transient is Measured 14,660 bytes, leaving 1,084 bytes below its
+resident boundary. Its adapter account is Measured 2,261 bytes: 1,897 code
+bytes, 257 immutable bytes, and 107 writable bytes. The separate multipart
+workspace holds the include graph, filenames, source descriptors, and resolver
+state.

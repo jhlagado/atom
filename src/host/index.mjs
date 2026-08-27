@@ -1,8 +1,9 @@
 export { AtomAssemblyError } from "./atom-assembly-error.mjs";
+export { ATOM_VERSION } from "./package-metadata.mjs";
 export { SourcePreparationError } from "./project-preparation/index.mjs";
-export { assembleAtomProject } from "./assemble-atom-project.mjs";
-export { resolveAtomProject } from "./resolve-atom-project.mjs";
-export { loadNativeAtomCore } from "./native-atom-core.mjs";
+export { assembleAtomProject } from "./application/assemble-atom-project.mjs";
+export { resolveAtomProject } from "./application/resolve-atom-project.mjs";
+export { loadNativeAtomCore } from "./core/native-atom-core.mjs";
 export { crc16CcittFalse, parseAtomNobj, writeAtomNobj } from "./artifacts/atom-nobj.mjs";
 export {
   renderAtomArtifacts,
@@ -23,8 +24,8 @@ export {
   ATOM_TOOL_SERVICE,
   ATOM_TOOL_STATUS,
   createAtomToolServiceGateway,
-} from "./tool-service-gateway.mjs";
-export { createNamedObjectAtomAdapter } from "./named-object-atom-adapter.mjs";
+} from "./providers/tool-service-gateway.mjs";
+export { createNamedObjectAtomAdapter } from "./harness/named-object-atom-adapter.mjs";
 export {
   MemoryNamedObjectServices,
   NAMED_OBJECT_ABI_VERSION,
@@ -33,11 +34,11 @@ export {
   NAMED_OBJECT_REQUEST_SIZE,
   NAMED_OBJECT_STATUS,
   NamedObjectClient,
-} from "./named-object-services.mjs";
+} from "./providers/named-object-services.mjs";
 export {
   assembleResolvedAtomProject,
   ATOM_HOST_SINK_STATUS,
   createMemoryAtomSink,
   materializeAtomGeneration,
   NATIVE_ATOM_LIMITS,
-} from "./native-atom-runner.mjs";
+} from "./harness/native-atom-runner.mjs";

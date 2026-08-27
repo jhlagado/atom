@@ -44,6 +44,7 @@ service workspace, stack, and publication policy.
 
 | Export | Use |
 | --- | --- |
+| `ATOM_VERSION` | Report the package version used by the CLI and D8 generator metadata |
 | `assembleAtomProject(options)` | Resolve a filesystem project, preprocess it, lower `INCBIN`, and execute native Atom |
 | `resolveAtomProject(options)` | Run only filesystem preparation and return ordered source parts |
 | `renderAtomArtifacts(result, options)` | Render NOBJ, BIN, HEX, listing, and D8 in memory, with an optional flat base |

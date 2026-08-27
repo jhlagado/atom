@@ -14,7 +14,7 @@ manifest, open a path, evaluate a host conditional, or concatenate files.
 
 ## Composition entry point
 
-`resolveAtomProject()` in `src/host/resolve-atom-project.mjs` is the Atom-specific
+`resolveAtomProject()` in `src/host/application/resolve-atom-project.mjs` is the Atom-specific
 preparation entry:
 
 ```js
@@ -272,7 +272,7 @@ The owner of a change follows the kind of fact it affects:
 - `INCBIN` recognition, snapshotting, and lowering belong in
   `atom/incbin.mjs`.
 - The Atom-specific sequence connecting those pieces belongs in
-  `resolve-atom-project.mjs`.
+  `application/resolve-atom-project.mjs`.
 
 Every preparation change needs both a focused boundary test and a composed
 `resolveAtomProject()` test. A change that affects native positions also needs

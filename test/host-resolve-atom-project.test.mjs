@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 let atomApi;
 try {
-  atomApi = await import("../src/host/resolve-atom-project.mjs");
+  atomApi = await import("../src/host/application/resolve-atom-project.mjs");
 } catch {
   atomApi = {};
 }

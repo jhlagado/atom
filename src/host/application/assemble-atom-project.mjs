@@ -1,6 +1,6 @@
 import { resolveAtomProject } from "./resolve-atom-project.mjs";
-import { assembleResolvedAtomProject, NATIVE_ATOM_LIMITS } from "./native-atom-runner.mjs";
-import { AtomAssemblyError } from "./atom-assembly-error.mjs";
+import { assembleResolvedAtomProject, NATIVE_ATOM_LIMITS } from "../harness/native-atom-runner.mjs";
+import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 
 export async function assembleAtomProject({
   root,

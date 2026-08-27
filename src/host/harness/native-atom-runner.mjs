@@ -1,11 +1,11 @@
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 
-import { AtomAssemblyError } from "./atom-assembly-error.mjs";
-import { loadNativeAtomCore } from "./native-atom-core.mjs";
+import { AtomAssemblyError } from "../atom-assembly-error.mjs";
+import { loadNativeAtomCore } from "../core/native-atom-core.mjs";
 import {
   ATOM_TOOL_SERVICE,
   createAtomToolServiceGateway,
-} from "./tool-service-gateway.mjs";
+} from "../providers/tool-service-gateway.mjs";
 
 const BUILD_DESCRIPTOR = 0x4000;
 const PART_DESCRIPTORS = 0x9000;

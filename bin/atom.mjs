@@ -12,8 +12,8 @@ import {
   writeAtomCom,
 } from "../src/host/index.mjs";
 import { parseAtomPreprocessorValue } from "../src/host/atom/literals.mjs";
+import { ATOM_VERSION } from "../src/host/package-metadata.mjs";
 
-const VERSION = "0.1.0";
 const usage = `Usage: atom [options] <input.asm> [output...]
        atom --project <project.json> [output...]
        atom self-host [output...]
@@ -198,7 +198,7 @@ async function main() {
       return 0;
     }
     if (options.version) {
-      process.stdout.write(`${VERSION}\n`);
+      process.stdout.write(`${ATOM_VERSION}\n`);
       return 0;
     }
     const build = await loadBuild(options);

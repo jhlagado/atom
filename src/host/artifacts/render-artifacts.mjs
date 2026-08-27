@@ -1,4 +1,5 @@
-import { materializeAtomGeneration } from "../native-atom-runner.mjs";
+import { materializeAtomGeneration } from "../harness/native-atom-runner.mjs";
+import { ATOM_VERSION } from "../package-metadata.mjs";
 import { writeAtomNobj } from "./atom-nobj.mjs";
 
 const decoder = new TextDecoder("utf-8", { fatal: false });
@@ -230,7 +231,7 @@ export function writeAtomD8(
     generator: {
       name: "atom",
       tool: "atom",
-      version: "0.1.0",
+      version: ATOM_VERSION,
       inputs: { entry: project.parts.at(-1)?.logicalIdentity },
       entryAddress,
     },

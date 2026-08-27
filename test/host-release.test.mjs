@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
-import { loadNativeAtomCore } from "../src/host/index.mjs";
+import { ATOM_VERSION, loadNativeAtomCore } from "../src/host/index.mjs";
 
 const codebaseDocuments = [
   "docs/codebase/index.md",
@@ -69,6 +69,7 @@ test("the product documentation, release gate, license, and measured account agr
 
   const metadata = JSON.parse(await fs.readFile("package.json", "utf8"));
   assert.equal(metadata.license, "GPL-3.0-only");
+  assert.equal(ATOM_VERSION, metadata.version);
   assert.equal(metadata.publishConfig.access, "public");
   assert.equal(metadata.scripts.prepublishOnly, "npm run release:check");
   assert.match(metadata.scripts["release:check"], /npm test/);

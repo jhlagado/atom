@@ -1,6 +1,6 @@
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 import { writeIntelHex } from "../artifacts/render-artifacts.mjs";
-import { materializeAtomGeneration } from "../native-atom-runner.mjs";
+import { materializeAtomGeneration } from "../harness/native-atom-runner.mjs";
 
 const CODE_RANGE_NAMES = Object.freeze([
   ["AtomEncoderCoreStart", "AtomEncoderCoreEnd"],

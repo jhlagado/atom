@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  ATOM_VERSION,
   assembleResolvedAtomProject,
   parseAtomNobj,
   publishAtomArtifacts,
@@ -59,6 +60,7 @@ test("artifact renderers preserve final patches, gaps, source lines, symbols, an
     ["VALUE", "constant"],
   ]);
   assert.deepEqual(artifacts.d8.segments, [{ start: 0x4000, end: 0x4006 }]);
+  assert.equal(artifacts.d8.generator.version, ATOM_VERSION);
 
   const parsed = parseAtomNobj(artifacts.nobj);
   assert.equal(parsed.version, "0.2");

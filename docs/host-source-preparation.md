@@ -15,7 +15,7 @@ parts to the native streaming adapter after preparation succeeds.
 `resolveAtomProject` is the Atom-specific composition entry point:
 
 ```js
-import { resolveAtomProject } from "./src/host/resolve-atom-project.mjs";
+import { resolveAtomProject } from "atom-z80";
 
 const project = await resolveAtomProject({
   root: "/absolute/project/root",
@@ -160,7 +160,8 @@ and byte length. Listings and D8 ranges remain attached to the original
 The language-neutral modules under `src/host/project-preparation/` contain path
 confinement, identity, graph, placement, and provenance code.
 They import only Node built-ins and other neutral modules. Atom syntax remains
-under `src/host/atom/`, and `resolve-atom-project.mjs` supplies the composition.
+under `src/host/atom/`, and `src/host/application/resolve-atom-project.mjs`
+supplies the composition.
 
 The neutral project-preparation modules are currently owned by Atom. Their
 boundary is kept independent of Atom syntax so another Z80 tool can reuse the
