@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  runConsoleServiceGatewayConformance,
   runOneByteGatewayConformance,
   runSourceServiceGatewayConformance,
 } from "@jhlagado/z80-tool-services";
@@ -209,4 +210,42 @@ test("the direct-host gateway passes shared source-service conformance vectors",
   );
 
   assert.deepEqual(result, { vectors: 3, assertions: 10 });
+});
+
+test("the direct-host gateway passes shared console-service conformance vectors", () => {
+  const result = runConsoleServiceGatewayConformance(
+    {
+      create: (fixtures) => {
+        const gateway = createAtomToolServiceGateway({
+          sourceRead: () => 0,
+          sink: {
+            begin() {},
+            image() {},
+            patch() {},
+            commit() {},
+            abort() {},
+          },
+          console: fixtures.console,
+        });
+        return {
+          consoleRead: () => gateway.dispatch(ATOM_TOOL_SERVICE.consoleRead),
+          consoleWrite: (request) =>
+            gateway.dispatch(ATOM_TOOL_SERVICE.consoleWrite, request),
+          exitSuccess: () => gateway.dispatch(ATOM_TOOL_SERVICE.exitSuccess),
+          exitFailure: (request) =>
+            gateway.dispatch(ATOM_TOOL_SERVICE.exitFailure, request),
+        };
+      },
+    },
+    {
+      policy: {
+        success: ATOM_TOOL_STATUS.success,
+        unavailable: ATOM_TOOL_STATUS.unavailable,
+        invalid: ATOM_TOOL_STATUS.invalid,
+        exception: ATOM_TOOL_STATUS.invalid,
+      },
+    },
+  );
+
+  assert.deepEqual(result, { vectors: 4, assertions: 21 });
 });
