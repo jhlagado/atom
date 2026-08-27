@@ -44,7 +44,7 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
 
   const packed = await run("npm", ["pack", "--pack-destination", packageDirectory], { cwd: process.cwd() });
   assert.equal(packed.status, 0, packed.stderr);
-  const archive = path.join(packageDirectory, "atom-z80-0.1.0.tgz");
+  const archive = path.join(packageDirectory, `atom-z80-${census.version}.tgz`);
   const installed = await run("npm", [
     "install",
     "--offline",
@@ -62,6 +62,8 @@ test("the packed Mac CLI installs offline and assembles without AZM or an Atom c
   const metadata = JSON.parse(await fs.readFile(path.join(installedAtom, "package.json"), "utf8"));
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(metadata.private, undefined);
+  assert.equal(metadata.exports["./native-builder"], "./scripts/native-object-harness-builder.mjs");
+  await fs.access(path.join(installedAtom, "scripts", "native-object-harness-builder.mjs"));
   await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
   await fs.access(path.join(installedAtom, "docs", "phase-11-report.md"));
   await fs.access(path.join(installedAtom, "docs", "language-reference.md"));

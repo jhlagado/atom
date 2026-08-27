@@ -13,17 +13,31 @@ The npm package is:
 atom-z80
 ```
 
-`package.json` exposes one ESM package path backed by `src/host/index.mjs` and
-one executable:
+`package.json` exposes the normal host API, an optional native build API, and
+two executables:
 
 ```text
-IMPORT:  atom-z80
-BINARY:  atom
+HOST IMPORT:    atom-z80
+NATIVE BUILDER: atom-z80/native-builder
+BINARIES:       atom, azm-to-atom
 ```
 
 The package requires Node 20 or later. It bundles
-`@jhlagado/debug80-runtime`. AZM is a development-only dependency and is not
-required by an installed build.
+`@jhlagado/debug80-runtime` and `@jhlagado/z80-tool-services`. AZM is not
+required to run the installed assembler. The optional native builder uses an
+installed AZM 0.3.9 or later to link strict-contract platform profiles.
+
+## Native profile builder
+
+`atom-z80/native-builder` exports `buildNativeObjectHarness()`. Platform build
+tools may select a link origin, a separate common-RAM workspace origin, a
+gateway implementation, and register-contract interface files. The function
+returns the immutable bank bytes, fixed-state initialization bytes, measured
+addresses, entries, capacities, and hashes.
+
+This subpath is a build interface, not part of Atom's runtime host API. A
+platform launcher still owns source preparation, descriptors, memory arenas,
+service workspace, stack, and publication policy.
 
 ## High-level host functions
 

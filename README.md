@@ -17,9 +17,9 @@ through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with `INPUT.ASM`
 and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
 `HELLO.ASM` and `HELLO.COM`. Leading `%INCLUDE` directives
 form a dependency graph of up to 255 CP/M 8.3 source names, with a 65,535-byte
-boundary for every part. The native named-object harness and TECM8
-transactional provider now exist; the ordinary TEC-FS source provider,
-complete TecMate launcher, and target memory map remain deployment work.
+boundary for every part. The native named-object harness and TECM8 source and
+transactional output providers now exist. The complete TecMate launcher,
+include resolver, and target memory map remain deployment work.
 
 ## Install and assemble
 
@@ -28,7 +28,7 @@ Node.js 20 or later is required.
 ```sh
 npm install
 npm pack
-npm install --global ./atom-z80-0.1.0.tgz
+npm install --global atom-z80
 ```
 
 Assemble an entry file from its project root. With no explicit output, Atom

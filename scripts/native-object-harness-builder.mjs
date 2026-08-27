@@ -12,7 +12,6 @@ import { translateAtomLineToAzm } from "../src/host/translation/atom-to-azm.mjs"
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const monorepoRoot = resolve(repositoryRoot, "../..");
 const nativeRoot = join(repositoryRoot, "native");
 const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
 const unavailableGateway = [
@@ -83,7 +82,7 @@ async function linkedSource({ origin, gatewaySource, workspaceOrigin }) {
   parts[4] = parts[4].slice(0, serviceStart);
 
   const [sharedAbi, adapterText] = await Promise.all([
-    readFile(join(monorepoRoot, "packages", "z80-tool-services", "native", "z80-tool-services-v1.asmi"), "utf8"),
+    readFile(fileURLToPath(import.meta.resolve("@jhlagado/z80-tool-services/native/z80-tool-services-v1.asmi")), "utf8"),
     readFile(join(nativeRoot, "named-object-adapter.asm"), "utf8"),
   ]);
   assert.ok(adapterText.includes(unavailableGateway), "native adapter gateway seam changed");

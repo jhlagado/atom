@@ -1,6 +1,6 @@
 {
   "name": "atom-z80",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "atom: a streaming Z80 assembler that runs on a Z80",
   "license": "GPL-3.0-only",
   "repository": {
@@ -26,7 +26,8 @@
     "azm-to-atom": "bin/azm-to-atom.mjs"
   },
   "exports": {
-    ".": "./src/host/index.mjs"
+    ".": "./src/host/index.mjs",
+    "./native-builder": "./scripts/native-object-harness-builder.mjs"
   },
   "files": [
     "assets/native-core.json",
@@ -38,6 +39,7 @@
     "examples",
     "native/*.asm",
     "native/atom-symbols.json",
+    "scripts/native-object-harness-builder.mjs",
     "src/abi.mjs",
     "src/host",
     "LICENSE",
@@ -88,6 +90,14 @@
   },
   "devDependencies": {
     "@jhlagado/azm": "file:../azm"
+  },
+  "peerDependencies": {
+    "@jhlagado/azm": "^0.3.9"
+  },
+  "peerDependenciesMeta": {
+    "@jhlagado/azm": {
+      "optional": true
+    }
   },
   "bundledDependencies": [
     "@jhlagado/debug80-runtime",
