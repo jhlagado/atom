@@ -1,10 +1,10 @@
 # TEC-1 deployment design
 
-Atom's native assembler is complete and fits one 16 KiB bank. It now has a
-proved Z80 adapter from its compact callbacks to the shared named-object
-request, while TECM8 exposes that request for transactional output. A TEC-FS
-source provider, include resolver, launcher, bank placement, and final RAM map
-are still deployment work.
+Atom's native assembler is complete and fits one 16 KiB bank. It has a proved
+Z80 adapter from its compact callbacks to the shared named-object request.
+TECM8 now provides that request for transactional output and read-only access
+to ordinary TEC-FS files. The include resolver, launcher, bank placement, and
+final RAM map are still deployment work.
 
 ## Portable native core
 
@@ -14,11 +14,18 @@ checks, and build lifecycle control. It depends on neither Node nor a
 filesystem. Its public entry is `AtomAssemble`, which consumes ordered source
 descriptors and caller-owned symbol and pending arenas.
 
-The current checked image is linked at `$0000` for Debug80. Its linked extent is
-Measured 12,396 bytes, leaving Measured 3,988 bytes below `$4000`. A TEC target
-may keep that placement or relink the same modules at a target-specific ROM or
-bank origin. Relinking must be followed by the complete strict-contract and
-runtime proof battery; the Mac address is not a portable absolute contract.
+The current checked core image is linked at `$0000` for Debug80. Its linked
+extent is Measured 12,396 bytes, leaving Measured 3,988 bytes below `$4000`.
+The native object harness builder can instead link the same core and adapter at
+a target-selected origin. A proof build at `$8000` occupies Measured 13,511
+bytes and ends at `$B4C7`; it assembles a multipart program successfully from
+that address under strict register contracts.
+
+The linked image contains fixed writable workspace as well as code and
+immutable tables. It must therefore run in a writable bank, or be loaded into
+writable RAM before use. An immutable ROM cannot hold the image unchanged.
+Relinking must be followed by the complete strict-contract and runtime proof
+battery; the Debug80 address is not a portable absolute contract.
 
 ## Required operating services
 
@@ -35,11 +42,17 @@ selectors. This distinction matters on TECM8: the existing eight-slot private
 object arena is suitable for transactional output but cannot define Atom's
 source capacity.
 
-The TEC source provider will expose ordinary TEC-FS catalogue files through
-the read operations of the shared ABI. After resolving an include path, the
-resolver can retain the catalogue's one-byte file ID. The final assembly stage
-therefore needs one byte per source ordinal, not a copy of every path. This
-preserves Atom's 255-part driver domain within a bounded native memory account.
+TECM8's proved source provider exposes ordinary TEC-FS catalogue files through
+the read operations of the shared ABI. It scans the full 256-entry catalogue,
+accepts a one-byte file ID as the object name, and keeps one live file handle.
+It reads through 512-byte sector and 4 KiB allocation boundaries without
+changing the caller's cursor after a failed operation.
+
+After resolving an include path, a TEC launcher can retain the catalogue's
+one-byte file ID. The final assembly stage therefore needs one byte per source
+ordinal, not a copy of every path. This preserves Atom's 255-part driver domain
+within a bounded native memory account. The path-to-ID include resolver is not
+yet implemented.
 
 A TEC adapter must provide the six sink calls documented in `output-abi.md`:
 
@@ -51,9 +64,9 @@ A TEC adapter must provide the six sink calls documented in `output-abi.md`:
 - abort an open generation.
 
 The Debug80 image contains 8 bytes of fail-closed stubs at those names. They
-return failure when executed directly. A hardware build must replace or route
-those entries to real operating services; copying the pinned Mac image to the
-TEC-1 is not enough.
+return failure when executed directly. The harness builder replaces the named
+gateway seam with a platform binding. Copying the checked Debug80 core image to
+the TEC-1 is not enough.
 
 The sink can use sequential storage. The retained named-object profile writes a
 flat target image: it fills forward gaps with zero bytes, applies PATCH data by
@@ -88,17 +101,19 @@ is copied into Z80 RAM.
 
 ## RAM decision
 
-With less than 24 KiB of effective RAM, the Mac proof capacities still require
-careful sizing. The 714-byte fixed workspace, symbol arena, pending arena,
-maximum descriptors, and 256-byte stack consume Measured 20,436 bytes. A 24
-KiB budget leaves 4,140 bytes for source-service state and the output adapter.
+With less than 24 KiB of common RAM, the Mac proof capacities still require
+careful sizing. The fixed workspace, symbol arena, pending arena, descriptors,
+source-name table, service workspace, and stack must be budgeted together.
+Their capacities are deployment choices; a proof using large Mac test arenas
+is not a prescribed TEC memory map.
 
-The source service removes the former whole-part residency problem. The proved
-adapter uses a 128-byte cache and 399 bytes of caller-owned common workspace.
-The composed core and adapter occupy Measured 13,511 bytes, leaving Measured
-2,873 bytes in the bank. TEC-FS catalogue lookup, dependency resolution, and
-the launcher remain separate unmeasured accounts; they must not be squeezed
-into that margin without a fresh linked measurement.
+The source service removes any need to keep a complete source part in Z80 RAM.
+The proved named-object adapter uses a 128-byte transfer buffer within 399 bytes
+of caller-owned common workspace. The composed core and adapter occupy Measured
+13,511 bytes, leaving Measured 2,873 bytes in a 16 KiB writable bank. The TEC-FS
+providers are separately measured in TECM8; dependency resolution and the
+launcher remain unmeasured accounts and must not be squeezed into that margin
+without a fresh linked measurement.
 
 A TEC filesystem adapter must also implement the measured Mac `INCBIN`
 contract: confined snapshot reads relative to the containing source, whole-file
@@ -126,5 +141,5 @@ A TEC adapter is ready only when all of these claims are measured:
 - the second Atom-built generation is identical to the first.
 
 Until those checks pass on the selected TEC operating layer, Atom is a working
-Mac command-line assembler and a proved portable Z80 core, not a finished
+Mac command-line assembler with proved portable Z80 services, not a finished
 TEC-1 application image.

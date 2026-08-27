@@ -8,6 +8,7 @@ import {
   NAMED_OBJECT_OPERATION,
   NAMED_OBJECT_STATUS,
 } from "@jhlagado/z80-tool-services";
+import { buildNativeObjectHarness } from "../scripts/native-object-harness-builder.mjs";
 
 const encoder = new TextEncoder();
 const SOURCE_SELECTOR = 0x90;
@@ -61,7 +62,16 @@ async function initializeAt(workspace) {
 }
 
 async function runProject(sources, options = {}) {
-  const { bytes, census } = await checkedHarness();
+  const harness = options.harness ?? await checkedHarness();
+  const { bytes } = harness;
+  const census = harness.report ?? harness.census;
+  const loadAddress = census.loadAddress ?? 0;
+  const commonWorkspace = options.commonWorkspace ?? COMMON_WORKSPACE;
+  const symbolStart = options.symbolStart ?? SYMBOLS;
+  const symbolEnd = options.symbolEnd ?? PENDING;
+  const pendingStart = options.pendingStart ?? PENDING;
+  const pendingEnd = options.pendingEnd ?? 0x9000;
+  const stack = options.stack ?? STACK;
   const initialSources = new Map(sources.map((source, ordinal) => [sourceName(ordinal), encoder.encode(source)]));
   const sourceOperations = [];
   const outputOperations = [];
@@ -88,8 +98,8 @@ async function runProject(sources, options = {}) {
   ]);
 
   const initialMemory = new Uint8Array(0x10000);
-  initialMemory.set(bytes);
-  const runtime = createZ80Runtime({ memory: initialMemory, startAddress: 0 }, 0);
+  initialMemory.set(bytes, loadAddress);
+  const runtime = createZ80Runtime({ memory: initialMemory, startAddress: loadAddress }, loadAddress);
   const memory = runtime.hardware.memory;
 
   memory[CONFIG + 0] = SOURCE_SELECTOR;
@@ -97,7 +107,7 @@ async function runProject(sources, options = {}) {
   putWord(memory, CONFIG + 2, PART_TABLE);
   putWord(memory, CONFIG + 4, OUTPUT_NAME);
   memory[CONFIG + 6] = 3;
-  putWord(memory, CONFIG + 7, COMMON_WORKSPACE);
+  putWord(memory, CONFIG + 7, commonWorkspace);
   memory.set(encoder.encode("out"), OUTPUT_NAME);
 
   for (let ordinal = 0; ordinal < sources.length; ordinal += 1) {
@@ -113,10 +123,10 @@ async function runProject(sources, options = {}) {
 
   memory[BUILD] = sources.length;
   putWord(memory, BUILD + 1, DESCRIPTORS);
-  putWord(memory, BUILD + 3, SYMBOLS);
-  putWord(memory, BUILD + 5, PENDING);
-  putWord(memory, BUILD + 7, PENDING);
-  putWord(memory, BUILD + 9, 0x9000);
+  putWord(memory, BUILD + 3, symbolStart);
+  putWord(memory, BUILD + 5, symbolEnd);
+  putWord(memory, BUILD + 7, pendingStart);
+  putWord(memory, BUILD + 9, pendingEnd);
   putWord(memory, BUILD + 11, 0x100);
   putWord(memory, BUILD + 13, 0x4000);
 
@@ -125,9 +135,9 @@ async function runProject(sources, options = {}) {
   let gatewayCalls = 0;
   const adapterTrace = [];
   const invoke = (entry, setup, maximum = 20_000_000) => {
-    memory[STACK] = RETURN_SENTINEL & 0xff;
-    memory[STACK + 1] = RETURN_SENTINEL >>> 8;
-    runtime.cpu.sp = STACK;
+    memory[stack] = RETURN_SENTINEL & 0xff;
+    memory[stack + 1] = RETURN_SENTINEL >>> 8;
+    runtime.cpu.sp = stack;
     runtime.cpu.pc = entry;
     setup(runtime.cpu);
     for (let count = 0; runtime.cpu.pc !== RETURN_SENTINEL && count < maximum; count += 1) {
@@ -155,7 +165,7 @@ async function runProject(sources, options = {}) {
       cycles += step.cycles ?? 0;
     }
     assert.equal(runtime.cpu.pc, RETURN_SENTINEL, "native object harness did not return");
-    assert.equal(runtime.cpu.sp, STACK + 2, "native object harness unbalanced the stack");
+    assert.equal(runtime.cpu.sp, stack + 2, "native object harness unbalanced the stack");
     return { status: runtime.cpu.a, carry: runtime.cpu.flags.C };
   };
 
@@ -202,6 +212,29 @@ test("native named-object harness assembles parts, fills gaps, patches, and comm
   assert.ok(run.outputOperations.includes(NAMED_OBJECT_OPERATION.seek));
   assert.ok(run.sourceOperations.includes(NAMED_OBJECT_OPERATION.read));
   assert.ok(run.census.residentBytes <= 0x4000);
+});
+
+test("native named-object harness relocates into a writable 16 KiB target bank", async () => {
+  const harness = await buildNativeObjectHarness({ origin: 0x8000 });
+  assert.equal(harness.report.loadAddress, 0x8000);
+  assert.equal(harness.report.residentBytes, 13_511);
+  assert.equal(harness.report.residentEnd, 0xb4c7);
+  const run = await runProject([
+    "ORG $100\nJR LATER\n",
+    "LATER:\nDB $5A\n",
+  ], {
+    harness,
+    commonWorkspace: 0x6000,
+    symbolStart: 0x4000,
+    symbolEnd: 0x5000,
+    pendingStart: 0x5000,
+    pendingEnd: 0x5800,
+    stack: 0x7ff0,
+  });
+  assert.deepEqual(run.result, { status: 0, carry: 0 });
+  assert.deepEqual([...run.output], [0x18, 0x00, 0x5a]);
+  assert.equal(run.sourceOpenHandles, 0);
+  assert.equal(run.outputOpenHandles, 0);
 });
 
 test("native named-object harness validates its complete common workspace range", async () => {

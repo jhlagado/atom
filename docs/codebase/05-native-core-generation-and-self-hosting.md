@@ -53,6 +53,24 @@ and compares the complete rendered JSON with the checked file. The release gate
 uses the check form so an unreviewed generated diff cannot be hidden by a test
 that consumes stale bytes.
 
+## Relocatable native object harness
+
+`scripts/native-object-harness-builder.mjs` composes the core with the shared
+named-object adapter. Its two platform choices are explicit: the link origin
+and the gateway implementation that carries requests to the operating
+environment. `scripts/generate-native-object-harness.mjs` calls the builder at
+origin zero with a fail-closed gateway to produce the checked package asset.
+
+The relocation proof also builds the harness at `$8000`. The resulting image
+ends at `$B4C7`, occupies 13,511 bytes, and executes a complete multipart
+assembly through independent source and output providers. This is a link-time
+choice, not a runtime relocation table.
+
+The image includes fixed writable workspace. A platform must place it in a
+writable 16 KiB bank or load it into writable RAM before execution. The gateway
+binding, symbol arena, pending arena, descriptors, service workspace, and stack
+remain platform-owned parts of the final memory map.
+
 ## Native source ledger
 
 The five content parts remain below the 65,535-byte per-part logical-offset
