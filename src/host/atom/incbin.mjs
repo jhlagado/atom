@@ -1,4 +1,4 @@
-import { SourcePreparationError } from "../project-preparation/errors.mjs";
+import { SourcePreparationError } from "@jhlagado/z80-tool-services/source-preparation";
 
 const encoder = new TextEncoder();
 

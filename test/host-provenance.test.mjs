@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveSourceProject } from "../src/host/project-preparation/index.mjs";
+import { resolveSourceProject } from "@jhlagado/z80-tool-services/source-preparation";
 
 const encoder = new TextEncoder();
 

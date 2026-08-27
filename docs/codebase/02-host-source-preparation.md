@@ -48,7 +48,7 @@ parts and bank zero.
 
 ## Source reader and three identities
 
-`createNodeSourceReader()` in `project-preparation/node-source-reader.mjs` opens the
+`createNodeSourceReader()` in the shared `source-preparation` package opens the
 project root through `realpath()` and keeps three source identities separate:
 
 | Identity | Meaning |
@@ -74,10 +74,10 @@ before execution.
 
 ## Neutral dependency resolution
 
-`resolveSourceProject()` in `project-preparation/resolver.mjs` owns graph traversal.
-The resolver accepts a reader and a language profile rather than importing Atom
-syntax. It validates every reader snapshot and profile result before adding it
-to the graph.
+`resolveSourceProject()` in the same package owns graph traversal. The resolver
+accepts a reader and a language profile rather than importing Atom syntax. It
+validates every reader snapshot and profile result before adding it to the
+graph.
 
 Traversal is deterministic depth-first postorder:
 

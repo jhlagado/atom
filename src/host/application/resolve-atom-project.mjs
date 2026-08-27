@@ -3,7 +3,7 @@ import { lowerAtomBinaryIncludes } from "../atom/incbin.mjs";
 import {
   createNodeSourceReader,
   resolveSourceProject,
-} from "../project-preparation/index.mjs";
+} from "@jhlagado/z80-tool-services/source-preparation";
 
 function snapshotRecord(value) {
   if (value instanceof Map) return Object.freeze(Object.fromEntries(value));

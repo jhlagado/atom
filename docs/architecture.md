@@ -40,7 +40,8 @@ emitted as PATCH records when the symbol becomes known.
 
 Language processing remains deterministic and filesystem-free on the Z80,
 while the operating layer supplies ordered bytes and durable output services.
-The host resolver is maintained behind Atom's project-preparation boundary.
+The host resolver comes from the shared Z80 tool-services source-preparation
+boundary; Atom supplies only its language profile and composition.
 
 ## Source preparation
 

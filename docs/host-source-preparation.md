@@ -157,17 +157,16 @@ and byte length. Listings and D8 ranges remain attached to the original
 
 ## Extraction boundary
 
-The language-neutral modules under `src/host/project-preparation/` contain path
-confinement, identity, graph, placement, and provenance code.
-They import only Node built-ins and other neutral modules. Atom syntax remains
-under `src/host/atom/`, and `src/host/application/resolve-atom-project.mjs`
-supplies the composition.
+The language-neutral modules exported by
+`@jhlagado/z80-tool-services/source-preparation` contain path confinement,
+identity, graph, placement, and provenance code. Atom syntax remains under
+`src/host/atom/`, and `src/host/application/resolve-atom-project.mjs` supplies
+the composition.
 
-The neutral project-preparation modules are currently owned by Atom. Their
-boundary is kept independent of Atom syntax so another Z80 tool can reuse the
-same services without importing the assembler.
+The shared package is independent of Atom syntax, so another Z80 tool can use
+the same services without importing the assembler.
 
-Nucleus can use the neutral resolver with its own comment-shaped directive
+Nucleus can import the neutral resolver with its own comment-shaped directive
 profile and byte-preserving emission policy. Atom's conditional masking and
 native token rules do not enter the neutral package.
 

@@ -6,7 +6,7 @@ import test from "node:test";
 
 let api;
 try {
-  api = await import("../src/host/project-preparation/index.mjs");
+  api = await import("@jhlagado/z80-tool-services/source-preparation");
 } catch {
   api = {};
 }

@@ -4,7 +4,7 @@ import { isBuiltin } from "node:module";
 import path from "node:path";
 import test from "node:test";
 
-const sourceDirectory = "src/host/project-preparation";
+const sourceDirectory = "../z80-tool-services/source-preparation";
 
 function assertNeutralImports(source, name) {
   assert.doesNotMatch(source, /\bimport\s*\(/, `${name} uses dynamic import`);
@@ -45,7 +45,7 @@ test("neutral import proof rejects dynamic Atom imports", () => {
 test("project-preparation errors retain a frozen structured diagnostic", async () => {
   let api;
   try {
-    api = await import("../src/host/project-preparation/index.mjs");
+    api = await import("@jhlagado/z80-tool-services/source-preparation");
   } catch {
     api = {};
   }

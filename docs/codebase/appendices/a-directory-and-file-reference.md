@@ -65,9 +65,12 @@ the owner of a behavior quickly.
 | `source-profile.mjs` | Adapts Atom directive inspection to the neutral resolver's entry/dependency profile interface |
 | `incbin.mjs` | Recognizes active `INCBIN`, snapshots a confined binary, lowers it to equal-length initialized `DS`, and retains bridge provenance |
 
-## `src/host/project-preparation/`
+## Shared source preparation
 
-| File | Role |
+The modules below are exported by
+`@jhlagado/z80-tool-services/source-preparation` rather than copied into Atom.
+
+| Shared file | Role |
 | --- | --- |
 | `index.mjs` | Neutral package export layer |
 | `errors.mjs` | `SourcePreparationError` category, code, message, and optional location |
@@ -75,7 +78,7 @@ the owner of a behavior quickly.
 | `resolver.mjs` | Bounded deterministic dependency traversal, deduplication, cycle detection, profile validation, part order, and retained-path accounting |
 | `placement.mjs` | Joins path-keyed bank placement to resolved parts and constructs provenance |
 | `passthrough-profile.mjs` | Byte-preserving profile used to prove the language-neutral resolver boundary |
-| `README.md` | Local project-preparation module notes |
+| `README.md` | Shared project-preparation module notes |
 
 ## `src/host/artifacts/`
 

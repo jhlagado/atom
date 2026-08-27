@@ -1,6 +1,6 @@
 export { AtomAssemblyError } from "./atom-assembly-error.mjs";
 export { ATOM_VERSION } from "./package-metadata.mjs";
-export { SourcePreparationError } from "./project-preparation/index.mjs";
+export { SourcePreparationError } from "@jhlagado/z80-tool-services/source-preparation";
 export { assembleAtomProject } from "./application/assemble-atom-project.mjs";
 export { resolveAtomProject } from "./application/resolve-atom-project.mjs";
 export { loadNativeAtomCore } from "./core/native-atom-core.mjs";

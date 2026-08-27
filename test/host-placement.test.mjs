@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   SourcePreparationError,
   resolveSourceProject,
-} from "../src/host/project-preparation/index.mjs";
+} from "@jhlagado/z80-tool-services/source-preparation";
 
 const encoder = new TextEncoder();
 

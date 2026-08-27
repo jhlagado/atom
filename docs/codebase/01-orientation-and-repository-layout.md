@@ -167,8 +167,9 @@ accounts. The values above come from
 
 The host implementation is divided by responsibility:
 
-1. `src/host/project-preparation/` provides the language-neutral source reader,
-   dependency resolver, placement join, and provenance records.
+1. `@jhlagado/z80-tool-services/source-preparation` provides the shared
+   language-neutral source reader, dependency resolver, placement join, and
+   provenance records.
 2. `src/host/atom/` implements Atom preprocessing, numeric syntax, and
    host-backed `INCBIN` lowering.
 3. `src/host/core/` loads and validates the pinned Z80 image.
@@ -207,7 +208,7 @@ The best entry point depends on the change:
 
 - For source dependency or conditional behaviour, begin in
   `src/host/application/resolve-atom-project.mjs`, then follow the Atom source profile into
-  `project-preparation/resolver.mjs`.
+  the shared `source-preparation` resolver.
 - For a lexical problem, use `native/atom-symbols.json` to map
   `AtomTokenizerNext` to `TK_NEXT`, locate it under `native/`, and read
   `test/tokenizer.test.mjs` beside it.
