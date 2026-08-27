@@ -120,7 +120,7 @@ generation closure. Remaining one-bank work consists of deployment support:
 
 Adding that range to **Measured: 12,484 bytes** gives a **Projected:
 whole native total of 12,884–13,384 bytes**, with **Projected: 3,000–3,500
-bytes** below the 16 KiB limit. Mac preprocessing, filesystem access, SP1
+bytes** below the 16 KiB limit. Mac preprocessing, filesystem access, ordered source
 parsing, NOBJ serialization, binary/HEX/listing/D8 rendering, and atomic
 artifact publication remain host or operating-adapter services.
 

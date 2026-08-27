@@ -90,14 +90,12 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   let minimumSp = 0xffff;
   const bdosCalls = [];
   const randomReadRecords = [];
-  let planSequentialReads = 0;
-  let sourceSequentialReads = 0;
   const sourceCacheMisses = [];
   let sourceReadCount = 0;
   let lastSourceOffset;
   let measureAtom = false;
   const transcript = (from = 0) => Buffer.from(output.slice(from)).toString("latin1");
-  const stepUntil = (predicate, description, maximum = 10_000_000) => {
+  const stepUntil = (predicate, description, maximum = options.maximumSteps ?? 30_000_000) => {
     for (let count = 0; count < maximum; count += 1) {
       if (measureAtom) {
         minimumSp = Math.min(minimumSp, runtime.getRegisters().sp);
@@ -117,8 +115,6 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
           const call = registers.c;
           bdosCalls.push(call);
           const fcb = (registers.d << 8) | registers.e;
-          if (call === 20 && fcb === census.planFcbAddress) planSequentialReads += 1;
-          if (call === 20 && fcb === census.inputFcbAddress) sourceSequentialReads += 1;
           if (call === 33) {
             const fcb = census.inputFcbAddress;
             randomReadRecords.push(
@@ -170,8 +166,6 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     atomMinimumSp: minimumSp,
     atomBdosCalls: Object.freeze(bdosCalls.slice()),
     atomRandomReadRecords: Object.freeze(randomReadRecords.slice()),
-    atomPlanSequentialReads: planSequentialReads,
-    atomSourceSequentialReads: sourceSequentialReads,
     atomSourceCacheMisses: Object.freeze(sourceCacheMisses.slice()),
     atomSourceReads: sourceReadCount,
     entrySp,

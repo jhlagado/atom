@@ -4,8 +4,8 @@ Atom is a single-pass Z80 assembler whose assembler core is written in Z80
 assembly. The Mac command runs that core through Debug80, while the host handles
 files, conditional preprocessing, and finished artifacts.
 
-Atom assembles the complete Z80 instruction set claimed by its AZM oracle,
-including CB, ED, DD, FD, index-half, and undocumented SLL/SLS forms. It also
+Atom assembles the complete Z80 instruction set, including CB, ED, DD, FD,
+index-half, and undocumented SLL/SLS forms. It also
 supports global and `.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
 `DS`, `ALIGN`, `CSTR`, `PSTR`, `ISTR`, character literals, and `LOW()` and
 `HIGH()` byte functions. The Mac host also supplies confined `INCBIN` input.
@@ -13,13 +13,12 @@ The native core assembles its own checked source byte for byte and fits in one
 16 KiB bank.
 
 The Mac command is usable now. Native CP/M 2.2 Atom also runs inside Debug80
-through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with
-`INPUT.ASM` and `OUTPUT.COM` as the no-argument defaults. Its bounded BDOS
-source reader accepts one file of up to 65,535 logical bytes. A trailing `@`
-selects a plain source plan containing up to 255 ordered CP/M 8.3 filenames,
-with the same 65,535-byte boundary for every part. The TECM8 named-object
-provider and Atom adapter now exist; a complete TecMate launcher and target
-memory map remain deployment work.
+through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with `INPUT.ASM`
+and `OUTPUT.COM` as the no-argument defaults. Leading `%INCLUDE` directives
+form a dependency graph of up to 255 CP/M 8.3 source names, with a 65,535-byte
+boundary for every part. The TECM8 named-object provider and Atom adapter now
+exist; a complete TecMate launcher and target memory map remain deployment
+work.
 
 ## Install and assemble
 
@@ -36,17 +35,6 @@ Assemble an entry file from its project root:
 ```sh
 atom --origin 4000H src/main.asm
 ```
-
-Migrate a source file from AZM's byte-preserving common subset:
-
-```sh
-azm-to-atom source/main.asm
-```
-
-The converter writes `source/main.atom.asm`. It reports an error instead of guessing
-when an AZM construct has no Atom equivalent. The
-[AZM conversion guide](docs/azm-to-atom.md) lists every direct mapping and
-rejected boundary.
 
 Atom publishes one immutable bundle under
 `build/main.atom/current` containing:
@@ -107,11 +95,10 @@ CP/M, Debug80, and later providers sit beneath the unchanged resident core.
 
 ## Correctness
 
-Atom's test suite uses AZM as an independent oracle. The proof covers all 3,445
-claimed instruction forms, invalid forms, register contracts, exact stack and
-memory effects, directive and symbol programs, host preprocessing, artifact
-publication, offline package installation, and two native self-assembly
-generations.
+Atom's proof suite covers all 3,445 supported instruction forms, invalid forms,
+register contracts, exact stack and memory effects, directive and symbol
+programs, host preprocessing, artifact publication, offline package
+installation, and two native self-assembly generations.
 
 Run the maintainer gate with:
 
@@ -120,13 +107,12 @@ npm run release:check
 ```
 
 The authoritative native source is under `native/` with an exact long-to-short
-symbol ledger. Atom assembles that source into the pinned core; the build also
-translates the same prepared parts to AZM for strict register-contract and byte
-comparison. Every subsystem proof executes the checked core directly; the
-repository retains no second native implementation or one-way source generator.
-`npm run verify:native-source` checks the complete authority path. See the
-[self-hosting design](docs/self-hosting.md). AZM is a development oracle and is
-not installed with the command-line package.
+symbol ledger. Atom assembles that source into the pinned core. Every subsystem
+proof executes the checked core directly; the repository retains no second
+native implementation or one-way source generator. `npm run
+verify:native-source` rebuilds the core from the authoritative sources and
+compares the complete result. See the
+[self-hosting design](docs/self-hosting.md).
 
 The detailed engineering record remains available in the phase reports:
 

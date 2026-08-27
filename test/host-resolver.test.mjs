@@ -186,11 +186,11 @@ test("resolver inspects the entry first and passes one frozen state to dependenc
   assert.deepEqual(calls, ["entry:main", "dependency:dependency"]);
 });
 
-test("resolver distinguishes repeated direct dependencies from diamonds", async () => {
-  await assertResolverError(
-    () => resolve({ main: ["shared", "shared"], shared: [] }),
-    "repeated-dependency",
-    (error) => assert.deepEqual(error.location, location("main", 1)),
+test("resolver imports repeated direct dependencies once", async () => {
+  const result = await resolve({ main: ["shared", "shared"], shared: [] });
+  assert.deepEqual(
+    result.parts.map(({ logicalIdentity }) => logicalIdentity),
+    ["shared", "main"],
   );
 });
 

@@ -116,22 +116,23 @@ claim inherited from the Mac runner.
 
 ## CP/M 2.2 vertical-slice capacities
 
-The native CP/M transient has single-file and source-plan input modes with one
-flat output profile:
+The native CP/M transient resolves leading `%INCLUDE` directives and produces
+one flat output profile:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Linked COM | Measured | 14,145 |
-| Free margin below the `$4000` source cache | Measured | 1,983 |
-| CP/M-specific resident increment | Measured | 1,746 |
+| Linked COM | Measured | 14,583 |
+| Free margin below the `$3E80` source cache | Measured | 1,161 |
+| CP/M-specific resident increment | Measured | 2,184 |
 | Source parts | Measured boundary | 255 |
 | One source part | Measured boundary | 65,535 |
 | Maximum described source | Derived boundary | 16,711,425 |
 | Source record cache | Measured execution storage | 128 |
-| Source-plan cache | Measured execution storage | 128 |
+| Part-order table | Measured execution storage | 256 |
+| Retained CP/M names | Measured execution storage | 2,805 |
 | Complete source descriptor array | Measured execution storage | 1,275 |
-| Source-plan FCB and state | Measured execution storage | 40 |
-| Complete source execution storage | Measured | 1,571 |
+| Resolver state | Measured execution storage | 12 |
+| Complete source execution storage | Measured | 4,476 |
 | Symbols | Measured boundary | 12,288 |
 | Pending references | Measured boundary | 4,096 |
 | Output image | Measured boundary | 18,304 |
@@ -140,11 +141,10 @@ flat output profile:
 
 With no arguments, the source filename is `INPUT.ASM` and the output filename
 is `OUTPUT.COM`. `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive
-8.3 names. Adding a trailing `@` treats the source as a one-name-per-line plan.
-The plan accepts 1–255 ordered current-drive files; each part retains the exact
-65,535-byte boundary. CP/M text EOF is `$1A`. The adapter preflights every part
-and reads the selected part through one random-record cache during assembly.
-The practical combined-source limit also depends on mounted disk capacity. The
+8.3 names. Leading `%INCLUDE` directives resolve up to 255 current-drive files;
+each part retains the exact 65,535-byte boundary. CP/M text EOF is `$1A`. The
+adapter preflights every part and reads it through one random-record cache. The
+practical combined-source limit also depends on mounted disk capacity. The
 output starts at `$0100`, so the 18,304-byte capacity ends at `$487F`. The
-[CP/M report](cpm22.md) records the output-path comparison, rollback rules, and
-execution account.
+[CP/M report](cpm22.md) records resolver rules, rollback, and the execution
+account.

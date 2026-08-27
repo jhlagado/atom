@@ -3,7 +3,7 @@
 Atom's native assembler is complete and fits one 16 KiB bank. TECM8 now exposes
 the shared named-object request through its private tool-service gateway, and
 Atom has a proved host adapter from its compact callbacks to that request. A
-complete TEC-1 launcher, source-plan loader, bank placement, and RAM allocation
+complete TEC-1 launcher, include resolver, bank placement, and RAM allocation
 are still deployment work. This document identifies the remaining memory
 decision that must be measured before hardware deployment.
 
@@ -62,8 +62,8 @@ The settled host pipeline is still suitable on the TEC-1:
 ```text
 entry source
     -> dependency resolver and conditional preprocessor
-    -> ordered SP1 source plan
-    -> source-part loader
+    -> ordered source parts
+    -> source provider
     -> AtomAssemble
 ```
 

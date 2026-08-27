@@ -114,19 +114,18 @@ register set.
 
 With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
 `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive 8.3 names. The
-same command followed by `@` treats `SOURCE` as a plain source plan containing
-one CP/M 8.3 name per line. The adapter validates the command tail, reserves
-the output's temporary and backup names, and preflights every listed source
-before native assembly begins. It derives the ordinary five-byte source
-descriptors and reparses the plan as the native driver advances through up to
-255 parts. Each part retains the 65,535-byte ABI boundary and exact diagnostic
-ordinal and offset.
+root and its included files use leading `%INCLUDE` directives with quoted
+current-drive 8.3 names. The provider resolves the graph, imports each file
+once, rejects cycles, and emits dependencies before importers. It validates the
+command tail, reserves the output's temporary and backup names, and preflights
+every source before native assembly begins. The resulting ordinary five-byte
+descriptors support up to 255 parts. Each part retains the 65,535-byte ABI
+boundary and exact diagnostic ordinal and offset.
 
-The CP/M plan contains an order, not a dependency graph. It has no SP1 header,
-path hierarchy, bank field, preprocessing, or host codec. The output limit
-remains 18,304 bytes under the target map. The [Native Atom on CP/M 2.2
-report](cpm22.md) contains the measured map, representation comparison, and
-output-path comparison.
+The native profile has no path hierarchy, bank field, project JSON, conditional
+engine, or host codec. The output limit remains 18,304 bytes under the target
+map. The [Native Atom on CP/M 2.2 report](cpm22.md) contains the measured map,
+resolver rules, and output contract.
 
 ## Self-hosting
 

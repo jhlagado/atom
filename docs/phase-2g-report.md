@@ -117,7 +117,7 @@ Remaining native work is smaller than the completed statement layer:
 
 | Remaining native component | Classification | Bytes |
 | --- | --- | ---: |
-| Flat SP1/source-part iterator and part reset | Projected | 100–250 |
+| Flat source-part iterator and part reset | Projected | 100–250 |
 | Final undefined-symbol check and finish entry | Projected | 100–250 |
 | Assembly driver and sink commit/abort lifecycle | Projected | 150–350 |
 | Native diagnostic formatting and integration state | Projected | 300–600 |
@@ -127,7 +127,7 @@ Remaining native work is smaller than the completed statement layer:
 Adding that range to **Measured: 11,705 bytes** gives a **Projected:
 whole-assembler total of 12,555–13,555 bytes**. The projected margin below the
 16 KiB code limit is **Projected: 2,829–3,829 bytes**. Host preprocessing,
-filesystem resolution, SP1 production, Intel HEX, listing, D8 maps, and NOBJ
+filesystem resolution, ordered source preparation, Intel HEX, listing, D8 maps, and NOBJ
 serialization remain host or operating-adapter services and do not enter this
 resident account.
 

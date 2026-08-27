@@ -220,7 +220,7 @@ export async function resolveSourceProject({
       const dependency = await resolveDependency(snapshot, reference);
       register(dependency, reference.location);
       if (directDependencies.has(dependency.dependencyIdentity)) {
-        fail("repeated-dependency", "source repeats one direct dependency", reference.location);
+        continue;
       }
       directDependencies.add(dependency.dependencyIdentity);
 

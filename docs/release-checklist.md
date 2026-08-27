@@ -13,10 +13,9 @@ The release gate must establish:
 - strict AZM register contracts pass for the linked native image;
 - all 64 KiB proof maps, stack/canary checks, and write boundaries pass;
 - the shipped example produces its exact 19-byte image and artifact metadata;
-- the CP/M image, output-path candidates, and source-plan candidates match
-  their checked censuses;
-- native CP/M single-source and source-plan commands preserve their exact
-  capacity, rollback, BDOS, diagnostic, and stack proofs;
+- the CP/M image and output-path candidates match their checked censuses;
+- native CP/M direct and `%INCLUDE` builds preserve their exact capacity,
+  rollback, BDOS, diagnostic, dependency-order, and stack proofs;
 - an npm archive installs offline without AZM and runs from an unrelated
   directory;
 - Atom assembles its complete checked source with the pinned core;

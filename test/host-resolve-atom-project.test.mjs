@@ -243,15 +243,6 @@ test("Atom composition snapshots mutable project configuration before filesystem
 test("Atom composition rejects dependency, preprocessing, and placement failures", async (t) => {
   const cases = [
     {
-      name: "repeated import",
-      files: {
-        "main.asm": "%include \"a.asm\"\n%include \"./a.asm\"\nNOP\n",
-        "a.asm": "NOP\n",
-      },
-      category: "dependency",
-      code: "repeated-dependency",
-    },
-    {
       name: "missing source",
       files: { "main.asm": "%include \"missing.asm\"\nNOP\n" },
       category: "dependency",
@@ -318,6 +309,15 @@ test("Atom composition rejects dependency, preprocessing, and placement failures
       "unreachable-placement",
     );
   });
+});
+
+test("Atom composition imports repeated direct dependencies once", async (t) => {
+  const root = await writeProject(t, {
+    "main.asm": "%include \"a.asm\"\n%include \"./a.asm\"\nNOP\n",
+    "a.asm": "NOP\n",
+  });
+  const project = await resolveAtomProject({ root, entry: "main.asm" });
+  assert.deepEqual(project.parts.map((part) => part.logicalIdentity), ["a.asm", "main.asm"]);
 });
 
 test("Atom composition selects only active includes", async (t) => {
