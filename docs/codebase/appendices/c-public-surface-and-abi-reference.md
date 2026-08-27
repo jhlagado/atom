@@ -114,6 +114,10 @@ the first Atom generation.
 }
 ```
 
+`publishAtomOutputFiles()` accepts any subset of those rendered values. This is
+the programmatic equivalent of CLI v1 positive output selection: a tool names
+the files it wants, and Atom publishes exactly those paths transactionally.
+
 ## Development and proof helpers
 
 | Export | Use |

@@ -373,6 +373,34 @@ D8 parser, and load `artifacts.hex` or `artifacts.bin`. It does not need to run
 the CLI or parse terminal output. It should retain ownership of application
 publication and launch policy.
 
+Tools request files by selecting from the rendered in-memory artifact set:
+
+```js
+import {
+  assembleAtomProject,
+  publishAtomOutputFiles,
+  renderAtomArtifacts,
+} from "atom-z80";
+
+const result = await assembleAtomProject({
+  root: PROJECT_ROOT,
+  entry: "src/main.asm",
+  target: { start: 0, capacity: 0xffff },
+});
+const artifacts = renderAtomArtifacts(result, {
+  base: 0x4000,
+  entryAddress: 0x4000,
+});
+
+await publishAtomOutputFiles([
+  { path: "build/main.hex", bytes: artifacts.hex },
+  { path: "build/main.d8.json", bytes: artifacts.d8Text },
+]);
+```
+
+That call publishes exactly the two selected paths. BIN, listing, NOBJ, and COM
+bytes remain available in memory when the caller needs them.
+
 The current package root exports both high-level and advanced functions. A
 future stable host facade can wrap these calls in a versioned assembler object
 and tagged result union without changing the native core or the logical output

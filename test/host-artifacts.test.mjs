@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   ATOM_VERSION,
+  assembleAtomProject,
   assembleResolvedAtomProject,
   parseAtomNobj,
   publishAtomArtifacts,
@@ -178,6 +179,32 @@ test("selected output publication stages every file and rolls back a failed repl
   );
   assert.deepEqual(await fs.readFile(binary), Buffer.from([1]));
   assert.equal(await fs.readFile(listing, "utf8"), "first\n");
+});
+
+test("public API callers can publish an exact selected artifact set without the CLI", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "atom-api-selected-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  await fs.writeFile(path.join(directory, "main.asm"), "ORG 4000H\nDB 1,2,3\n");
+
+  const result = await assembleAtomProject({
+    root: directory,
+    entry: "main.asm",
+    target: { start: 0, capacity: 0xffff },
+  });
+  const artifacts = renderAtomArtifacts(result, { base: 0x4000, entryAddress: 0x4000 });
+  const published = await publishAtomOutputFiles([
+    { path: path.join(directory, "build", "main.hex"), bytes: artifacts.hex },
+    { path: path.join(directory, "build", "main.d8.json"), bytes: artifacts.d8Text },
+  ]);
+
+  assert.deepEqual(published, [
+    path.join(directory, "build", "main.hex"),
+    path.join(directory, "build", "main.d8.json"),
+  ]);
+  assert.match(await fs.readFile(path.join(directory, "build", "main.hex"), "utf8"), /:03400000010203B7/);
+  assert.equal(JSON.parse(await fs.readFile(path.join(directory, "build", "main.d8.json"), "utf8")).generator.tool, "atom");
+  await assert.rejects(fs.access(path.join(directory, "build", "main.bin")));
+  await assert.rejects(fs.access(path.join(directory, "build", "main.lst")));
 });
 
 test("D8 retains distinct identities for reused private symbols after native eviction", async () => {
