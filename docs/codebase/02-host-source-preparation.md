@@ -38,26 +38,24 @@ The returned project contains:
 
 - `parts`, in native compilation order;
 - `bankArray`, indexed by source-part ordinal;
-- a parsed `sourcePlan` and its canonical `sourcePlanBytes`;
 - the frozen `%DEFINE` state established by the entry;
 - the total retained logical-path byte count; and
 - original, compiler, dependency, binary-input, and provenance data for every
   part.
 
-`assembleAtomProject()` calls this function with the native limits: at most 16
-parts and bank zero. The neutral resolver supports a wider SP1 consumer, but
-that wider capacity does not enlarge the native Atom driver.
+`assembleAtomProject()` calls this function with the native limits: at most 255
+parts and bank zero.
 
 ## Source reader and three identities
 
-`createNodeSourceReader()` in `source-packager/node-source-reader.mjs` opens the
+`createNodeSourceReader()` in `project-preparation/node-source-reader.mjs` opens the
 project root through `realpath()` and keeps three source identities separate:
 
 | Identity | Meaning |
 | --- | --- |
 | `physicalPath` | Canonical host path that was opened |
 | `dependencyIdentity` | Canonical identity used for graph deduplication and cycle detection |
-| `logicalIdentity` | Normalized project-relative path used in plans, diagnostics, listings, D8 maps, and placement |
+| `logicalIdentity` | Normalized project-relative path used in diagnostics, listings, D8 maps, and placement |
 
 An include specifier resolves relative to the importing file. The reader
 rejects absolute paths, lexical `..` escapes, symlink targets outside the
@@ -76,7 +74,7 @@ before execution.
 
 ## Neutral dependency resolution
 
-`resolveSourceProject()` in `source-packager/resolver.mjs` owns graph traversal.
+`resolveSourceProject()` in `project-preparation/resolver.mjs` owns graph traversal.
 The resolver accepts a reader and a language profile rather than importing Atom
 syntax. It validates every reader snapshot and profile result before adding it
 to the graph.
@@ -118,10 +116,9 @@ masked ranges. The entry result also supplies frozen state passed to every
 dependency. `createAtomSourceProfile()` implements these methods by calling
 `inspectAtomSource()` with the appropriate entry flag.
 
-This profile seam is the extraction point for a future shared Debug80 source
-packager. A Nucleus profile can preserve comment-shaped directives byte for
-byte while reusing path confinement, graph traversal, placement, provenance,
-and SP1. Atom's `%` syntax and masking remain in `src/host/atom/`.
+This profile seam lets another Z80 tool preserve its own directive syntax while
+reusing path confinement, graph traversal, placement, and provenance. Atom's
+`%` syntax and masking remain in `src/host/atom/`.
 
 ## Directive recognition
 
@@ -216,7 +213,7 @@ FONT: INCBIN "ASSETS/FONT.BIN"
 
 The replacement must fit inside the original line extent. One binary may have
 0 through 65,535 bytes. The binary is not a source part and does not enter the
-dependency graph or SP1.
+dependency graph.
 
 During native execution, `DS COUNT,0` advances labels and performs the ordinary
 target-capacity checks. The host output bridge recognizes IMAGE bytes attributed
@@ -226,7 +223,7 @@ number of native bytes matches the snapshot before commit.
 Inactive conditional lines are already spaces, so they trigger neither
 `INCBIN` recognition nor a binary read.
 
-## Placement and source plans
+## Placement
 
 `joinSourcePlacement()` runs after dependency order is known. Placement maps
 canonical source identities to bank ordinals. It rejects invalid banks,
@@ -234,27 +231,9 @@ conflicting aliases, paths outside the resolved graph, and missing assignments
 when there is no default.
 
 Native Atom currently forces every part to bank zero. The general join retains
-the field because the neutral source-plan format is shared infrastructure and
-because a later operating adapter may support wider placement.
-
-SP1 is a restricted line-oriented interchange:
-
-```text
-SP1 3
-P 0 lib/device.asm
-P 0 lib/console.asm
-P 0 src/main.asm
-END
-```
-
-`source-plan.mjs` serializes LF and parses LF or CRLF. It checks the declared
-count, record syntax, bank range, ASCII path syntax, path components, required
-`END`, and absence of trailing bytes. `writeSourcePlanAtomically()` serializes
-and reparses the complete plan before opening a temporary file, then writes,
-synchronizes, and renames it over the destination.
-
-The native compiler does not parse SP1. A host or TEC operating adapter uses
-the plan to load the five-byte source descriptors supplied to `AtomAssemble`.
+the field so a later operating adapter can support wider placement. Placement
+is carried directly on each prepared part; preparation does not write an
+intermediate file.
 
 ## Prepared part shape
 
@@ -286,8 +265,7 @@ The owner of a change follows the kind of fact it affects:
   `node-source-reader.mjs`.
 - Graph order, deduplication, cycles, and graph capacities belong in
   `resolver.mjs`.
-- Bank assignment and SP1 construction belong in `placement.mjs`.
-- SP1 wire syntax belongs in `source-plan.mjs`.
+- Bank assignment belongs in `placement.mjs`.
 - `%` directive grammar, conditional state, and masking belong in
   `atom/directives.mjs`.
 - Preprocessor numeric spelling belongs in `atom/literals.mjs`.

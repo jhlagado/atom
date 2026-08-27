@@ -59,7 +59,7 @@ const result = await assembleAtomProject({
 
 The optional execution controls are `maxInstructions`, `maxCycles`, and a
 custom sink. The default budgets are 200,000,000 instructions and
-2,000,000,000 T-states. `limits` may lower source-packager capacities, but this
+2,000,000,000 T-states. `limits` may lower project-preparation capacities, but this
 entry caps parts at 255 and banks at zero to match the native driver.
 
 The function returns the resolved `project` together with:
@@ -100,7 +100,7 @@ immediate-equate constraints before returning the LF-normalized text.
 Unsupported AZM constructs throw `AtomAssemblyError` with category
 `translation`, a stable code, and a one-based source diagnostic. The converter
 does not guess at imports, conditional assembly, ops, layouts, exports, or
-string equates. This rule keeps conversion separate from the source packager
+string equates. This rule keeps conversion separate from the project preparation
 and prevents a syntax rewrite from silently changing output bytes.
 
 `bin/azm-to-atom.mjs` adds filesystem policy around the pure function. It reads
@@ -233,7 +233,7 @@ truncating binary data.
 
 ## Diagnostics
 
-Host preparation throws `SourcePackagerError` with category, code, message, and
+Host preparation throws `SourcePreparationError` with category, code, message, and
 an optional source location. Native execution, artifact creation, and
 publication throw `AtomAssemblyError` with the same broad machine-readable
 shape plus details appropriate to the boundary.

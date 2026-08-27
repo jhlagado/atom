@@ -1,9 +1,9 @@
-import { SourcePackagerError } from "../source-packager/errors.mjs";
+import { SourcePreparationError } from "../project-preparation/errors.mjs";
 
 const definitionPattern = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 function fail(code, message, location) {
-  throw new SourcePackagerError("preprocessing", code, message, location);
+  throw new SourcePreparationError("preprocessing", code, message, location);
 }
 
 export function canonicalAtomDefinitionName(name, location) {

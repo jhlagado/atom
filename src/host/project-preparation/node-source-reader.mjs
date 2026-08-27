@@ -1,14 +1,14 @@
 import * as nodeFilesystem from "node:fs/promises";
 import path from "node:path";
 
-import { SourcePackagerError } from "./errors.mjs";
+import { SourcePreparationError } from "./errors.mjs";
 
 function dependencyFailure(code, message) {
-  throw new SourcePackagerError("dependency", code, message);
+  throw new SourcePreparationError("dependency", code, message);
 }
 
 function projectFailure(code, message) {
-  throw new SourcePackagerError("project", code, message);
+  throw new SourcePreparationError("project", code, message);
 }
 
 function isAbsoluteOnAnyHost(specifier) {

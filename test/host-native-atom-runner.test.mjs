@@ -170,7 +170,7 @@ test("the integrated boundary rejects nonzero placement before starting native A
   await assert.rejects(
     () => assembleAtomProject({ root, entry: "main.asm", placement: { defaultBank: 1, banks: {} } }),
     (error) => {
-      assert.equal(error?.name, "SourcePackagerError");
+      assert.equal(error?.name, "SourcePreparationError");
       assert.equal(error?.code, "bank-capacity");
       return true;
     },

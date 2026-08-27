@@ -1,4 +1,4 @@
-# Atom host source packaging
+# Atom host source preparation
 
 Atom separates filesystem work from resident assembly. The Mac host resolves
 source dependencies, evaluates host conditionals, masks preprocessing syntax,
@@ -6,7 +6,7 @@ resolves Atom binary inputs, and produces an ordered set of source parts. The
 native Z80 assembler receives those parts as a stream and has no filesystem or
 dependency-graph interface.
 
-The source packager does not compile or publish an Atom object. It returns a
+Source preparation does not compile or publish an Atom object. It returns a
 fully validated ordered set of source parts. `assembleAtomProject` passes those
 parts to the native streaming adapter after preparation succeeds.
 
@@ -32,7 +32,6 @@ The result contains:
 
 - `parts`, in compilation order;
 - `bankArray`, indexed by source-part ordinal;
-- parsed `sourcePlan` records and canonical `sourcePlanBytes`;
 - the frozen preprocessor definition state; and
 - the retained logical-path byte count.
 
@@ -48,12 +47,12 @@ read-only until the streaming adapter has consumed them.
 
 ## Source identities and resolution
 
-The packager keeps three identities separate:
+Source preparation keeps three identities separate:
 
 1. `physicalPath` is the canonical path opened on the current host.
 2. `dependencyIdentity` identifies a physical source for diamond and cycle
    detection.
-3. `logicalIdentity` is the normalized project-relative path used by SP1,
+3. `logicalIdentity` is the normalized project-relative path used by
    diagnostics, listing and D8 attribution, and placement rules.
 
 An include path is relative to its importing file. Absolute paths, lexical
@@ -79,45 +78,21 @@ The default Node limits are:
 Callers may lower these limits. Every exact limit is accepted; the first value
 beyond it is rejected during preparation.
 
-The native Atom driver and SP1 wire format both accept 1 through 255 parts.
-The host rejects a 256th part during preparation, before the Z80 runtime starts.
+The native Atom driver accepts 1 through 255 parts. The host rejects a 256th
+part during preparation, before the Z80 runtime starts.
 
 The current Atom output ABI is flat bank zero. `assembleAtomProject` sets the
 resolver's maximum bank to zero, so a nonzero placement fails before the Z80
-runtime starts. The general source-plan format keeps its bank field for shared
-packager consumers and later target work.
+runtime starts.
 
-## Placement and SP1
+## Placement
 
 Placement remains outside Atom source. `defaultBank` applies to every source
 without a path-specific assignment; `banks` maps logical project paths to bank
 ordinals. Preparation rejects invalid banks, conflicting aliases, assignments
 for missing or unreachable sources, and an unassigned part when no default is
-present.
-
-The portable source plan uses restricted ASCII SP1 records:
-
-```text
-SP1 4
-P 2 hardware.asm
-P 1 display.asm
-P 0 input.asm
-P 0 main.asm
-END
-```
-
-Record order determines the source-part ordinal. The serializer emits LF. The
-parser accepts LF and CRLF, validates the declared count and every capacity,
-requires one exact `END`, and rejects trailing bytes. Logical paths contain
-ASCII letters, digits, `.`, `_`, `-`, and `/`; empty, `.` and `..` components
-are invalid.
-
-`writeSourcePlanAtomically` serializes and reparses the complete plan before it
-opens a temporary file. It uses an exclusive temporary path and replaces the
-destination by rename only after the write and sync complete. Callers resolve
-the project before invoking the writer, so a preprocessing failure never opens
-the destination. Serialization, write, and rename failures preserve the
-previous published plan.
+present. The ordered prepared parts carry their bank and ordinal directly; no
+intermediate file is written or read.
 
 ## Atom preprocessing
 
@@ -175,20 +150,21 @@ output cursor therefore account for the binary without filesystem code in the
 Z80 core. The Mac output bridge replaces the attributed zero IMAGE bytes with
 the snapshot and rejects any count mismatch before commit.
 
-The path is not an SP1 source part and does not enter the dependency graph.
+The path is not a source part and does not enter the dependency graph.
 Provenance records its logical binary identity, source line, transformed range,
 and byte length. Listings and D8 ranges remain attached to the original
 `INCBIN` line.
 
 ## Extraction boundary
 
-The language-neutral modules under `src/host/source-packager/` contain path
-confinement, identity, graph, placement, provenance, SP1, and atomic plan code.
+The language-neutral modules under `src/host/project-preparation/` contain path
+confinement, identity, graph, placement, and provenance code.
 They import only Node built-ins and other neutral modules. Atom syntax remains
 under `src/host/atom/`, and `resolve-atom-project.mjs` supplies the composition.
 
-The neutral source-packager modules are currently owned by Atom. They may move
-to a Debug80 package or app after Atom and Nucleus host requirements stabilize.
+The neutral project-preparation modules are currently owned by Atom. Their
+boundary is kept independent of Atom syntax so another Z80 tool can reuse the
+same services without importing the assembler.
 
 Nucleus can use the neutral resolver with its own comment-shaped directive
 profile and byte-preserving emission policy. Atom's conditional masking and
@@ -196,7 +172,7 @@ native token rules do not enter the neutral package.
 
 ## Proof map
 
-The named Node tests below map the agreed source-packager requirements to
+The named Node tests below map the source-preparation requirements to
 executable observations.
 
 | Requirement | Named proof |
@@ -204,8 +180,6 @@ executable observations.
 | Diamond deduplication and sibling order | `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | Repeated include, missing source, root escape, alias and cycle diagnostics | `Atom composition rejects dependency, preprocessing, and placement failures` |
 | Physical symlink-target confinement | `reader rejects a symlink whose real target escapes the project root` |
-| LF, CRLF, lone CR, truncation, `END`, and trailing-data handling | `SP1 parses complete LF and CRLF plans`; `SP1 rejects non-ASCII and invalid newline bytes`; `SP1 requires one exact END and rejects trailing data`; `SP1 rejects count mismatches and record-position errors` |
-| Count and wire capacities | `SP1 wire capacities pass at 255 and fail at 256`; `SP1 enforces caller capacities exactly` |
 | Graph, path, retained-path and bank capacities | `Atom composition enforces every graph and placement capacity at the boundary` |
 | Relocation-stable logical identity and compiler bytes | `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | Path-keyed placement after order changes | `path-keyed placement follows a part while unrelated order changes` |
@@ -221,7 +195,7 @@ executable observations.
 | Binary syntax, path, size, and bridge failures | `INCBIN rejects malformed, escaping, missing, and oversized inputs`; `the native bridge fails closed when supplied INCBIN metadata disagrees with DS` |
 | Explicit and resolved compiler inputs | `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | Snapshot stability after filesystem mutation | `reader snapshots each dependency once and ignores later filesystem mutation`; `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
-| Failure before publication | `preprocessing failure returns no project and preserves a prior SP1 artifact`; `write failure preserves the prior plan and removes only its temp`; `rename failure preserves the prior plan and removes only its temp` |
+| Failure before execution | `preprocessing failure returns no project and leaves the filesystem unchanged` |
 | Neutral static and dynamic import boundary | `neutral host modules do not import Atom implementation`; `neutral import proof rejects dynamic Atom imports` |
 | Resident compiler diagnostics | `undefined global reports its exact source part, offset, and packed name`; existing tokenizer, expression, parser, and statement diagnostic proofs |
 | Packager-to-native composition | `the Mac host resolves, masks, and executes one project through native Atom` |
@@ -242,6 +216,6 @@ npm run measure:tokenizer
 npm run measure:host-native
 ```
 
-`npm test` rebuilds the frozen AZM and Debug80 runtime dependencies, assembles
-the native proofs with strict register contracts, executes them, and checks the
-declared 64 KiB memory profiles.
+`npm test` rebuilds the development dependencies, assembles the native proofs
+with strict register contracts, executes them, and checks the declared 64 KiB
+memory profiles.

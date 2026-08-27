@@ -1,8 +1,7 @@
-import { SourcePackagerError } from "./errors.mjs";
-import { parseSourcePlan, serializeSourcePlan } from "./source-plan.mjs";
+import { SourcePreparationError } from "./errors.mjs";
 
 function fail(code, message) {
-  throw new SourcePackagerError("project", code, message);
+  throw new SourcePreparationError("project", code, message);
 }
 
 function validateBank(bank, limits) {
@@ -24,14 +23,6 @@ function freezeEdge(edge) {
     from: edge.from,
     to: edge.to,
     location: freezeLocation(edge.location),
-  });
-}
-
-function planLimits(limits) {
-  return Object.freeze({
-    maxParts: limits.maxParts,
-    maxPathBytes: limits.maxLogicalPathBytes,
-    maxBank: limits.maxBank,
   });
 }
 
@@ -61,7 +52,7 @@ export async function joinSourcePlacement({
     try {
       snapshot = await reader.resolveEntry(specifier);
     } catch (error) {
-      if (error instanceof SourcePackagerError && error.code === "missing-source") {
+      if (error instanceof SourcePreparationError && error.code === "missing-source") {
         fail("nonexistent-placement", `placement source does not exist: ${specifier}`);
       }
       throw error;
@@ -98,19 +89,8 @@ export async function joinSourcePlacement({
     return Object.freeze({ ...part, ordinal, bank, provenance });
   });
 
-  const sourcePlanInput = Object.freeze({
-    records: Object.freeze(placedParts.map((part) => Object.freeze({
-      bank: part.bank,
-      logicalIdentity: part.logicalIdentity,
-    }))),
-  });
-  const sourcePlanBytes = serializeSourcePlan(sourcePlanInput, planLimits(limits));
-  const sourcePlan = parseSourcePlan(sourcePlanBytes, planLimits(limits));
-
   return Object.freeze({
     parts: Object.freeze(placedParts),
     bankArray: Object.freeze(placedParts.map((part) => part.bank)),
-    sourcePlan,
-    sourcePlanBytes,
   });
 }

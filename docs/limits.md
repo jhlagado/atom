@@ -83,10 +83,10 @@ counts from 0 through 23, and forward affine addends from -128 through 127.
 Immediate, displacement, port, and data widths are validated or truncated as
 described in the language reference.
 
-## Mac host graph
+## Node host graph
 
-The resolver, SP1 wire format, Mac runner, and native driver share one part
-limit. `assembleAtomProject` validates it before execution.
+The resolver, Node runner, and native driver share one part limit.
+`assembleAtomProject` validates it before execution.
 
 | Host preparation limit | Default |
 | --- | ---: |
@@ -94,7 +94,7 @@ limit. `assembleAtomProject` validates it before execution.
 | Dependency depth, including entry | 64 |
 | Logical path | 255 ASCII bytes |
 | Retained logical paths | 65,536 bytes |
-| SP1 bank ordinal | 0–255; zero for native Atom |
+| Bank ordinal | 0–255; zero for the current Atom output profile |
 
 The Mac runner's default execution budgets are 200,000,000 Z80 instructions
 and 2,000,000,000 T-states. Atom's measured self-build uses 101,840,573

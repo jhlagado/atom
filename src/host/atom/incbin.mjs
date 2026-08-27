@@ -1,9 +1,9 @@
-import { SourcePackagerError } from "../source-packager/errors.mjs";
+import { SourcePreparationError } from "../project-preparation/errors.mjs";
 
 const encoder = new TextEncoder();
 
 function fail(code, message, location) {
-  throw new SourcePackagerError("preprocessing", code, message, location);
+  throw new SourcePreparationError("preprocessing", code, message, location);
 }
 
 function linesOf(bytes) {
@@ -55,8 +55,8 @@ function incbinAt(part, line) {
 }
 
 function withLocation(error, location) {
-  if (error instanceof SourcePackagerError && error.location === undefined) {
-    return new SourcePackagerError(error.category, error.code, error.message, location);
+  if (error instanceof SourcePreparationError && error.location === undefined) {
+    return new SourcePreparationError(error.category, error.code, error.message, location);
   }
   return error;
 }

@@ -2,10 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  SourcePackagerError,
-  parseSourcePlan,
+  SourcePreparationError,
   resolveSourceProject,
-} from "../src/host/source-packager/index.mjs";
+} from "../src/host/project-preparation/index.mjs";
 
 const encoder = new TextEncoder();
 
@@ -25,14 +24,14 @@ function fixture(graph, aliases = {}) {
     async resolveEntry(name) {
       const found = sources.get(name);
       if (found === undefined) {
-        throw new SourcePackagerError("dependency", "missing-source", name);
+        throw new SourcePreparationError("dependency", "missing-source", name);
       }
       return found;
     },
     async resolveDependency(_importer, name) {
       const found = sources.get(name);
       if (found === undefined) {
-        throw new SourcePackagerError("dependency", "missing-source", name);
+        throw new SourcePreparationError("dependency", "missing-source", name);
       }
       return found;
     },
@@ -62,7 +61,7 @@ async function resolve(graph, placement, aliases) {
 
 async function assertPlacementError(action, code) {
   await assert.rejects(action, (error) => {
-    assert.equal(error?.name, "SourcePackagerError");
+    assert.equal(error?.name, "SourcePreparationError");
     assert.equal(error?.category, "project");
     assert.equal(error?.code, code);
     return true;
@@ -98,7 +97,6 @@ test("path-keyed placement follows a part while unrelated order changes", async 
   ]);
   assert.deepEqual(first.bankArray, [255, 0, 0, 0]);
   assert.deepEqual(second.bankArray, [0, 255, 0, 0]);
-  assert.deepEqual(parseSourcePlan(first.sourcePlanBytes), first.sourcePlan);
 });
 
 test("placement accepts explicit bank zero and the maximum bank", async () => {

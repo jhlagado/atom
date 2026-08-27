@@ -43,7 +43,7 @@ They do not share responsibility for language semantics.
 | Resolves `%INCLUDE` dependencies | Packs and resolves case-insensitive symbols |
 | Evaluates `%DEFINE`, `%IF`, `%ELSE`, and `%ENDIF` | Parses expressions, operands, and statements |
 | Snapshots and lowers `INCBIN` | Encodes the complete claimed Z80 instruction set |
-| Orders source parts and writes SP1 plans | Manages global and private symbol scope |
+| Orders source parts and assigns source ordinals | Manages global and private symbol scope |
 | Implements the output sink | Decides when IMAGE and PATCH operations occur |
 | Renders NOBJ, BIN, HEX, listing, and D8 | Performs final undefined-symbol checks |
 | Publishes a complete artifact generation | Begins, commits, or aborts one output generation |
@@ -167,8 +167,8 @@ accounts. The values above come from
 
 The host implementation has five main responsibilities:
 
-1. `src/host/source-packager/` provides the language-neutral source reader,
-   dependency resolver, placement join, provenance records, and SP1 format.
+1. `src/host/project-preparation/` provides the language-neutral source reader,
+   dependency resolver, placement join, and provenance records.
 2. `src/host/atom/` implements Atom preprocessing, numeric syntax, and
    host-backed `INCBIN` lowering.
 3. `native-atom-core.mjs` and `native-atom-runner.mjs` load and execute the
@@ -201,7 +201,7 @@ The best entry point depends on the change:
 
 - For source dependency or conditional behaviour, begin in
   `resolve-atom-project.mjs`, then follow the Atom source profile into
-  `source-packager/resolver.mjs`.
+  `project-preparation/resolver.mjs`.
 - For a lexical problem, use `native/atom-symbols.json` to map
   `AtomTokenizerNext` to `TK_NEXT`, locate it under `native/`, and read
   `test/tokenizer.test.mjs` beside it.

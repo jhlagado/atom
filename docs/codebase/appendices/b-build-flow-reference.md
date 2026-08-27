@@ -28,7 +28,6 @@ ASSEMBLEATOMPROJECT(OPTIONS)
       JOINSOURCEPLACEMENT()
         ASSIGN BANKS BY LOGICAL PATH
         BUILD PROVENANCE
-        SERIALIZE AND REPARSE CANONICAL SP1
     LOWERATOMBINARYINCLUDES()
       RESOLVE AND SNAPSHOT ACTIVE INCBIN FILES
       REPLACE EACH LINE WITH EQUAL-LENGTH DS COUNT,0
@@ -176,7 +175,7 @@ READABLE ASM SOURCES
 | --- | --- | --- |
 | Node source reader | Project root and path specifier | Snapshotted source with three identities |
 | Atom source profile | Original source bytes and definition state | Equal-length compiler bytes, dependency references, masked ranges |
-| Neutral resolver | Reader, profile, limits, placement | Ordered placed parts, provenance, SP1, retained definition state |
+| Neutral resolver | Reader, profile, limits, placement | Ordered placed parts, provenance, retained definition state |
 | `INCBIN` lowering | Resolved project and reader | Transformed compiler bytes plus binary snapshots |
 | Native runner | Prepared project, target, core, budgets, sink | Committed logical generation and execution evidence |
 | Native tokenizer | One part interval | Nine-byte token records |

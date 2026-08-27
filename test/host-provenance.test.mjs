@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveSourceProject } from "../src/host/source-packager/index.mjs";
+import { resolveSourceProject } from "../src/host/project-preparation/index.mjs";
 
 const encoder = new TextEncoder();
 

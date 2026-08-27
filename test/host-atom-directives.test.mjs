@@ -30,7 +30,7 @@ function inspectDependency(source, state, logicalIdentity = "lib.asm") {
 
 function assertPreprocessingError(action, code) {
   assert.throws(action, (error) => {
-    assert.equal(error?.name, "SourcePackagerError");
+    assert.equal(error?.name, "SourcePreparationError");
     assert.equal(error?.category, "preprocessing");
     assert.equal(error?.code, code);
     assert.equal(typeof error?.location?.offset, "number");

@@ -3,7 +3,7 @@ import test from "node:test";
 
 let api;
 try {
-  api = await import("../src/host/source-packager/index.mjs");
+  api = await import("../src/host/project-preparation/index.mjs");
 } catch {
   api = {};
 }
@@ -36,12 +36,12 @@ function fixture(graph, overrides = {}) {
     reader: Object.freeze({
       async resolveEntry(name) {
         const source = sources.get(name);
-        if (source === undefined) throw new api.SourcePackagerError("dependency", "missing-source", name);
+        if (source === undefined) throw new api.SourcePreparationError("dependency", "missing-source", name);
         return source;
       },
       async resolveDependency(_importer, specifier) {
         const source = sources.get(specifier);
-        if (source === undefined) throw new api.SourcePackagerError("dependency", "missing-source", specifier);
+        if (source === undefined) throw new api.SourcePreparationError("dependency", "missing-source", specifier);
         return source;
       },
     }),
@@ -92,7 +92,7 @@ async function resolve(graph, options = {}) {
 
 async function assertResolverError(action, code, check = () => {}) {
   await assert.rejects(action, (error) => {
-    assert.equal(error?.name, "SourcePackagerError");
+    assert.equal(error?.name, "SourcePreparationError");
     assert.equal(error?.category, "dependency");
     assert.equal(error?.code, code);
     check(error);

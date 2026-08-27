@@ -3,7 +3,7 @@
 `AtomAssemble` consumes an ordered array of caller-owned source descriptors,
 assembles every part once, performs the final symbol checks, and closes one
 operating-adapter generation. Filesystem access, dependency resolution,
-preprocessing, SP1 parsing, and source loading remain outside the native core.
+preprocessing and source loading remain outside the native core.
 
 ## Build descriptor
 

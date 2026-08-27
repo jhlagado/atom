@@ -6,7 +6,7 @@ import test from "node:test";
 
 let api;
 try {
-  api = await import("../src/host/source-packager/index.mjs");
+  api = await import("../src/host/project-preparation/index.mjs");
 } catch {
   api = {};
 }
@@ -37,7 +37,7 @@ async function write(root, relativePath, contents) {
 
 async function assertDependencyError(action, code) {
   await assert.rejects(action, (error) => {
-    assert.equal(error?.name, "SourcePackagerError");
+    assert.equal(error?.name, "SourcePreparationError");
     assert.ok(["project", "dependency"].includes(error?.category));
     assert.equal(error?.code, code);
     return true;

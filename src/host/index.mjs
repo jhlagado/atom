@@ -1,4 +1,5 @@
 export { AtomAssemblyError } from "./atom-assembly-error.mjs";
+export { SourcePreparationError } from "./project-preparation/index.mjs";
 export { assembleAtomProject } from "./assemble-atom-project.mjs";
 export { resolveAtomProject } from "./resolve-atom-project.mjs";
 export { loadNativeAtomCore } from "./native-atom-core.mjs";

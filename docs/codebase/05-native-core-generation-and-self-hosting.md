@@ -90,7 +90,7 @@ implementation remains in the repository.
 ## First Atom generation
 
 The self-host proof resolves `native/atom.asm` through the ordinary host
-source packager and calls `assembleResolvedAtomProject()` with origin zero and
+project preparation and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 
 The pinned Atom-built native core assembles all six parts. The resulting

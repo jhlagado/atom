@@ -41,19 +41,17 @@ the owner of a behavior quickly.
 | `source-profile.mjs` | Adapts Atom directive inspection to the neutral resolver's entry/dependency profile interface |
 | `incbin.mjs` | Recognizes active `INCBIN`, snapshots a confined binary, lowers it to equal-length initialized `DS`, and retains bridge provenance |
 
-## `src/host/source-packager/`
+## `src/host/project-preparation/`
 
 | File | Role |
 | --- | --- |
 | `index.mjs` | Neutral package export layer |
-| `errors.mjs` | `SourcePackagerError` category, code, message, and optional location |
+| `errors.mjs` | `SourcePreparationError` category, code, message, and optional location |
 | `node-source-reader.mjs` | Project-root validation, physical spelling, realpath confinement, source snapshots, and physical/dependency/logical identities |
 | `resolver.mjs` | Bounded deterministic dependency traversal, deduplication, cycle detection, profile validation, part order, and retained-path accounting |
-| `placement.mjs` | Joins path-keyed bank placement to resolved parts, constructs provenance, and builds canonical SP1 |
-| `source-plan.mjs` | Strict SP1 parser, serializer, path grammar, record counts, bank limits, newline handling, and terminator validation |
-| `atomic-plan-writer.mjs` | Validates, writes, synchronizes, and renames one SP1 plan while preserving the previous destination on failure |
+| `placement.mjs` | Joins path-keyed bank placement to resolved parts and constructs provenance |
 | `passthrough-profile.mjs` | Byte-preserving profile used to prove the language-neutral resolver boundary |
-| `README.md` | Local source-packager module notes |
+| `README.md` | Local project-preparation module notes |
 
 ## `src/host/artifacts/`
 
@@ -151,10 +149,8 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `host-node-source-reader.test.mjs` | Physical path spelling, confinement, symlinks, identities, and snapshots |
 | `host-resolver.test.mjs` | Graph order, diamonds, repeats, cycles, and limits |
 | `host-placement.test.mjs` | Path-keyed bank assignments and placement failures |
-| `host-source-plan.test.mjs` | SP1 syntax, limits, newlines, truncation, counts, and terminator |
-| `host-atomic-plan-writer.test.mjs` | Temporary write, synchronization, rename, cleanup, and prior-plan preservation |
 | `host-provenance.test.mjs` | Logical identities, include stacks, locations, and frozen metadata |
-| `host-source-packager-boundary.test.mjs` | Neutral modules remain independent of Atom syntax |
+| `host-project-preparation-boundary.test.mjs` | Neutral modules remain independent of Atom syntax |
 | `host-resolve-atom-project.test.mjs` | Composed Atom preparation, lowering, placement, state, and failures |
 
 ## `test/` execution, artifact, and product suites
@@ -203,7 +199,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `command-line.md` | Installation, CLI options, bundle layout, diagnostics, example, and release command |
 | `azm-to-atom.md` | Converter commands, exact syntax mappings, rejected AZM boundaries, diagnostics, and programmatic API |
 | `mac-host-integration.md` | Native runner, sink interception, memory map, diagnostics, and public host modules |
-| `host-source-packaging.md` | Resolver, preprocessing, SP1, binary inclusion, extraction seam, and proof map |
+| `host-source-preparation.md` | Resolver, preprocessing, binary inclusion, extraction seam, and proof map |
 | `atom-object-format.md` | Atom flat NOBJ 0.2 framing and MAP profile |
 | `encoder-abi.md` | Parsed instruction record and encoder entries |
 | `tokenizer-abi.md` | Source interval, token record, lexical surface, and handoff |

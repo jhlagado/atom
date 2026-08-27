@@ -1,11 +1,11 @@
-import { SourcePackagerError } from "../source-packager/errors.mjs";
+import { SourcePreparationError } from "../project-preparation/errors.mjs";
 import {
   canonicalAtomDefinitionName,
   parseAtomPreprocessorValue,
 } from "./literals.mjs";
 
 function fail(code, message, location) {
-  throw new SourcePackagerError("preprocessing", code, message, location);
+  throw new SourcePreparationError("preprocessing", code, message, location);
 }
 
 function linesOf(bytes) {

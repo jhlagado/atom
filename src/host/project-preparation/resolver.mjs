@@ -1,4 +1,4 @@
-import { SourcePackagerError } from "./errors.mjs";
+import { SourcePreparationError } from "./errors.mjs";
 import { joinSourcePlacement } from "./placement.mjs";
 
 const encoder = new TextEncoder();
@@ -12,7 +12,7 @@ export const NODE_SOURCE_LIMITS = Object.freeze({
 });
 
 function fail(code, message, location) {
-  throw new SourcePackagerError("dependency", code, message, location);
+  throw new SourcePreparationError("dependency", code, message, location);
 }
 
 function positiveLimit(value, name, maximum = Number.MAX_SAFE_INTEGER) {
@@ -82,9 +82,9 @@ function validateInspection(inspection, entry, location) {
 }
 
 function withLocation(error, location) {
-  if (error instanceof SourcePackagerError) {
+  if (error instanceof SourcePreparationError) {
     if (error.location !== undefined) return error;
-    return new SourcePackagerError(error.category, error.code, error.message, location);
+    return new SourcePreparationError(error.category, error.code, error.message, location);
   }
   return error;
 }
@@ -188,7 +188,7 @@ export async function resolveSourceProject({
         ...edgeStack.slice(activeIndex),
         incomingEdge,
       ].map((edge) => Object.freeze({ ...edge })));
-      const error = new SourcePackagerError(
+      const error = new SourcePreparationError(
         "dependency",
         "dependency-cycle",
         "source dependency cycle",
@@ -239,7 +239,7 @@ export async function resolveSourceProject({
           ...edgeStack.slice(dependencyActiveIndex),
           edge,
         ].map((cycleEdge) => Object.freeze({ ...cycleEdge })));
-        const error = new SourcePackagerError(
+        const error = new SourcePreparationError(
           "dependency",
           "dependency-cycle",
           "source dependency cycle",

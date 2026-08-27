@@ -50,7 +50,7 @@ The current main build option shape is:
 }
 ```
 
-The function throws structured `SourcePackagerError` or `AtomAssemblyError`
+The function throws structured `SourcePreparationError` or `AtomAssemblyError`
 instances on failure. A future versioned host facade may convert these to a
 tagged result without changing the lower-level functions.
 

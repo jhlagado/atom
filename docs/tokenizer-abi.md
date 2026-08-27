@@ -12,7 +12,7 @@
 
 The interval establishes the part length and the default memory-backed source.
 The tokenizer then advances a 16-bit logical offset and calls
-`AtomSourceReadByte` for each source byte. A flat-manifest adapter calls
+`AtomSourceReadByte` for each source byte. A multipart adapter calls
 `AtomTokenizerReset` for each ordered part. A non-empty part without a physical
 line ending produces one synthetic EOL before EOF, so adjacent parts cannot
 join two source words accidentally.

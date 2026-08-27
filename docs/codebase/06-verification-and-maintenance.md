@@ -28,7 +28,7 @@ The test directory is flat, but filenames group it into clear lanes:
 | `integration.test.mjs`, `integration-support.mjs` | Cross-module native assembly programs |
 | `driver.test.mjs`, `driver-support.mjs` | Multipart descriptor validation, lifecycle, final undefined checks, and abort rules |
 | `host-atom-*.test.mjs` | Atom preprocessing, literals, masking, translation, and host syntax |
-| `host-resolver.test.mjs` and related source-packager tests | Source identity, graph, SP1, placement, provenance, confinement, and capacities |
+| `host-resolver.test.mjs` and related project-preparation tests | Source identity, graph, placement, provenance, confinement, and capacities |
 | `host-native-atom-runner.test.mjs` | Prepared project through Debug80 and the native sink boundary |
 | `host-artifacts.test.mjs` | NOBJ, BIN, HEX, listing, and D8 rendering |
 | `host-example.test.mjs` | Shipped example through the complete CLI |
@@ -170,13 +170,12 @@ recoverable even though it cannot roll source input backward.
 
 ## Host preparation proofs
 
-The source-packager tests construct temporary filesystem graphs. They cover:
+The project-preparation tests construct temporary filesystem graphs. They cover:
 
 - deterministic postorder and diamond deduplication;
 - repeated direct dependencies and complete cycle paths;
 - lexical, symlink, absolute, missing, and case-alias path failures;
 - exact part, depth, path, retained-path, and bank limits;
-- LF and CRLF SP1 parsing, truncation, required `END`, and trailing bytes;
 - path-keyed placement independent of graph-order changes;
 - snapshot stability after filesystem mutation;
 - neutral profile separation from Atom imports;

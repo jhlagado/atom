@@ -5,11 +5,6 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import {
-  parseSourcePlan,
-  writeSourcePlanAtomically,
-} from "../src/host/source-packager/index.mjs";
-
 let atomApi;
 try {
   atomApi = await import("../src/host/resolve-atom-project.mjs");
@@ -17,7 +12,7 @@ try {
   atomApi = {};
 }
 
-const fixtureRoot = fileURLToPath(new URL("fixtures/source-packager/diamond/", import.meta.url));
+const fixtureRoot = fileURLToPath(new URL("fixtures/project-preparation/diamond/", import.meta.url));
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -141,7 +136,7 @@ async function explicitDiamondParts(root) {
 
 async function assertHostError(action, category, code) {
   await assert.rejects(action, (error) => {
-    assert.equal(error?.name, "SourcePackagerError");
+    assert.equal(error?.name, "SourcePreparationError");
     assert.equal(error?.category, category);
     assert.equal(error?.code, code);
     return true;
@@ -167,11 +162,6 @@ test("Atom composition resolves, masks, places, snapshots, and relocates one dia
     ["main.asm", 3, 0],
   ]);
   assert.deepEqual(first.bankArray, [2, 1, 0, 0]);
-  assert.deepEqual(parseSourcePlan(first.sourcePlanBytes), first.sourcePlan);
-  assert.deepEqual(first.sourcePlan.records, first.parts.map((part) => ({
-    bank: part.bank,
-    logicalIdentity: part.logicalIdentity,
-  })));
   assert.equal(first.parts.filter((part) => part.logicalIdentity === "hardware.asm").length, 1);
   assert.equal(first.state.definitions.DEBUG, 1);
 
@@ -184,7 +174,6 @@ test("Atom composition resolves, masks, places, snapshots, and relocates one dia
   }
   assert.equal(Object.isFrozen(first), true);
   assert.equal(Object.isFrozen(first.parts), true);
-  assert.equal(Object.isFrozen(first.sourcePlan), true);
   assert.equal(Object.isFrozen(first.state), true);
   assert.equal(Object.isFrozen(first.state.definitions), true);
 
@@ -205,7 +194,6 @@ test("Atom composition resolves, masks, places, snapshots, and relocates one dia
   ]);
 
   assert.deepEqual(second.parts.map((part) => part.logicalIdentity), first.parts.map((part) => part.logicalIdentity));
-  assert.deepEqual(byteArray(second.sourcePlanBytes), byteArray(first.sourcePlanBytes));
   assert.deepEqual(
     second.parts.map((part) => byteArray(part.compilerBytes)),
     first.parts.map((part) => byteArray(part.compilerBytes)),
@@ -373,18 +361,17 @@ test("Atom composition enforces every graph and placement capacity at the bounda
   }
 });
 
-test("preprocessing failure returns no project and preserves a prior SP1 artifact", async (t) => {
+test("preprocessing failure returns no project and leaves the filesystem unchanged", async (t) => {
   const root = await writeProject(t, { "main.asm": "%if UNKNOWN\nNOP\n%endif\n" });
-  const destination = path.join(root, "sources.sp1");
-  await fs.writeFile(destination, "previous-plan\n");
+  const marker = path.join(root, "unrelated.txt");
+  await fs.writeFile(marker, "unchanged\n");
   let project;
 
   await assertHostError(async () => {
     project = await resolveAtomProject({ root, entry: "main.asm" });
-    await writeSourcePlanAtomically(destination, project.sourcePlan);
   }, "preprocessing", "undefined-definition");
 
   assert.equal(project, undefined);
-  assert.equal(await fs.readFile(destination, "utf8"), "previous-plan\n");
-  assert.deepEqual((await fs.readdir(root)).sort(), ["main.asm", "sources.sp1"]);
+  assert.equal(await fs.readFile(marker, "utf8"), "unchanged\n");
+  assert.deepEqual((await fs.readdir(root)).sort(), ["main.asm", "unrelated.txt"]);
 });

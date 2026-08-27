@@ -32,16 +32,15 @@ emitted as PATCH records when the symbol becomes known.
 | --- | --- |
 | Filesystem access, path confinement, and `INCBIN` snapshots | Streaming tokenization |
 | `%INCLUDE`, `%DEFINE`, and conditional masking | Case-insensitive symbols and private scope |
-| Dependency graph, ordering, and SP1 plan | Expression parsing and validation |
+| Dependency graph and deterministic ordering | Expression parsing and validation |
 | Loading each ordered source part | Labels, equates, data, placement, alignment, and string directives |
 | NOBJ storage and output sink implementation | Complete Z80 instruction encoding |
 | Binary, HEX, listing, and D8 rendering | Forward-reference and patch decisions |
 | Atomic artifact publication | Final undefined-symbol check and lifecycle control |
 
-This boundary follows Nucleus: language processing remains deterministic and
-filesystem-free on the Z80, while the operating layer supplies ordered bytes
-and durable output services. The common host resolver is currently maintained
-inside Atom and has a clean extraction seam for a later Debug80 package.
+Language processing remains deterministic and filesystem-free on the Z80,
+while the operating layer supplies ordered bytes and durable output services.
+The host resolver is maintained behind Atom's project-preparation boundary.
 
 ## Source preparation
 
@@ -56,9 +55,9 @@ the snapshotted binary beside that source part. The Mac output bridge
 substitutes the binary bytes while the native cursor and labels advance by the
 same measured length.
 
-SP1 is the portable, line-oriented source-plan format. It records only ordered
-logical paths and bank ordinals. The compiler does not parse SP1; an operating
-adapter uses it to load the source descriptors consumed by `AtomAssemble`.
+The prepared parts carry their logical identities, bank assignments, and
+ordinals directly into the host adapter. `AtomAssemble` sees only the source
+descriptor array and the byte service; it does not parse project metadata.
 
 ## Native assembly and output
 
@@ -81,10 +80,9 @@ claiming Nucleus-specific runtime-map fields.
 
 ## Mac execution
 
-The npm package contains the pinned native core and the Debug80 runtime. AZM is
-used only in development to regenerate the image and to provide the independent
-oracle. The package loader checks the core digest and structural coverage before
-execution. Debug80 marks native code read-only and intercepts the source-read
+The npm package contains the pinned native core and the Debug80 runtime. The
+package loader checks the core digest and structural coverage before execution.
+Debug80 marks native code read-only and intercepts the source-read
 entry plus six fail-closed sink entry points. Those compact entries reach the
 private Atom provider dispatch. Only this direct-host profile uses that route;
 it does not intercept arbitrary Z80 calls or memory.
@@ -132,13 +130,11 @@ output-path comparison.
 
 ## Self-hosting
 
-The authoritative Atom-syntax representation is checked under `native/`.
-Collision-checked semantic names and their former long ABI names are recorded
-in `native/atom-symbols.json`. The proof runs three complete builds: the pinned
-image assembles the `.asm` source, the resulting Atom image assembles it again,
-and the same prepared `.asm` parts are translated for an independent strict-AZM
-build.
-All initialized addresses and all 12,396 resident bytes must agree.
+The authoritative Atom source is checked under `native/`. Collision-checked
+semantic names are recorded in `native/atom-symbols.json`. The proof runs two
+complete native builds: the checked image assembles the source, then the
+resulting Atom image assembles it again. All initialized addresses and all
+12,396 resident bytes must agree.
 
 `npm run build:native-core` starts from `native/atom.asm`. Every subsystem proof
 calls the checked core, and the repository contains no second native

@@ -4,7 +4,7 @@ import { isBuiltin } from "node:module";
 import path from "node:path";
 import test from "node:test";
 
-const sourceDirectory = "src/host/source-packager";
+const sourceDirectory = "src/host/project-preparation";
 
 function assertNeutralImports(source, name) {
   assert.doesNotMatch(source, /\bimport\s*\(/, `${name} uses dynamic import`);
@@ -20,7 +20,7 @@ function assertNeutralImports(source, name) {
     assert.equal(
       relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative),
       true,
-      `${name} imports outside neutral source-packager: ${specifier}`,
+      `${name} imports outside neutral project-preparation: ${specifier}`,
     );
   }
 }
@@ -42,15 +42,15 @@ test("neutral import proof rejects dynamic Atom imports", () => {
   );
 });
 
-test("source-packager errors retain a frozen structured diagnostic", async () => {
+test("project-preparation errors retain a frozen structured diagnostic", async () => {
   let api;
   try {
-    api = await import("../src/host/source-packager/index.mjs");
+    api = await import("../src/host/project-preparation/index.mjs");
   } catch {
     api = {};
   }
 
-  assert.equal(typeof api.SourcePackagerError, "function", "SourcePackagerError export is missing");
+  assert.equal(typeof api.SourcePreparationError, "function", "SourcePreparationError export is missing");
 
   const location = {
     logicalIdentity: "src/main.asm",
@@ -58,14 +58,14 @@ test("source-packager errors retain a frozen structured diagnostic", async () =>
     line: 3,
     column: 5,
   };
-  const error = new api.SourcePackagerError(
+  const error = new api.SourcePreparationError(
     "dependency",
     "missing-source",
     "cannot open dependency",
     location,
   );
 
-  assert.equal(error.name, "SourcePackagerError");
+  assert.equal(error.name, "SourcePreparationError");
   assert.equal(error.message, "cannot open dependency");
   assert.equal(error.category, "dependency");
   assert.equal(error.code, "missing-source");
@@ -73,4 +73,9 @@ test("source-packager errors retain a frozen structured diagnostic", async () =>
   assert.equal(Object.isFrozen(error.location), true);
   location.offset = 99;
   assert.equal(error.location.offset, 17);
+});
+
+test("the public Atom API exposes preparation failures", async () => {
+  const api = await import("../src/host/index.mjs");
+  assert.equal(api.SourcePreparationError.name, "SourcePreparationError");
 });

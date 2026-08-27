@@ -96,7 +96,7 @@ still retained in the materialized range.
 
 ## Structured diagnostics
 
-Preparation failures remain `SourcePackagerError` values. Native or adapter
+Preparation failures remain `SourcePreparationError` values. Native or adapter
 failures use `AtomAssemblyError` with a category and code. A native source
 diagnostic includes:
 
