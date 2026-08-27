@@ -3,8 +3,10 @@
 Atom’s native source uses ordinary `.asm` filenames. The checked source under `native/`
 is the input to native-core generation, the self-host proof, the command line’s
 `atom self-host`, and the npm package. The repository retains no second native
-implementation. AZM consumes an automatic translation of the same `.asm`
-source only as an independent development oracle.
+implementation. The development build also assembles an automatic translation
+of the same `.asm` source with strict register-contract checking, so the
+native source is checked by an independent toolchain without becoming a second
+source of truth.
 
 This transition has two reasons for being staged. First, Atom stores only the
 first eight significant characters of a symbol, while the AZM source was
@@ -96,10 +98,10 @@ PR_PARSE:
         CALL EX_PARSE
 ```
 
-The host’s Atom-to-AZM oracle adapter restores these as `.ROUTINE` and
-`.EXPECTOUT` annotations. AZM can therefore continue checking register, flag,
-and stack contracts against the `.asm` source. Atom ignores the comments while
-assembling the same bytes.
+The host’s Atom-to-AZM contract adapter restores these as `.ROUTINE` and
+`.EXPECTOUT` annotations for development checks. The contract pass can
+therefore continue checking registers, flags, and stack balance against the
+`.asm` source. Atom ignores the comments while assembling the same bytes.
 
 ## Authority
 
