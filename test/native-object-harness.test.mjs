@@ -224,6 +224,20 @@ test("native named-object harness assembles parts, fills gaps, patches, and comm
   assert.ok(run.census.residentBytes <= 0x4000);
 });
 
+test("native named-object output does not corrupt unread cached source bytes", async () => {
+  const run = await runProject(["DB $A5,$00,$1A,$7F,$80,$FF\n"]);
+  assert.deepEqual(
+    run.result,
+    { status: 0, carry: 0 },
+    JSON.stringify({ diagnostic: run.diagnostic, adapterTrace: run.adapterTrace }),
+  );
+  assert.deepEqual([...run.output], [0xa5, 0x00, 0x1a, 0x7f, 0x80, 0xff]);
+  assert.ok(
+    run.sourceOperations.filter((operation) => operation === NAMED_OBJECT_OPERATION.read).length > 1,
+    "source cache was not refilled after output reused the transfer buffer",
+  );
+});
+
 test("native named-object harness separates fixed workspace from a 16 KiB ROM bank", async () => {
   const harness = await buildNativeObjectHarness({
     origin: 0x8100,
@@ -238,8 +252,8 @@ test("native named-object harness separates fixed workspace from a 16 KiB ROM ba
   });
   assert.equal(harness.report.loadAddress, 0x8000);
   assert.equal(harness.report.coreOrigin, 0x8100);
-  assert.equal(harness.report.residentBytes, 13_026);
-  assert.equal(harness.report.residentEnd, 0xb2e2);
+  assert.equal(harness.report.residentBytes, 13_030);
+  assert.equal(harness.report.residentEnd, 0xb2e6);
   assert.equal(harness.report.fixedWorkspaceStart, 0x1800);
   assert.equal(harness.report.fixedWorkspaceEnd, 0x1ae5);
   assert.equal(harness.report.fixedWorkspaceBytes, 741);

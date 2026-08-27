@@ -81,7 +81,7 @@ by the source program.
 The Node gateway adds no resident Z80 bytes. The native core remains 12,396
 bytes, including its existing 24-byte fail-closed service-stub tail.
 
-The Z80 named-object composition is Measured 13,511 resident bytes: the
+The Z80 named-object composition is Measured 13,515 resident bytes: the
 12,396-byte core with its memory fallback and fail-closed sink tail replaced by the
 adapter. The measured adapter delta is 1,115 bytes, leaving 2,873 bytes below a
 16 KiB boundary. Its caller supplies 399 bytes of always-visible workspace: a

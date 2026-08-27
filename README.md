@@ -85,7 +85,7 @@ The measured native account is:
 | Margin below 16 KiB | 3,988 |
 
 The optional Z80 named-object harness replaces the memory source fallback and
-host sink stubs. That composition is 13,511 resident bytes and uses 399 bytes
+host sink stubs. That composition is 13,515 resident bytes and uses 399 bytes
 of caller-owned common workspace, leaving 2,873 bytes in its 16 KiB bank.
 An immutable-bank profile instead places 12,770 bytes of code and tables in ROM
 and relocates 741 bytes of fixed state to common RAM.
