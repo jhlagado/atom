@@ -24,7 +24,7 @@ artifact in memory. Filesystem publication is optional.
 artifact contains:
 
 - Intel HEX for the linked native image;
-- the AZM-derived symbol map;
+- the native-core symbol map;
 - a SHA-256 of the HEX text;
 - a SHA-256 covering the HEX and symbol map together; and
 - the readable source identity used to generate it.
