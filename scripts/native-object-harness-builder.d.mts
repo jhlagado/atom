@@ -4,6 +4,8 @@ export type NativeObjectHarnessOptions = {
   workspaceOrigin?: number;
   preludeSource?: string;
   gatewaySource?: string;
+  /** Z80 label called by the Atom core for each source byte. Defaults to NA_SREAD. */
+  sourceReadTarget?: string;
   registerContractsProfile?: string;
   registerContractsInterfaces?: string[];
 };
@@ -17,6 +19,7 @@ export type NativeObjectHarnessReport = {
   adapterInitEntry: number;
   gatewayEntry: number;
   sourceReadEntry: number;
+  configuredSourceReadEntry: number;
   residentEnd: number;
   residentBytes: number;
   nativeCoreResidentBytes: number;

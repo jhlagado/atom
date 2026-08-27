@@ -32,9 +32,12 @@ installed AZM 0.3.9 or later to link strict-contract platform profiles.
 `atom-z80/native-builder` exports `buildNativeObjectHarness()`. Platform build
 tools may select an image origin, a later core origin, a platform prelude, a
 separate common-RAM workspace origin, a gateway implementation, and
-register-contract profile and interface files. The function returns the
-immutable bank bytes, fixed-state initialization bytes, measured addresses,
-entries, capacities, hashes, and complete D8 build map.
+register-contract profile and interface files. A profile may also name a Z80
+source-reader target; the default is the named-object reader. This lets a
+native preprocessor install an equal-offset masking reader without changing the
+Atom core or the tool-service ABI. The function returns the immutable bank
+bytes, fixed-state initialization bytes, measured addresses, entries,
+capacities, hashes, and complete D8 build map.
 
 This subpath is a build interface, not part of Atom's runtime host API. A
 platform launcher still owns source preparation, descriptors, memory arenas,

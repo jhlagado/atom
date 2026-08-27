@@ -267,6 +267,46 @@ test("native named-object harness separates fixed workspace from a 16 KiB ROM ba
   assert.equal(run.residentUnchanged, true);
 });
 
+test("native named-object harness composes a profile source reader without changing the core", async () => {
+  const harness = await buildNativeObjectHarness({
+    origin: 0x8100,
+    imageOrigin: 0x8000,
+    workspaceOrigin: 0x1800,
+    preludeSource: [
+      "ORG $8000",
+      ";@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY",
+      "PL_READ:",
+      "JP NA_SREAD",
+    ].join("\n"),
+    sourceReadTarget: "PL_READ",
+  });
+  assert.equal(
+    harness.report.configuredSourceReadEntry,
+    harness.debugMap.symbols.find(({ name }) => name === "PL_READ")?.address,
+  );
+  assert.notEqual(harness.report.configuredSourceReadEntry, harness.report.sourceReadEntry);
+  const run = await runProject(["ORG $100\nDB $5A\n"], {
+    harness,
+    commonWorkspace: 0x1b00,
+    symbolStart: 0x4000,
+    symbolEnd: 0x5000,
+    pendingStart: 0x5000,
+    pendingEnd: 0x5800,
+    stack: 0x7ff0,
+    romRanges: [{ start: 0x8000, end: harness.report.residentEnd - 1 }],
+  });
+  assert.deepEqual(run.result, { status: 0, carry: 0 });
+  assert.deepEqual([...run.output], [0x5a]);
+  assert.equal(run.residentUnchanged, true);
+});
+
+test("native named-object harness rejects an invalid source-reader target before linking", async () => {
+  await assert.rejects(
+    buildNativeObjectHarness({ sourceReadTarget: "NOT A LABEL" }),
+    /invalid source-read target label/,
+  );
+});
+
 test("native named-object harness validates its complete common workspace range", async () => {
   assert.deepEqual(await initializeAt(0xfe71), { status: 0, carry: 0 });
   assert.deepEqual(await initializeAt(0xfe72), { status: NAMED_OBJECT_STATUS.invalid, carry: 1 });

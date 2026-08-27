@@ -6,6 +6,7 @@
   "adapterInitEntry": 12383,
   "gatewayEntry": 13480,
   "sourceReadEntry": 12774,
+  "configuredSourceReadEntry": 12774,
   "residentEnd": 13511,
   "residentBytes": 13511,
   "nativeCoreResidentBytes": 12396,

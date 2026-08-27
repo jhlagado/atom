@@ -60,7 +60,13 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin) {
   return `${code.join("\n")}\n${originSource(workspaceOrigin)}\n${workspace.join("\n")}\n`;
 }
 
-async function linkedSource({ origin, gatewaySource, workspaceOrigin, preludeSource }) {
+function sourceReadTargetSource(target) {
+  const label = target ?? "NA_SREAD";
+  assert.match(label, /^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*$/, "invalid source-read target label");
+  return { label, source: `TK_SREAD:\nJP ${label}\n` };
+}
+
+async function linkedSource({ origin, gatewaySource, sourceReadTarget, workspaceOrigin, preludeSource }) {
   const parts = await Promise.all(
     ["atom-00.asm", "atom-01.asm", "atom-02.asm", "atom-03.asm", "atom-04.asm"]
       .map((name) => readFile(join(nativeRoot, name), "utf8")),
@@ -75,7 +81,8 @@ async function linkedSource({ origin, gatewaySource, workspaceOrigin, preludeSou
   );
   assert.notEqual(sourceReadStart, -1, "native core omitted the source-read entry");
   assert.notEqual(sourceReadEnd, -1, "native core omitted the source-read boundary");
-  parts[1] = `${parts[1].slice(0, sourceReadStart)}TK_SREAD:\nJP NA_SREAD\n${parts[1].slice(sourceReadEnd)}`;
+  const sourceRead = sourceReadTargetSource(sourceReadTarget);
+  parts[1] = `${parts[1].slice(0, sourceReadStart)}${sourceRead.source}${parts[1].slice(sourceReadEnd)}`;
 
   const serviceStart = parts[4].indexOf("HS_SCBEG:\n");
   assert.notEqual(serviceStart, -1, "native core omitted the host service tail");
@@ -90,7 +97,10 @@ async function linkedSource({ origin, gatewaySource, workspaceOrigin, preludeSou
   if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
   let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${parts.join("\n")}\n${sharedAbi}\n${adapter}`;
   if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin);
-  return `${atomSource.split(/\r\n|\n|\r/).map(translateAtomLineToAzm).join("\n")}\n.end\n`;
+  return {
+    sourceReadTarget: sourceRead.label,
+    sourceText: `${atomSource.split(/\r\n|\n|\r/).map(translateAtomLineToAzm).join("\n")}\n.end\n`,
+  };
 }
 
 export async function buildNativeObjectHarness({
@@ -99,13 +109,21 @@ export async function buildNativeObjectHarness({
   workspaceOrigin,
   preludeSource,
   gatewaySource,
+  sourceReadTarget,
   registerContractsProfile,
   registerContractsInterfaces = [],
 } = {}) {
   originSource(imageOrigin);
   assert.ok(imageOrigin <= origin, "native harness image origin follows its core origin");
   if (workspaceOrigin !== undefined) originSource(workspaceOrigin);
-  const sourceText = await linkedSource({ origin, gatewaySource, workspaceOrigin, preludeSource });
+  const linked = await linkedSource({
+    origin,
+    gatewaySource,
+    sourceReadTarget,
+    workspaceOrigin,
+    preludeSource,
+  });
+  const { sourceText } = linked;
   const temporary = await mkdtemp(join(tmpdir(), "atom-object-harness-"));
   try {
     const sourcePath = join(temporary, "atom-object-harness.asm");
@@ -184,6 +202,7 @@ export async function buildNativeObjectHarness({
         adapterInitEntry: symbols.NA_INIT,
         gatewayEntry: symbols.NA_GATE,
         sourceReadEntry: symbols.NA_SREAD,
+        configuredSourceReadEntry: symbols[linked.sourceReadTarget],
         residentEnd: symbols.NA_REND,
         residentBytes,
         nativeCoreResidentBytes: nativeCoreBytes,
