@@ -67,6 +67,7 @@ The current main build option shape is:
   maxInstructions,
   maxCycles,
   sink,
+  nativeMemoryLayout,
 }
 ```
 
@@ -86,8 +87,11 @@ tagged result without changing the lower-level functions.
 | `ATOM_HOST_SINK_STATUS` | Stable host-adapter status values used by the runner and tests |
 
 `assembleResolvedAtomProject()` accepts a development-only `nativeCore` option
-in addition to target, budgets, and sink. The self-host proof uses it to execute
-the first Atom generation.
+in addition to target, budgets, sink, and `nativeMemoryLayout`. The self-host
+proof uses `nativeCore` to execute the first Atom generation. Migration and
+large-proof tools may use `nativeMemoryLayout` to assign larger symbol, pending,
+or source-part descriptor arenas in the emulated 64 KiB address space without
+changing the native Atom core or its descriptor ABI.
 
 ## Artifact functions
 

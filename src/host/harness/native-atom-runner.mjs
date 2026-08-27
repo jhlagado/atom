@@ -17,6 +17,13 @@ const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0xfffe;
+const DEFAULT_NATIVE_MEMORY_LAYOUT = Object.freeze({
+  symbolStart: SYMBOL_START,
+  symbolEnd: SYMBOL_END,
+  pendingStart: PENDING_START,
+  pendingEnd: PENDING_END,
+  partDescriptors: PART_DESCRIPTORS,
+});
 
 export const NATIVE_ATOM_LIMITS = Object.freeze({
   sourceParts: 255,
@@ -286,6 +293,52 @@ function targetOptions(target = {}) {
   return Object.freeze({ start, capacity });
 }
 
+function memoryAddress(value, name) {
+  return integer(value, name, 0, 0xffff);
+}
+
+function range(start, end, name) {
+  if (start >= end) fail("memory-map", `${name} start must be below its end`);
+  return Object.freeze({ start, end, name });
+}
+
+function assertNonOverlapping(ranges) {
+  const ordered = [...ranges].sort((left, right) => left.start - right.start || left.end - right.end);
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1];
+    const current = ordered[index];
+    if (previous.end > current.start) {
+      fail("memory-map", `${previous.name} overlaps ${current.name}`);
+    }
+  }
+}
+
+function nativeMemoryLayout(option = {}, { core, partCount, partDescriptorBytes }) {
+  if (option === null || typeof option !== "object" || Array.isArray(option)) {
+    fail("invalid-option", "nativeMemoryLayout must be an object");
+  }
+  const layout = Object.freeze({
+    symbolStart: memoryAddress(option.symbolStart ?? DEFAULT_NATIVE_MEMORY_LAYOUT.symbolStart, "nativeMemoryLayout.symbolStart"),
+    symbolEnd: memoryAddress(option.symbolEnd ?? DEFAULT_NATIVE_MEMORY_LAYOUT.symbolEnd, "nativeMemoryLayout.symbolEnd"),
+    pendingStart: memoryAddress(option.pendingStart ?? DEFAULT_NATIVE_MEMORY_LAYOUT.pendingStart, "nativeMemoryLayout.pendingStart"),
+    pendingEnd: memoryAddress(option.pendingEnd ?? DEFAULT_NATIVE_MEMORY_LAYOUT.pendingEnd, "nativeMemoryLayout.pendingEnd"),
+    partDescriptors: memoryAddress(option.partDescriptors ?? DEFAULT_NATIVE_MEMORY_LAYOUT.partDescriptors, "nativeMemoryLayout.partDescriptors"),
+  });
+  const partDescriptorEnd = layout.partDescriptors + partCount * partDescriptorBytes;
+  if (partDescriptorEnd > STACK_BEFORE) {
+    fail("memory-map", "native Atom part descriptors overlap the host stack canary");
+  }
+  assertNonOverlapping([
+    range(0, core.residentExtentBytes, "native Atom resident core"),
+    range(BUILD_DESCRIPTOR, BUILD_DESCRIPTOR + core.symbols.AtomDriverDescriptorBytes, "native Atom build descriptor"),
+    range(layout.symbolStart, layout.symbolEnd, "native Atom symbol arena"),
+    range(layout.pendingStart, layout.pendingEnd, "native Atom pending arena"),
+    range(layout.partDescriptors, partDescriptorEnd, "native Atom part descriptors"),
+    range(STACK_BEFORE, STACK_AFTER + 1, "native Atom host stack canary"),
+  ]);
+  return layout;
+}
+
 function inTarget(target, address, length) {
   return address >= target.start && address + length <= target.start + target.capacity;
 }
@@ -459,8 +512,8 @@ function unpackPackedSymbol(memory, pointer, symbols) {
   return (memory[pointer + 5] & symbols.AtomSymbolFlagPrivate) === 0 ? name : `.${name}`;
 }
 
-function unpackSymbol(memory, pointer, symbols) {
-  if (pointer < SYMBOL_START || pointer + symbols.AtomSymbolRecordBytes > SYMBOL_END) return undefined;
+function unpackSymbol(memory, pointer, symbols, layout) {
+  if (pointer < layout.symbolStart || pointer + symbols.AtomSymbolRecordBytes > layout.symbolEnd) return undefined;
   return unpackPackedSymbol(memory, pointer, symbols);
 }
 
@@ -495,13 +548,13 @@ function uniqueDeclarations(declarations) {
   return Object.freeze([...unique.values()]);
 }
 
-function nativeFailure(result, project, memory, symbols, sinkState, execution, cause, bridgeFailure) {
+function nativeFailure(result, project, memory, symbols, memoryLayout, sinkState, execution, cause, bridgeFailure) {
   const part = project.parts[result.part];
   const diagnostic = bridgeFailure?.diagnostic ?? (part === undefined ? undefined : sourcePosition(part, result.offset));
   const native = Object.freeze({ ...result });
   const common = { native, diagnostic, sink: sinkState, execution, cause };
   if (result.status === symbols.AtomDriverStatusUndefined) {
-    const name = unpackSymbol(memory, result.undefinedSymbol, symbols) ?? "?";
+    const name = unpackSymbol(memory, result.undefinedSymbol, symbols, memoryLayout) ?? "?";
     return new AtomAssemblyError("source", "undefined-symbol", `undefined symbol ${name}`, {
       ...common,
       symbol: name,
@@ -560,6 +613,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   if (core.residentExtentBytes > BUILD_DESCRIPTOR) {
     fail("memory-map", "native Atom resident extent overlaps its host descriptor region");
   }
+  const memoryLayout = nativeMemoryLayout(options.nativeMemoryLayout, {
+    core,
+    partCount: snapshot.parts.length,
+    partDescriptorBytes: symbols.AtomDriverPartDescriptorBytes,
+  });
   const romRanges = [
     ...core.codeRanges.map(({ start, end }) => ({ start, end: end - 1 })),
   ];
@@ -567,26 +625,28 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   const memory = runtime.hardware.memory;
   const immutable = core.codeRanges.map(({ start, end }) => ({ start, bytes: memory.slice(start, end) }));
 
-  memory.fill(0xa5, BUILD_DESCRIPTOR, SYMBOL_START);
-  memory.fill(0xa5, PART_DESCRIPTORS, PART_DESCRIPTORS + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes);
+  memory.fill(0xa5, BUILD_DESCRIPTOR, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorBytes);
+  memory.fill(0xa5, memoryLayout.symbolStart, memoryLayout.symbolEnd);
+  memory.fill(0xa5, memoryLayout.pendingStart, memoryLayout.pendingEnd);
+  memory.fill(0xa5, memoryLayout.partDescriptors, memoryLayout.partDescriptors + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes);
   for (const part of snapshot.parts) {
-    const descriptor = PART_DESCRIPTORS + part.ordinal * symbols.AtomDriverPartDescriptorBytes;
+    const descriptor = memoryLayout.partDescriptors + part.ordinal * symbols.AtomDriverPartDescriptorBytes;
     memory[descriptor] = part.ordinal;
     writeWord(memory, descriptor + 1, 0);
     writeWord(memory, descriptor + 3, part.compilerBytes.length);
   }
   memory[BUILD_DESCRIPTOR] = snapshot.parts.length;
-  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorParts, PART_DESCRIPTORS);
-  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorSymbolStart, SYMBOL_START);
-  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorSymbolEnd, SYMBOL_END);
-  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorPendingStart, PENDING_START);
-  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorPendingEnd, PENDING_END);
+  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorParts, memoryLayout.partDescriptors);
+  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorSymbolStart, memoryLayout.symbolStart);
+  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorSymbolEnd, memoryLayout.symbolEnd);
+  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorPendingStart, memoryLayout.pendingStart);
+  writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorPendingEnd, memoryLayout.pendingEnd);
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorTargetStart, target.start);
   writeWord(memory, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorTargetBytes, target.capacity);
   const buildDescriptorBefore = memory.slice(BUILD_DESCRIPTOR, BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorBytes);
   const partDescriptorsBefore = memory.slice(
-    PART_DESCRIPTORS,
-    PART_DESCRIPTORS + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes,
+    memoryLayout.partDescriptors,
+    memoryLayout.partDescriptors + snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes,
   );
 
   memory[STACK_BEFORE] = 0x87;
@@ -788,7 +848,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     [memory[STACK_BEFORE] === 0x87, "native Atom crossed the lower stack canary"],
     [memory[STACK_AFTER] === 0x78, "native Atom crossed the upper stack canary"],
     [buildDescriptorBefore.every((byte, index) => memory[BUILD_DESCRIPTOR + index] === byte), "native Atom changed build descriptor bytes"],
-    [partDescriptorsBefore.every((byte, index) => memory[PART_DESCRIPTORS + index] === byte), "native Atom changed part descriptor bytes"],
+    [partDescriptorsBefore.every((byte, index) => memory[memoryLayout.partDescriptors + index] === byte), "native Atom changed part descriptor bytes"],
     [immutable.every(({ start, bytes }) => bytes.every((byte, index) => memory[start + index] === byte)), "native Atom changed immutable code or tables"],
   ];
   const broken = invariants.find(([ok]) => !ok);
@@ -811,6 +871,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       snapshot,
       memory,
       symbols,
+      memoryLayout,
       sinkState,
       execution,
       serviceException,
@@ -835,5 +896,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       codeBytes: core.codeBytes,
       residentExtentBytes: core.residentExtentBytes,
     }),
+    memoryLayout,
   });
 }

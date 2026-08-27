@@ -384,6 +384,56 @@ test("native part capacity accepts 255 and rejects 256", async () => {
   );
 });
 
+test("native memory layout can resize the symbol arena", async () => {
+  const source = [
+    "ONE:",
+    "TWO:",
+    "THREE:",
+    "",
+  ].join("\n");
+  await assemblyError(
+    () => assembleResolvedAtomProject(resolvedParts([source]), {
+      target: { start: 0, capacity: 0 },
+      nativeMemoryLayout: {
+        symbolStart: 0x4100,
+        symbolEnd: 0x4110,
+      },
+    }),
+    "source",
+    "statement",
+  );
+
+  const result = await assembleResolvedAtomProject(resolvedParts([source]), {
+    target: { start: 0, capacity: 0 },
+    nativeMemoryLayout: {
+      symbolStart: 0x4100,
+      symbolEnd: 0x4120,
+    },
+  });
+  assert.equal(result.native.status, 0);
+  assert.deepEqual(result.memoryLayout, {
+    symbolStart: 0x4100,
+    symbolEnd: 0x4120,
+    pendingStart: 0x7500,
+    pendingEnd: 0x8800,
+    partDescriptors: 0x9000,
+  });
+});
+
+test("native memory layout rejects overlapping arenas", async () => {
+  await assemblyError(
+    () => assembleResolvedAtomProject(resolvedParts(["NOP\n"]), {
+      target: { start: 0, capacity: 1 },
+      nativeMemoryLayout: {
+        symbolStart: 0x4100,
+        symbolEnd: 0x7600,
+      },
+    }),
+    "configuration",
+    "memory-map",
+  );
+});
+
 test("two fresh native runs are byte-for-byte and operation-for-operation deterministic", async () => {
   const project = resolvedParts(["ORG 4000H\nDW Later\nLater: DB 1\n"]);
   const first = await assembleResolvedAtomProject(project, { target: { start: 0x4000, capacity: 0x100 } });

@@ -100,6 +100,12 @@ The Mac runner's default execution budgets are 200,000,000 Z80 instructions
 and 2,000,000,000 T-states. Atom's measured self-build uses 101,840,573
 instructions and 1,086,338,471 T-states.
 
+`assembleResolvedAtomProject()` uses the default Mac runner arena layout unless
+the caller supplies `nativeMemoryLayout`. That option is for desktop harnesses
+and migration proof tools that need a different split of the emulated 64 KiB
+address space. It does not change the Atom source language, the Z80 core, or
+the default capacities reported above.
+
 ## A realistic 24 KiB TEC workspace
 
 The current Mac capacities are not a TEC memory map. Fixed workspace, symbols,
