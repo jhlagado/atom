@@ -85,7 +85,7 @@ The fixed nine-byte token record contains:
 | 6 | 1 | Raw lexeme length |
 | 7 | 2 | Decoded numeric value, or zero |
 
-Names retain their source spelling in a fixed 256-byte lexeme buffer. Consumers
+Names retain their original source bytes in a fixed 256-byte lexeme buffer. Consumers
 pass the pointer and length to mnemonic or RADIX-40 routines that perform case
 folding before the next tokenizer call. No token pointer enters the symbol
 table or output stream.
@@ -298,8 +298,8 @@ encoding paths because it contains the broadest set of register, memory,
 absolute, index, half-register, and special-register interactions. The current
 measurement records 881 direct LD bytes inside the 3,132-byte encoder core.
 
-The frozen differential census contains 69 mnemonic spellings and 3,445 valid
-logical forms. The encoder also rejects 526 AZM-invalid source forms and 2,453
+The frozen differential census contains 69 mnemonic forms and 3,445 valid
+logical forms. The encoder also rejects 526 invalid source forms and 2,453
 systematically malformed records. `test/cases.mjs` is the generated input
 space; `proofs/azm-form-census.json` independently fixes its count, per-mnemonic
 distribution, and canonical hash.

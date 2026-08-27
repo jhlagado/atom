@@ -1,6 +1,6 @@
 # Atom language reference
 
-Atom source is case-insensitive. Symbol spelling ignores ASCII letter case;
+Atom source is case-insensitive. Symbol matching ignores ASCII letter case;
 the same rule applies to instructions, registers, directives,
 hexadecimal digits, and host-preprocessor names. A semicolon begins a comment.
 One source line contains at most one label, equate, directive, or instruction,
@@ -31,7 +31,7 @@ without changing private scope. The colon is optional and has no label effect.
 
 ## Numbers and expressions
 
-The following spellings all represent integers:
+The following literal forms all represent integers:
 
 ```asm
 42          ; DECIMAL
@@ -88,11 +88,10 @@ whose range calculation cannot be retained in the compact pending record.
 
 ## Instructions
 
-Atom accepts the complete Z80 instruction-form census used by AZM, including
+Atom accepts the complete Z80 instruction-form census used by its proof suite, including
 CB, ED, DD, and FD encodings, IX/IY displacement forms, index-half registers,
-and the undocumented `SLL` operation with AZM's `SLS` alias. The native proof
-compares all 3,445 claimed logical forms with AZM byte for byte and rejects 526
-AZM-invalid forms.
+and the undocumented `SLL` operation with the `SLS` alias. The native proof
+checks all 3,445 claimed logical forms and rejects 526 invalid forms.
 
 Branch width is explicit. Atom never promotes `JR` to `JP`; a relative target
 outside -128 through 127 is an error. Enumerated operands are also checked:

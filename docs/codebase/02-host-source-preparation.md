@@ -268,7 +268,7 @@ The owner of a change follows the kind of fact it affects:
 - Bank assignment belongs in `placement.mjs`.
 - `%` directive grammar, conditional state, and masking belong in
   `atom/directives.mjs`.
-- Preprocessor numeric spelling belongs in `atom/literals.mjs`.
+- Preprocessor numeric literal forms belong in `atom/literals.mjs`.
 - `INCBIN` recognition, snapshotting, and lowering belong in
   `atom/incbin.mjs`.
 - The Atom-specific sequence connecting those pieces belongs in

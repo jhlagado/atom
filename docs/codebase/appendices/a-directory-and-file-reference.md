@@ -74,7 +74,7 @@ The modules below are exported by
 | --- | --- |
 | `index.mjs` | Neutral package export layer |
 | `errors.mjs` | `SourcePreparationError` category, code, message, and optional location |
-| `node-source-reader.mjs` | Project-root validation, physical spelling, realpath confinement, source snapshots, and physical/dependency/logical identities |
+| `node-source-reader.mjs` | Project-root validation, case-conflicting paths, realpath confinement, source snapshots, and physical/dependency/logical identities |
 | `resolver.mjs` | Bounded deterministic dependency traversal, deduplication, cycle detection, profile validation, part order, and retained-path accounting |
 | `placement.mjs` | Joins path-keyed bank placement to resolved parts and constructs provenance |
 | `passthrough-profile.mjs` | Byte-preserving profile used to prove the language-neutral resolver boundary |
@@ -171,13 +171,13 @@ The `.asm` files are the sole editing authority for the native assembler.
 
 | File | Role |
 | --- | --- |
-| `host-atom-literals.test.mjs` | Host numeric spellings, definition names, and boundaries |
+| `host-atom-literals.test.mjs` | Host numeric literal forms, definition names, and boundaries |
 | `host-atom-directives.test.mjs` | Directive grammar, definitions, headers, conditionals, and dependency selection |
 | `host-atom-masking.test.mjs` | Equal lengths, CR/LF preservation, inactive bytes, and leaked-directive discrimination |
 | `host-incbin.test.mjs` | Binary recognition, confinement, snapshotting, lowering, bridge counts, listing, and D8 |
 | `host-atom-to-azm.test.mjs` | Atom-to-AZM syntax translation and initialized-address comparison |
 | `host-azm-to-atom.test.mjs` | Strict mapping and rejection census, CLI behavior, and exact AZM-to-Atom initialized-address and byte differential |
-| `host-node-source-reader.test.mjs` | Physical path spelling, confinement, symlinks, identities, and snapshots |
+| `host-node-source-reader.test.mjs` | Physical path casing, confinement, symlinks, identities, and snapshots |
 | `host-resolver.test.mjs` | Graph order, diamonds, repeats, cycles, and limits |
 | `host-placement.test.mjs` | Path-keyed bank assignments and placement failures |
 | `host-provenance.test.mjs` | Logical identities, include stacks, locations, and frozen metadata |

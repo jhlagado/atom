@@ -57,7 +57,7 @@ Source preparation keeps three identities separate:
 
 An include path is relative to its importing file. Absolute paths, lexical
 escapes, and symlink targets outside the project root fail before compilation.
-The reader also rejects case-conflicting physical spellings.
+The reader also rejects physical paths that differ only by letter case.
 
 Resolution uses deterministic depth-first postorder. Dependencies precede
 their importer, sibling order follows the source, and a diamond emits its
@@ -118,7 +118,7 @@ in the entry's leading preprocessing header. Dependencies may test the frozen
 environment but may not add definitions.
 
 Conditions contain one literal or defined name. Zero is false; every other
-16-bit value is true. The accepted literal spellings are decimal, `$`-prefixed
+16-bit value is true. The accepted literal forms are decimal, `$`-prefixed
 hexadecimal, `%`-prefixed binary, digit-led `H` hexadecimal, and `B` binary.
 Values outside 0 through 65,535, undefined names, extra tokens, and malformed
 suffixes fail preparation.
@@ -186,7 +186,7 @@ executable observations.
 | Byte-preserving neutral/Nucleus profile | `passthrough profile preserves the exact original byte object` |
 | Atom length, newline, active-byte and mask preservation | `masking preserves length and every LF or CRLF byte`; `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
 | `%DEFINE DEBUG %1` and percent-expression separation | `directive recognition does not steal binary literals, remainder, or comments` |
-| Intel and prefix literal equivalence | `Intel suffix conditions select the same branches as prefix spellings`; `Intel suffix literals match prefix spellings with exact 16-bit boundaries` |
+| Intel and prefix literal equivalence | `Intel suffix conditions select the same branches as prefix forms`; `Intel suffix literals match prefix forms with exact 16-bit boundaries` |
 | Unknown and leaked directives | `Atom composition rejects dependency, preprocessing, and placement failures`; `leaked line-start host directives fail without stealing percent expressions` |
 | Nested branches, inactive includes and imbalance | `nested conditions mask only inactive ordinary lines`; `inactive includes create no dependency while directive structure is still checked`; `Atom composition selects only active includes` |
 | Original identity and offset attribution | `masked ranges and dependency locations use original byte offsets`; `resolved parts expose complete immutable provenance and identity offsets` |

@@ -8,6 +8,9 @@ const specification = (name) =>
     "utf8",
   );
 
+const repositoryFile = (path) =>
+  fs.readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
+
 test("Atom architecture records the implemented TEC-native profile", () => {
   const architecture = specification("atom-platform-architecture.md");
   const boundary = specification("tool-service-boundary.md");
@@ -38,6 +41,22 @@ test("source preparation has no serialized ordering format", () => {
     preparation,
     /\bSP1\b|source plan|flat ordered manifest/i,
   );
+});
+
+test("public Atom reference docs avoid historical proof vocabulary", () => {
+  const publicReference = repositoryFile("packages/atom/docs/language-reference.md");
+
+  assert.doesNotMatch(publicReference, /\bAZM\b|oracle|spelling/i);
+  assert.match(publicReference, /literal forms/);
+  assert.match(publicReference, /proof suite/);
+});
+
+test("Debug80 packaging docs describe the bundled Atom runtime", () => {
+  const strategy = repositoryFile("apps/debug80-vscode/docs/regression-test-strategy.md");
+
+  assert.match(strategy, /bundled Atom assembler runtime/);
+  assert.match(strategy, /assets\/native-core\.json/);
+  assert.doesNotMatch(strategy, /node_modules\/atom-z80|node_modules\/@jhlagado\/azm/);
 });
 
 test("filesystem path resolution remains provider-local", () => {

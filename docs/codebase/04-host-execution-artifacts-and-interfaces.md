@@ -94,7 +94,7 @@ const atomSource = translateAzmSourceToAtom(azmSource, {
 
 The converter recognizes the Z80 instruction set and the shared assembler
 directives. It translates underscore locals, byte functions, numeric prefixes,
-proof annotations, and directive spelling. It also enforces Atom's symbol and
+proof annotations, and directive forms. It also enforces Atom's symbol and
 immediate-equate constraints before returning the LF-normalized text.
 
 Unsupported AZM constructs throw `AtomAssemblyError` with category

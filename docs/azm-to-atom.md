@@ -41,7 +41,7 @@ The converter handles:
 - AZM underscore locals, translated to Atom dot-prefixed private labels;
 - `.ORG`, `.DB`, `.DW`, `.DS`, `.ALIGN`, `.CSTR`, `.PSTR`, and `.ISTR`,
   translated to Atom's bare directives;
-- dotted or alias `EQU`, including the common colon spelling;
+- dotted or alias `EQU`, including the common colon form;
 - `LSB()` and `MSB()`, translated to `LOW()` and `HIGH()`;
 - `0X` and `0B` numeric prefixes, translated to `$` and `%`;
 - Intel `H` and `B` suffixes without alteration;
@@ -72,7 +72,7 @@ START:
        JR NZ,.LOOP
 ```
 
-Symbol spelling is checked during conversion. Atom's eight-character global
+Symbol names are checked during conversion. Atom's eight-character global
 and private-name limits are enforced, and declarations that differ only by
 case are rejected. An AZM local must follow a global label. Because Atom
 requires `EQU` expressions to be resolved immediately, the converter also
