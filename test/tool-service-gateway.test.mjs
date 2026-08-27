@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { runOneByteGatewayConformance } from "@jhlagado/z80-tool-services";
+import {
+  runOneByteGatewayConformance,
+  runSourceServiceGatewayConformance,
+} from "@jhlagado/z80-tool-services";
 
 import {
   ATOM_TOOL_SERVICE,
@@ -173,4 +176,37 @@ test("the direct-host gateway passes the shared one-byte conformance vectors", (
   );
 
   assert.deepEqual(result, { vectors: 3, assertions: 14 });
+});
+
+test("the direct-host gateway passes shared source-service conformance vectors", () => {
+  const result = runSourceServiceGatewayConformance(
+    {
+      create: (provider) => {
+        const gateway = createAtomToolServiceGateway({
+          sourceRead: ({ part, offset }) => provider.read(part, offset),
+          sink: {
+            begin() {},
+            image() {},
+            patch() {},
+            commit() {},
+            abort() {},
+          },
+        });
+        return {
+          sourceRead: (request) =>
+            gateway.dispatch(ATOM_TOOL_SERVICE.sourceRead, request),
+        };
+      },
+    },
+    {
+      policy: {
+        success: ATOM_TOOL_STATUS.success,
+        unavailable: ATOM_TOOL_STATUS.unavailable,
+        invalid: ATOM_TOOL_STATUS.invalid,
+        exception: ATOM_TOOL_STATUS.invalid,
+      },
+    },
+  );
+
+  assert.deepEqual(result, { vectors: 3, assertions: 10 });
 });

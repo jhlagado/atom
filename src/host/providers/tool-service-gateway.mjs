@@ -1,4 +1,5 @@
 import {
+  dispatchSourceByteRead,
   normalizeOneByteStatus,
   oneByteValue,
 } from "@jhlagado/z80-tool-services";
@@ -24,6 +25,7 @@ export const ATOM_TOOL_STATUS = Object.freeze({
 
 const ATOM_STATUS_POLICY = Object.freeze({
   success: ATOM_TOOL_STATUS.success,
+  unavailable: ATOM_TOOL_STATUS.unavailable,
   invalid: ATOM_TOOL_STATUS.invalid,
   exception: ATOM_TOOL_STATUS.invalid,
 });
@@ -90,10 +92,17 @@ export function createAtomToolServiceGateway({ sourceRead, sink, console } = {})
           });
         }
         case ATOM_TOOL_SERVICE.sourceRead: {
-          const value = byte(sourceRead(Object.freeze({ ...request })));
-          return value === undefined
-            ? Object.freeze({ status: ATOM_TOOL_STATUS.invalid })
-            : Object.freeze({ status: ATOM_TOOL_STATUS.success, value });
+          return Object.freeze(
+            dispatchSourceByteRead(
+              {
+                read(part, offset) {
+                  return sourceRead(Object.freeze({ part, offset }));
+                },
+              },
+              Object.freeze({ ...request }),
+              ATOM_STATUS_POLICY,
+            ),
+          );
         }
         case ATOM_TOOL_SERVICE.begin:
         case ATOM_TOOL_SERVICE.image:
