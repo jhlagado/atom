@@ -5,7 +5,11 @@ import path from "node:path";
 import test from "node:test";
 
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
-import { runGenerationLifecycleConformance } from "@jhlagado/z80-tool-services";
+import {
+  MemorySourceByteProvider,
+  runGenerationLifecycleConformance,
+  runSourceByteProviderConformance,
+} from "@jhlagado/z80-tool-services";
 
 import {
   assembleAtomProject,
@@ -361,6 +365,24 @@ test("the memory sink passes the shared generation lifecycle conformance vectors
   });
 
   assert.deepEqual(result, { vectors: 4, assertions: 16 });
+});
+
+test("resolved Atom parts pass the shared source-byte provider vectors", () => {
+  assert.deepEqual(
+    runSourceByteProviderConformance({
+      create: (records) => new MemorySourceByteProvider(records),
+    }),
+    { vectors: 2, assertions: 7 },
+  );
+  const provider = new MemorySourceByteProvider(
+    resolvedParts(["A", "BC"]).parts.map((part) => ({
+      ordinal: part.ordinal,
+      bytes: part.compilerBytes,
+    })),
+  );
+  assert.equal(provider.read(0, 0), "A".charCodeAt(0));
+  assert.equal(provider.read(1, 1), "C".charCodeAt(0));
+  assert.equal(provider.read(2, 0), undefined);
 });
 
 test("native source offsets accept 65,535 bytes and reject one byte more", async () => {

@@ -1,5 +1,8 @@
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
-import { invokeOneByteStatus } from "@jhlagado/z80-tool-services";
+import {
+  MemorySourceByteProvider,
+  invokeOneByteStatus,
+} from "@jhlagado/z80-tool-services";
 
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 import { loadNativeAtomCore } from "../core/native-atom-core.mjs";
@@ -670,6 +673,12 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let logicalHighWater = target.start;
   const layout = [];
   const declaredSymbols = [];
+  const defaultSourceProvider = new MemorySourceByteProvider(
+    snapshot.parts.map((part) => ({
+      ordinal: part.ordinal,
+      bytes: part.compilerBytes,
+    })),
+  );
   const binaryIncludes = new Map();
   for (const part of snapshot.parts) {
     for (const include of part.binaryIncludes) {
@@ -697,15 +706,15 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   const toolServices = createAtomToolServiceGateway({
     sink,
     sourceRead: profile?.sourceRead ?? (({ part, offset }) => {
-      const sourcePart = snapshot.parts[part];
-      if (sourcePart === undefined || offset >= sourcePart.compilerBytes.length) {
+      const value = defaultSourceProvider.read(part, offset);
+      if (value === undefined) {
         throw runtimeFailure(
           "source-read",
           "native Atom requested a source byte outside the resolved part",
         );
       }
       sourceReads += 1;
-      return sourcePart.compilerBytes[offset];
+      return value;
     }),
   });
   const serviceAt = new Map([
