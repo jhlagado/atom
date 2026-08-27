@@ -5,12 +5,13 @@
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jhlagado/atom.git"
+    "url": "git+https://github.com/jhlagado/debug80.git",
+    "directory": "packages/atom"
   },
   "bugs": {
-    "url": "https://github.com/jhlagado/atom/issues"
+    "url": "https://github.com/jhlagado/debug80/issues"
   },
-  "homepage": "https://github.com/jhlagado/atom#readme",
+  "homepage": "https://github.com/jhlagado/debug80/tree/main/packages/atom#readme",
   "keywords": [
     "z80",
     "assembler",
@@ -53,7 +54,7 @@
     "verify:self-host-source": "npm run verify:native-source",
     "verify:example": "node scripts/verify-example.mjs",
     "annotate:contracts": "npm run verify:strict-contracts",
-    "build:dependencies": "npm --prefix ../debug80/packages/azm run build && npm --prefix ../debug80/packages/debug80-runtime run build",
+    "build:dependencies": "npm run build -w @jhlagado/azm && npm run build -w @jhlagado/debug80-runtime",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "prepare:proof": "npm run verify:dependencies && npm run build:dependencies",
     "pretest": "npm run prepare:proof && npm run verify:native-source && npm run verify:cpm22 && npm run verify:cpm22-output-candidates && npm run verify:cpm22-plan-candidates",
@@ -76,14 +77,15 @@
     "measure:cpm22-output-candidates": "node scripts/measure-cpm22-output-candidates.mjs",
     "measure:cpm22-plan-candidates": "node scripts/measure-cpm22-plan-candidates.mjs",
     "release:check": "npm test && npm run verify:strict-contracts && node test/measure-host-native.mjs && node test/measure-self-host.mjs",
-    "prepack": "npm run verify:native-source && npm run verify:cpm22",
+    "prepack": "npm run verify:native-source && npm run verify:cpm22 && node scripts/bundled-runtime.mjs prepare",
+    "postpack": "node scripts/bundled-runtime.mjs cleanup",
     "prepublishOnly": "npm run release:check"
   },
   "dependencies": {
-    "@jhlagado/debug80-runtime": "file:../debug80/packages/debug80-runtime"
+    "@jhlagado/debug80-runtime": "file:../debug80-runtime"
   },
   "devDependencies": {
-    "@jhlagado/azm": "file:../debug80/packages/azm"
+    "@jhlagado/azm": "file:../azm"
   },
   "bundledDependencies": [
     "@jhlagado/debug80-runtime"

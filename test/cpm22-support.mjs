@@ -17,7 +17,7 @@ import {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(here, "..");
-const debug80Root = resolve(repositoryRoot, "..", "debug80");
+const debug80Root = resolve(repositoryRoot, "../..");
 const cpmRoot = join(debug80Root, "apps", "debug80-vscode", "roms", "cpm22");
 
 export const representativeSource = Buffer.from([

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repository = path.resolve("../debug80");
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repository = path.resolve(packageRoot, "../..");
 const expected = {
   branch: "main",
   azmTree: "c75c76e2f0de66592917679de0974bb64fcbdd55",
