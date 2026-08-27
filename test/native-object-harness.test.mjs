@@ -307,6 +307,28 @@ test("native named-object harness rejects an invalid source-reader target before
   );
 });
 
+test("native named-object harness measures profile code linked after the shared adapter", async () => {
+  const ordinary = await buildNativeObjectHarness({
+    origin: 0x8100,
+    imageOrigin: 0x8000,
+    workspaceOrigin: 0x1800,
+    preludeSource: "ORG $8000",
+  });
+  const extended = await buildNativeObjectHarness({
+    origin: 0x8100,
+    imageOrigin: 0x8000,
+    workspaceOrigin: 0x1800,
+    preludeSource: "ORG $8000",
+    postludeSource: "PL_TAIL: DB $A5",
+  });
+  assert.equal(ordinary.report.platformPostludeBytes, 0);
+  assert.equal(ordinary.report.platformPreludeBytes, 0x100);
+  assert.equal(extended.report.platformPostludeBytes, 1);
+  assert.equal(extended.report.residentBytes, ordinary.report.residentBytes + 1);
+  assert.equal(extended.report.adapterResidentDeltaBytes, ordinary.report.adapterResidentDeltaBytes);
+  assert.equal(extended.bytes.at(-1), 0xa5);
+});
+
 test("native named-object harness validates its complete common workspace range", async () => {
   assert.deepEqual(await initializeAt(0xfe71), { status: 0, carry: 0 });
   assert.deepEqual(await initializeAt(0xfe72), { status: NAMED_OBJECT_STATUS.invalid, carry: 1 });

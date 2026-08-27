@@ -3,6 +3,8 @@ export type NativeObjectHarnessOptions = {
   imageOrigin?: number;
   workspaceOrigin?: number;
   preludeSource?: string;
+  /** Z80 source linked after the shared adapter and included in the resident account. */
+  postludeSource?: string;
   gatewaySource?: string;
   /** Z80 label called by the Atom core for each source byte. Defaults to NA_SREAD. */
   sourceReadTarget?: string;
@@ -24,6 +26,8 @@ export type NativeObjectHarnessReport = {
   residentBytes: number;
   nativeCoreResidentBytes: number;
   adapterResidentDeltaBytes: number;
+  platformPreludeBytes: number;
+  platformPostludeBytes: number;
   commonWorkspaceBytes: number;
   transferBufferBytes: number;
   maximumSourceParts: number;

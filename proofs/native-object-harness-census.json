@@ -11,6 +11,8 @@
   "residentBytes": 13511,
   "nativeCoreResidentBytes": 12396,
   "adapterResidentDeltaBytes": 1115,
+  "platformPreludeBytes": 0,
+  "platformPostludeBytes": 0,
   "commonWorkspaceBytes": 399,
   "transferBufferBytes": 128,
   "maximumSourceParts": 255,
