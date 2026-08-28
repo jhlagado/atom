@@ -443,6 +443,45 @@ test("labels compose with DB, DW, and uninitialized DS reservations", () => {
   assert.deepEqual(h.outputState(), { cursor: 0x4109, remaining: 0xf7 });
 });
 
+test("resolved symbol differences assemble in emitted data, but two-forward differences stay rejected", () => {
+  let source = [
+    "ORG $4100",
+    "Start: DB 1,2,3",
+    "End:",
+    "DB End-Start",
+    "DW End-Start",
+    "",
+  ].join("\n");
+  let result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x4100), [1, 2, 3, 3, 3, 0]);
+  assert.deepEqual(h.finalBytes(0x4100), azmBytes(source));
+
+  source = [
+    "ORG $4100",
+    "DW PaySize",
+    "PStart: DB 1,2,3",
+    "PEnd:",
+    "PaySize EQU PEnd-PStart",
+    "",
+  ].join("\n");
+  result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.OK);
+  assert.deepEqual(h.finalBytes(0x4100), [3, 0, 1, 2, 3]);
+  assert.deepEqual(h.finalBytes(0x4100), azmBytes(source));
+
+  source = [
+    "ORG $4100",
+    "DW PEnd-PStart",
+    "PStart: DB 1,2,3",
+    "PEnd:",
+    "",
+  ].join("\n");
+  result = h.assemble(source);
+  assert.equal(result.status, STATEMENT.DIRECTIVE);
+  assert.deepEqual(h.operations(), []);
+});
+
 test("each data-list expression sees its own current output address", () => {
   const source = "ORG $4000\nDB $,$\nDW $,$\n";
   const result = h.assemble(source);
