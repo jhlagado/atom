@@ -12,11 +12,11 @@ import {
 } from "../providers/tool-service-gateway.mjs";
 
 const BUILD_DESCRIPTOR = 0x4000;
-const PART_DESCRIPTORS = 0x9000;
 const SYMBOL_START = 0x4100;
-const SYMBOL_END = 0x7500;
-const PENDING_START = 0x7500;
-const PENDING_END = 0x8800;
+const SYMBOL_END = 0xa000;
+const PENDING_START = 0xa000;
+const PENDING_END = 0xc000;
+const PART_DESCRIPTORS = 0xc000;
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
@@ -866,6 +866,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     carry: runtime.cpu.flags.C,
     driverDetail: memory[symbols.AtomDriverDetail],
     statementDetail: memory[symbols.AtomStatementDetail],
+    parserSymbolStatus: memory[symbols.AtomParserSymbolStatus],
     part: memory[symbols.AtomStatementErrorPart],
     offset: word(memory, symbols.AtomStatementErrorOffset),
     undefinedSymbol: word(memory, symbols.AtomDriverUndefinedSymbol),

@@ -488,9 +488,9 @@ test("native memory layout can resize the symbol arena", async () => {
   assert.deepEqual(result.memoryLayout, {
     symbolStart: 0x4100,
     symbolEnd: 0x4120,
-    pendingStart: 0x7500,
-    pendingEnd: 0x8800,
-    partDescriptors: 0x9000,
+    pendingStart: 0xa000,
+    pendingEnd: 0xc000,
+    partDescriptors: 0xc000,
   });
 });
 
@@ -500,7 +500,7 @@ test("native memory layout rejects overlapping arenas", async () => {
       target: { start: 0, capacity: 1 },
       nativeMemoryLayout: {
         symbolStart: 0x4100,
-        symbolEnd: 0x7600,
+        symbolEnd: 0xa100,
       },
     }),
     "configuration",
