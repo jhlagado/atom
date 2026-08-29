@@ -7,6 +7,7 @@ import test from "node:test";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 import {
   MemorySourceByteProvider,
+  appendOnlyGenerationLifecycleAdapter,
   runGenerationLifecycleConformance,
   runSourceByteProviderConformance,
 } from "@jhlagado/z80-tool-services";
@@ -327,41 +328,41 @@ test("the memory sink passes the shared generation lifecycle conformance vectors
       if (status !== 0) throw new Error(`Atom sink status ${status}`);
     };
 
-    return {
-      get active() {
-        return sink.snapshot().open;
-      },
-      begin() {
+    return appendOnlyGenerationLifecycleAdapter({
+      active: () => sink.snapshot().open,
+      begin(record) {
         imageLength = 0;
-        requireStatusOk(sink.begin({ descriptor, target }));
+        requireStatusOk(sink.begin(record));
       },
-      image() {
-        requireStatusOk(
-          sink.image({
-            bank: 0,
-            address: target.start + imageLength,
-            bytes: [1, 2],
-          }),
-        );
-        imageLength += 2;
+      image(record) {
+        requireStatusOk(sink.image(record));
+        imageLength += record.bytes.length;
       },
-      patch() {
-        requireStatusOk(sink.patch({ bank: 0, address: target.start + 1, bytes: [9] }));
+      patch(record) {
+        requireStatusOk(sink.patch(record));
       },
-      commit() {
-        requireStatusOk(
-          sink.commit({
-            descriptor,
-            finalCursor: target.start + imageLength,
-            highWater: target.start + imageLength,
-            remaining: target.capacity - imageLength,
-          }),
-        );
+      commit(record) {
+        requireStatusOk(sink.commit(record));
       },
       abort() {
         requireStatusOk(sink.abort());
       },
-    };
+      records: () => ({
+        begin: { descriptor, target },
+        image: {
+          bank: 0,
+          address: target.start + imageLength,
+          bytes: [1, 2],
+        },
+        patch: { bank: 0, address: target.start + 1, bytes: [9] },
+        commit: {
+          descriptor,
+          finalCursor: target.start + imageLength,
+          highWater: target.start + imageLength,
+          remaining: target.capacity - imageLength,
+        },
+      }),
+    });
   });
 
   assert.deepEqual(result, { vectors: 4, assertions: 16 });
