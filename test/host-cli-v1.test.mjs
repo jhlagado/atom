@@ -87,6 +87,7 @@ test("CLI v1 project files are Node-only defaults overridden by command outputs 
   await fs.mkdir(path.join(root, "src"));
   await fs.writeFile(path.join(root, "src", "main.asm"), "%IF DEBUG\nDB 7\n%ELSE\nDB 9\n%ENDIF\n");
   await fs.writeFile(path.join(root, "atom.json"), JSON.stringify({
+    assembler: "atom",
     entry: "src/main.asm",
     outputs: ["build/project.bin"],
     definitions: { DEBUG: 0 },
@@ -98,6 +99,22 @@ test("CLI v1 project files are Node-only defaults overridden by command outputs 
   const overridden = await run(["--project", "atom.json", "-DDEBUG=1", "build/override.hex"], root);
   assert.equal(overridden.status, 0, overridden.stderr);
   assert.match(await fs.readFile(path.join(root, "build", "override.hex"), "utf8"), /07/);
+});
+
+test("CLI v1 project files reject non-Atom assembler flavours", async (t) => {
+  const root = await workspace(t);
+  await fs.mkdir(path.join(root, "src"));
+  await fs.writeFile(path.join(root, "src", "main.asm"), "NOP\n");
+  await fs.writeFile(path.join(root, "atom.json"), JSON.stringify({
+    assembler: "azm",
+    entry: "src/main.asm",
+  }));
+
+  const result = await run(["--project", "atom.json"], root);
+
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /Atom projects must set assembler to atom/);
+  await assert.rejects(fs.access(path.join(root, "build", "main.bin")));
 });
 
 test("CLI v1 project files fall back to BIN when no positive output is configured", async (t) => {

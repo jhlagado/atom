@@ -240,6 +240,21 @@ test("Atom composition snapshots mutable project configuration before filesystem
   assert.equal(result.parts.length, 4);
 });
 
+test("Atom composition accepts only the Atom assembler flavour", async (t) => {
+  const root = await writeProject(t, { "main.asm": "NOP\n" });
+  const project = await resolveAtomProject({ root, entry: "main.asm", assembler: "ATOM-Z80" });
+  assert.deepEqual(project.parts.map((part) => part.logicalIdentity), ["main.asm"]);
+
+  await assert.rejects(
+    () => resolveAtomProject({ root, entry: "main.asm", assembler: "azm" }),
+    /Atom projects must set assembler to atom/,
+  );
+  await assert.rejects(
+    () => resolveAtomProject({ root, entry: "main.asm", assembler: "auto" }),
+    /assembler flavour must be atom or azm/,
+  );
+});
+
 test("Atom composition rejects dependency, preprocessing, and placement failures", async (t) => {
   const cases = [
     {

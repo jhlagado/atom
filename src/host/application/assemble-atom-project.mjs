@@ -5,6 +5,7 @@ import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 export async function assembleAtomProject({
   root,
   entry,
+  assembler,
   definitions = {},
   placement = { defaultBank: 0, banks: {} },
   limits = {},
@@ -19,6 +20,7 @@ export async function assembleAtomProject({
   const project = await resolveAtomProject({
     root,
     entry,
+    assembler,
     definitions,
     placement,
     limits: {

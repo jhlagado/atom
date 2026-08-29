@@ -71,6 +71,7 @@ A JSON project records repeatable desktop build policy:
 
 ```json
 {
+  "assembler": "atom",
   "entry": "src/main.asm",
   "target": "cpm22",
   "outputs": ["build/main.com", "build/main.d8.json"],
@@ -92,6 +93,10 @@ project output list, and command definitions override project definitions:
 ```sh
 atom --project atom.json -DDEBUG=1 build/debug.com
 ```
+
+The `assembler` field is optional for the `atom` command, but shared `.asm`
+projects should set it to `atom`. The command rejects `azm` instead of choosing
+a source format from the filename.
 
 JSON belongs to the Node-hosted frontend. Native CP/M and TEC profiles do not
 contain a JSON parser.

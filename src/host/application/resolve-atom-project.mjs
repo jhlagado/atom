@@ -1,6 +1,10 @@
 import { createAtomSourceProfile } from "../atom/source-profile.mjs";
 import { lowerAtomBinaryIncludes } from "../atom/incbin.mjs";
 import {
+  normalizeZ80AssemblerFlavour,
+  Z80_ASSEMBLER_FLAVOUR,
+} from "@jhlagado/z80-tool-services";
+import {
   createNodeSourceReader,
   resolveSourceProject,
 } from "@jhlagado/z80-tool-services/source-preparation";
@@ -26,10 +30,18 @@ function snapshotPlacement(placement) {
 export async function resolveAtomProject({
   root,
   entry,
+  assembler,
   definitions = {},
   placement = { defaultBank: 0, banks: {} },
   limits,
 }) {
+  const selectedAssembler = normalizeZ80AssemblerFlavour(assembler, {
+    defaultFlavour: Z80_ASSEMBLER_FLAVOUR.atom,
+    allowAuto: false,
+  });
+  if (selectedAssembler !== Z80_ASSEMBLER_FLAVOUR.atom) {
+    throw new TypeError("Atom projects must set assembler to atom");
+  }
   const configuration = Object.freeze({ definitions: snapshotRecord(definitions) });
   const frozenPlacement = snapshotPlacement(placement);
   const frozenLimits = snapshotRecord(limits);

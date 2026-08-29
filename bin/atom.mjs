@@ -166,6 +166,7 @@ async function loadBuild(options) {
     return {
       root,
       entry: project.entry,
+      assembler: project.assembler,
       target: targetProfileForOutputs(options.target ?? project.target, outputs),
       definitions: { ...projectDefinitions(project.definitions), ...options.definitions },
       outputs,
@@ -214,6 +215,7 @@ async function main() {
     const result = await assembleAtomProject({
       root: build.root,
       entry: build.entry,
+      assembler: build.assembler,
       definitions: build.definitions,
       target: { start: build.target.start, capacity: build.target.capacity },
     });
