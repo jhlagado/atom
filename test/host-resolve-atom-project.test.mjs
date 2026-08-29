@@ -251,7 +251,7 @@ test("Atom composition accepts only the Atom assembler flavour", async (t) => {
   );
   await assert.rejects(
     () => resolveAtomProject({ root, entry: "main.asm", assembler: "auto" }),
-    /assembler flavour must be atom or azm/,
+    /main\.asm does not select an assembler from its filename; set assembler to atom or azm/,
   );
 });
 

@@ -1,7 +1,7 @@
 import { createAtomSourceProfile } from "../atom/source-profile.mjs";
 import { lowerAtomBinaryIncludes } from "../atom/incbin.mjs";
 import {
-  normalizeZ80AssemblerFlavour,
+  selectConcreteZ80AssemblerFlavour,
   Z80_ASSEMBLER_FLAVOUR,
 } from "@jhlagado/z80-tool-services";
 import {
@@ -35,9 +35,10 @@ export async function resolveAtomProject({
   placement = { defaultBank: 0, banks: {} },
   limits,
 }) {
-  const selectedAssembler = normalizeZ80AssemblerFlavour(assembler, {
+  const selectedAssembler = selectConcreteZ80AssemblerFlavour({
+    requested: assembler,
     defaultFlavour: Z80_ASSEMBLER_FLAVOUR.atom,
-    allowAuto: false,
+    sourcePath: entry,
   });
   if (selectedAssembler !== Z80_ASSEMBLER_FLAVOUR.atom) {
     throw new TypeError("Atom projects must set assembler to atom");

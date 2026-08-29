@@ -30,7 +30,9 @@ the installed command.
 
 Debug80 uses the same package API rather than starting the command-line
 program. Atom and AZM both use normal `.asm` filenames, so set the target's
-assembler explicitly:
+assembler explicitly. The shared host helper treats `.asm` as ambiguous; a
+neutral Debug80-style caller must receive `atom` or `azm` from project or target
+configuration before it calls an assembler.
 
 ```json
 {

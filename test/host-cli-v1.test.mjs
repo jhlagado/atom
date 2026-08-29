@@ -115,6 +115,17 @@ test("CLI v1 project files reject non-Atom assembler flavours", async (t) => {
   assert.equal(result.status, 2);
   assert.match(result.stderr, /Atom projects must set assembler to atom/);
   await assert.rejects(fs.access(path.join(root, "build", "main.bin")));
+
+  await fs.writeFile(path.join(root, "atom.json"), JSON.stringify({
+    assembler: "auto",
+    entry: "src/main.asm",
+  }));
+
+  const ambiguous = await run(["--project", "atom.json"], root);
+
+  assert.equal(ambiguous.status, 2);
+  assert.match(ambiguous.stderr, /src\/main\.asm does not select an assembler from its filename/);
+  await assert.rejects(fs.access(path.join(root, "build", "main.bin")));
 });
 
 test("CLI v1 project files fall back to BIN when no positive output is configured", async (t) => {

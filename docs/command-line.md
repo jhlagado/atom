@@ -94,9 +94,11 @@ project output list, and command definitions override project definitions:
 atom --project atom.json -DDEBUG=1 build/debug.com
 ```
 
-The `assembler` field is optional for the `atom` command, but shared `.asm`
-projects should set it to `atom`. The command rejects `azm` instead of choosing
-a source format from the filename.
+The `assembler` field is optional for the `atom` command because the command
+itself selects Atom. Shared `.asm` projects should still set it to `atom`.
+Neutral tools must not infer the assembler from `.asm`; they should require an
+explicit `atom` or `azm` selection. The `atom` command rejects `azm` and `auto`
+instead of choosing a source format from the filename.
 
 JSON belongs to the Node-hosted frontend. Native CP/M and TEC profiles do not
 contain a JSON parser.
