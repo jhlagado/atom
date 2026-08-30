@@ -88,7 +88,7 @@ test("migration status records active Nucleus permanent Atom convergence", () =>
   const migration = specification("atom-first-class-migration.md");
 
   assert.match(migration, /Nucleus convergence active/);
-  assert.match(migration, /The checked-in permanent Atom translation/);
+  assert.match(migration, /The checked-in\s+permanent Atom translation/);
   assert.match(migration, /26 assemble byte-identically with Atom/);
   assert.doesNotMatch(migration, /Nucleus convergence is deferred/);
   assert.doesNotMatch(migration, /Status: pending\. Nucleus/);

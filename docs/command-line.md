@@ -26,14 +26,16 @@ Name the outputs you want after the input:
 ```sh
 atom src/main.asm build/main.bin build/main.hex
 atom src/main.asm build/main.nobj build/main.lst build/main.d8.json
+atom -o build/main.hex src/main.asm
 atom --target cpm22 src/main.asm build/main.com
 atom src/main.asm build/main.com
 ```
 
-Each path selects one format by suffix. Atom recognizes `.bin`, `.hex`, `.com`,
-`.nobj`, `.lst`, and `.d8.json`, without case sensitivity. A command cannot
-repeat a format or destination path. Atom renders and stages every requested
-file before replacing an earlier output; a failed build publishes none.
+Output paths may also be named with `-o` or `--output`. Each path selects one
+format by suffix. Atom recognizes `.bin`, `.hex`, `.com`, `.nobj`, `.lst`, and
+`.d8.json`, without case sensitivity. A command cannot repeat a format or
+destination path. Atom renders and stages every requested file before replacing
+an earlier output; a failed build publishes none.
 
 Output selection is affirmative: Atom writes the files you name. There is no
 default bundle of artifacts to suppress with negative switches. If you want
@@ -132,6 +134,7 @@ definition options are disabled for this fixed proof build.
 
 ```text
 -p, --project FILE     Node project file
+-o, --output FILE      output file; may be repeated
 -t, --target NAME      generic or cpm22
 -DNAME[=VALUE]         preprocessor definition; default value 1
 -h, --help             command help

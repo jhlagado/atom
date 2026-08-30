@@ -56,6 +56,11 @@ test("CLI v1 defaults to one trimmed BIN and publishes only named formats", asyn
     "program.nobj",
   ]);
   assert.deepEqual(await fs.readFile(path.join(root, "out", "program.bin")), Buffer.from([1, 2, 3]));
+
+  const selectedWithOption = await run(["-o", "option/program.hex", "main.asm"], root);
+  assert.equal(selectedWithOption.status, 0, selectedWithOption.stderr);
+  assert.deepEqual(await fs.readdir(path.join(root, "option")), ["program.hex"]);
+  assert.match(await fs.readFile(path.join(root, "option", "program.hex"), "utf8"), /01/);
 });
 
 test("CLI version follows package metadata", async (t) => {
@@ -96,7 +101,7 @@ test("CLI v1 project files are Node-only defaults overridden by command outputs 
   assert.equal(configured.status, 0, configured.stderr);
   assert.deepEqual(await fs.readFile(path.join(root, "build", "project.bin")), Buffer.from([9]));
 
-  const overridden = await run(["--project", "atom.json", "-DDEBUG=1", "build/override.hex"], root);
+  const overridden = await run(["--project", "atom.json", "-DDEBUG=1", "--output", "build/override.hex"], root);
   assert.equal(overridden.status, 0, overridden.stderr);
   assert.match(await fs.readFile(path.join(root, "build", "override.hex"), "utf8"), /07/);
 });

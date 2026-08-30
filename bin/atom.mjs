@@ -25,6 +25,7 @@ const usage = `Usage: atom [options] <input.asm> [output...]
 
 Options:
   -p, --project <file>     Node project file
+  -o, --output <file>      Output file; may be repeated
   -t, --target <name>      Target profile: generic or cpm22
   -DNAME[=value]           Host preprocessor definition (default value: 1)
   -h, --help               Show this help
@@ -60,12 +61,13 @@ function addDefinition(definitions, definition) {
 }
 
 function parseArguments(arguments_) {
-  const options = { definitions: Object.create(null), positional: [] };
+  const options = { definitions: Object.create(null), optionOutputs: [], positional: [] };
   for (let index = 0; index < arguments_.length; index += 1) {
     const argument = arguments_[index];
     if (argument === "-h" || argument === "--help") return { help: true };
     if (argument === "-V" || argument === "--version") return { version: true };
     if (argument === "-p" || argument === "--project") options.project = readCliOptionValue(arguments_, index++, argument);
+    else if (argument === "-o" || argument === "--output") options.optionOutputs.push(readCliOptionValue(arguments_, index++, argument));
     else if (argument === "-t" || argument === "--target") options.target = readCliOptionValue(arguments_, index++, argument);
     else if (argument === "-D") addDefinition(options.definitions, readCliOptionValue(arguments_, index++, argument));
     else if (argument.startsWith("-D")) addDefinition(options.definitions, argument.slice(2));
@@ -124,7 +126,10 @@ function projectDefinitions(value) {
 async function loadBuild(options) {
   const selfHost = options.positional[0] === "self-host";
   if (selfHost) {
-    const split = splitPositiveOutputArguments({ positionals: options.positional });
+    const split = splitPositiveOutputArguments({
+      positionals: options.positional,
+      optionOutputs: options.optionOutputs,
+    });
     if (options.project !== undefined || options.target !== undefined || Object.keys(options.definitions).length !== 0) {
       throw new Error("self-host does not accept project, target, or definition options");
     }
@@ -148,7 +153,10 @@ async function loadBuild(options) {
     const root = path.dirname(projectPath);
     const project = JSON.parse(await fs.readFile(projectPath, "utf8"));
     if (typeof project.entry !== "string" || project.entry.length === 0) throw new Error("project entry is required");
-    const split = splitPositiveOutputArguments({ positionals: ["project", ...options.positional] });
+    const split = splitPositiveOutputArguments({
+      positionals: ["project", ...options.positional],
+      optionOutputs: options.optionOutputs,
+    });
     const outputNames = split.outputPaths.length === 0 ? (project.outputs ?? []) : split.outputPaths;
     if (!Array.isArray(outputNames) || outputNames.some((item) => typeof item !== "string")) {
       throw new Error("project outputs must be an array of paths");
@@ -168,7 +176,10 @@ async function loadBuild(options) {
   }
 
   if (options.positional.length === 0) throw new Error("input source is required");
-  const split = splitPositiveOutputArguments({ positionals: options.positional });
+  const split = splitPositiveOutputArguments({
+    positionals: options.positional,
+    optionOutputs: options.optionOutputs,
+  });
   const entry = split.input;
   if (entry === undefined) throw new Error("input source is required");
   const root = process.cwd();
