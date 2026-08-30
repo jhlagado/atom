@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
+  splitPositiveOutputArguments,
   validatePositiveOutputSelections,
 } from "@jhlagado/z80-tool-services";
 
@@ -128,6 +129,7 @@ function projectDefinitions(value) {
 async function loadBuild(options) {
   const selfHost = options.positional[0] === "self-host";
   if (selfHost) {
+    const split = splitPositiveOutputArguments({ positionals: options.positional });
     if (options.project !== undefined || options.target !== undefined || Object.keys(options.definitions).length !== 0) {
       throw new Error("self-host does not accept project, target, or definition options");
     }
@@ -137,7 +139,7 @@ async function loadBuild(options) {
       target: Object.freeze({ name: "self-host", start: 0, capacity: 0x4000, entryAddress: 0 }),
       definitions: Object.create(null),
       outputs: validateOutputs(
-        options.positional.slice(1).length === 0 ? ["build/atom.bin"] : options.positional.slice(1),
+        split.outputPaths.length === 0 ? ["build/atom.bin"] : split.outputPaths,
         process.cwd(),
       ),
     };
@@ -151,7 +153,8 @@ async function loadBuild(options) {
     const root = path.dirname(projectPath);
     const project = JSON.parse(await fs.readFile(projectPath, "utf8"));
     if (typeof project.entry !== "string" || project.entry.length === 0) throw new Error("project entry is required");
-    const outputNames = options.positional.length === 0 ? (project.outputs ?? []) : options.positional;
+    const split = splitPositiveOutputArguments({ positionals: ["project", ...options.positional] });
+    const outputNames = split.outputPaths.length === 0 ? (project.outputs ?? []) : split.outputPaths;
     if (!Array.isArray(outputNames) || outputNames.some((item) => typeof item !== "string")) {
       throw new Error("project outputs must be an array of paths");
     }
@@ -170,10 +173,12 @@ async function loadBuild(options) {
   }
 
   if (options.positional.length === 0) throw new Error("input source is required");
-  const [entry, ...requestedOutputs] = options.positional;
+  const split = splitPositiveOutputArguments({ positionals: options.positional });
+  const entry = split.input;
+  if (entry === undefined) throw new Error("input source is required");
   const root = process.cwd();
   const stem = path.basename(entry, path.extname(entry));
-  const outputs = validateOutputs(requestedOutputs.length === 0 ? [`build/${stem}.bin`] : requestedOutputs, root);
+  const outputs = validateOutputs(split.outputPaths.length === 0 ? [`build/${stem}.bin`] : split.outputPaths, root);
   return {
     root,
     entry,
