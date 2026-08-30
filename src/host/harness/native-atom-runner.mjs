@@ -2,6 +2,7 @@ import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 import {
   MemorySourceByteProvider,
   invokeOneByteStatus,
+  Z80_RESIDENT_SOURCE_PART_CAPACITY,
 } from "@jhlagado/z80-tool-services";
 
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
@@ -30,7 +31,7 @@ const DEFAULT_NATIVE_MEMORY_LAYOUT = Object.freeze({
 });
 
 export const NATIVE_ATOM_LIMITS = Object.freeze({
-  sourceParts: 255,
+  sourceParts: Z80_RESIDENT_SOURCE_PART_CAPACITY,
   sourceBytes: 0xffff,
   symbolBytes: SYMBOL_END - SYMBOL_START,
   pendingBytes: PENDING_END - PENDING_START,
