@@ -4,6 +4,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+  validatePositiveOutputSelections,
+} from "@jhlagado/z80-tool-services";
 
 import {
   assembleAtomProject,
@@ -28,6 +31,15 @@ Options:
 Output suffixes: .bin .hex .com .nobj .lst .d8.json
 With no output, Atom writes build/<input>.bin.
 `;
+
+const ATOM_OUTPUT_FORMATS = Object.freeze([
+  { format: "d8", suffix: ".d8.json" },
+  { format: "nobj", suffix: ".nobj" },
+  { format: "bin", suffix: ".bin" },
+  { format: "hex", suffix: ".hex" },
+  { format: "com", suffix: ".com" },
+  { format: "lst", suffix: ".lst" },
+]);
 
 function optionValue(arguments_, index, name) {
   const value = arguments_[index + 1];
@@ -84,27 +96,11 @@ function targetProfileForOutputs(requestedTarget, outputs) {
   return targetProfile(requestedTarget);
 }
 
-function outputFormat(filename) {
-  const lower = filename.toLowerCase();
-  if (lower.endsWith(".d8.json")) return "d8";
-  for (const format of ["nobj", "bin", "hex", "com", "lst"]) {
-    if (lower.endsWith(`.${format}`)) return format;
-  }
-  throw new Error(`output path has no recognized format suffix: ${filename}`);
-}
-
 function validateOutputs(filenames, baseDirectory) {
-  const formats = new Set();
-  const paths = new Set();
-  return filenames.map((filename) => {
-    const format = outputFormat(filename);
-    if (formats.has(format)) throw new Error(`output format is repeated: ${format}`);
-    formats.add(format);
-    const selectedPath = path.resolve(baseDirectory, filename);
-    const key = process.platform === "win32" ? selectedPath.toLowerCase() : selectedPath;
-    if (paths.has(key)) throw new Error(`output path is repeated: ${filename}`);
-    paths.add(key);
-    return Object.freeze({ format, path: selectedPath });
+  return validatePositiveOutputSelections({
+    filenames,
+    formats: ATOM_OUTPUT_FORMATS,
+    baseDirectory,
   });
 }
 
