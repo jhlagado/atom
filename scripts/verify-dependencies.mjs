@@ -9,7 +9,7 @@ const expected = {
   branch: "main",
   azmTree: "c75c76e2f0de66592917679de0974bb64fcbdd55",
   runtimeTree: "e754cd4a895586665d267dbc881ebcbfaf3e4d41",
-  toolServicesTree: "dafc8f5986e26f15ed1f950188ff86b6d0a18f1c",
+  toolServicesTree: "68c0b727fdc6a387fa5a0ec21232d91df10aa68f",
 };
 
 function git(...args) {
