@@ -4,6 +4,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
+import { readCliOptionValue } from "@jhlagado/z80-tool-services";
+
 import { translateAzmSourceToAtom } from "../src/host/index.mjs";
 
 const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -25,8 +27,8 @@ function parseArguments(arguments_) {
     if (argument === "-h" || argument === "--help") return { help: true };
     if (argument === "--stdout") stdout = true;
     else if (argument === "-o" || argument === "--output") {
-      output = arguments_[index += 1];
-      if (output === undefined) throw new Error(`${argument} requires a file`);
+      output = readCliOptionValue(arguments_, index, argument, "file");
+      index += 1;
     } else if (argument.startsWith("-")) throw new Error(`unknown option: ${argument}`);
     else if (input === undefined) input = argument;
     else throw new Error(`unexpected argument: ${argument}`);

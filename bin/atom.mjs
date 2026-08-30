@@ -5,6 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 import {
+  readCliOptionValue,
   splitPositiveOutputArguments,
   validatePositiveOutputSelections,
 } from "@jhlagado/z80-tool-services";
@@ -42,12 +43,6 @@ const ATOM_OUTPUT_FORMATS = Object.freeze([
   { format: "lst", suffix: ".lst" },
 ]);
 
-function optionValue(arguments_, index, name) {
-  const value = arguments_[index + 1];
-  if (value === undefined) throw new Error(`${name} requires a value`);
-  return value;
-}
-
 function numberValue(text, name) {
   try {
     return parseAtomPreprocessorValue(String(text));
@@ -70,9 +65,9 @@ function parseArguments(arguments_) {
     const argument = arguments_[index];
     if (argument === "-h" || argument === "--help") return { help: true };
     if (argument === "-V" || argument === "--version") return { version: true };
-    if (argument === "-p" || argument === "--project") options.project = optionValue(arguments_, index++, argument);
-    else if (argument === "-t" || argument === "--target") options.target = optionValue(arguments_, index++, argument);
-    else if (argument === "-D") addDefinition(options.definitions, optionValue(arguments_, index++, argument));
+    if (argument === "-p" || argument === "--project") options.project = readCliOptionValue(arguments_, index++, argument);
+    else if (argument === "-t" || argument === "--target") options.target = readCliOptionValue(arguments_, index++, argument);
+    else if (argument === "-D") addDefinition(options.definitions, readCliOptionValue(arguments_, index++, argument));
     else if (argument.startsWith("-D")) addDefinition(options.definitions, argument.slice(2));
     else if (argument.startsWith("-")) throw new Error(`unknown option: ${argument}`);
     else options.positional.push(argument);
