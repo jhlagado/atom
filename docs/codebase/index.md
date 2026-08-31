@@ -5,7 +5,7 @@ build from a source entry through host preparation, native Z80 assembly,
 append-only output, artifact rendering, publication, and self-host verification.
 It also maps the repository and identifies the tests that protect each boundary.
 
-The guide describes the codebase as it stands on 17 August 2026. The source,
+The guide describes the codebase as it stands on 31 August 2026. The source,
 ABI documents, and executable proofs remain the final authority when a detail
 changes.
 
@@ -35,5 +35,5 @@ behind the repository.
 - [Architecture](../architecture.md)
 - [Language reference](../language-reference.md)
 - [Native limits and capacity](../limits.md)
-- [Mac host integration](../mac-host-integration.md)
+- [Desktop host integration](../desktop-host-integration.md)
 - [TEC-1 deployment design](../tec-1-deployment.md)

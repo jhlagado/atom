@@ -1,6 +1,6 @@
 # Atom host source preparation
 
-Atom separates filesystem work from resident assembly. The Mac host resolves
+Atom separates filesystem work from resident assembly. The Node host resolves
 source dependencies, evaluates host conditionals, masks preprocessing syntax,
 resolves Atom binary inputs, and produces an ordered set of source parts. The
 native Z80 assembler receives those parts as a stream and has no filesystem or
@@ -37,8 +37,8 @@ The result contains:
 
 Each part records its ordinal, bank, three source identities, original bytes,
 equal-length compiler bytes, dependencies, masked or transformed ranges,
-binary snapshots, and provenance. The
-composition snapshots definitions, placement, and limits before its first
+binary snapshots, and provenance. The composition snapshots definitions,
+placement, and limits before its first
 filesystem wait. The source reader reads each selected physical file once, so
 later filesystem changes cannot alter the bytes prepared for that build.
 Record containers and metadata are frozen. The returned `Uint8Array` buffers
@@ -60,10 +60,10 @@ escapes, and symlink targets outside the project root fail before compilation.
 The reader also rejects physical paths that differ only by letter case.
 
 Resolution uses deterministic depth-first postorder. Dependencies precede
-their importer, sibling order follows the source, and a diamond emits its
-shared dependency once. A repeated direct include is an error rather than a
-request for textual repetition. Cycles report the complete active edge cycle
-with source locations.
+their importer, sibling order follows the source, and each source identity is
+imported once. Repeated direct includes and dependency diamonds therefore emit
+one source part rather than repeating its text. Cycles report the complete
+active edge cycle with source locations.
 
 The default Node limits are:
 
@@ -147,8 +147,8 @@ The host replaces the active directive with an equal-length `DS COUNT,0`
 compiler line. Original bytes, line endings, offsets, and the source identity
 remain unchanged. Native labels, branches, capacity checks, and the streaming
 output cursor therefore account for the binary without filesystem code in the
-Z80 core. The Mac output bridge replaces the attributed zero IMAGE bytes with
-the snapshot and rejects any count mismatch before commit.
+Z80 core. The desktop output bridge replaces the attributed zero IMAGE bytes
+with the snapshot and rejects any count mismatch before commit.
 
 The path is not a source part and does not enter the dependency graph.
 Provenance records its logical binary identity, source line, transformed range,
@@ -178,7 +178,7 @@ executable observations.
 | Requirement | Named proof |
 | --- | --- |
 | Diamond deduplication and sibling order | `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
-| Repeated include, missing source, root escape, alias and cycle diagnostics | `Atom composition rejects dependency, preprocessing, and placement failures` |
+| Repeated include deduplication, missing source, root escape, alias and cycle diagnostics | resolver and Atom-composition dependency tests |
 | Physical symlink-target confinement | `reader rejects a symlink whose real target escapes the project root` |
 | Graph, path, retained-path and bank capacities | `Atom composition enforces every graph and placement capacity at the boundary` |
 | Relocation-stable logical identity and compiler bytes | `Atom composition resolves, masks, places, snapshots, and relocates one diamond` |
@@ -198,7 +198,7 @@ executable observations.
 | Failure before execution | `preprocessing failure returns no project and leaves the filesystem unchanged` |
 | Neutral static and dynamic import boundary | `neutral host modules do not import Atom implementation`; `neutral import proof rejects dynamic Atom imports` |
 | Resident compiler diagnostics | `undefined global reports its exact source part, offset, and packed name`; existing tokenizer, expression, parser, and statement diagnostic proofs |
-| Packager-to-native composition | `the Mac host resolves, masks, and executes one project through native Atom` |
+| Packager-to-native composition | `the desktop host resolves, masks, and executes one project through native Atom` |
 | Included-part diagnostics | `an error in an included part is attributed to that physical source identity` |
 | Listing lines and D8 ranges | `INCBIN bytes retain their source line in listings and D8`; the general artifact proofs cover ordinary source |
 

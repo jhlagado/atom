@@ -32,10 +32,13 @@ A>ATOM HELLO
 HELLO.COM written
 ```
 
-The compact native command has one form:
+The compact native command accepts these forms:
 
 ```text
-ATOM [SOURCE [OUTPUT]]
+ATOM
+ATOM SOURCE
+ATOM SOURCE OUTPUT
+ATOM ?
 ```
 
 Names must be current-drive CP/M 8.3 names. An explicit output extension must

@@ -94,9 +94,10 @@ ORDERED PARTS:
 ```
 
 The shared dependency appears once. Dependencies precede their importer, and
-sibling order follows the source. A repeated dependency from the same importer
-is an error rather than textual repetition. A cycle retains the complete active
-edge sequence and the location of each `%INCLUDE` that formed it.
+sibling order follows the source. Repeated dependencies from the same importer
+and dependency diamonds are deduplicated by source identity. A cycle retains
+the complete active edge sequence and the location of each `%INCLUDE` that
+formed it.
 
 The resolver enforces part count, graph depth, path length, retained path bytes,
 and bank ordinal before publication. Boundary tests accept each exact limit and

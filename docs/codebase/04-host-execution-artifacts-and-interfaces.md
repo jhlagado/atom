@@ -2,17 +2,19 @@
 
 [← Native Z80 assembly pipeline](03-native-z80-assembly-pipeline.md) | [Native core generation and self-hosting →](05-native-core-generation-and-self-hosting.md)
 
-The Mac host takes the prepared source parts, executes the pinned native core,
-captures its logical output, renders user artifacts, and publishes a complete
-generation. These operations are separate modules so tests and tool consumers
-can stop at the boundary they need.
+The desktop host takes the prepared source parts, executes the pinned native
+core, captures its logical output, renders user artifacts, and publishes a
+complete set of selected output files. These operations are separate modules
+so tests and tool consumers can stop at the boundary they need.
 
 The normal high-level sequence is:
 
 ```js
 const assembled = await assembleAtomProject(BUILD_OPTIONS);
 const artifacts = renderAtomArtifacts(assembled, ARTIFACT_OPTIONS);
-const publication = await publishAtomArtifacts(DESTINATION, BASENAME, artifacts);
+await publishAtomOutputFiles([
+  { path: "build/main.hex", bytes: artifacts.hex },
+]);
 ```
 
 Debug80 or another tool can use the first two calls in process and retain every
@@ -110,7 +112,7 @@ runtime dependency.
 
 ## Native proof memory map
 
-`src/host/harness/native-atom-runner.mjs` uses a fixed 64 KiB Mac proof map:
+`src/host/harness/native-atom-runner.mjs` uses a fixed 64 KiB desktop proof map:
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
@@ -126,7 +128,7 @@ runtime dependency.
 | Proof stack | `$FE00..$FF00` | 256 |
 | Reserved top page | `$FF00..$10000` | 256 |
 
-This is a test and Mac execution map, not a proposed TEC-1 RAM layout. A TEC
+This is a test and desktop execution map, not a proposed TEC-1 RAM layout. A TEC
 adapter must choose its own symbol, pending, descriptor, source-service state,
 and stack regions.
 
@@ -168,7 +170,7 @@ service trace, source-read count, final SP, and return PC.
 
 The source-read entry has a linked memory-backed implementation for direct
 native harnesses and hardware configurations that keep a part in memory. The
-Mac runner intercepts the entry before that fallback executes.
+desktop runner intercepts the entry before that fallback executes.
 
 ## Host sink interception
 
@@ -320,7 +322,8 @@ and carries no file path.
 
 ## Artifact publication
 
-`publishAtomArtifacts()` writes one content-addressed immutable generation. Its
+The advanced `publishAtomArtifacts()` API writes one content-addressed
+immutable generation. Its
 digest covers each artifact name and byte sequence in a fixed order. A new
 temporary directory receives:
 
@@ -338,9 +341,12 @@ its digest. If the digest directory already exists, the publisher verifies
 every byte and its manifest before reuse. It then creates a temporary symlink
 and atomically renames that link over `current`.
 
-A failed build never calls publication. A staging or promotion failure leaves
+A failed build never calls this publisher. A staging or promotion failure leaves
 the previous `current` generation selected. Old successful generations are
 retained; automatic pruning is not implemented.
+
+The installed CLI uses `publishAtomOutputFiles()` instead. It stages the
+positively selected files and replaces those paths as one transaction.
 
 ## Command-line entry
 

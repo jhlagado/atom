@@ -2,7 +2,7 @@
 
 `npm run release:check` is the maintainer gate. It rebuilds the frozen proof
 dependencies, runs the complete native and host suite, verifies the checked
-self-host source and strict-contract native core, and repeats the Mac and
+self-host source and strict-contract native core, and repeats the desktop and
 self-host measurements. `npm publish` invokes the same gate through
 `prepublishOnly`.
 

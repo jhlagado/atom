@@ -23,7 +23,7 @@ IX points to a 15-byte descriptor:
 Each five-byte source-part descriptor contains its zero-based ordinal, source
 start, and source end. The half-open interval establishes the part length and
 the base used by the default memory-backed `AtomSourceReadByte` routine.
-Ordinals must be the exact sequence 0 through count-1. The Mac profile uses
+Ordinals must be the exact sequence 0 through count-1. The desktop profile uses
 start zero and end equal to the part length; its host interception reads the
 source snapshot outside Z80 memory. Descriptors and the build descriptor remain
 immutable and addressable until `AtomAssemble` returns.

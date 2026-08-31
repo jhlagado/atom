@@ -63,7 +63,7 @@ async function assemblyError(action, category, code) {
   return captured;
 }
 
-test("the Mac host resolves, masks, and executes one project through native Atom", async (t) => {
+test("the desktop host resolves, masks, and executes one project through native Atom", async (t) => {
   const root = await projectRoot(t, NATIVE_HOST_FILES);
 
   const result = await assembleAtomProject({
@@ -422,7 +422,7 @@ test("native source offsets accept 65,535 bytes and reject one byte more", async
   );
 });
 
-test("the Mac adapter streams ordered source parts larger than 24 KiB", async () => {
+test("the desktop adapter streams ordered source parts larger than 24 KiB", async () => {
   const comment = `;${"x".repeat(13_000)}\n`;
   const result = await assembleResolvedAtomProject(resolvedParts([comment, `${comment}NOP\n`]), {
     target: { start: 0x4000, capacity: 0x100 },

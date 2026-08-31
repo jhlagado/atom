@@ -153,7 +153,7 @@ ISTR "TOKEN"
   the boundary need not be a power of two.
 - `INCBIN "PATH"` emits the complete binary file as initialized bytes. The path
   is relative to the source file containing the directive and must remain
-  inside the project root. Paths use ASCII. The Mac host snapshots the file
+  inside the project root. Paths use ASCII. The Node host snapshots the file
   before native assembly. One binary may contain from zero through 65,535
   bytes. Offset and length operands are not accepted.
 - `CSTR "TEXT"` emits the decoded bytes followed by zero.
@@ -166,7 +166,7 @@ decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\`, and `\xHH` to one byte.
 
 ## Host directives
 
-The Mac host consumes preprocessing directives before the Z80 assembler runs:
+The Node host consumes preprocessing directives before the Z80 assembler runs:
 
 ```asm
 %DEFINE DEBUG 1
@@ -193,6 +193,9 @@ The host replaces directives and inactive lines with spaces while preserving
 every CR and LF byte. The native assembler therefore receives no `%` directive
 but can still report positions in the original source. `%` remains available
 for a binary literal when followed by `0` or `1`, and as remainder otherwise.
+
+The native CP/M profile implements leading `%INCLUDE` only. It does not parse
+`%DEFINE`, conditional directives, or `INCBIN`.
 
 ## Deliberate boundaries
 

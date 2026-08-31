@@ -24,7 +24,8 @@ ASSEMBLEATOMPROJECT(OPTIONS)
       VISIT DEPENDENCIES IN DETERMINISTIC POSTORDER
         INSPECT EACH DEPENDENCY WITH FROZEN DEFINITIONS
         DEDUPLICATE DIAMONDS
-        REJECT REPEATS, CYCLES, AND CAPACITY FAILURES
+        DEDUPLICATE REPEATS AND DIAMONDS
+        REJECT CYCLES AND CAPACITY FAILURES
       JOINSOURCEPLACEMENT()
         ASSIGN BANKS BY LOGICAL PATH
         BUILD PROVENANCE
@@ -129,7 +130,7 @@ RENDERATOMARTIFACTS(ASSEMBLED)
   WRITEATOMD8()
     FILES + SOURCE SEGMENTS + SYMBOLS + ENTRY
 
-PUBLISHATOMARTIFACTS()
+OPTIONAL PUBLISHATOMARTIFACTS()
   HASH ORDERED ARTIFACT SET
   WRITE AND SYNC TEMPORARY GENERATION
   WRITE MANIFEST WITH BYTE COUNTS AND SHA-256
@@ -141,32 +142,24 @@ PUBLISHATOMARTIFACTS()
 ## Self-host flow
 
 ```text
-READABLE ASM SOURCES
+NATIVE/ATOM.ASM AND FIVE INCLUDED PARTS
   |
-  +-- AZM STRICT BUILD ----------------------> PINNED NATIVE CORE
-  |
-  +-- SELF-HOST SOURCE GENERATOR
-        FLATTEN INCLUDES AND FIXED CONDITIONS
-        REMOVE CONTRACT ANNOTATIONS
-        LOWER DIRECTIVES
-        SHORTEN SYMBOLS
-        SPLIT INTO FIVE CONTENT PARTS
-        WRITE SIXTH %INCLUDE ENTRY
-              |
-              v
-        PINNED CORE ASSEMBLES SOURCE --------> FIRST ATOM CORE
-              |                                  |
-              |                                  +-- BYTE-COMPARE WITH PINNED CORE
-              |
-              +-- RECOVER SYMBOL MAP AND RUN FIRST CORE
-              |                                  |
-              |                                  +-- SECOND ATOM CORE
-              |                                      BYTE-COMPARE WITH FIRST
-              |
-              +-- TRANSLATE PREPARED SOURCE TO AZM
-                                                 |
-                                                 +-- COMPARE INITIALIZED ADDRESSES
-                                                     AND RESIDENT BYTES
+  +-- RESOLVE AND MASK THROUGH NORMAL PREPARATION
+        |
+        +-- PINNED CORE ASSEMBLES SOURCE -------> FIRST ATOM CORE
+        |                                           |
+        |                                           +-- COMPARE WITH PINNED CORE
+        |
+        +-- RECOVER SYMBOL MAP AND RUN FIRST CORE
+        |                                           |
+        |                                           +-- SECOND ATOM CORE
+        |                                               COMPARE WITH FIRST
+        |
+        +-- TRANSLATE THE SAME PREPARED PARTS TO AZM
+                                                    |
+                                                    +-- STRICT-CONTRACT BUILD
+                                                        COMPARE INITIALIZED
+                                                        ADDRESSES AND BYTES
 ```
 
 ## Data handoffs

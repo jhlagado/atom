@@ -190,7 +190,7 @@ entry file or an anonymous concatenated stream.
 
 ## Native host-runner proofs
 
-`test/host-native-atom-runner.test.mjs` exercises the complete 64 KiB Mac map.
+`test/host-native-atom-runner.test.mjs` exercises the complete 64 KiB desktop map.
 It checks descriptor construction, the 65,535-byte source boundary, invalid
 source-service reads, read-only code, stack canaries, execution budgets, sink
 status propagation, service exceptions, target boundaries, IMAGE order, PATCH
@@ -265,7 +265,7 @@ Measurement scripts print current observations rather than editing proof files:
 | `npm run measure:output` | Output code, workspace, logical operations, and failure paths |
 | `npm run measure:statements` | Statement code, directives, diagnostics, and execution maxima |
 | `npm run measure:driver` | Driver code, descriptor limits, lifecycle, and execution maxima |
-| `npm run measure:host-native` | Linked native account, caller-owned Mac regions, and composed execution |
+| `npm run measure:host-native` | Linked native account, caller-owned desktop regions, and composed execution |
 | `npm run measure:self-host` | Source size, two generations, AZM comparison, and complete execution account |
 
 `proofs/phase-*.json` freezes reviewed observations and named budgets. A phase

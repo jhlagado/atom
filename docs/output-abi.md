@@ -37,7 +37,7 @@ entries and records the same logical operation shape used by the Nucleus Z80
 proofs: kind, bank, target address, byte count, and final bytes. It executes the
 checked Atom-built core and adds no proof-only Z80 adapter code.
 
-The Mac adapter intercepts these six entry addresses in Debug80 before their
+The desktop adapter intercepts these six entry addresses in Debug80 before their
 stub instructions execute. It reads the documented Z80 registers and routes
 the request through Atom's private tool-service gateway. The adapter pops the
 native return address and supplies A and carry as the routine result. Each
@@ -50,7 +50,7 @@ IMAGE byte and may be patched once. COMMIT verifies the original descriptor,
 remaining capacity, and final cursor before exposing the generation to its
 caller. A forward `ORG` may leave a gap; a backward `ORG` followed by output is
 rejected when its next IMAGE address descends below an earlier IMAGE end. The
-Mac runner also observes native `ORG` and uninitialized `DS` entries. It retains
+desktop runner also observes native `ORG` and uninitialized `DS` entries. It retains
 their highest logical extent and reports an intermediate out-of-range directive
 at its original source position.
 

@@ -20,7 +20,7 @@ join two source words accidentally.
 `AtomSourceReadByte` receives the part ordinal in A and the logical byte offset
 in HL. It returns the byte in A with carry clear. The linked fallback adds the
 offset to the interval start supplied to `AtomTokenizerReset` and reads memory
-directly. The Mac runner intercepts the same entry and reads an immutable
+directly. The desktop runner intercepts the same entry and reads an immutable
 JavaScript snapshot, so prepared source consumes no Z80 source-page RAM. A TEC
 adapter may intercept or replace this entry with a filesystem, serial, or
 banked-storage reader.
@@ -55,7 +55,7 @@ token into a fixed 256-byte buffer, and the lexeme pointer addresses that
 buffer. The pointer remains valid until the next call to `AtomTokenizerNext`.
 A synthetic EOL and EOF have zero length.
 
-Names retain their source spelling. The parser passes the buffered pointer and
+Names retain their source capitalization. The parser passes the buffered pointer and
 length directly to `AtomRecognizeMnemonic`, `AtomRadix40Pack`, or
 `AtomPackSymbol`. Those routines perform case-insensitive classification; the
 tokenizer does not fold a name.
@@ -93,7 +93,7 @@ character literal. An unterminated character reports status 10. A character
 with zero decoded bytes, more than one decoded byte, or an invalid escape
 reports status 11.
 
-Phase 2b does not accept AZM's `0x` or `0b` spellings. It also excludes
+Phase 2b does not accept the `0x` or `0b` numeric formats. It also excludes
 question-mark symbol names, brackets, layout syntax, expression precedence,
 directive meaning, operand classification, and output. These are explicit
 boundaries of the measured tokenizer, not claims about AZM's accepted source

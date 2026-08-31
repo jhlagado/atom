@@ -70,7 +70,7 @@ global reference in one part may be defined in a later part.
 The tokenizer begins at `TK_CBEG` in `native/atom-01.asm`.
 `AtomTokenizerReset` records the part ordinal, base, length, and zero-based
 logical offset. `AtomTokenizerNext` calls `AtomSourceReadByte`, skips horizontal
-whitespace and comments, then dispatches by the returned byte. The Mac runner
+whitespace and comments, then dispatches by the returned byte. The desktop runner
 serves each call from an immutable JavaScript snapshot. The linked fallback
 reads from the installed memory interval.
 

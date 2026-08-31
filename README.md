@@ -1,34 +1,32 @@
 # Atom
 
 Atom is a single-pass Z80 assembler whose assembler core is written in Z80
-assembly. The Mac command runs that core through Debug80, while the host handles
+assembly. The desktop command runs that core through Debug80, while Node handles
 files, conditional preprocessing, and finished artifacts.
 
 Atom assembles the complete Z80 instruction set, including CB, ED, DD, FD,
-index-half, and undocumented SLL/SLS forms. It also
-supports global and `.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
+index-half, and undocumented SLL/SLS forms. It also supports global and
+`.`-private labels, expressions, `EQU`, `ORG`, `DB`, `DW`,
 `DS`, `ALIGN`, `CSTR`, `PSTR`, `ISTR`, character literals, and `LOW()` and
-`HIGH()` byte functions. The Mac host also supplies confined `INCBIN` input.
+`HIGH()` byte functions. The Node host also supplies confined `INCBIN` input.
 The native core assembles its own checked source byte for byte and fits in one
 16 KiB bank.
 
-The Mac command is usable now. Native CP/M 2.2 Atom also runs inside Debug80
-through real BDOS calls and accepts `ATOM SOURCE OUTPUT`, with `INPUT.ASM`
-and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
+The desktop command is available through npm. Native CP/M 2.2 Atom runs as a
+Z80 transient program and accepts `ATOM SOURCE OUTPUT`, with
+`INPUT.ASM` and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
 `HELLO.ASM` and `HELLO.COM`; an explicit output may end in `.COM`, `.BIN`, or
-`.HEX`. Leading `%INCLUDE` directives
-form a dependency graph of up to 255 CP/M 8.3 source names, with a 65,535-byte
-boundary for every part. The native named-object harness and TECM8 source and
-transactional output providers now exist. The complete TecMate launcher,
-include resolver, and target memory map remain deployment work.
+`.HEX`. Leading `%INCLUDE` directives form a dependency graph of up to 255
+CP/M 8.3 source names, with a 65,535-byte boundary for every part. The native
+named-object harness and TECM8 source and transactional output providers now
+exist. The complete TecMate launcher, include resolver, and target memory map
+remain deployment work.
 
 ## Install and assemble
 
 Node.js 20 or later is required.
 
 ```sh
-npm install
-npm pack
 npm install --global atom-z80
 ```
 
@@ -69,8 +67,8 @@ lowering host-owned syntax.
 The Z80 core then performs tokenization, symbol handling, expression parsing,
 directive processing, instruction encoding, forward-patch decisions, final
 undefined checks, and output lifecycle control. Filesystem access, dependency
-graphs, listings, D8 maps, Intel HEX, and atomic publication stay outside the
-resident assembler.
+graphs, listings, D8 maps, Intel HEX, and transactional file publication stay
+outside the resident assembler.
 
 This is a two-stage build, not a two-pass assembler. The native core reads the
 prepared source once. Forward references become append-only PATCH records when
@@ -123,7 +121,7 @@ The detailed engineering record remains available in the phase reports:
 - [encoder measurement](docs/phase-1-report.md)
 - [symbols through statements](docs/phase-2g-report.md)
 - [native multipart driver](docs/phase-3-report.md)
-- [Mac host integration](docs/phase-4-report.md)
+- [desktop host integration](docs/phase-4-report.md)
 - [CLI and artifacts](docs/phase-5-report.md)
 - [native self-hosting](docs/phase-6-report.md)
 - [product and release checkpoint](docs/phase-7-report.md)

@@ -1,8 +1,8 @@
 # Atom architecture
 
-Atom is a native Z80 assembler inside a host-managed build. On the Mac, Node
-provides filesystem and artifact services while Debug80 executes the same Z80
-core that is intended for the TEC-1.
+Atom is a native Z80 assembler inside a host-managed build. In the desktop
+profile, Node provides filesystem and artifact services while Debug80 executes
+the same Z80 core used by native Z80 profiles.
 
 ```text
 entry.asm
@@ -14,7 +14,7 @@ host resolver and preprocessor
 native Atom core running in Debug80
    |  append-only IMAGE and final-byte PATCH records
    v
-host renderers and atomic publisher
+host renderers and transactional publisher
    |
    +-- NOBJ  +-- binary  +-- Intel HEX  +-- listing  +-- D8 map
 ```
@@ -36,7 +36,7 @@ emitted as PATCH records when the symbol becomes known.
 | Loading each ordered source part | Labels, equates, data, placement, alignment, and string directives |
 | NOBJ storage and output sink implementation | Complete Z80 instruction encoding |
 | Binary, HEX, listing, and D8 rendering | Forward-reference and patch decisions |
-| Atomic artifact publication | Final undefined-symbol check and lifecycle control |
+| Transactional output publication | Final undefined-symbol check and lifecycle control |
 
 Language processing remains deterministic and filesystem-free on the Z80,
 while the operating layer supplies ordered bytes and durable output services.
@@ -52,7 +52,7 @@ a distinct source part. Atom preprocessing produces a compiler buffer of the
 same byte length as the original buffer, so native offsets map directly back to
 the original filename, line, and byte column. The Atom composition layer lowers
 an active `INCBIN` line to an equal-length initialized reservation and retains
-the snapshotted binary beside that source part. The Mac output bridge
+the snapshotted binary beside that source part. The desktop output bridge
 substitutes the binary bytes while the native cursor and labels advance by the
 same measured length.
 
@@ -72,14 +72,14 @@ exactly once.
 IMAGE bytes are emitted in ascending order. A forward reference initially
 emits placeholder IMAGE bytes and later emits a PATCH carrying final bytes,
 never a symbol name. The output adapter can therefore append both streams to
-sequential storage. `ORG` and uninitialized `DS` remain layout events; the Mac
-renderer materializes their gaps only when it creates a flat image.
+sequential storage. `ORG` and uninitialized `DS` remain layout events; the
+desktop renderer materializes their gaps only when it creates a flat image.
 
 The current output profile is flat bank zero. Atom NOBJ 0.2 retains NOBJ's
 append-only framing, record counts, final-byte patches, and CRC without
 claiming Nucleus-specific runtime-map fields.
 
-## Mac execution
+## Desktop execution
 
 The npm package contains the pinned native core and the Debug80 runtime. The
 package loader checks the core digest and structural coverage before execution.
@@ -93,7 +93,7 @@ source line. It checks that the native byte count and snapshotted binary length
 match before commit. Any mismatch aborts the tentative generation.
 
 Prepared source remains in immutable JavaScript snapshots. The tokenizer calls
-`AtomSourceReadByte` with a part ordinal and 16-bit logical offset; the Mac
+`AtomSourceReadByte` with a part ordinal and 16-bit logical offset; the desktop
 runner returns one byte without copying the part into emulated Z80 memory. The
 native driver remains unaware of the filesystem and processes only ordered
 descriptors.

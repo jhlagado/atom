@@ -83,7 +83,7 @@ tagged result without changing the lower-level functions.
 | `assembleResolvedAtomProject(project, options)` | Run an already prepared project through a pinned or supplied native core |
 | `createMemoryAtomSink()` | Create the default append-only in-memory generation sink |
 | `materializeAtomGeneration(generation, options)` | Produce a new contiguous byte array with IMAGE and PATCH operations applied |
-| `NATIVE_ATOM_LIMITS` | Report native part, per-part byte, symbol, pending, and bank limits used by the Mac runner |
+| `NATIVE_ATOM_LIMITS` | Report native part, per-part byte, symbol, pending, and bank limits used by the desktop runner |
 | `ATOM_HOST_SINK_STATUS` | Stable host-adapter status values used by the runner and tests |
 
 `assembleResolvedAtomProject()` accepts a development-only `nativeCore` option
@@ -147,13 +147,15 @@ The current options are:
 
 ```text
 -p, --project FILE
+-o, --output FILE
 -t, --target NAME
 -DNAME[=VALUE]
 -h, --help
 -V, --version
 ```
 
-Output paths positively select BIN, HEX, COM, NOBJ, LST, or D8 JSON by suffix.
+Output paths positively select `.bin`, `.hex`, `.com`, `.nobj`, `.lst`, or
+`.d8.json` by suffix.
 With no output path, a direct build publishes one BIN file.
 
 ## Native top-level entry

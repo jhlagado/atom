@@ -94,7 +94,7 @@ each part's logical ordinal, original identity, and binary snapshots for
 diagnostics and output substitution. It need not concatenate files or expose
 filesystem calls to the assembler.
 
-The Mac runner keeps every prepared part in an immutable host snapshot and
+The desktop runner keeps every prepared part in an immutable host snapshot and
 intercepts `AtomSourceReadByte`. Each part may contain at most 65,535 bytes
 because the native offset is 16-bit. Atom's self-host source has five content
 parts totalling Measured 101,492 bytes plus a small entry part. No source page
@@ -102,10 +102,10 @@ is copied into Z80 RAM.
 
 ## RAM decision
 
-With less than 24 KiB of common RAM, the Mac proof capacities still require
+With less than 24 KiB of common RAM, the desktop proof capacities still require
 careful sizing. The fixed workspace, symbol arena, pending arena, descriptors,
 source-name table, service workspace, and stack must be budgeted together.
-Their capacities are deployment choices; a proof using large Mac test arenas
+Their capacities are deployment choices; a proof using large desktop test arenas
 is not a prescribed TEC memory map.
 
 The source service removes any need to keep a complete source part in Z80 RAM.
@@ -117,7 +117,7 @@ pending references, and stack are added. The TEC-FS providers are separately
 measured in TECM8; dependency resolution and the launcher remain unmeasured
 accounts and need their own linked measurements.
 
-A TEC filesystem adapter must also implement the measured Mac `INCBIN`
+A TEC filesystem adapter must also implement the measured desktop `INCBIN`
 contract: confined snapshot reads relative to the containing source, whole-file
 length validation, and exact IMAGE-byte substitution before commit. Its code,
 metadata, and buffering cost remain unmeasured for TEC hardware.
@@ -143,5 +143,5 @@ A TEC adapter is ready only when all of these claims are measured:
 - the second Atom-built generation is identical to the first.
 
 Until those checks pass on the selected TEC operating layer, Atom is a working
-Mac command-line assembler with proved portable Z80 services, not a finished
+desktop command-line assembler with proved portable Z80 services, not a finished
 TEC-1 application image.

@@ -3,7 +3,7 @@
 [← Host execution, artifacts, and interfaces](04-host-execution-artifacts-and-interfaces.md) | [Verification and maintenance →](06-verification-and-maintenance.md)
 
 Atom keeps one authoritative Z80 implementation in `.asm` and derives the
-pinned native image used by the Mac package. The same prepared source is
+pinned native image used by the desktop package. The same prepared source is
 translated to AZM syntax for an independent strict-contract build. Core
 generation and translation are part of the correctness boundary.
 

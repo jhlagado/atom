@@ -18,7 +18,7 @@ function run(command, arguments_, options = {}) {
   });
 }
 
-test("the shipped hello project passes through the complete Mac CLI", async () => {
+test("the shipped hello project passes through the complete desktop CLI", async () => {
   const result = await run(process.execPath, [path.resolve("scripts/verify-example.mjs")]);
   assert.equal(result.signal, null);
   assert.equal(result.status, 0, result.stderr);

@@ -2,7 +2,7 @@
 
 This report preserves the original Phase 4 memory-backed source-window
 checkpoint. The current Mac runner uses `AtomSourceReadByte` and no Z80 source
-page; see [`mac-host-integration.md`](mac-host-integration.md) and
+page; see [`desktop-host-integration.md`](desktop-host-integration.md) and
 [`limits.md`](limits.md) for the current account.
 
 ## Result

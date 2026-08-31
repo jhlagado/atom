@@ -208,7 +208,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `measure-statements.mjs` | Statement code/workspace, directives, and execution observations |
 | `measure-integration.mjs` | Linked cross-module native account |
 | `measure-driver.mjs` | Multipart driver account and lifecycle observations |
-| `measure-host-native.mjs` | Complete linked Mac image, caller-owned regions, and host execution |
+| `measure-host-native.mjs` | Complete linked desktop image, caller-owned regions, and host execution |
 | `measure-self-host.mjs` | Source generation, two Atom generations, AZM comparison, and execution totals |
 
 ## `proofs/`
@@ -227,10 +227,10 @@ The `.asm` files are the sole editing authority for the native assembler.
 | --- | --- |
 | `architecture.md` | Concise host/native responsibility and lifecycle design |
 | `language-reference.md` | Current Atom source syntax and deliberate language boundaries |
-| `limits.md` | Native limits, Mac proof capacities, expressions, symbols, pending records, and realistic TEC RAM discussion |
-| `command-line.md` | Installation, CLI options, bundle layout, diagnostics, example, and release command |
+| `limits.md` | Native limits, desktop proof capacities, expressions, symbols, pending records, and realistic TEC RAM discussion |
+| `command-line.md` | Installation, CLI options, positive output selection, diagnostics, examples, and native CP/M command |
 | `azm-to-atom.md` | Converter commands, exact syntax mappings, rejected AZM boundaries, diagnostics, and programmatic API |
-| `mac-host-integration.md` | Native runner, sink interception, memory map, diagnostics, and public host modules |
+| `desktop-host-integration.md` | Native runner, sink interception, memory map, diagnostics, and public host modules |
 | `host-source-preparation.md` | Resolver, preprocessing, binary inclusion, extraction seam, and proof map |
 | `atom-object-format.md` | Atom flat NOBJ 0.2 framing and MAP profile |
 | `encoder-abi.md` | Parsed instruction record and encoder entries |

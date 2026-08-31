@@ -21,7 +21,7 @@ function run(command, arguments_, options = {}) {
   });
 }
 
-test("the packed Mac CLI installs offline and assembles without AZM or an Atom checkout", async (t) => {
+test("the packed desktop CLI installs offline and assembles without AZM or an Atom checkout", async (t) => {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "atom-package-"));
   t.after(() => fs.rm(temporary, { recursive: true, force: true }));
   const packageDirectory = path.join(temporary, "package");

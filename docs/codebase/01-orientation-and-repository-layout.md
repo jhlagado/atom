@@ -3,7 +3,7 @@
 [Manual](index.md) | [Host source preparation →](02-host-source-preparation.md)
 
 Atom is a single-pass Z80 assembler whose authoritative assembler core is
-written in Z80 assembly. The installed Mac command runs that core through
+written in Z80 assembly. The installed desktop command runs that core through
 Debug80. Node supplies services that do not belong in the resident assembler:
 filesystem access, conditional preprocessing, dependency discovery, binary
 input, artifact rendering, and durable publication.
@@ -23,7 +23,7 @@ NATIVE ATOM CORE RUNNING IN DEBUG80
 NODE ARTIFACT RENDERERS
         |  NOBJ, BIN, HEX, LISTING, D8
         v
-CONTENT-ADDRESSED ARTIFACT BUNDLE
+SELECTED OUTPUT FILES
 ```
 
 Dependency discovery and assembly are separate build stages. They are not two
@@ -46,11 +46,11 @@ They do not share responsibility for language semantics.
 | Orders source parts and assigns source ordinals | Manages global and private symbol scope |
 | Implements the output sink | Decides when IMAGE and PATCH operations occur |
 | Renders NOBJ, BIN, HEX, listing, and D8 | Performs final undefined-symbol checks |
-| Publishes a complete artifact generation | Begins, commits, or aborts one output generation |
+| Publishes selected output files | Begins, commits, or aborts one output generation |
 
-The same native core can run behind a Mac adapter or a future TEC-1 operating
-adapter. Native code contains no path, filesystem, dependency-graph, Intel HEX,
-listing, or D8 logic.
+The same native core runs behind the desktop adapter and the native CP/M
+adapter, and can later run behind a TEC-1 operating adapter. Native code
+contains no path, filesystem, dependency-graph, Intel HEX, listing, or D8 logic.
 
 ## A small build from end to end
 
@@ -112,7 +112,7 @@ native image against the checked reference build.
 
 ## Native source layout
 
-`native/atom.asm` is the linked Mac-host entry. Its five ordered parts contain
+`native/atom.asm` is the linked-core entry. Its five ordered parts contain
 the native modules in dependency order:
 
 ```text

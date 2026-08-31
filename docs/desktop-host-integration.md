@@ -1,6 +1,6 @@
 # Node host and native Atom integration
 
-`assembleAtomProject` is the first complete host-to-Z80 assembly entry. The Mac
+`assembleAtomProject` is the complete Node-to-Z80 assembly entry. The desktop
 host reads the project, resolves `%INCLUDE` dependencies and `INCBIN` inputs,
 evaluates host conditionals, and masks or lowers host-owned syntax. Debug80
 then executes the native Atom tokenizer, symbol table, statements, encoder,
@@ -23,8 +23,8 @@ const { base, bytes } = materializeAtomGeneration(result.generation);
 ```
 
 The `atom` executable wraps this API with deterministic artifact rendering and
-atomic generation publication. [`command-line.md`](command-line.md) documents
-the installed command.
+transactional publication of the positively selected output files.
+[`command-line.md`](command-line.md) documents the installed command.
 
 ## Debug80 programming API integration
 
@@ -156,9 +156,9 @@ The Debug80 integration uses this measured layout:
 
 The symbol arena holds at most 1,664 simultaneous eight-byte records. Private
 records remain transient across global scopes. The pending arena holds 694
-complete seven-byte records. These are Mac-host proof capacities, not a proposed
-TEC-1 deployment map; the TEC operating layer will choose its own symbol,
-pending, adapter-state, and stack regions.
+complete seven-byte records. These are desktop-host proof capacities, not a
+proposed TEC-1 deployment map; the TEC operating layer will choose its own
+symbol, pending, adapter-state, and stack regions.
 
 ## Public modules
 
@@ -169,8 +169,8 @@ pending, adapter-state, and stack regions.
 - `resolveAtomProject` for preparation alone;
 - `createMemoryAtomSink` and `materializeAtomGeneration` for logical output;
 - NOBJ, binary, HEX, listing, and D8 renderers;
-- atomic artifact-set publication;
-- `loadNativeAtomCore` for the pinned strict-contract image; and
+- optional content-addressed artifact-set publication;
+- `loadNativeAtomCore` for the pinned strict-contract image;
 - deterministic Atom-to-AZM and self-host source translation;
 - `createSelfHostedAtomCore` for second-generation proof execution; and
 - `AtomAssemblyError`, native limits, and host sink status constants.

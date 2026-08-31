@@ -1,7 +1,7 @@
 # Atom limits and capacity
 
 This document separates limits enforced by code from measured capacities of
-the present Mac proof map. Unless marked Projected or Hypothesis, the numbers
+the present desktop proof map. Unless marked Projected or Hypothesis, the numbers
 below are Measured from the checked image or executable tests.
 
 ## Resident image
@@ -13,7 +13,7 @@ below are Measured from the checked image or executable tests.
 | Linked resident extent at origin zero | Measured | 12,396 |
 | Margin below one 16 KiB bank | Measured | 3,988 |
 
-The package, authoritative native source, Debug80 runtime, renderer, and Mac CLI
+The package, authoritative native source, Debug80 runtime, renderer, and desktop CLI
 do not consume this Z80 bank. A TEC-specific source/output adapter is not part
 of the 12,396-byte image and must be measured separately.
 
@@ -23,7 +23,7 @@ of the 12,396-byte image and must be measured separately.
 | --- | ---: |
 | Ordered source parts | 1–255 |
 | Bytes in one source part | 0–65,535 |
-| Resident Z80 source-page bytes on Mac | 0 |
+| Resident Z80 source-page bytes in the desktop profile | 0 |
 | Output banks | 1, bank zero |
 | Encoded instruction length | 1–4 bytes |
 | Build descriptor | 15 bytes |
@@ -31,7 +31,7 @@ of the 12,396-byte image and must be measured separately.
 | One `INCBIN` input | 0–65,535 bytes |
 
 The source service uses a 16-bit logical offset, so one part may contain at most
-65,535 bytes. Total source may be larger across the 255 ordered parts. The Mac
+65,535 bytes. Total source may be larger across the 255 ordered parts. The desktop
 runner retains immutable JavaScript snapshots and returns one byte at each
 `AtomSourceReadByte` call; it does not copy a source page into Z80 memory. The
 checked native self-host input is Measured 101,492 bytes in five content parts.
@@ -42,7 +42,7 @@ end. Starting at zero therefore permits a maximum capacity of 65,535 bytes,
 covering `$0000` through `$FFFE`.
 
 `INCBIN` bytes count as initialized output and consume the target capacity.
-The Mac bridge submits one IMAGE operation per byte through the existing native
+The desktop bridge submits one IMAGE operation per byte through the existing native
 `DS` emission path. Large binaries therefore consume native execution budget
 even though their filesystem storage is host-owned.
 
@@ -53,7 +53,7 @@ the rest of the build. Private records consume space only in the current global
 scope and are evicted at the next global label. A pending reference consumes
 Measured 7 bytes until its symbol is defined and its patch has been submitted.
 
-The Mac proof map provides:
+The desktop proof map provides:
 
 | Arena | Classification | Bytes | Complete records |
 | --- | --- | ---: | ---: |
@@ -96,11 +96,11 @@ The resolver, Node runner, and native driver share one part limit.
 | Retained logical paths | 65,536 bytes |
 | Bank ordinal | 0–255; zero for the current Atom output profile |
 
-The Mac runner's default execution budgets are 200,000,000 Z80 instructions
+The desktop runner's default execution budgets are 200,000,000 Z80 instructions
 and 2,000,000,000 T-states. Atom's measured self-build uses 101,840,573
 instructions and 1,086,338,471 T-states.
 
-`assembleResolvedAtomProject()` uses the default Mac runner arena layout unless
+`assembleResolvedAtomProject()` uses the default desktop runner arena layout unless
 the caller supplies `nativeMemoryLayout`. That option is for desktop harnesses
 and migration proof tools that need a different split of the emulated 64 KiB
 address space. It does not change the Atom source language, the Z80 core, or
@@ -108,7 +108,7 @@ the default capacities reported above.
 
 ## A realistic 24 KiB TEC workspace
 
-The current Mac capacities are not a TEC memory map. Fixed workspace, symbols,
+The current desktop capacities are not a TEC memory map. Fixed workspace, symbols,
 pending records, the maximum descriptor set, and a 256-byte stack total
 Measured 20,436 bytes at those capacities, leaving 4,140 bytes in a 24 KiB RAM
 budget for the operating adapter and its state. Source bytes are outside that
@@ -118,7 +118,7 @@ A practical TEC deployment must choose arena sizes from measured program
 density and implement the source service over its storage hardware. The linked
 fallback still supports an ordinary memory interval for small standalone
 harnesses. The deployed capacity is therefore a target configuration, not a
-claim inherited from the Mac runner.
+claim inherited from the desktop runner.
 
 ## CP/M 2.2 vertical-slice capacities
 
