@@ -127,9 +127,9 @@ one flat output profile:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Linked COM | Measured | 14,660 |
-| Free margin below the `$3E80` source cache | Measured | 1,084 |
-| CP/M-specific resident increment | Measured | 2,261 |
+| Linked CP/M transient | Measured | 15,008 |
+| Free margin below the `$3E80` source cache | Measured | 736 |
+| CP/M-specific resident increment | Measured | 2,609 |
 | Source parts | Measured boundary | 255 |
 | One source part | Measured boundary | 65,535 |
 | Maximum described source | Derived boundary | 16,711,425 |
@@ -146,8 +146,9 @@ one flat output profile:
 | Stack high-water mark in the representative proof | Measured | 32 |
 
 With no arguments, the source filename is `INPUT.ASM` and the output filename
-is `OUTPUT.COM`. `ATOM SOURCE OUTPUT.COM` selects another pair of current-drive
-8.3 names. Leading `%INCLUDE` directives resolve up to 255 current-drive files;
+is `OUTPUT.COM`. `ATOM SOURCE OUTPUT` selects another pair of current-drive
+8.3 names; `.COM`, `.BIN`, and `.HEX` select the output format. Leading
+`%INCLUDE` directives resolve up to 255 current-drive files;
 each part retains the exact 65,535-byte boundary. CP/M text EOF is `$1A`. The
 adapter preflights every part and reads it through one random-record cache. The
 practical combined-source limit also depends on mounted disk capacity. The

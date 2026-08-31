@@ -110,14 +110,17 @@ The native CP/M build relocates the same Atom core to `$0110` behind a
 sixteen-byte transient-program header. Its adapter scans source files through
 BDOS to establish their logical lengths, then supplies `AtomSourceReadByte`
 through a 128-byte random-record cache. It retains the flat image in TPA for
-direct patching and writes a temporary COM only after native commit. No
+direct patching and writes a temporary output only after native commit. BIN
+and COM use the patched bytes directly; HEX is rendered into 128-byte output
+records after all patches have been applied. No
 Debug80 hook intercepts BDOS calls. A shared adapter wrapper preserves IX and
 IY around the public `$0005` entry because CP/M standardizes only the 8080
 register set.
 
 With no arguments, this profile reads `INPUT.ASM` and writes `OUTPUT.COM`.
-`ATOM SOURCE` derives `.ASM` and `.COM` names; `ATOM SOURCE OUTPUT.COM` selects
-another pair of current-drive 8.3 names. The root and its included files use
+`ATOM SOURCE` derives `.ASM` and `.COM` names; `ATOM SOURCE OUTPUT` selects
+another pair of current-drive 8.3 names. The output suffix may be `.COM`,
+`.BIN`, or `.HEX`. The root and its included files use
 leading `%INCLUDE` directives with quoted
 current-drive 8.3 names. The provider resolves the graph, imports each file
 once, rejects cycles, and emits dependencies before importers. It validates the

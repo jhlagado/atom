@@ -8,6 +8,7 @@ import {
   representativeSource,
   runCpm22Atom,
 } from "./cpm22-support.mjs";
+import { writeIntelHex } from "../src/host/index.mjs";
 
 const multipartParts = [
   Buffer.from("ORG $100\r\nJP START", "ascii"),
@@ -77,6 +78,36 @@ test("the CP/M publication path preserves representative eight-bit binary bytes"
   );
 });
 
+test("native Atom publishes a selected raw BIN", async () => {
+  const expected = await expectedRepresentativeProgram();
+  const result = await runCpm22Atom(representativeSource, undefined, {
+    sourceName: "HELLO.ASM",
+    outputName: "HELLO.BIN",
+  });
+
+  assert.match(result.atomTranscript, /HELLO\.BIN written/);
+  assert.deepEqual(
+    result.outputFile?.bytes.slice(0, expected.bytes.length),
+    expected.bytes,
+  );
+  assert.equal(result.returnA, 0);
+});
+
+test("native Atom publishes checksummed Intel HEX", async () => {
+  const expected = await expectedRepresentativeProgram();
+  const result = await runCpm22Atom(representativeSource, undefined, {
+    sourceName: "HELLO.ASM",
+    outputName: "HELLO.HEX",
+  });
+  const physical = result.outputFile?.bytes ?? new Uint8Array();
+  const padding = physical.indexOf(0x1a);
+  const text = Buffer.from(physical.slice(0, padding < 0 ? physical.length : padding)).toString("ascii");
+
+  assert.match(result.atomTranscript, /HELLO\.HEX written/);
+  assert.equal(text, writeIntelHex(expected, { lineEnding: "\r\n" }));
+  assert.equal(result.returnA, 0);
+});
+
 test("a rejected assembly preserves an earlier OUTPUT.COM and removes its temp", async () => {
   const prior = Uint8Array.from([0xc9]);
   const result = await runCpm22Atom(Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"), prior);
@@ -123,7 +154,7 @@ test("one native source argument derives ASM input and COM output names", async 
 
 test("native question-mark help returns success without assembling", async () => {
   const result = await runCpm22Atom(representativeSource, undefined, { command: "ATOM ?" });
-  assert.match(result.atomTranscript, /Usage: ATOM \[SOURCE \[OUTPUT\.COM\]\]/);
+  assert.match(result.atomTranscript, /Usage: ATOM \[SOURCE \[OUTPUT\]\]/);
   assert.equal(result.outputFile, undefined);
   assert.equal(result.returnA, 0);
 });
@@ -166,8 +197,8 @@ test("a blank command tail retains INPUT.ASM and OUTPUT.COM defaults", async () 
 
 test("command-tail parsing reports exact usage and filename diagnostics", async () => {
   for (const [command, diagnostic] of [
-    ["ATOM INPUT.ASM OUTPUT.COM EXTRA", "Usage: ATOM [SOURCE [OUTPUT.COM]]"],
-    ["ATOM INPUT.ASM OUTPUT.COM @", "Usage: ATOM [SOURCE [OUTPUT.COM]]"],
+    ["ATOM INPUT.ASM OUTPUT.COM EXTRA", "Usage: ATOM [SOURCE [OUTPUT]]"],
+    ["ATOM INPUT.ASM OUTPUT.COM @", "Usage: ATOM [SOURCE [OUTPUT]]"],
     ["ATOM TOOLONGGG.ASM MADE.COM", "Invalid source name"],
     ["ATOM INPUT.ASMX MADE.COM", "Invalid source name"],
     ["ATOM .ASM MADE.COM", "Invalid source name"],
@@ -179,7 +210,7 @@ test("command-tail parsing reports exact usage and filename diagnostics", async 
     ["ATOM INPUT.ASM .COM", "Invalid output name"],
     ["ATOM INPUT.ASM MADE.", "Invalid output name"],
     ["ATOM INPUT.ASM MADE", "Invalid output name"],
-    ["ATOM INPUT.ASM MADE.BIN", "Invalid output name"],
+    ["ATOM INPUT.ASM MADE.OBJ", "Invalid output name"],
     ["ATOM INPUT.ASM M?.COM", "Invalid output name"],
   ]) {
     const result = await runCpm22Atom(representativeSource, undefined, {

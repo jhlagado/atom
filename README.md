@@ -13,9 +13,10 @@ The native core assembles its own checked source byte for byte and fits in one
 16 KiB bank.
 
 The Mac command is usable now. Native CP/M 2.2 Atom also runs inside Debug80
-through real BDOS calls and accepts `ATOM SOURCE OUTPUT.COM`, with `INPUT.ASM`
+through real BDOS calls and accepts `ATOM SOURCE OUTPUT`, with `INPUT.ASM`
 and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
-`HELLO.ASM` and `HELLO.COM`. Leading `%INCLUDE` directives
+`HELLO.ASM` and `HELLO.COM`; an explicit output may end in `.COM`, `.BIN`, or
+`.HEX`. Leading `%INCLUDE` directives
 form a dependency graph of up to 255 CP/M 8.3 source names, with a 65,535-byte
 boundary for every part. The native named-object harness and TECM8 source and
 transactional output providers now exist. The complete TecMate launcher,

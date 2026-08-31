@@ -35,14 +35,14 @@ HELLO.COM written
 The compact native command has one form:
 
 ```text
-ATOM [SOURCE [OUTPUT.COM]]
+ATOM [SOURCE [OUTPUT]]
 ```
 
-Names must be current-drive CP/M 8.3 names. The output extension must be
-`.COM`. Drive prefixes, wildcards, incomplete argument pairs, extra arguments,
-and invalid filename characters are rejected. CP/M canonicalises lowercase
-command input, so `atom hello.asm made.com` is equivalent to the uppercase
-form.
+Names must be current-drive CP/M 8.3 names. An explicit output extension must
+be `.COM`, `.BIN`, or `.HEX`. Drive prefixes, wildcards, incomplete argument
+pairs, extra arguments, and invalid filename characters are rejected. CP/M
+canonicalises lowercase command input, so `atom hello.asm made.com` is
+equivalent to the uppercase form.
 
 ## Multiple source files
 
@@ -92,15 +92,17 @@ joined accidentally across files. Private-label scope and forward references
 continue across the ordered compilation unit. Diagnostics report the exact
 zero-based part ordinal and offset within that part.
 
-For an output named `NAME.COM`, Atom writes `NAME.$$$`, moves an existing output
+For an output named `NAME.EXT`, Atom writes `NAME.$$$`, moves an existing output
 to `NAME.BAK`, renames the completed temporary file, and then removes the
 backup. A failed assembly removes the temporary file and restores the backup
 when necessary. No source part may use the output, temporary, or backup name.
 
-The output is a flat CP/M image beginning at `$0100`. Gaps created by `ORG` or
-uninitialised `DS` contain zero bytes. CP/M records do not retain an exact final
-byte count, so the last 128-byte record can contain padding after the logical
-program.
+The output is a flat image beginning at `$0100`. Gaps created by `ORG` or
+uninitialised `DS` contain zero bytes. BIN and COM contain the same raw bytes;
+COM selects the CP/M load-and-entry convention but adds no header. HEX contains
+16-byte addressed data records, checksums, and an end-of-file record. CP/M
+files occupy complete 128-byte records, so BIN and COM may contain padding
+after the logical image and HEX may contain `$1A` padding after its end record.
 
 ## Measured memory map
 
@@ -108,8 +110,8 @@ The current checked image has this TPA layout:
 
 | Range | Bytes | Use |
 | --- | ---: | --- |
-| `$0100..$3A43` | 14,660 | native core, CP/M provider, and resident state |
-| `$3A44..$3E7F` | 1,084 | free resident-partition margin |
+| `$0100..$3B9F` | 15,008 | native core, CP/M provider, and resident state |
+| `$3BA0..$3E7F` | 736 | free resident-partition margin |
 | `$3E80..$3EFF` | 128 | source random-record cache |
 | `$3F00..$3FFF` | 256 | dependency-first part order |
 | `$4000..$4AF4` | 2,805 | 255 retained CP/M 8.3 names |
@@ -141,6 +143,7 @@ command.
 The CP/M suite proves:
 
 - direct and named commands through real BDOS calls;
+- byte-identical BIN and COM output plus checksummed Intel HEX output;
 - nested include graphs, diamonds, deterministic order, and import-once
   behaviour;
 - missing includes, malformed or late directives, cycles, and source/output
