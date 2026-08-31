@@ -1,3 +1,8 @@
+import {
+  materializeTargetImage,
+  renderTargetBinary,
+} from "@jhlagado/z80-tool-services";
+
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 
 const KIND = Object.freeze({ begin: 1, image: 2, patch: 3, map: 4, commit: 5 });
@@ -99,6 +104,26 @@ export function writeAtomNobj(generation, project, { fill = 0, entryAddress = ge
 }
 
 export function parseAtomNobj(bytes) {
+  const decoded = decodeAtomNobj(bytes);
+  return atomNobjSummary(decoded);
+}
+
+function atomNobjSummary(decoded) {
+  return Object.freeze({
+    version: "0.2",
+    recordCount: decoded.records.length,
+    imageRecords: decoded.images.length,
+    patchRecords: decoded.patches.length,
+    entryAddress: decoded.entryAddress,
+    crc16: decoded.crc16,
+  });
+}
+
+function readU16(bytes, offset) {
+  return bytes[offset] | (bytes[offset + 1] << 8);
+}
+
+function decodeAtomNobj(bytes) {
   if (!(bytes instanceof Uint8Array)) fail("nobj-input", "NOBJ input must be bytes");
   let cursor = 0;
   const records = [];
@@ -115,6 +140,9 @@ export function parseAtomNobj(bytes) {
   if (records.length < 3 || records[0].kind !== KIND.begin || records.at(-1).kind !== KIND.commit) {
     fail("nobj-sequence", "NOBJ lacks its BEGIN or terminal COMMIT");
   }
+  if (records.slice(0, -1).some(({ kind }) => kind === KIND.commit)) {
+    fail("nobj-sequence", "NOBJ COMMIT must be terminal");
+  }
   const begin = records[0].payload;
   if (
     begin.length !== 15 ||
@@ -124,30 +152,109 @@ export function parseAtomNobj(bytes) {
   ) {
     fail("nobj-version", "NOBJ is not the Atom flat-image profile 0.2");
   }
+  if (begin[6] !== 0 || readU16(begin, 7) !== 0 || begin[9] !== 1) {
+    fail("nobj-profile", "NOBJ BEGIN is not the Atom flat bank-zero profile");
+  }
+  const imageFill = begin[10];
+  const imageBase = readU16(begin, 11);
+  const imageCapacity = readU16(begin, 13);
+  if (imageCapacity === 0 || imageBase + imageCapacity > 0x10000) {
+    fail("nobj-capacity", "NOBJ image region is invalid");
+  }
+
   let phase = KIND.image;
+  const images = [];
+  const patches = [];
   for (const item of records.slice(1, -2)) {
     if (item.kind === KIND.patch) phase = KIND.patch;
     if ((item.kind !== KIND.image && item.kind !== KIND.patch) || item.kind < phase) {
       fail("nobj-sequence", "NOBJ image and patch records are out of order");
     }
     if (item.payload.length < 4) fail("nobj-record", "NOBJ image or patch record is empty");
+    const operation = Object.freeze({
+      bank: item.payload[0],
+      address: readU16(item.payload, 1),
+      bytes: item.payload.slice(3),
+    });
+    if (item.kind === KIND.image) images.push(operation);
+    else patches.push(operation);
   }
   const map = records.at(-2);
   if (map.kind !== KIND.map || map.payload[0] !== 0x41) fail("nobj-map", "NOBJ lacks the Atom flat map");
+  const partCount = map.payload[9];
+  if (
+    map.payload.length !== 10 + partCount ||
+    map.payload[1] !== 0 ||
+    map.payload[2] !== 0 ||
+    partCount === 0 ||
+    map.payload.slice(10).some((bank) => bank !== 0)
+  ) {
+    fail("nobj-map", "NOBJ Atom flat map is invalid");
+  }
+  const entryAddress = readU16(map.payload, 3);
+  const usedLength = readU16(map.payload, 5);
+  const finalCursor = readU16(map.payload, 7);
+  if (
+    usedLength > imageCapacity ||
+    finalCursor < imageBase ||
+    finalCursor > imageBase + imageCapacity
+  ) {
+    fail("nobj-map", "NOBJ Atom output extent is invalid");
+  }
   const commit = records.at(-1).payload;
   if (commit.length !== 7) fail("nobj-commit", "NOBJ COMMIT has the wrong length");
-  const count = commit[0] | (commit[1] << 8);
+  const count = readU16(commit, 0);
   if (count !== records.length) fail("nobj-commit", "NOBJ COMMIT record count is wrong");
-  const storedCrc = commit[5] | (commit[6] << 8);
+  if (commit[2] !== 0 || readU16(commit, 3) !== entryAddress) {
+    fail("nobj-commit", "NOBJ COMMIT entry differs from MAP");
+  }
+  const storedCrc = readU16(commit, 5);
   if (crc16CcittFalse(bytes.slice(0, bytes.length - 2)) !== storedCrc) {
     fail("nobj-crc", "NOBJ COMMIT CRC is wrong");
   }
+  let targetImage;
+  try {
+    targetImage = materializeTargetImage({
+      geometry: {
+        bankCount: 1,
+        imageBase,
+        imageCapacity,
+        imageFill,
+        entryBank: 0,
+        entryAddress,
+      },
+      banks: [{ usedLength }],
+      images,
+      patches,
+      patchPolicy: "image",
+    });
+  } catch (cause) {
+    fail("nobj-image", cause instanceof Error ? cause.message : "NOBJ image is invalid");
+  }
   return Object.freeze({
-    version: "0.2",
-    recordCount: records.length,
-    imageRecords: records.filter(({ kind }) => kind === KIND.image).length,
-    patchRecords: records.filter(({ kind }) => kind === KIND.patch).length,
-    entryAddress: commit[3] | (commit[4] << 8),
+    records,
+    images,
+    patches,
+    imageBase,
+    imageCapacity,
+    imageFill,
+    usedLength,
+    finalCursor,
+    entryAddress,
     crc16: storedCrc,
+    targetImage,
+  });
+}
+
+/** Validate and materialize a stored Atom NOBJ generation. */
+export function materializeAtomNobj(bytes) {
+  const decoded = decodeAtomNobj(bytes);
+  const materialized = renderTargetBinary(decoded.targetImage);
+  return Object.freeze({
+    parsed: atomNobjSummary(decoded),
+    targetImage: decoded.targetImage,
+    base: decoded.imageBase,
+    end: decoded.imageBase + decoded.usedLength,
+    bytes: materialized,
   });
 }

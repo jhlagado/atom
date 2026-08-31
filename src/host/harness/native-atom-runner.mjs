@@ -2,6 +2,8 @@ import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 import {
   MemorySourceByteProvider,
   invokeOneByteStatus,
+  materializeTargetImage,
+  renderTargetBinary,
   Z80_RESIDENT_SOURCE_PART_CAPACITY,
 } from "@jhlagado/z80-tool-services";
 
@@ -486,17 +488,34 @@ export function materializeAtomGeneration(generation, { fill = 0, base: requeste
   integer(base, "materialization base", 0, 0xffff);
   let end = Math.max(base, generation.finalCursor, generation.highWater ?? generation.finalCursor);
   for (const operation of generation.images) end = Math.max(end, operation.address + operation.bytes.length);
-  const bytes = new Uint8Array(end - base);
-  bytes.fill(fill);
-  for (const operation of generation.images) {
-    if (operation.address < base) fail("materialization-base", "Atom image begins below the materialization base");
-    bytes.set(operation.bytes, operation.address - base);
+  const capacity = generation.target.start + generation.target.capacity - base;
+  if (capacity < 1 || capacity > 0xffff) {
+    fail("materialization-base", "Atom materialization base lies outside the target range");
   }
-  for (const operation of generation.patches) {
-    if (operation.address < base) fail("materialization-base", "Atom patch begins below the materialization base");
-    bytes.set(operation.bytes, operation.address - base);
+  try {
+    const targetImage = materializeTargetImage({
+      geometry: {
+        bankCount: 1,
+        imageBase: base,
+        imageCapacity: capacity,
+        imageFill: fill,
+        entryBank: 0,
+        entryAddress: base,
+      },
+      banks: [{ usedLength: end - base }],
+      images: generation.images,
+      patches: generation.patches,
+      patchPolicy: "image",
+    });
+    return Object.freeze({
+      base,
+      end,
+      bytes: renderTargetBinary(targetImage),
+      targetImage,
+    });
+  } catch (cause) {
+    fail("invalid-generation", "Atom generation cannot be materialized", { cause });
   }
-  return Object.freeze({ base, end, bytes });
 }
 
 const RADIX40 = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";

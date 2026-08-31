@@ -1,3 +1,9 @@
+import {
+  createFlatTargetImage,
+  renderTargetCpmCom,
+  renderTargetIntelHex,
+} from "@jhlagado/z80-tool-services";
+
 import { materializeAtomGeneration } from "../harness/native-atom-runner.mjs";
 import { ATOM_VERSION } from "../package-metadata.mjs";
 import { writeAtomNobj } from "./atom-nobj.mjs";
@@ -7,19 +13,12 @@ const decoder = new TextDecoder("utf-8", { fatal: false });
 const hex4 = (value) => value.toString(16).toUpperCase().padStart(4, "0");
 const hex2 = (value) => value.toString(16).toUpperCase().padStart(2, "0");
 
-function intelRecord(address, type, bytes) {
-  const values = [bytes.length, address >>> 8, address & 0xff, type, ...bytes];
-  const checksum = (-values.reduce((sum, byte) => sum + byte, 0)) & 0xff;
-  return `:${values.map(hex2).join("")}${hex2(checksum)}`;
-}
-
 export function writeIntelHex(materialized, { lineEnding = "\n" } = {}) {
-  const lines = [];
-  for (let offset = 0; offset < materialized.bytes.length; offset += 16) {
-    lines.push(intelRecord(materialized.base + offset, 0, [...materialized.bytes.slice(offset, offset + 16)]));
-  }
-  lines.push(":00000001FF");
-  return `${lines.join(lineEnding)}${lineEnding}`;
+  const targetImage = materialized.targetImage ?? createFlatTargetImage({
+    base: materialized.base,
+    bytes: materialized.bytes,
+  });
+  return renderTargetIntelHex(targetImage, { lineEnding });
 }
 
 export function writeAtomCom(materialized, { entryAddress = 0x100 } = {}) {
@@ -29,7 +28,21 @@ export function writeAtomCom(materialized, { entryAddress = 0x100 } = {}) {
   if (materialized.end > 0x10000 || materialized.bytes.length > 0xff00) {
     throw new RangeError("COM output exceeds the 65,280-byte CP/M address range");
   }
-  return materialized.bytes;
+  const targetImage = materialized.targetImage === undefined ||
+    materialized.targetImage.geometry.entryAddress !== entryAddress
+    ? createFlatTargetImage({
+        base: materialized.base,
+        bytes: materialized.bytes,
+        entryAddress,
+        capacity: 0xff00,
+      })
+    : materialized.targetImage;
+  try {
+    renderTargetCpmCom(targetImage);
+    return materialized.bytes;
+  } catch (cause) {
+    throw new RangeError(cause instanceof Error ? cause.message : "invalid COM output", { cause });
+  }
 }
 
 function sourceLines(project) {

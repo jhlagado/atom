@@ -8,6 +8,7 @@ import {
   ATOM_VERSION,
   assembleAtomProject,
   assembleResolvedAtomProject,
+  materializeAtomNobj,
   parseAtomNobj,
   publishAtomArtifacts,
   publishAtomOutputFiles,
@@ -68,6 +69,7 @@ test("artifact renderers preserve final patches, gaps, source lines, symbols, an
   assert.equal(parsed.imageRecords, 2);
   assert.equal(parsed.patchRecords, 1);
   assert.equal(parsed.entryAddress, 0x4000);
+  assert.deepEqual(materializeAtomNobj(artifacts.nobj).bytes, artifacts.bin);
   const damaged = artifacts.nobj.slice();
   damaged[24] ^= 1;
   assert.throws(() => parseAtomNobj(damaged), /CRC/);

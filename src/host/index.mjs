@@ -4,7 +4,12 @@ export { SourcePreparationError } from "@jhlagado/z80-tool-services/source-prepa
 export { assembleAtomProject } from "./application/assemble-atom-project.mjs";
 export { resolveAtomProject } from "./application/resolve-atom-project.mjs";
 export { loadNativeAtomCore } from "./core/native-atom-core.mjs";
-export { crc16CcittFalse, parseAtomNobj, writeAtomNobj } from "./artifacts/atom-nobj.mjs";
+export {
+  crc16CcittFalse,
+  materializeAtomNobj,
+  parseAtomNobj,
+  writeAtomNobj,
+} from "./artifacts/atom-nobj.mjs";
 export {
   renderAtomArtifacts,
   writeAtomCom,
