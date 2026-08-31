@@ -110,8 +110,8 @@ The current checked image has this TPA layout:
 
 | Range | Bytes | Use |
 | --- | ---: | --- |
-| `$0100..$3B9F` | 15,008 | native core, CP/M provider, and resident state |
-| `$3BA0..$3E7F` | 736 | free resident-partition margin |
+| `$0100..$3BB4` | 15,029 | native core, CP/M provider, and resident state |
+| `$3BB5..$3E7F` | 715 | free resident-partition margin |
 | `$3E80..$3EFF` | 128 | source random-record cache |
 | `$3F00..$3FFF` | 256 | dependency-first part order |
 | `$4000..$4AF4` | 2,805 | 255 retained CP/M 8.3 names |

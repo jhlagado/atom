@@ -4,7 +4,7 @@
   "boundary": "output-specific Z80 kernel; excludes common source loading, diagnostics, FCB names, rollback rename, and user interface",
   "inTpaComplete": {
     "classification": "Measured complete retained adapter",
-    "outputCodeBytes": 652,
+    "outputCodeBytes": 684,
     "outputImageWorkspaceBytes": 18304
   },
   "randomRecord": {

@@ -13,6 +13,10 @@ const repositoryRoot = resolve(scriptDirectory, "..");
 const nativeRoot = join(repositoryRoot, "native");
 const outputPath = join(repositoryRoot, "assets", "atom-cpm22.com");
 const reportPath = join(repositoryRoot, "proofs", "cpm22-census.json");
+const finalImageModulePath = resolve(
+  repositoryRoot,
+  "../z80-tool-services/native/cpm22-final-image.asm",
+);
 
 async function linkedSource() {
   const parts = await Promise.all(
@@ -32,7 +36,11 @@ async function linkedSource() {
   const serviceStart = parts[4].indexOf("HS_SCBEG:\n");
   assert.notEqual(serviceStart, -1, "native core omitted the host service tail");
   parts[4] = parts[4].slice(0, serviceStart);
-  const atomSource = `${parts.join("\n")}\n${await readFile(join(nativeRoot, "cpm22-adapter.asm"), "utf8")}`;
+  const adapter = await readFile(join(nativeRoot, "cpm22-adapter.asm"), "utf8");
+  const marker = ";@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@";
+  assert.equal(adapter.split(marker).length, 2, "CP/M adapter must contain one final-image module marker");
+  const linkedAdapter = adapter.replace(marker, await readFile(finalImageModulePath, "utf8"));
+  const atomSource = `${parts.join("\n")}\n${linkedAdapter}`;
   return `${atomSource.split(/\r\n|\n|\r/).map(translateAtomLineToAzm).join("\n")}\n.end\n`;
 }
 

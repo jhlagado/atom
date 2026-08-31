@@ -94,8 +94,8 @@ joins the 399-byte service workspace in common RAM; the bank remains unchanged
 during a proved multipart assembly.
 
 The CP/M provider preserves IX and IY around BDOS with one shared wrapper. The
-linked transient is Measured 15,008 bytes, leaving 736 bytes below its
-resident boundary. Its adapter account is Measured 2,609 bytes: 2,222 code
-bytes, 272 immutable bytes, and 115 writable bytes. The separate multipart
+linked transient is Measured 15,029 bytes, leaving 715 bytes below its
+resident boundary. Its adapter account is Measured 2,630 bytes: 2,254 code
+bytes, 259 immutable bytes, and 117 writable bytes. The separate multipart
 workspace holds the include graph, filenames, source descriptors, and resolver
 state.
