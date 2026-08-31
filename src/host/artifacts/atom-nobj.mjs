@@ -1,5 +1,7 @@
 import {
+  decodeNobjEnvelope,
   materializeTargetImage,
+  nobjCrc16CcittFalse,
   renderTargetBinary,
 } from "@jhlagado/z80-tool-services";
 
@@ -31,16 +33,7 @@ function concatenate(chunks) {
   return result;
 }
 
-export function crc16CcittFalse(bytes) {
-  let crc = 0xffff;
-  for (const byte of bytes) {
-    crc ^= byte << 8;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc & 0x8000) === 0 ? (crc << 1) & 0xffff : ((crc << 1) ^ 0x1021) & 0xffff;
-    }
-  }
-  return crc;
-}
+export const crc16CcittFalse = nobjCrc16CcittFalse;
 
 function coalesce(operations) {
   const runs = [];
@@ -124,31 +117,21 @@ function readU16(bytes, offset) {
 }
 
 function decodeAtomNobj(bytes) {
-  if (!(bytes instanceof Uint8Array)) fail("nobj-input", "NOBJ input must be bytes");
-  let cursor = 0;
-  const records = [];
-  while (cursor < bytes.length) {
-    if (cursor + 3 > bytes.length) fail("nobj-truncated", "NOBJ ends inside a record header");
-    const start = cursor;
-    const kind = bytes[cursor];
-    const length = bytes[cursor + 1] | (bytes[cursor + 2] << 8);
-    cursor += 3;
-    if (cursor + length > bytes.length) fail("nobj-truncated", "NOBJ ends inside a record payload");
-    records.push({ kind, start, payload: bytes.slice(cursor, cursor + length) });
-    cursor += length;
+  let envelope;
+  try {
+    envelope = decodeNobjEnvelope(bytes, {
+      majorVersion: 0,
+      minorVersion: 2,
+      requireImage: false,
+    });
+  } catch (cause) {
+    fail("nobj-framing", cause instanceof Error ? cause.message : String(cause));
   }
-  if (records.length < 3 || records[0].kind !== KIND.begin || records.at(-1).kind !== KIND.commit) {
-    fail("nobj-sequence", "NOBJ lacks its BEGIN or terminal COMMIT");
-  }
-  if (records.slice(0, -1).some(({ kind }) => kind === KIND.commit)) {
-    fail("nobj-sequence", "NOBJ COMMIT must be terminal");
-  }
-  const begin = records[0].payload;
+  const { records } = envelope;
+  const begin = envelope.begin.payload;
   if (
     begin.length !== 15 ||
-    String.fromCharCode(...begin.slice(0, 4)) !== "NOBJ" ||
-    begin[4] !== 0 ||
-    begin[5] !== 2
+    String.fromCharCode(...begin.slice(0, 4)) !== "NOBJ"
   ) {
     fail("nobj-version", "NOBJ is not the Atom flat-image profile 0.2");
   }
@@ -162,14 +145,9 @@ function decodeAtomNobj(bytes) {
     fail("nobj-capacity", "NOBJ image region is invalid");
   }
 
-  let phase = KIND.image;
   const images = [];
   const patches = [];
-  for (const item of records.slice(1, -2)) {
-    if (item.kind === KIND.patch) phase = KIND.patch;
-    if ((item.kind !== KIND.image && item.kind !== KIND.patch) || item.kind < phase) {
-      fail("nobj-sequence", "NOBJ image and patch records are out of order");
-    }
+  for (const item of [...envelope.images, ...envelope.patches]) {
     if (item.payload.length < 4) fail("nobj-record", "NOBJ image or patch record is empty");
     const operation = Object.freeze({
       bank: item.payload[0],
@@ -179,8 +157,8 @@ function decodeAtomNobj(bytes) {
     if (item.kind === KIND.image) images.push(operation);
     else patches.push(operation);
   }
-  const map = records.at(-2);
-  if (map.kind !== KIND.map || map.payload[0] !== 0x41) fail("nobj-map", "NOBJ lacks the Atom flat map");
+  const map = envelope.map;
+  if (map.payload[0] !== 0x41) fail("nobj-map", "NOBJ lacks the Atom flat map");
   const partCount = map.payload[9];
   if (
     map.payload.length !== 10 + partCount ||
@@ -201,16 +179,8 @@ function decodeAtomNobj(bytes) {
   ) {
     fail("nobj-map", "NOBJ Atom output extent is invalid");
   }
-  const commit = records.at(-1).payload;
-  if (commit.length !== 7) fail("nobj-commit", "NOBJ COMMIT has the wrong length");
-  const count = readU16(commit, 0);
-  if (count !== records.length) fail("nobj-commit", "NOBJ COMMIT record count is wrong");
-  if (commit[2] !== 0 || readU16(commit, 3) !== entryAddress) {
+  if (envelope.commit.entryBank !== 0 || envelope.commit.entryAddress !== entryAddress) {
     fail("nobj-commit", "NOBJ COMMIT entry differs from MAP");
-  }
-  const storedCrc = readU16(commit, 5);
-  if (crc16CcittFalse(bytes.slice(0, bytes.length - 2)) !== storedCrc) {
-    fail("nobj-crc", "NOBJ COMMIT CRC is wrong");
   }
   let targetImage;
   try {
@@ -241,7 +211,7 @@ function decodeAtomNobj(bytes) {
     usedLength,
     finalCursor,
     entryAddress,
-    crc16: storedCrc,
+    crc16: envelope.commit.crc16,
     targetImage,
   });
 }

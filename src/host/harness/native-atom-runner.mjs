@@ -492,6 +492,9 @@ export function materializeAtomGeneration(generation, { fill = 0, base: requeste
   if (capacity < 1 || capacity > 0xffff) {
     fail("materialization-base", "Atom materialization base lies outside the target range");
   }
+  const canonicalImages = [...generation.images].sort(
+    (left, right) => left.bank - right.bank || left.address - right.address,
+  );
   try {
     const targetImage = materializeTargetImage({
       geometry: {
@@ -503,7 +506,7 @@ export function materializeAtomGeneration(generation, { fill = 0, base: requeste
         entryAddress: base,
       },
       banks: [{ usedLength: end - base }],
-      images: generation.images,
+      images: canonicalImages,
       patches: generation.patches,
       patchPolicy: "image",
     });

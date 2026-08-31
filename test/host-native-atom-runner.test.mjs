@@ -123,6 +123,25 @@ test("the Mac host resolves, masks, and executes one project through native Atom
   assert.equal(materializeAtomGeneration(result.generation).bytes[0], 0x3e);
 });
 
+test("legacy unordered proof output is canonicalized before final materialization", () => {
+  const generation = {
+    target: { start: 0x4000, capacity: 0x100 },
+    finalCursor: 0x4002,
+    highWater: 0x4002,
+    remaining: 0xfe,
+    images: [
+      { bank: 0, address: 0x4001, bytes: [0x22] },
+      { bank: 0, address: 0x4000, bytes: [0x11] },
+    ],
+    patches: [],
+  };
+
+  assert.deepEqual(
+    Array.from(materializeAtomGeneration(generation).bytes),
+    [0x11, 0x22],
+  );
+});
+
 test("native diagnostics retain logical source, byte offset, line, column, and symbol", async (t) => {
   const source = [
     "%define TAKE 1",
