@@ -17,10 +17,10 @@ Z80 transient program and accepts `ATOM SOURCE OUTPUT`, with
 `INPUT.ASM` and `OUTPUT.COM` as the no-argument defaults. `ATOM HELLO` derives
 `HELLO.ASM` and `HELLO.COM`; an explicit output may end in `.COM`, `.BIN`, or
 `.HEX`. Leading `%INCLUDE` directives form a dependency graph of up to 255
-CP/M 8.3 source names, with a 65,535-byte boundary for every part. The native
-named-object harness and TECM8 source and transactional output providers now
-exist. The complete TecMate launcher, include resolver, and target memory map
-remain deployment work.
+CP/M 8.3 source names, with a 65,535-byte boundary for every part. The reusable
+TEC harness and provider components are proved under emulation. Final TecMate
+product integration, target memory-map acceptance, and physical-hardware
+acceptance remain deployment work.
 
 ## Install and assemble
 
@@ -89,7 +89,9 @@ of caller-owned common workspace, leaving 2,873 bytes in its 16 KiB bank.
 An immutable-bank profile instead places 12,770 bytes of code and tables in ROM
 and relocates 741 bytes of fixed state to common RAM.
 
-[Architecture](docs/architecture.md), [limits](docs/limits.md), and the
+[Architecture](docs/architecture.md), the
+[normative platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md),
+[limits](docs/limits.md), and the
 [CP/M adapter report](docs/cpm22.md) separate the measured host and native CP/M
 configurations from the remaining [TEC-1 adapter work](docs/tec-1-deployment.md).
 The [private tool-service boundary](docs/tool-services.md) records how Node,

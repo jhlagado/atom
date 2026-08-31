@@ -1,5 +1,10 @@
 # Atom tool-service boundary
 
+The repository-wide
+[Atom platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md)
+defines where this private adapter sits between the Atom core and each
+operating environment.
+
 Atom reaches files, output publication, and a human-facing console through a
 private tool-service boundary. This boundary belongs to Atom and its
 development environments. It is not part of Atom assembly language, a CP/M

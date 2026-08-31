@@ -11,17 +11,20 @@ const specification = (name) =>
 const repositoryFile = (path) =>
   fs.readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
-test("Atom architecture records the implemented TEC-native profile", () => {
+test("Atom platform contract fixes the portable ownership boundaries", () => {
   const architecture = specification("atom-platform-architecture.md");
   const boundary = specification("tool-service-boundary.md");
 
+  assert.match(architecture, /Status: authoritative/);
+  assert.match(architecture, /Atom is always a Z80 program/);
+  assert.match(architecture, /AtomSourceReadByte\(partOrdinal, logicalOffset\)/);
+  assert.match(architecture, /NOBJ is the portable stored form[\s\S]*not mandatory/);
+  assert.match(architecture, /called validation and materialization, not linking/);
+  assert.match(architecture, /There is no portable `resolvePath` operation/);
+  assert.match(architecture, /desktop and CP\/M products are complete paths/);
   assert.match(
     architecture,
-    /TEC-native profiles are\s+implemented and proved under emulation/,
-  );
-  assert.match(
-    architecture,
-    /current CP\/M and TEC profiles implement leading\s+`%INCLUDE`/,
+    /final TecMate product\s+integration[\s\S]*separate deployment checkpoints/,
   );
   assert.match(
     boundary,

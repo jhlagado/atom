@@ -32,6 +32,7 @@ behind the repository.
 
 ## Related references
 
+- [Atom platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md)
 - [Architecture](../architecture.md)
 - [Language reference](../language-reference.md)
 - [Native limits and capacity](../limits.md)

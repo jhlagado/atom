@@ -1,5 +1,10 @@
 # Atom architecture
 
+The repository-wide
+[Atom platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md)
+is the normative ownership and lifecycle specification. This page describes
+the same design from the Atom package.
+
 Atom is a native Z80 assembler inside a host-managed build. In the desktop
 profile, Node provides filesystem and artifact services while Debug80 executes
 the same Z80 core used by native Z80 profiles.
