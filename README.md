@@ -1,8 +1,8 @@
 # Atom
 
 Atom is a single-pass Z80 assembler whose assembler core is written in Z80
-assembly. The desktop command runs that core through Debug80, while Node handles
-files, conditional preprocessing, and finished artifacts.
+assembly. The desktop command runs that core through Debug80 Runtime, while
+Node handles files, conditional preprocessing, and finished artifacts.
 
 Atom assembles the complete Z80 instruction set, including CB, ED, DD, FD,
 index-half, and undocumented SLL/SLS forms. It also supports global and
@@ -89,9 +89,7 @@ of caller-owned common workspace, leaving 2,873 bytes in its 16 KiB bank.
 An immutable-bank profile instead places 12,770 bytes of code and tables in ROM
 and relocates 741 bytes of fixed state to common RAM.
 
-[Architecture](docs/architecture.md), the
-[normative platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md),
-[limits](docs/limits.md), and the
+[Architecture](docs/architecture.md), [limits](docs/limits.md), and the
 [CP/M adapter report](docs/cpm22.md) separate the measured host and native CP/M
 configurations from the remaining [TEC-1 adapter work](docs/tec-1-deployment.md).
 The [private tool-service boundary](docs/tool-services.md) records how Node,
