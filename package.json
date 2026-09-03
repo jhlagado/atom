@@ -90,8 +90,8 @@
     "prepublishOnly": "npm run release:check"
   },
   "dependencies": {
-    "@jhlagado/debug80-runtime": "file:../debug80-runtime",
-    "@jhlagado/z80-tool-services": "file:../z80-tool-services"
+    "@jhlagado/debug80-runtime": "git+https://github.com/jhlagado/debug80-runtime.git#b7343aa8c38c248abbc6ee801b4af270d4843ad6",
+    "@jhlagado/z80-tool-services": "git+https://github.com/jhlagado/z80-tool-services.git#6313682d4a9bc3d08d32c11fe054d153ce350720"
   },
   "devDependencies": {
     "@jhlagado/azm": "^0.3.9"
