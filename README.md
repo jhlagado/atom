@@ -26,6 +26,11 @@ acceptance remain deployment work.
 
 Node.js 20 or later is required.
 
+Disk-image builders can resolve `atom-z80/cpm22/image` to the packaged
+`ATOM.COM` binary and `atom-z80/cpm22/census` to its measured metadata, including
+`residentBytes` and `sha256`. These package exports avoid a source-checkout
+dependency; they are file paths for reading, not JavaScript modules.
+
 ```sh
 npm install --global atom-z80
 ```

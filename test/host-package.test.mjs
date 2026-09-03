@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -51,6 +53,13 @@ test("the packed desktop CLI installs offline and assembles without AZM or an At
   const metadata = JSON.parse(await fs.readFile(path.join(installedAtom, "package.json"), "utf8"));
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(metadata.private, undefined);
+  const consumer = createRequire(path.join(installDirectory, "package.json"));
+  const cpmImage = await fs.readFile(consumer.resolve("atom-z80/cpm22/image"));
+  const cpmCensus = JSON.parse(await fs.readFile(consumer.resolve("atom-z80/cpm22/census"), "utf8"));
+  assert.equal(cpmCensus.format, "atom-cpm22-census");
+  assert.equal(cpmImage.length, cpmCensus.residentBytes);
+  assert.equal(createHash("sha256").update(cpmImage).digest("hex"), cpmCensus.sha256);
+  assert.deepEqual(cpmImage, await fs.readFile(path.resolve("assets/atom-cpm22.com")));
   assert.deepEqual(metadata.exports["./native-builder"], {
     types: "./scripts/native-object-harness-builder.d.mts",
     import: "./scripts/native-object-harness-builder.mjs",

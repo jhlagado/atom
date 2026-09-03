@@ -26,6 +26,8 @@
   },
   "exports": {
     ".": "./src/host/index.mjs",
+    "./cpm22/image": "./assets/atom-cpm22.com",
+    "./cpm22/census": "./proofs/cpm22-census.json",
     "./native-builder": {
       "types": "./scripts/native-object-harness-builder.d.mts",
       "import": "./scripts/native-object-harness-builder.mjs"
@@ -34,6 +36,7 @@
   "files": [
     "assets/native-core.json",
     "assets/atom-cpm22.com",
+    "proofs/cpm22-census.json",
     "assets/atom-object-harness.bin",
     "bin",
     "docs/*.md",
