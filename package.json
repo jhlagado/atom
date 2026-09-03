@@ -1,17 +1,16 @@
 {
   "name": "atom-z80",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "atom: a streaming Z80 assembler that runs on a Z80",
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jhlagado/debug80.git",
-    "directory": "packages/atom"
+    "url": "git+https://github.com/jhlagado/atom.git"
   },
   "bugs": {
-    "url": "https://github.com/jhlagado/debug80/issues"
+    "url": "https://github.com/jhlagado/atom/issues"
   },
-  "homepage": "https://github.com/jhlagado/debug80/tree/main/packages/atom#readme",
+  "homepage": "https://github.com/jhlagado/atom#readme",
   "keywords": [
     "z80",
     "assembler",
@@ -63,11 +62,10 @@
     "verify:self-host-source": "npm run verify:native-source",
     "verify:example": "node scripts/verify-example.mjs",
     "annotate:contracts": "npm run verify:strict-contracts",
-    "build:dependencies": "npm run build -w @jhlagado/azm && npm run build -w @jhlagado/debug80-runtime && npm run build -w @jhlagado/z80-tool-services",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "verify:package-census": "node scripts/package-census.mjs --check",
     "update:package-census": "node scripts/package-census.mjs --update",
-    "prepare:proof": "npm run verify:dependencies && npm run build:dependencies",
+    "prepare:proof": "npm run verify:dependencies",
     "pretest": "npm run prepare:proof && npm run verify:native-source && npm run verify:native-object && npm run verify:cpm22 && npm run verify:cpm22-output-candidates",
     "test": "node --test test/*.test.mjs",
     "test:host": "node --test test/host-*.test.mjs",
@@ -96,7 +94,7 @@
     "@jhlagado/z80-tool-services": "file:../z80-tool-services"
   },
   "devDependencies": {
-    "@jhlagado/azm": "file:../azm"
+    "@jhlagado/azm": "^0.3.9"
   },
   "peerDependencies": {
     "@jhlagado/azm": "^0.3.9"
