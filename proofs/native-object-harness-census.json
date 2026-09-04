@@ -3,13 +3,13 @@
   "version": 1,
   "loadAddress": 0,
   "assembleEntry": 11757,
-  "adapterInitEntry": 12383,
-  "gatewayEntry": 13484,
-  "sourceReadEntry": 12774,
-  "configuredSourceReadEntry": 12774,
-  "residentEnd": 13515,
-  "residentBytes": 13515,
-  "nativeCoreResidentBytes": 12396,
+  "adapterInitEntry": 12387,
+  "gatewayEntry": 13488,
+  "sourceReadEntry": 12778,
+  "configuredSourceReadEntry": 12778,
+  "residentEnd": 13519,
+  "residentBytes": 13519,
+  "nativeCoreResidentBytes": 12400,
   "adapterResidentDeltaBytes": 1119,
   "platformPreludeBytes": 0,
   "platformPostludeBytes": 0,
@@ -20,13 +20,13 @@
   "maximumObjectNameBytes": 255,
   "maximumSourceObjectBytes": 65535,
   "maximumOutputObjectBytes": 65535,
-  "sha256": "636b1f8d24fc72e574923fcf99729d0ae103756802fa435952d59165769b0fa3",
+  "sha256": "f43d28880a45e65d857ed2c6ee08ce42d2cbb8a13ac12ff469260b088f0af8ca",
   "symbols": {
-    "DR_DETAI": 12380,
+    "DR_DETAI": 12384,
     "ST_DETAI": 11743,
     "ST_EPART": 11753,
     "ST_EOFF": 11754,
     "TK_ESTAT": 5278,
-    "NA_TRANS": 12618
+    "NA_TRANS": 12622
   }
 }

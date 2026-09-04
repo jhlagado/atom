@@ -8,14 +8,14 @@ below are Measured from the checked image or executable tests.
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Z80 code and immutable tables | Measured | 11,682 |
+| Z80 code and immutable tables | Measured | 11,686 |
 | Fixed non-reentrant workspace | Measured | 714 |
-| Linked resident extent at origin zero | Measured | 12,396 |
-| Margin below one 16 KiB bank | Measured | 3,988 |
+| Linked resident extent at origin zero | Measured | 12,400 |
+| Margin below one 16 KiB bank | Measured | 3,984 |
 
 The package, authoritative native source, Debug80 runtime, renderer, and desktop CLI
 do not consume this Z80 bank. A TEC-specific source/output adapter is not part
-of the 12,396-byte image and must be measured separately.
+of the 12,400-byte image and must be measured separately.
 
 ## Native source and output
 
@@ -34,12 +34,14 @@ The source service uses a 16-bit logical offset, so one part may contain at most
 65,535 bytes. Total source may be larger across the 255 ordered parts. The desktop
 runner retains immutable JavaScript snapshots and returns one byte at each
 `AtomSourceReadByte` call; it does not copy a source page into Z80 memory. The
-checked native self-host input is Measured 101,492 bytes in five content parts.
+checked native self-host input is Measured 101,536 bytes in five content parts.
 
-The native target uses a non-wrapping half-open 16-bit range whose mathematical
-end is at most `$FFFF`. It cannot currently represent `$10000` as an exclusive
-end. Starting at zero therefore permits a maximum capacity of 65,535 bytes,
-covering `$0000` through `$FFFE`.
+The native target has a 16-bit start and capacity, with a mathematical
+exclusive end at most `$10000`. An explicit target starting at `$FFFF` with
+capacity one can emit the last addressable byte. Capacity is at most 65,535;
+zero means empty, not 65,536. Starting at zero therefore still permits only
+`$0000` through `$FFFE` in one generation. The host's omitted-capacity default
+remains `$FFFF - start`; reaching `$FFFF` requires an explicit capacity.
 
 `INCBIN` bytes count as initialized output and consume the target capacity.
 The desktop bridge submits one IMAGE operation per byte through the existing native
@@ -97,8 +99,8 @@ The resolver, Node runner, and native driver share one part limit.
 | Bank ordinal | 0–255; zero for the current Atom output profile |
 
 The desktop runner's default execution budgets are 200,000,000 Z80 instructions
-and 2,000,000,000 T-states. Atom's measured self-build uses 101,840,573
-instructions and 1,086,338,471 T-states.
+and 2,000,000,000 T-states. Atom's measured self-build uses 101,857,310
+instructions and 1,086,511,840 T-states.
 
 `assembleResolvedAtomProject()` uses the default desktop runner arena layout unless
 the caller supplies `nativeMemoryLayout`. That option is for desktop harnesses
@@ -127,8 +129,8 @@ one flat output profile:
 
 | Item | Classification | Bytes |
 | --- | --- | ---: |
-| Linked CP/M transient | Measured | 15,029 |
-| Free margin below the `$3E80` source cache | Measured | 715 |
+| Linked CP/M transient | Measured | 15,033 |
+| Free margin below the `$3E80` source cache | Measured | 711 |
 | CP/M-specific resident increment | Measured | 2,630 |
 | Source parts | Measured boundary | 255 |
 | One source part | Measured boundary | 65,535 |

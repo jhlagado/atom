@@ -3,14 +3,14 @@ import fs from "node:fs";
 import test from "node:test";
 
 import { validCases, invalidCases } from "./cases.mjs";
-import { azmBytes, azmRejects } from "./support.mjs";
+import { referenceBytes, referenceRejects } from "./reference-fixtures.mjs";
 import { createParserHarness, PARSER_STATUS } from "./parser-support.mjs";
 
 const h = await createParserHarness({ contracts: process.env.ATOM_PARSER_CONTRACTS ?? "strict" });
 const census = JSON.parse(fs.readFileSync("proofs/azm-form-census.json", "utf8"));
 const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2c-memory.json", "utf8"));
 const valid = validCases();
-const invalid = invalidCases().filter(({ source }) => azmRejects(source));
+const invalid = invalidCases().filter(({ source }) => referenceRejects(source));
 
 function resolve(value) {
   if (typeof value === "number") return value;
@@ -35,7 +35,7 @@ test("Phase 2c memory profile covers exactly 64 KiB without gaps or overlap", ()
   }
 });
 
-test("native parser emits the exact encoder record and AZM bytes for every supported form", () => {
+test("native parser emits the exact encoder record and the frozen reference bytes for every supported form", () => {
   for (const [index, item] of valid.entries()) {
     const parsed = h.parse(item.source);
     assert.equal(parsed.carry, 0, `${index}: ${item.source} status=${parsed.status}`);
@@ -44,7 +44,7 @@ test("native parser emits the exact encoder record and AZM bytes for every suppo
     assert.deepEqual(parsed.record, Array.from(item.record), `${index}: record ${item.source}`);
     const encoded = h.encodeParsed(item.source);
     assert.equal(encoded.carry, 0, `${index}: encode ${item.source}`);
-    assert.deepEqual(encoded.bytes, azmBytes(item.source), `${index}: bytes ${item.source}`);
+    assert.deepEqual(encoded.bytes, referenceBytes(item.source), `${index}: bytes ${item.source}`);
   }
   assert.equal(valid.length, census.caseCount);
 });
@@ -57,11 +57,11 @@ test("case-insensitive spellings preserve every parsed record and byte encoding"
     assert.equal(parsed.carry, 0, `${index}: ${source} status=${parsed.status}`);
     assert.deepEqual(parsed.record, Array.from(item.record), `${index}: record ${source}`);
     const encoded = h.encodeParsed(source);
-    assert.deepEqual(encoded.bytes, azmBytes(item.source), `${index}: bytes ${source}`);
+    assert.deepEqual(encoded.bytes, referenceBytes(item.source), `${index}: bytes ${source}`);
   }
 });
 
-test("AZM-rejected form space is rejected atomically", () => {
+test("the frozen reference-rejected form space is rejected atomically", () => {
   for (const [index, item] of invalid.entries()) {
     const parsed = h.parse(item.source);
     assert.equal(parsed.carry, 1, `${index}: parser accepted ${item.source}`);
@@ -106,7 +106,7 @@ test("all indexed-zero aliases and current-address relative boundaries are exact
       assert.equal(parsed.carry, 0, source);
       assert.deepEqual(parsed.record, Array.from(item.record), source);
       const encoded = h.encodeParsed(source);
-      assert.deepEqual(encoded.bytes, azmBytes(source), source);
+      assert.deepEqual(encoded.bytes, referenceBytes(source), source);
     }
   }
   for (const [source, expected] of [["JR $3F82", -128], ["JR $4081", 127]]) {

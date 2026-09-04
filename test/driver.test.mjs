@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { packRadix40 } from "../src/abi.mjs";
 import { createDriverHarness } from "./driver-support.mjs";
-import { azmBytes } from "./support.mjs";
+import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createDriverHarness();
 const STATUS = Object.freeze({
@@ -38,7 +38,7 @@ test("native driver assembles ordered parts and commits one generation", () => {
   const result = h.assemble(parts);
   assert.equal(result.status, STATUS.OK);
   assert.equal(result.carry, 0);
-  assert.deepEqual(h.finalBytes(), azmBytes(parts.join("")));
+  assert.deepEqual(h.finalBytes(), referenceBytes(parts.join("")));
   assert.deepEqual(h.finalBytes(), [0x18, 0x00, 0x3e, 0x42]);
   assert.deepEqual(h.lifecycle(), {
     open: 0,
@@ -60,7 +60,7 @@ test("private scope crosses a source-part boundary and closes only at a global l
   ];
   const result = h.assemble(parts);
   assert.equal(result.status, STATUS.OK);
-  assert.deepEqual(h.finalBytes(), azmBytes(parts.join("")));
+  assert.deepEqual(h.finalBytes(), referenceBytes(parts.join("")));
   assert.deepEqual(h.finalBytes(), [0x18, 0x00, 0x00, 0x21, 0x00, 0x40]);
 });
 

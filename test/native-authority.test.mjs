@@ -6,7 +6,7 @@ import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 import { MNEMONICS } from "../src/abi.mjs";
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 import { invalidCases, systematicInvalidRecords, validCases } from "./cases.mjs";
-import { azmBytes, azmRejects } from "./support.mjs";
+import { referenceBytes, referenceRejects } from "./reference-fixtures.mjs";
 
 const INPUT = 0x8000;
 const OUTPUT = 0x8010;
@@ -102,9 +102,9 @@ async function createCheckedCoreHarness() {
 
 const harness = await createCheckedCoreHarness();
 
-test("the authoritative .asm encoder matches AZM across the complete claimed space", () => {
+test("the authoritative .asm encoder matches the frozen reference across the complete claimed space", () => {
   for (const { source, record } of validCases()) {
-    const expected = azmBytes(source);
+    const expected = referenceBytes(source);
     const length = harness.length(record);
     assert.equal(length.carry, 0, `${source}: form length rejected a valid form`);
     assert.equal(length.value, expected.length, `${source}: form length differs`);
@@ -117,7 +117,7 @@ test("the authoritative .asm encoder matches AZM across the complete claimed spa
   }
 
   for (const { source, record, matrix } of invalidCases()) {
-    const rejected = azmRejects(source);
+    const rejected = referenceRejects(source);
     if (!rejected && matrix) continue;
     assert.equal(rejected, true, `${source}: invalid fixture is accepted by AZM`);
     assert.equal(harness.length(record).carry, 1, `${source}: form length accepted an invalid form`);

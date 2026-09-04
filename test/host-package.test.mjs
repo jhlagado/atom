@@ -148,7 +148,7 @@ test("the packed desktop CLI installs offline and assembles without AZM or an At
 
   const selfHosted = await run(executable, ["self-host"], { cwd: projectDirectory });
   assert.equal(selfHosted.status, 0, selfHosted.stderr);
-  assert.match(selfHosted.stdout, /Atom assembled 6 part\(s\), 12396 byte\(s\)/);
+  assert.match(selfHosted.stdout, /Atom assembled 6 part\(s\), 12400 byte\(s\)/);
   const selfHostBinary = await fs.readFile(path.join(projectDirectory, "build", "atom.bin"));
   const installedCore = JSON.parse(await fs.readFile(path.join(installedAtom, "assets", "native-core.json"), "utf8"));
   const expectedSelfHost = parseIntelHex(installedCore.hexText).memory.slice(0, installedCore.symbols.AtomHostResidentEnd);

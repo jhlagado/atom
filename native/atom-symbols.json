@@ -2,13 +2,13 @@
   "format": "atom-native-symbol-ledger",
   "version": 2,
   "statistics": {
-    "statements": 7166,
-    "sourceBytes": 101492,
+    "statements": 7170,
+    "sourceBytes": 101536,
     "sourceParts": 5,
     "checkedParts": 6,
-    "checkedBytes": 101641,
+    "checkedBytes": 101685,
     "globalSymbols": 876,
-    "privateSymbols": 440
+    "privateSymbols": 441
   },
   "symbols": [
     {
@@ -8111,6 +8111,13 @@
       "original": "AtomDriverValidateArenas",
       "short": "DR_VAREN",
       "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "_AtomDriverTargetRangeOk",
+      "short": ".RANGEOK",
+      "private": true,
+      "scope": "ATOMDRIVERVALIDATEARENAS",
       "module": "DR"
     },
     {

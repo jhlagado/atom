@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { validCases } from "./cases.mjs";
 import { createOutputHarness } from "./output-support.mjs";
-import { azmBytes } from "./support.mjs";
+import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createOutputHarness();
 const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2f-memory.json", "utf8"));
@@ -49,7 +49,7 @@ test("emits one Nucleus-model image operation for each instruction byte", () => 
   ]);
 });
 
-test("Nucleus image operations preserve every AZM-supported instruction byte", () => {
+test("Nucleus image operations preserve every instruction byte in the frozen reference", () => {
   for (const [index, item] of validCases().entries()) {
     h.reset();
     const parsed = h.parse(item.source);
@@ -57,7 +57,7 @@ test("Nucleus image operations preserve every AZM-supported instruction byte", (
     const emitted = h.emit();
     assert.equal(emitted.carry, 0, `${index}: ${item.source}`);
     const bytes = h.operations().filter(({ kind }) => kind === 1).map((operation) => operation.bytes[0]);
-    assert.deepEqual(bytes, azmBytes(item.source), `${index}: ${item.source}`);
+    assert.deepEqual(bytes, referenceBytes(item.source), `${index}: ${item.source}`);
   }
 });
 

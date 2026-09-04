@@ -3,7 +3,8 @@ import test from "node:test";
 
 import { MNEMONICS, O, packRadix40 } from "../src/abi.mjs";
 import { invalidCases, systematicInvalidRecords, validCases } from "./cases.mjs";
-import { azmBytes, azmRejects, createHarness, extent } from "./support.mjs";
+import { referenceBytes, referenceRejects } from "./reference-fixtures.mjs";
+import { createHarness, extent } from "./support.mjs";
 
 const harness = await createHarness();
 
@@ -54,11 +55,11 @@ test("recognizes every mnemonic through mixed case and rejects non-mnemonics", (
   }
 });
 
-test("native encoder is byte-identical to AZM for the enumerated full valid space", () => {
+test("native encoder is byte-identical to the frozen reference for the enumerated full valid space", () => {
   const cases = validCases();
   assert.ok(cases.length > 3_000, `case generator unexpectedly small: ${cases.length}`);
   for (const { source, record } of cases) {
-    const expected = azmBytes(source);
+    const expected = referenceBytes(source);
     const length = harness.length(record);
     assert.equal(length.carry, 0, `${source}: formLength rejected valid form`);
     assert.equal(length.value, expected.length, `${source}: wrong formLength`);
@@ -83,7 +84,7 @@ test("formLength ignores every concrete value in every valid and rejected record
     [0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55],
     [0x00, 0x80, 0x7f, 0xff, 0x01, 0xfe],
   ];
-  const rejected = invalidCases().filter(({ source }) => azmRejects(source));
+  const rejected = invalidCases().filter(({ source }) => referenceRejects(source));
   for (const { source, record } of [...validCases(), ...rejected]) {
     const expected = harness.length(record);
     for (const pattern of patterns) {
@@ -100,7 +101,7 @@ test("negative differential rejects invalid forms without committing bytes", () 
   const candidates = invalidCases();
   let rejected = 0;
   for (const { source, record, matrix } of candidates) {
-    const oracleRejected = azmRejects(source);
+    const oracleRejected = referenceRejects(source);
     if (!oracleRejected && matrix) continue;
     assert.equal(oracleRejected, true, `${source}: malformed negative fixture is accepted by AZM`);
     rejected += 1;
@@ -126,7 +127,7 @@ test("index-half collision rules have explicit discriminators", () => {
     ["LD H,(IX+1)", [O.H, O.INDEX_IX], true],
   ];
   for (const [source, operands, valid] of fixtures) {
-    assert.equal(azmRejects(source), !valid, source);
+    assert.equal(referenceRejects(source), !valid, source);
     const record = new Uint8Array([43, ...operands, 255, 0, 0, 1, 0, 0, 0]);
     const result = harness.length(record);
     assert.equal(result.carry, valid ? 0 : 1, source);

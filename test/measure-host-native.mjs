@@ -38,7 +38,7 @@ const workspaceBytes = [
 
 console.log(JSON.stringify({
   labels: {
-    resident: "Measured in the strict-contract Atom desktop host image.",
+    resident: "Measured in the checked ATOM-built desktop host image; no static register analysis is performed.",
     execution: "Measured for the two-part host-preprocessed integration program.",
   },
   native: {

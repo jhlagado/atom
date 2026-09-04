@@ -1,10 +1,10 @@
 import { validCases, invalidCases } from "./cases.mjs";
-import { azmRejects } from "./support.mjs";
+import { referenceRejects } from "./reference-fixtures.mjs";
 import { createParserHarness } from "./parser-support.mjs";
 
 const h = await createParserHarness();
 const valid = validCases();
-const invalid = invalidCases().filter(({ source }) => azmRejects(source));
+const invalid = invalidCases().filter(({ source }) => referenceRejects(source));
 const indexedZeroAliases = valid.flatMap((item) => {
   if (!/\(I[XY]\+0\)/.test(item.source)) return [];
   return [

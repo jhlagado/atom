@@ -16,10 +16,10 @@
     { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
     { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1358 },
     { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 24 },
-    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 617 },
+    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 621 },
     { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
     { "name": "host-service-code", "start": "AtomHostServiceCodeStart", "end": "AtomHostServiceCodeEnd", "exactBytes": 8 },
-    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomIntegrationProofSourceStart", "exactBytes": 20372 },
+    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomIntegrationProofSourceStart", "exactBytes": 20368 },
     { "name": "proof-source", "start": "AtomIntegrationProofSourceStart", "end": "AtomIntegrationProofSourceEnd", "exactBytes": 514 },
     { "name": "proof-record", "start": "AtomIntegrationProofRecordStart", "end": "AtomIntegrationProofRecordEnd", "exactBytes": 12 },
     { "name": "proof-output", "start": "AtomIntegrationProofOutputStart", "end": "AtomIntegrationProofOutputEnd", "exactBytes": 6 },
@@ -33,7 +33,7 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12396 },
+    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12400 },
     { "name": "expression-code", "start": "AtomExpressionCodeStart", "end": "AtomExpressionCodeEnd", "exactBytes": 1877 },
     { "name": "patch-locator-code", "start": "AtomPatchCodeStart", "end": "AtomPatchCodeEnd", "exactBytes": 67 },
     { "name": "parser-rule-code", "start": "AtomParserCodeStart", "end": "AtomParserRuleCodeEnd", "exactBytes": 1967 },

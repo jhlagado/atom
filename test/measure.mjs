@@ -1,12 +1,15 @@
 import { MNEMONICS } from "../src/abi.mjs";
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 import { invalidCases, systematicInvalidRecords, validCases } from "./cases.mjs";
-import { azmBytes, azmRejects, createHarness, extent } from "./support.mjs";
+import { referenceBytes, referenceRejects } from "./reference-fixtures.mjs";
+import { createHarness, extent } from "./support.mjs";
 
 const harness = await createHarness();
+const core = await loadNativeAtomCore();
 const s = harness.symbols;
 const valid = validCases();
-const negative = invalidCases().filter(({ source }) => azmRejects(source));
-const encodings = new Set(valid.map(({ source }) => azmBytes(source).map((b) => b.toString(16).padStart(2, "0")).join("")));
+const negative = invalidCases().filter(({ source }) => referenceRejects(source));
+const encodings = new Set(valid.map(({ source }) => referenceBytes(source).map((b) => b.toString(16).padStart(2, "0")).join("")));
 const records = new Set(valid.map(({ record }) => Buffer.from(record).toString("hex")));
 
 for (const { record } of valid) {
@@ -24,6 +27,11 @@ harness.pack("ZZZZZZZZ");
 const result = {
   labels: "All byte counts are Measured unless explicitly marked Projected or Hypothesis.",
   authority: {
+    source: core.source,
+    nativeCoreSha256: core.artifactSha256,
+    historicalReference: "test/fixtures/historical-assembly.json",
+  },
+  historicalPhase1Authority: {
     repository: "/Users/johnhardy/projects/debug80",
     branch: "main",
     head: "b4046badd29b1dd1bc146029728bacaa5e5fe603",

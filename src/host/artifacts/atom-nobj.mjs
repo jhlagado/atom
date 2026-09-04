@@ -171,7 +171,9 @@ function decodeAtomNobj(bytes) {
   }
   const entryAddress = readU16(map.payload, 3);
   const usedLength = readU16(map.payload, 5);
-  const finalCursor = readU16(map.payload, 7);
+  const cursorWord = readU16(map.payload, 7);
+  const finalCursor = cursorWord === 0 && imageBase + imageCapacity === 0x10000
+    ? 0x10000 : cursorWord;
   if (
     usedLength > imageCapacity ||
     finalCursor < imageBase ||

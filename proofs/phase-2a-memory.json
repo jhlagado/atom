@@ -16,10 +16,10 @@
     { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
     { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1358 },
     { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 24 },
-    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 617 },
+    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 621 },
     { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
     { "name": "host-service-code", "start": "AtomHostServiceCodeStart", "end": "AtomHostServiceCodeEnd", "exactBytes": 8 },
-    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomSymbolProofDataStart", "exactBytes": 20372 },
+    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomSymbolProofDataStart", "exactBytes": 20368 },
     { "name": "proof-data", "start": "AtomSymbolProofDataStart", "end": "AtomSymbolProofDataEnd", "exactBytes": 20 },
     { "name": "middle-free", "start": "AtomSymbolProofDataEnd", "end": "AtomSymbolArenaBefore", "exactBytes": 4076 },
     { "name": "symbol-proof-arena", "start": "AtomSymbolArenaBefore", "end": "AtomSymbolArenaProofEnd", "exactBytes": 66 },
@@ -30,7 +30,7 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12396 },
+    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12400 },
     { "name": "symbol-code", "start": "AtomSymbolCodeStart", "end": "AtomSymbolCodeEnd", "exactBytes": 732 },
     { "name": "fixed-symbol-workspace", "start": "AtomSymbolWorkspaceStart", "end": "AtomSymbolWorkspaceEnd", "exactBytes": 20 },
     { "name": "proof-symbol-capacity", "start": "AtomSymbolArena", "end": "AtomSymbolArenaLimit", "exactBytes": 64 },

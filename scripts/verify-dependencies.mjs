@@ -6,11 +6,6 @@ const require = createRequire(import.meta.url);
 
 const dependencies = [
   {
-    name: "@jhlagado/azm",
-    minimum: [0, 3, 9],
-    upperExclusive: [0, 4, 0],
-  },
-  {
     name: "@jhlagado/debug80-runtime",
     minimum: [0, 3, 0],
     upperExclusive: [0, 4, 0],

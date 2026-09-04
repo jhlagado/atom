@@ -60,11 +60,9 @@
     "verify:cpm22-output-candidates": "node scripts/measure-cpm22-output-candidates.mjs --check",
     "verify:native-core": "node scripts/generate-native-core.mjs --check",
     "verify:native-object": "node scripts/generate-native-object-harness.mjs --check",
-    "verify:strict-contracts": "node scripts/generate-native-core.mjs --check",
     "verify:native-source": "node scripts/generate-native-core.mjs --check",
     "verify:self-host-source": "npm run verify:native-source",
     "verify:example": "node scripts/verify-example.mjs",
-    "annotate:contracts": "npm run verify:strict-contracts",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "verify:package-census": "node scripts/package-census.mjs --check",
     "update:package-census": "node scripts/package-census.mjs --update",
@@ -87,7 +85,7 @@
     "measure:self-host": "node test/measure-self-host.mjs",
     "measure:cpm22": "node test/measure-cpm22.mjs",
     "measure:cpm22-output-candidates": "node scripts/measure-cpm22-output-candidates.mjs",
-    "release:check": "npm test && npm run verify:strict-contracts && node test/measure-host-native.mjs && node test/measure-self-host.mjs",
+    "release:check": "npm test && node test/measure-host-native.mjs && node test/measure-self-host.mjs",
     "prepack": "npm run verify:native-source && npm run verify:native-object && npm run verify:cpm22 && node scripts/bundled-dependencies.mjs prepare",
     "postpack": "node scripts/bundled-dependencies.mjs cleanup",
     "prepublishOnly": "npm run release:check"
@@ -96,21 +94,6 @@
     "@jhlagado/debug80-runtime": "git+https://github.com/jhlagado/debug80-runtime.git#b7343aa8c38c248abbc6ee801b4af270d4843ad6",
     "@jhlagado/z80-tool-services": "git+https://github.com/jhlagado/z80-tool-services.git#6313682d4a9bc3d08d32c11fe054d153ce350720"
   },
-  "devDependencies": {
-    "@jhlagado/azm": "^0.3.9"
-  },
-  "peerDependencies": {
-    "@jhlagado/azm": "^0.3.9"
-  },
-  "peerDependenciesMeta": {
-    "@jhlagado/azm": {
-      "optional": true
-    }
-  },
-  "bundledDependencies": [
-    "@jhlagado/debug80-runtime",
-    "@jhlagado/z80-tool-services"
-  ],
   "engines": {
     "node": ">=20"
   }

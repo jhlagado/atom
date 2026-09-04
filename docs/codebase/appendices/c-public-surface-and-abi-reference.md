@@ -23,21 +23,27 @@ BINARIES:       atom, azm-to-atom
 ```
 
 The package requires Node 20 or later. It bundles
-`@jhlagado/debug80-runtime` and `@jhlagado/z80-tool-services`. AZM is not
-required to run the installed assembler. The optional native builder uses an
-installed AZM 0.3.9 or later to link strict-contract platform profiles.
+`@jhlagado/debug80-runtime` and `@jhlagado/z80-tool-services`. Both the installed
+assembler and the native profile builder use ATOM; neither requires AZM.
 
 ## Native profile builder
 
 `atom-z80/native-builder` exports `buildNativeObjectHarness()`. Platform build
 tools may select an image origin, a later core origin, a platform prelude, a
-measured platform postlude, a separate common-RAM workspace origin, a gateway implementation, and
-register-contract profile and interface files. A profile may also name a Z80
+measured platform postlude, a separate common-RAM workspace origin, and a gateway
+implementation. A profile may also name a Z80
 source-reader target; the default is the named-object reader. This lets a
 native preprocessor install an equal-offset masking reader without changing the
 Atom core or the tool-service ABI. The function returns the immutable bank
 bytes, fixed-state initialization bytes, measured addresses, entries,
 capacities, hashes, and complete D8 build map.
+
+Source fragments must use ATOM syntax and its eight-character symbol limit.
+The builder splits the linked source between lines into ordered native parts;
+D8 source locations identify those generated parts. It does not run static
+register-contract analysis: supplying `registerContractsProfile` or a nonempty
+`registerContractsInterfaces` list is an error. Register annotations remain
+comments, and execution tests qualify the stated register and stack behavior.
 
 This subpath is a build interface, not part of Atom's runtime host API. A
 platform launcher still owns source preparation, descriptors, memory arenas,

@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { compile } from "@jhlagado/azm";
-import { parseIntelHex } from "@jhlagado/debug80-runtime";
-
-import { translateAtomLineToAzm } from "../src/host/translation/atom-to-azm.mjs";
+import {
+  assembleResolvedAtomProject,
+  loadNativeAtomCore,
+  materializeAtomGeneration,
+  writeAtomD8,
+} from "../src/host/index.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -36,7 +37,7 @@ function markAdapterWorkspace(adapterText) {
   return `${adapterText.slice(0, start)}NA_WBEG:\n${adapterText.slice(start, end)}NA_WEND:\n${adapterText.slice(end)}`;
 }
 
-function relocateFixedWorkspace(sourceText, workspaceOrigin) {
+function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
   const code = [];
   const workspace = [];
   const found = new Set();
@@ -57,7 +58,24 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin) {
   }
   assert.equal(active, undefined, "unterminated fixed workspace");
   assert.deepEqual(found, fixedWorkspacePrefixes, "native fixed-workspace markers changed");
-  return `${code.join("\n")}\n${originSource(workspaceOrigin)}\n${workspace.join("\n")}\n`;
+  const workspaceSource = `${originSource(workspaceOrigin)}\n${workspace.join("\n")}\n`;
+  if (workspaceOrigin >= imageOrigin) return `${code.join("\n")}\n${workspaceSource}`;
+
+  // ATOM's IMAGE stream is ascending. Emit low RAM before the high ROM bank.
+  // These eight literal EQU declarations size the native workspace; moving
+  // them emits no bytes and does not evaluate code-address expressions.
+  const required = new Set(["TK_RECB", "EX_VALB", "EX_VCAP", "EX_OPERB", "EX_OCAP", "PR_RCAP", "PR_BRB", "PR_PRB"]);
+  const constants = [];
+  const remainder = code.filter((line) => {
+    const match = /^([A-Z_]+) EQU (.*)$/.exec(line);
+    if (match === null || !required.has(match[1])) return true;
+    assert.match(match[2], /^\d+$/, `workspace constant ${match[1]} is no longer a literal`);
+    required.delete(match[1]);
+    constants.push(line);
+    return false;
+  });
+  assert.equal(required.size, 0, "native workspace size constants changed");
+  return `${constants.join("\n")}\n${workspaceSource}\n${remainder.join("\n")}\n`;
 }
 
 function sourceReadTargetSource(target) {
@@ -68,6 +86,7 @@ function sourceReadTargetSource(target) {
 
 async function linkedSource({
   origin,
+  imageOrigin,
   gatewaySource,
   sourceReadTarget,
   workspaceOrigin,
@@ -103,11 +122,42 @@ async function linkedSource({
   let adapter = adapterText.replace(unavailableGateway, gatewaySource ?? unavailableGateway);
   if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
   let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${parts.join("\n")}\n${sharedAbi}\n${adapter}${postludeSource === undefined ? "" : `\n${postludeSource}`}\nNP_END:\n`;
-  if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin);
+  if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin, imageOrigin);
   return {
     sourceReadTarget: sourceRead.label,
-    sourceText: `${atomSource.split(/\r\n|\n|\r/).map(translateAtomLineToAzm).join("\n")}\n.end\n`,
+    sourceText: atomSource,
   };
+}
+
+// The linked source exceeds one native 16-bit source part. Split only between
+// lines; ATOM retains label scope across the ordered parts of one assembly.
+function sourceProject(sourceText) {
+  const parts = [];
+  let lines = [];
+  let size = 0;
+  const flush = () => {
+    if (lines.length === 0) return;
+    const bytes = new TextEncoder().encode(lines.join(""));
+    parts.push({
+      ordinal: parts.length,
+      bank: 0,
+      logicalIdentity: `atom-object-harness-${parts.length}.asm`,
+      originalBytes: bytes,
+      compilerBytes: bytes,
+    });
+    lines = [];
+    size = 0;
+  };
+  for (const line of sourceText.split(/\r\n|\n|\r/)) {
+    const text = `${line}\n`;
+    const length = Buffer.byteLength(text);
+    assert.ok(length <= 0xffff, "native harness source line exceeds one ATOM part");
+    if (size + length > 0xffff) flush();
+    lines.push(text);
+    size += length;
+  }
+  flush();
+  return { parts };
 }
 
 export async function buildNativeObjectHarness({
@@ -121,117 +171,107 @@ export async function buildNativeObjectHarness({
   registerContractsProfile,
   registerContractsInterfaces = [],
 } = {}) {
+  assert.ok(registerContractsProfile === undefined && registerContractsInterfaces.length === 0,
+    "ATOM does not support AZM static register-contract options");
   originSource(imageOrigin);
   assert.ok(imageOrigin <= origin, "native harness image origin follows its core origin");
   if (workspaceOrigin !== undefined) originSource(workspaceOrigin);
   const linked = await linkedSource({
     origin,
+    imageOrigin,
     gatewaySource,
     sourceReadTarget,
     workspaceOrigin,
     preludeSource,
     postludeSource,
   });
-  const { sourceText } = linked;
-  const temporary = await mkdtemp(join(tmpdir(), "atom-object-harness-"));
-  try {
-    const sourcePath = join(temporary, "atom-object-harness.asm");
-    await writeFile(sourcePath, sourceText);
-    const result = await compile(sourcePath, {
-      emitBin: workspaceOrigin === undefined,
-      emitHex: workspaceOrigin !== undefined,
-      emitD8m: true,
-      emitLst: false,
-      registerContracts: "strict",
-      ...(registerContractsProfile === undefined ? {} : { registerContractsProfile }),
-      registerContractsInterfaces,
-      symbolCase: "insensitive",
-    });
-    const errors = result.diagnostics.filter(({ severity }) => severity === "error");
-    if (errors.length !== 0) {
-      throw new Error(errors.map(({ sourceName, line, column, message }) =>
-        `${sourceName}:${line}:${column}: ${message}\n> ${sourceText.split("\n")[line - 1] ?? ""}`).join("\n"));
-    }
-    const binary = result.artifacts.find(({ kind }) => kind === "bin");
-    const hex = result.artifacts.find(({ kind }) => kind === "hex");
-    const debugMap = result.artifacts.find(({ kind }) => kind === "d8m");
-    assert.equal(debugMap?.kind, "d8m");
-    const symbols = Object.fromEntries(debugMap.json.symbols.flatMap((symbol) => {
-      const value = symbol.address ?? symbol.value;
-      return value === undefined ? [] : [[symbol.name.toUpperCase(), value]];
-    }));
-    const residentBytes = symbols.NP_END - imageOrigin;
-    assert.ok(residentBytes <= 0x4000, "named-object harness exceeds one 16 KiB bank");
-    let bytes;
-    let workspaceBytes;
-    let fixedWorkspace;
-    if (workspaceOrigin === undefined) {
-      assert.equal(binary?.kind, "bin");
-      assert.equal(binary.bytes.length, residentBytes);
-      bytes = binary.bytes;
-    } else {
-      assert.equal(hex?.kind, "hex");
-      const program = parseIntelHex(hex.text);
-      bytes = program.memory.slice(imageOrigin, symbols.NP_END);
-      const workspaceEnd = symbols.NA_WEND;
-      assert.equal(symbols.EN_WBEG, workspaceOrigin);
-      assert.ok(workspaceEnd > workspaceOrigin, "native fixed workspace is empty");
-      assert.ok(
-        symbols.NP_END <= workspaceOrigin || workspaceEnd <= imageOrigin,
-        "native code and fixed workspace overlap",
-      );
-      workspaceBytes = program.memory.slice(workspaceOrigin, workspaceEnd);
-      fixedWorkspace = {
-        fixedWorkspaceStart: workspaceOrigin,
-        fixedWorkspaceEnd: workspaceEnd,
-        fixedWorkspaceBytes: workspaceEnd - workspaceOrigin,
-        nativeCoreFixedWorkspaceBytes: symbols.NA_WBEG - workspaceOrigin,
-        adapterFixedWorkspaceBytes: workspaceEnd - symbols.NA_WBEG,
-        workspaceSha256: createHash("sha256").update(workspaceBytes).digest("hex"),
-      };
-    }
-    const nativeCoreBytes = workspaceOrigin === undefined ? 12_396 : symbols.DR_CEND - origin;
-    const proofSymbols = Object.fromEntries([
-      "DR_DETAI",
-      "ST_DETAI",
-      "ST_EPART",
-      "ST_EOFF",
-      "TK_ESTAT",
-      "NA_TRANS",
-    ].map((name) => [name, symbols[name]]));
-    return {
-      bytes,
-      debugMap: debugMap.json,
-      report: {
-        format: "atom-native-object-harness-census",
-        version: 1,
-        loadAddress: imageOrigin,
-        ...(imageOrigin === origin ? {} : { coreOrigin: origin }),
-        assembleEntry: symbols.DR_ASM,
-        adapterInitEntry: symbols.NA_INIT,
-        gatewayEntry: symbols.NA_GATE,
-        sourceReadEntry: symbols.NA_SREAD,
-        configuredSourceReadEntry: symbols[linked.sourceReadTarget],
-        residentEnd: symbols.NP_END,
-        residentBytes,
-        nativeCoreResidentBytes: nativeCoreBytes,
-        adapterResidentDeltaBytes: symbols.NA_REND - origin - nativeCoreBytes,
-        platformPreludeBytes: origin - imageOrigin,
-        platformPostludeBytes: symbols.NP_END - symbols.NA_REND,
-        commonWorkspaceBytes: symbols.NA_WLEN,
-        transferBufferBytes: symbols.NA_XLEN,
-        maximumSourceParts: 255,
-        sourceNameTableBytes: 255 * 3,
-        maximumObjectNameBytes: 255,
-        maximumSourceObjectBytes: 65_535,
-        maximumOutputObjectBytes: 65_535,
-        sha256: createHash("sha256").update(bytes).digest("hex"),
-        symbols: proofSymbols,
-        ...fixedWorkspace,
-      },
-      ...(workspaceBytes === undefined ? {} : { workspaceBytes }),
+  const project = sourceProject(linked.sourceText);
+  const result = await assembleResolvedAtomProject(project, {
+    target: { start: 0, capacity: 0xffff },
+    maxInstructions: 250_000_000,
+    maxCycles: 2_500_000_000,
+  }).catch((cause) => {
+    const location = cause.diagnostic;
+    const part = project.parts[location?.ordinal];
+    if (part === undefined) throw cause;
+    const line = new TextDecoder().decode(part.originalBytes).split("\n")[location.line - 1];
+    throw new Error(`${location.logicalIdentity}:${location.line}: ${cause.message}\n> ${line}`, { cause });
+  });
+  const debugMap = writeAtomD8(project, result.generation);
+  const materialized = materializeAtomGeneration(result.generation, { base: 0 });
+  const symbols = Object.fromEntries(debugMap.symbols.flatMap((symbol) => {
+    const value = symbol.address ?? symbol.value;
+    return value === undefined ? [] : [[symbol.name.toUpperCase(), value]];
+  }));
+  const residentBytes = symbols.NP_END - imageOrigin;
+  assert.ok(residentBytes <= 0x4000, "named-object harness exceeds one 16 KiB bank");
+  let bytes;
+  let workspaceBytes;
+  let fixedWorkspace;
+  if (workspaceOrigin === undefined) {
+    assert.equal(materialized.end, symbols.NP_END);
+    bytes = materialized.bytes.slice(imageOrigin, symbols.NP_END);
+    assert.equal(bytes.length, residentBytes);
+  } else {
+    bytes = materialized.bytes.slice(imageOrigin, symbols.NP_END);
+    const workspaceEnd = symbols.NA_WEND;
+    assert.equal(symbols.EN_WBEG, workspaceOrigin);
+    assert.ok(workspaceEnd > workspaceOrigin, "native fixed workspace is empty");
+    assert.ok(
+      symbols.NP_END <= workspaceOrigin || workspaceEnd <= imageOrigin,
+      "native code and fixed workspace overlap",
+    );
+    workspaceBytes = materialized.bytes.slice(workspaceOrigin, workspaceEnd);
+    fixedWorkspace = {
+      fixedWorkspaceStart: workspaceOrigin,
+      fixedWorkspaceEnd: workspaceEnd,
+      fixedWorkspaceBytes: workspaceEnd - workspaceOrigin,
+      nativeCoreFixedWorkspaceBytes: symbols.NA_WBEG - workspaceOrigin,
+      adapterFixedWorkspaceBytes: workspaceEnd - symbols.NA_WBEG,
+      workspaceSha256: createHash("sha256").update(workspaceBytes).digest("hex"),
     };
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
   }
+  const nativeCoreBytes = workspaceOrigin === undefined
+    ? (await loadNativeAtomCore()).residentExtentBytes
+    : symbols.DR_CEND - origin;
+  const proofSymbols = Object.fromEntries([
+    "DR_DETAI",
+    "ST_DETAI",
+    "ST_EPART",
+    "ST_EOFF",
+    "TK_ESTAT",
+    "NA_TRANS",
+  ].map((name) => [name, symbols[name]]));
+  return {
+    bytes,
+    debugMap,
+    report: {
+      format: "atom-native-object-harness-census",
+      version: 1,
+      loadAddress: imageOrigin,
+      ...(imageOrigin === origin ? {} : { coreOrigin: origin }),
+      assembleEntry: symbols.DR_ASM,
+      adapterInitEntry: symbols.NA_INIT,
+      gatewayEntry: symbols.NA_GATE,
+      sourceReadEntry: symbols.NA_SREAD,
+      configuredSourceReadEntry: symbols[linked.sourceReadTarget],
+      residentEnd: symbols.NP_END,
+      residentBytes,
+      nativeCoreResidentBytes: nativeCoreBytes,
+      adapterResidentDeltaBytes: symbols.NA_REND - origin - nativeCoreBytes,
+      platformPreludeBytes: origin - imageOrigin,
+      platformPostludeBytes: symbols.NP_END - symbols.NA_REND,
+      commonWorkspaceBytes: symbols.NA_WLEN,
+      transferBufferBytes: symbols.NA_XLEN,
+      maximumSourceParts: 255,
+      sourceNameTableBytes: 255 * 3,
+      maximumObjectNameBytes: 255,
+      maximumSourceObjectBytes: 65_535,
+      maximumOutputObjectBytes: 65_535,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+      symbols: proofSymbols,
+      ...fixedWorkspace,
+    },
+    ...(workspaceBytes === undefined ? {} : { workspaceBytes }),
+  };
 }

@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { validCases } from "./cases.mjs";
 import { createIntegrationHarness, PATCH_KIND } from "./integration-support.mjs";
-import { azmBytes } from "./support.mjs";
+import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createIntegrationHarness({ contracts: process.env.ATOM_INTEGRATION_CONTRACTS ?? "strict" });
 const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2e-memory.json", "utf8"));
@@ -41,7 +41,7 @@ test("Phase 2e memory profile covers exactly 64 KiB without gaps or overlap", ()
   }
 });
 
-test("expression-enabled parser preserves every concrete record and AZM byte", () => {
+test("expression-enabled parser preserves every concrete record and frozen reference byte", () => {
   for (const [index, item] of validCases().entries()) {
     h.reset();
     const parsed = h.parse(item.source);
@@ -49,7 +49,7 @@ test("expression-enabled parser preserves every concrete record and AZM byte", (
     assert.deepEqual(parsed.record, Array.from(item.record), `${index}: record ${item.source}`);
     assert.deepEqual(parsed.references, [], `${index}: references ${item.source}`);
     const encoded = h.encodeParsed(item.source);
-    assert.deepEqual(encoded.bytes, azmBytes(item.source), `${index}: bytes ${item.source}`);
+    assert.deepEqual(encoded.bytes, referenceBytes(item.source), `${index}: bytes ${item.source}`);
   }
 });
 
@@ -75,7 +75,7 @@ test("resolved global expressions flow through normalization, validation, and en
     const parsed = h.parse(source, { address: 0x4000 });
     assert.equal(parsed.carry, 0, source);
     assert.deepEqual(parsed.references, [], source);
-    assert.deepEqual(h.encodeParsed(source).bytes, azmBytes(oracle), source);
+    assert.deepEqual(h.encodeParsed(source).bytes, referenceBytes(oracle), source);
   }
 });
 

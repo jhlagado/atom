@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import { azmBytes } from "./support.mjs";
+import { referenceBytes } from "./reference-fixtures.mjs";
 import { createExpressionHarness, EXPRESSION } from "./expression-support.mjs";
 
 const h = await createExpressionHarness({ contracts: process.env.ATOM_EXPRESSION_CONTRACTS ?? "strict" });
@@ -31,13 +31,13 @@ test("Phase 2d memory profile covers exactly 64 KiB without gaps or overlap", ()
   }
 });
 
-function azmWord(expression) {
-  const bytes = azmBytes(`LD HL,${expression}`);
+function referenceWord(expression) {
+  const bytes = referenceBytes(`LD HL,${expression}`);
   assert.equal(bytes[0], 0x21, expression);
   return bytes[1] | (bytes[2] << 8);
 }
 
-test("precedence, associativity, unary operations, and current address match AZM", () => {
+test("precedence, associativity, unary operations, and current address match the frozen reference", () => {
   const cases = [
     ["0", 0], ["65535", 65535], ["-1", 0xffff], ["-32768", 0x8000],
     ["1+2*3", 7], ["(1+2)*3", 9], ["20-5-3", 12],
@@ -52,7 +52,7 @@ test("precedence, associativity, unary operations, and current address match AZM
     assert.equal(result.carry, 0, source);
     assert.equal(result.status, EXPRESSION.RESOLVED, source);
     assert.equal(result.hl, expected, source);
-    assert.equal(result.hl, azmWord(source), `AZM ${source}`);
+    assert.equal(result.hl, referenceWord(source), `AZM ${source}`);
     assert.equal(result.delimiter, 1, source);
   }
 });
@@ -83,10 +83,10 @@ test("all concrete operators accept nested whitespace and stop before delimiters
   result = h.evaluate("($10 << 2) | (%11 ^ 1)");
   assert.equal(result.carry, 0);
   assert.equal(result.hl, 66);
-  assert.equal(result.hl, azmWord("($10 << 2) | (%11 ^ 1)"));
+  assert.equal(result.hl, referenceWord("($10 << 2) | (%11 ^ 1)"));
 });
 
-test("LOW and HIGH are case-insensitive byte functions matching AZM", () => {
+test("LOW and HIGH are case-insensitive byte functions matching the frozen reference", () => {
   for (const [source, oracle] of [
     ["LOW($1234)", "LSB($1234)"],
     ["hIgH($1234)", "MSB($1234)"],
@@ -98,7 +98,7 @@ test("LOW and HIGH are case-insensitive byte functions matching AZM", () => {
     const result = h.evaluate(source);
     assert.equal(result.carry, 0, source);
     assert.equal(result.status, EXPRESSION.RESOLVED, source);
-    assert.equal(result.hl, azmWord(oracle), source);
+    assert.equal(result.hl, referenceWord(oracle), source);
   }
 });
 
@@ -129,7 +129,7 @@ test("LOW and HIGH retain one forward affine symbol for byte patching", () => {
   }
 });
 
-test("boundary-partitioned concrete arithmetic is byte-identical to AZM", () => {
+test("boundary-partitioned concrete arithmetic is byte-identical to the frozen reference", () => {
   const values = [0, 1, 2, 7, 127, 128, 255, 256, 32767, 32768, 65534, 65535];
   const cases = new Set();
   for (const left of values) {
@@ -155,11 +155,11 @@ test("boundary-partitioned concrete arithmetic is byte-identical to AZM", () => 
     const result = h.evaluate(source);
     assert.equal(result.carry, 0, source);
     assert.equal(result.status, EXPRESSION.RESOLVED, source);
-    assert.equal(result.hl, azmWord(source), source);
+    assert.equal(result.hl, referenceWord(source), source);
   }
 });
 
-test("signed boundary partitions are byte-identical to AZM", () => {
+test("signed boundary partitions are byte-identical to the frozen reference", () => {
   const values = [-32768, -255, -2, -1, 0, 1, 2, 255, 32767];
   const cases = new Set();
   for (const left of values) {
@@ -185,7 +185,7 @@ test("signed boundary partitions are byte-identical to AZM", () => {
     const result = h.evaluate(source);
     assert.equal(result.carry, 0, source);
     assert.equal(result.status, EXPRESSION.RESOLVED, source);
-    assert.equal(result.hl, azmWord(source), source);
+    assert.equal(result.hl, referenceWord(source), source);
   }
 });
 

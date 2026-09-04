@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { compile } from "@jhlagado/azm";
 import { parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import {
@@ -14,19 +12,12 @@ import {
   createSelfHostedAtomCore,
   materializeAtomGeneration,
   resolveAtomProject,
-  translateResolvedAtomProjectToAzm,
 } from "../src/host/index.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const nativeRoot = path.join(repositoryRoot, "native");
 const ledgerPath = path.join(nativeRoot, "atom-symbols.json");
 const outputPath = path.join(repositoryRoot, "assets", "native-core.json");
-
-function artifact(result, kind) {
-  const selected = result.artifacts.find((candidate) => candidate.kind === kind);
-  if (selected === undefined) throw new Error(`AZM omitted the ${kind} artifact`);
-  return selected;
-}
 
 function intelRecord(address, bytes) {
   const values = [bytes.length, address >>> 8, address & 0xff, 0, ...bytes];
@@ -82,61 +73,25 @@ async function readLedger() {
   return ledger;
 }
 
-async function strictOracle(project, ledger, generation, materialized, core) {
-  const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "atom-native-core-"));
-  try {
-    const oraclePath = path.join(temporary, "atom-native-core.asm");
-    await fs.writeFile(oraclePath, translateResolvedAtomProjectToAzm(project));
-    const result = await compile(oraclePath, {
-      emitBin: false,
-      emitHex: true,
-      emitD8m: true,
-      emitLst: false,
-      symbolCase: "insensitive",
-      registerContracts: "strict",
-    });
-    const errors = result.diagnostics.filter(({ severity }) => severity === "error");
-    if (errors.length !== 0) {
-      throw new Error(`strict-contract translated native core failed to assemble:\n${JSON.stringify(errors, null, 2)}`);
-    }
-    const oracleProgram = parseIntelHex(artifact(result, "hex").text);
-    const atomAddresses = generation.images.flatMap((operation) =>
-      operation.bytes.map((_byte, index) => operation.address + index));
-    assert.deepEqual(initializedAddresses(oracleProgram), atomAddresses, "Atom and AZM initialized different native addresses");
-    assert.deepEqual(
-      oracleProgram.memory.slice(materialized.base, materialized.end),
-      materialized.bytes,
-      "Atom and AZM produced different native bytes",
-    );
-
-    const oracleSymbols = new Map(artifact(result, "d8m").json.symbols.flatMap((symbol) => {
-      const value = symbol.address ?? symbol.value;
-      return value === undefined ? [] : [[symbol.name.toUpperCase(), value]];
-    }));
-    for (const item of ledger.symbols) {
-      if (item.private) continue;
-      const value = oracleSymbols.get(item.short.toUpperCase());
-      if (!Number.isInteger(value)) throw new Error(`strict AZM oracle omitted ${item.short}`);
-      assert.equal(value, core.symbols[item.original], `${item.short} has a different Atom and AZM value`);
-    }
-  } finally {
-    await fs.rm(temporary, { recursive: true, force: true });
-  }
-}
-
 async function buildArtifact() {
   const ledger = await readLedger();
   const project = await resolveAtomProject({ root: nativeRoot, entry: "atom.asm" });
-  const first = await assembleResolvedAtomProject(project, {
+  const options = {
     target: { start: 0, capacity: 0x4000 },
     maxInstructions: 200_000_000,
     maxCycles: 2_000_000_000,
-  });
+  };
+  const first = await assembleResolvedAtomProject(project, options);
   const core = createSelfHostedAtomCore({ mapping: ledger.symbols }, first.generation);
   const materialized = materializeAtomGeneration(first.generation);
-  await strictOracle(project, ledger, first.generation, materialized, core);
 
   const hexText = sparseIntelHex(first.generation);
+  // Execute the newly emitted core, not just the checked-in seed. Sparse HEX
+  // preserves write coverage as well as values; recovered symbols pin the ABI.
+  const second = await assembleResolvedAtomProject(project, { ...options, nativeCore: core });
+  const secondCore = createSelfHostedAtomCore({ mapping: ledger.symbols }, second.generation);
+  assert.equal(sparseIntelHex(second.generation), hexText, "native ATOM generations differ in bytes or write coverage");
+  assert.deepEqual(secondCore.symbols, core.symbols, "native ATOM generations differ in ABI symbols");
   const parsed = parseIntelHex(hexText);
   assert.deepEqual(initializedAddresses(parsed), first.generation.images.flatMap((operation) =>
     operation.bytes.map((_byte, index) => operation.address + index)));

@@ -4,13 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { compile } from "@jhlagado/azm";
-import { parseIntelHex } from "@jhlagado/debug80-runtime";
-
 import {
   assembleAtomProject,
   translateAtomLineToAzm,
   translateResolvedAtomProjectToAzm,
+  translateAzmSourceToAtom,
 } from "../src/host/index.mjs";
 
 test("Atom-to-AZM translation changes only concrete assembler directives", () => {
@@ -33,7 +31,7 @@ test("Atom-to-AZM translation changes only concrete assembler directives", () =>
   assert.equal(translateAtomLineToAzm("LD A,%1010 ; binary"), "LD A,%1010 ; binary");
 });
 
-test("a complete preprocessed multipart Atom program is byte-identical through AZM", async (t) => {
+test("a preprocessed multipart Atom program preserves exact bytes and translation boundaries", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "atom-azm-differential-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.writeFile(path.join(root, "lib.asm"), [
@@ -65,20 +63,6 @@ test("a complete preprocessed multipart Atom program is byte-identical through A
     target: { start: 0x4000, capacity: 0x100 },
   });
   const translated = translateResolvedAtomProjectToAzm(assembled.project);
-  const azmPath = path.join(root, "translated.asm");
-  await fs.writeFile(azmPath, translated);
-  const oracle = await compile(azmPath, {
-    emitBin: false,
-    emitHex: true,
-    emitD8m: false,
-    emitLst: false,
-    symbolCase: "insensitive",
-  });
-  const errors = oracle.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, []);
-  const hex = oracle.artifacts.find(({ kind }) => kind === "hex");
-  assert.notEqual(hex, undefined);
-  const oracleProgram = parseIntelHex(hex.text);
   const atomBytes = new Map();
   for (const operation of assembled.generation.images) {
     operation.bytes.forEach((byte, index) => atomBytes.set(operation.address + index, byte));
@@ -86,12 +70,26 @@ test("a complete preprocessed multipart Atom program is byte-identical through A
   for (const operation of assembled.generation.patches) {
     operation.bytes.forEach((byte, index) => atomBytes.set(operation.address + index, byte));
   }
-  const oracleAddresses = oracleProgram.writeRanges.flatMap(({ start, end }) =>
-    Array.from({ length: end - start }, (_, index) => start + index),
-  );
-  assert.deepEqual([...atomBytes.keys()], oracleAddresses);
-  assert.deepEqual([...atomBytes.values()], oracleAddresses.map((address) => oracleProgram.memory[address]));
+  // LD A,2; JR NZ,-4; RET; CALL $4000; DB "A",10; DW $4005.
+  // The final DS 3 reserves addresses without initializing them.
+  const expected = [0x3e, 2, 0x20, 0xfc, 0xc9, 0xcd, 0, 0x40, 0x41, 10, 5, 0x40];
+  assert.deepEqual([...atomBytes.keys()], expected.map((_, index) => 0x4000 + index));
+  assert.deepEqual([...atomBytes.values()], expected);
   assert.match(translated, /; Atom source part 0: lib\.asm/);
   assert.match(translated, /; Atom source part 1: main\.asm/);
   assert.doesNotMatch(translated, /%include|%if|%define/);
+
+  // Also exercise the translated text, so lost or changed statements cannot
+  // pass merely because the original ATOM source still assembles correctly.
+  await fs.writeFile(path.join(root, "roundtrip.asm"), translateAzmSourceToAtom(translated));
+  const roundtrip = await assembleAtomProject({
+    root,
+    entry: "roundtrip.asm",
+    target: { start: 0x4000, capacity: 0x100 },
+  });
+  const roundtripBytes = new Map();
+  for (const operation of [...roundtrip.generation.images, ...roundtrip.generation.patches]) {
+    operation.bytes.forEach((byte, index) => roundtripBytes.set(operation.address + index, byte));
+  }
+  assert.deepEqual([...roundtripBytes], expected.map((byte, index) => [0x4000 + index, byte]));
 });

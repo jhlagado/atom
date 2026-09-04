@@ -33,7 +33,10 @@ The test directory is flat, but filenames group it into clear lanes:
 | `host-artifacts.test.mjs` | NOBJ, BIN, HEX, listing, and D8 rendering |
 | `host-example.test.mjs` | Shipped example through the complete CLI |
 | `host-package.test.mjs` | Packed offline install, runtime dependency, CLI, failure, `INCBIN`, and installed self-host |
-| `host-self-host.test.mjs` | Pinned AZM image, second Atom generation, and translated-AZM equality |
+| `host-self-host.test.mjs` | Pinned image, second ATOM generation, initialized addresses and recovered ABI symbols |
+| `host-core-bootstrap.test.mjs` | Native-core verification with AZM imports forbidden |
+| `host-cpm-bootstrap.test.mjs` | CP/M image and census equality, output-candidate sizes, and an isolated-directory build with AZM imports forbidden |
+| `host-cpm-source.test.mjs` | Private CP/M link-name preparation, forward aliases, local scopes, failure cases and source-part boundaries |
 | `host-release.test.mjs` | Documentation, examples, licensing, package policy, and measured native account |
 
 The closest test should identify the broken layer. A wider test should prove
@@ -43,9 +46,9 @@ that the public build still observes the intended result.
 
 Native proof harnesses load `assets/native-core.json` and supply
 guarded input and output records, source buffers, arenas, adapter state, stack,
-and sentinel return addresses. Automatic Atom-to-AZM translation checks the
-same complete core under strict register contracts before Debug80 executes its
-entry points.
+and sentinel return addresses. Native-core verification executes two ATOM
+generations before comparing the checked image. It does not run static
+register-contract analysis.
 
 The checked expression, parser/patch, output, statement, and driver lanes execute
 `native/atom.asm` directly. They supply guarded source, record, output, key,
@@ -101,7 +104,7 @@ memory remain separate accounts.
 `test/cases.mjs` generates the complete Atom instruction corpus as source text
 plus ten-byte parsed records. For every valid case, the encoder lane:
 
-1. assembles the source independently with AZM;
+1. obtains independently captured bytes from the reviewed historical fixture;
 2. calls native `AtomFormLength` directly;
 3. calls native `AtomEncode` directly;
 4. compares length and every emitted byte; and
@@ -113,26 +116,32 @@ mnemonic, and a SHA-256 of the canonical source/record pairs. The proof first
 requires the generated set to match this census, so deleting a family cannot
 leave a misleading 100% differential result.
 
-The negative lane asks AZM to reject malformed source and requires both native
+The negative lane uses captured rejection results and requires both native
 length and encoding entries to reject the corresponding record without output.
 Additional systematic records cover unknown ordinals, unused operand-class
 holes, and hidden trailing operands. Targeted cases cover the DD/FD index-half
 collision rules that are easy to encode incorrectly.
 
+`test/reference-fixtures.mjs` loads the fixed reference corpus and checks its
+content digest. The corpus records 6,788 distinct requests: 6,262 successful
+byte arrays and 526 rejections, including expression and statement cases as
+well as instructions. Its provenance identifies the pre-migration test revision
+and exact historical assembler build. Unrecorded requests fail; there is no
+assembler fallback. New tests need independently reviewed expected results.
+
 ## Register and stack contracts
 
-Every native public routine carries an AZM `.routine` annotation. Call sites may
-use `.expectout` where an inferred output must be explicit. Automatic
-translation assembles the authoritative `.asm` core under strict
-register-contract mode. Runtime harnesses then execute those checked bytes.
+Native public routines carry `;@ROUTINE` comments. Call sites may use
+`;@EXPECTOUT` comments where an output is explicit. These comments remain
+contract documentation. Runtime harnesses execute the checked native bytes.
 
 The annotations state inputs, outputs, possible outputs, clobbers, and flag
 effects. Runtime tests remain necessary: a static contract can describe the
-wrong implementation, and an execution test can miss an unexercised path. Atom
-uses both.
+wrong implementation, and an execution test can miss an unexercised path.
+The ATOM-only core build does not establish a static-analysis guarantee.
 
-`npm run annotate:contracts` remains as a compatibility name for the strict
-translated-core check. It does not rewrite the authoritative `;@` annotations.
+The misleading `annotate:contracts` and `verify:strict-contracts` aliases have
+been removed. `verify:native-source` checks self-hosted image reproduction.
 Any contract change requires review against the routine body and direct runtime
 proof before commit.
 
@@ -245,8 +254,9 @@ because it can vary with npm and compression tooling.
 the authoritative native source, assembles it with the pinned core, constructs
 a core from that first generation, and assembles the same source again.
 
-It then translates the prepared source to AZM and compares the exact initialized
-address set and every resident byte. Generator statistics, code bytes,
+It compares the exact initialized address set and every resident byte with the
+pinned image and second generation, and checks recovered ABI symbols between
+generations. Generator statistics, code bytes,
 workspace, resident extent, patch count, instruction count, T-states, output
 service calls, and source-read count are checked against the frozen proof
 record.
@@ -266,7 +276,7 @@ Measurement scripts print current observations rather than editing proof files:
 | `npm run measure:statements` | Statement code, directives, diagnostics, and execution maxima |
 | `npm run measure:driver` | Driver code, descriptor limits, lifecycle, and execution maxima |
 | `npm run measure:host-native` | Linked native account, caller-owned desktop regions, and composed execution |
-| `npm run measure:self-host` | Source size, two generations, AZM comparison, and complete execution account |
+| `npm run measure:self-host` | Source size, two ATOM generations, pinned-image comparison, ABI symbols and execution account |
 
 `proofs/phase-*.json` freezes reviewed observations and named budgets. A phase
 report explains their basis and classifies each number as Measured, Projected,
@@ -275,10 +285,11 @@ do not copy an earlier total into a new report.
 
 ## Dependency pin
 
-Atom's development proofs depend on a pinned AZM reference build and Debug80
-Runtime in the sibling Debug80 repository. `scripts/verify-dependencies.mjs`
-checks the required Debug80 branch, exact AZM and runtime tree identities, and a
-clean dependency worktree before the normal npm test preparation rebuilds them.
+`package.json` pins standalone Debug80 Runtime and Z80 Tool Services Git
+revisions. `scripts/verify-dependencies.mjs` checks installed package version
+ranges. It does not validate sibling repository branches or worktrees. Core,
+object and CP/M generation use ATOM, as does the CP/M output-candidate
+measurement. Historical comparisons use fixed data without an AZM dependency.
 
 This pin protects the comparison set and emulator semantics. Updating it is a
 separate reviewed dependency checkpoint with fresh native and differential
@@ -291,7 +302,6 @@ The principal lanes are:
 ```sh
 npm run test:host
 npm test
-npm run verify:strict-contracts
 npm run verify:native-core
 npm run verify:native-source
 npm run measure:host-native
@@ -300,7 +310,7 @@ npm run release:check
 ```
 
 `npm run release:check` is the complete local maintainer gate. It runs all
-native and host tests, strict core and authoritative-source checks, and the final
+native and host tests, core and authoritative-source checks, and the final
 host and self-host measurements. `prepublishOnly` invokes the same gate.
 
 The exact npm archive census is a separate release audit, not a unit test. Run
