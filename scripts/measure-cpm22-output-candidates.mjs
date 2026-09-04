@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { compile } from "@jhlagado/azm";
+import { assembleCpmAtomSource } from "./cpm22-atom-source.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = join(repositoryRoot, "proofs", "cpm22-output-candidates.json");
@@ -12,12 +11,12 @@ const censusPath = join(repositoryRoot, "proofs", "cpm22-census.json");
 
 const candidates = {
   randomRecord: `
-.org 0
-SET_DMA: .equ $f000
-READ_RANDOM: .equ $f003
-WRITE_RANDOM: .equ $f006
-WRITE_SEQUENTIAL: .equ $f009
-CLOSE_TEMP: .equ $f00c
+ORG 0
+SET_DMA EQU $f000
+READ_RANDOM EQU $f003
+WRITE_RANDOM EQU $f006
+WRITE_SEQUENTIAL EQU $f009
+CLOSE_TEMP EQU $f00c
 CODE_START:
 IMAGE_BYTE:
     push af
@@ -108,23 +107,22 @@ FLUSH_RECORD:
     ret
 CODE_END:
 WORK_START:
-CURSOR: .dw $0100
-BUFFER_POINTER: .dw BUFFER
-BUFFER_COUNT: .db 0
-BYTE_INDEX: .db 0
-FCB_RANDOM: .ds 3
-BUFFER: .ds 128
+CURSOR: DW $0100
+BUFFER_POINTER: DW BUFFER
+BUFFER_COUNT: DB 0
+BYTE_INDEX: DB 0
+FCB_RANDOM: DS 3
+BUFFER: DS 128
 WORK_END:
-.end
 `,
   nobjMaterializer: `
-.org 0
-WRITE_SEQUENTIAL: .equ $f000
-READ_RECORD_HEADER: .equ $f003
-READ_BANK_ADDRESS: .equ $f006
-READ_STREAM_BYTE: .equ $f009
-VALIDATE_FLAT_MAP: .equ $f00c
-VALIDATE_CRC_AND_PUBLISH: .equ $f00f
+ORG 0
+WRITE_SEQUENTIAL EQU $f000
+READ_RECORD_HEADER EQU $f003
+READ_BANK_ADDRESS EQU $f006
+READ_STREAM_BYTE EQU $f009
+VALIDATE_FLAT_MAP EQU $f00c
+VALIDATE_CRC_AND_PUBLISH EQU $f00f
 CODE_START:
 IMAGE_BYTE:
     push af
@@ -229,43 +227,21 @@ MATERIALIZE_COMMIT:
     jp VALIDATE_CRC_AND_PUBLISH
 CODE_END:
 WORK_START:
-CRC: .dw 0
-BUFFER_POINTER: .dw BUFFER
-BUFFER_COUNT: .db 0
-RECORD_REMAINING: .dw 0
-BUFFER: .ds 128
+CRC: DW 0
+BUFFER_POINTER: DW BUFFER
+BUFFER_COUNT: DB 0
+RECORD_REMAINING: DW 0
+BUFFER: DS 128
 WORK_END:
-.end
 `,
 };
 
 async function measure(name, source) {
-  const temporary = await mkdtemp(join(tmpdir(), `atom-cpm22-${name}-`));
-  try {
-    const path = join(temporary, `${name}.asm`);
-    await writeFile(path, source);
-    const result = await compile(path, {
-      emitBin: true,
-      emitD8m: true,
-      emitHex: false,
-      emitLst: false,
-      registerContracts: "off",
-    });
-    const errors = result.diagnostics.filter(({ severity }) => severity === "error");
-    assert.deepEqual(errors, []);
-    const map = result.artifacts.find(({ kind }) => kind === "d8m");
-    assert.equal(map?.kind, "d8m");
-    const symbols = Object.fromEntries(map.json.symbols.flatMap((symbol) => {
-      const value = symbol.address ?? symbol.value;
-      return value === undefined ? [] : [[symbol.name, value]];
-    }));
-    return {
-      codeBytes: symbols.CODE_END - symbols.CODE_START,
-      workspaceBytes: symbols.WORK_END - symbols.WORK_START,
-    };
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
-  }
+  const { symbols } = await assembleCpmAtomSource(source, { name });
+  return {
+    codeBytes: symbols.CODE_END - symbols.CODE_START,
+    workspaceBytes: symbols.WORK_END - symbols.WORK_START,
+  };
 }
 
 const census = JSON.parse(await readFile(censusPath, "utf8"));

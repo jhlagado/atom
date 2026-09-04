@@ -131,6 +131,9 @@ The `.asm` files are the sole editing authority for the native assembler.
 | --- | --- |
 | `generate-native-core.mjs` | Assembles `native/atom.asm` with ATOM, executes that emitted core to prove a second identical generation, and writes or checks `assets/native-core.json` |
 | `generate-native-object-harness.mjs` | Uses ATOM to link the shared ABI constants and Z80 object adapter, checks the one-bank gate, and writes or verifies the binary and census |
+| `generate-cpm22.mjs` | Builds the CP/M executable with ATOM and the installed Tool Services renderer; verifies the checked bytes and census |
+| `cpm22-atom-source.mjs` | Private CP/M link preparation: deterministic short names, forward name aliases, bounded source parts and native ATOM assembly |
+| `measure-cpm22-output-candidates.mjs` | ATOM-derived code and workspace extents for two lower-bound output kernels |
 | `verify-dependencies.mjs` | Checks installed runtime, tool-service and historical AZM package version ranges; remaining AZM requirement is not yet migrated |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 

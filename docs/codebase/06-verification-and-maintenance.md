@@ -35,6 +35,8 @@ The test directory is flat, but filenames group it into clear lanes:
 | `host-package.test.mjs` | Packed offline install, runtime dependency, CLI, failure, `INCBIN`, and installed self-host |
 | `host-self-host.test.mjs` | Pinned image, second ATOM generation, initialized addresses and recovered ABI symbols |
 | `host-core-bootstrap.test.mjs` | Native-core verification with AZM imports forbidden |
+| `host-cpm-bootstrap.test.mjs` | CP/M image and census equality, output-candidate sizes, and an isolated-directory build with AZM imports forbidden |
+| `host-cpm-source.test.mjs` | Private CP/M link-name preparation, forward aliases, local scopes, failure cases and source-part boundaries |
 | `host-release.test.mjs` | Documentation, examples, licensing, package policy, and measured native account |
 
 The closest test should identify the broken layer. A wider test should prove
@@ -279,9 +281,10 @@ do not copy an earlier total into a new report.
 `package.json` pins standalone Debug80 Runtime and Z80 Tool Services Git
 revisions. `scripts/verify-dependencies.mjs` checks installed package version
 ranges, including the historical AZM requirement. It does not validate sibling
-repository branches or worktrees. The remaining AZM-dependent builders and
-comparison tests must be migrated before the complete release gate can run
-under the ATOM-only policy.
+repository branches or worktrees. Core, object and CP/M generation now use
+ATOM, as does the CP/M output-candidate measurement. The dependency gate and
+historical comparison tests must be migrated before the complete release gate
+can run under the ATOM-only policy.
 
 This pin protects the comparison set and emulator semantics. Updating it is a
 separate reviewed dependency checkpoint with fresh native and differential
