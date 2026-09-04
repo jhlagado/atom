@@ -8,8 +8,10 @@ export type NativeObjectHarnessOptions = {
   gatewaySource?: string;
   /** Z80 label called by the Atom core for each source byte. Defaults to NA_SREAD. */
   sourceReadTarget?: string;
-  registerContractsProfile?: string;
-  registerContractsInterfaces?: string[];
+  /** Unsupported by ATOM; a supplied profile is rejected rather than ignored. */
+  registerContractsProfile?: never;
+  /** Legacy compatibility: only an empty list is accepted. */
+  registerContractsInterfaces?: [];
 };
 
 export type NativeObjectHarnessReport = {

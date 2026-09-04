@@ -24,8 +24,8 @@ marked read-only, and every bank byte remains unchanged.
 
 This split lets Atom execute directly from expansion ROM. The 741-byte state
 image must be copied or cleared in common RAM before execution. Relinking and
-workspace placement must be followed by the complete strict-contract and
-runtime proof battery; the Debug80 address is not a portable absolute
+workspace placement must be followed by the runtime proof battery, including
+register, stack and memory checks; the Debug80 address is not a portable absolute
 contract.
 
 ## Required operating services
@@ -138,7 +138,7 @@ A TEC adapter is ready only when all of these claims are measured:
 - begin/commit/abort counts are exact on success and injected failures;
 - IMAGE and PATCH output survives power-safe publication or a documented
   recoverable protocol;
-- one full Atom self-build matches the pinned AZM image at every initialized
+- one full Atom self-build matches the pinned image at every initialized
   address and across the complete resident extent; and
 - the second Atom-built generation is identical to the first.
 

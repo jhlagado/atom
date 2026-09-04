@@ -23,11 +23,11 @@ The release gate must establish:
   bytes and recovered ABI symbols; and
 - the pinned native core matches the authoritative `.asm` source.
 
-The ATOM-only migration is incomplete: object-harness and CP/M generation,
+The ATOM-only migration is incomplete: CP/M generation,
 dependency checks and historical comparison tests still execute or require AZM.
 Do not run those paths as normal release work or publish this checkpoint as an
-ATOM-only toolchain. Native-core generation, its guarded verification test and
-the self-host measurement are migrated. The misleading `verify:strict-contracts`
+ATOM-only toolchain. Native-core and object-harness generation, their guarded
+verification tests and the self-host measurement are migrated. The misleading `verify:strict-contracts`
 and `annotate:contracts` aliases are removed; static register analysis is not
 claimed by the replacement self-host checks.
 

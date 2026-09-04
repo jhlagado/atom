@@ -321,6 +321,15 @@ test("native named-object harness rejects an invalid source-reader target before
   );
 });
 
+test("native builder rejects unsupported static contract analysis options", async () => {
+  for (const options of [
+    { registerContractsProfile: "strict" },
+    { registerContractsInterfaces: ["platform.asmi"] },
+  ]) {
+    await assert.rejects(buildNativeObjectHarness(options), /ATOM does not support AZM static register-contract options/);
+  }
+});
+
 test("native named-object harness measures profile code linked after the shared adapter", async () => {
   const ordinary = await buildNativeObjectHarness({
     origin: 0x8100,
@@ -346,6 +355,20 @@ test("native named-object harness measures profile code linked after the shared 
 test("native named-object harness validates its complete common workspace range", async () => {
   assert.deepEqual(await initializeAt(0xfe71), { status: 0, carry: 0 });
   assert.deepEqual(await initializeAt(0xfe72), { status: NAMED_OBJECT_STATUS.invalid, carry: 1 });
+});
+
+test("native named-object harness also executes with fixed workspace above code", async () => {
+  const harness = await buildNativeObjectHarness({ workspaceOrigin: 0x4800 });
+  assert.equal(harness.report.residentBytes, 12_774);
+  assert.equal(harness.report.fixedWorkspaceStart, 0x4800);
+  assert.equal(harness.report.fixedWorkspaceBytes, 741);
+  assert.equal(harness.workspaceBytes.length, 741);
+  const run = await runProject(["ORG $100\nJR NEXT\nNEXT: DB $5A\n"], { harness });
+  assert.deepEqual(run.result, { status: 0, carry: 0 });
+  assert.deepEqual([...run.output], [0x18, 0x00, 0x5a]);
+  assert.equal(run.residentUnchanged, true);
+  assert.equal(run.sourceOpenHandles, 0);
+  assert.equal(run.outputOpenHandles, 0);
 });
 
 test("native named-object harness aborts a poisoned output without replacing it", async () => {

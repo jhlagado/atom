@@ -112,7 +112,7 @@ The modules below are exported by
 | File | Role |
 | --- | --- |
 | `native-core.json` | Atom-built Intel HEX, checked symbol map, digests, and source identity loaded by the installed package |
-| `atom-object-harness.bin` | Strict-contract native core composed with the portable named-object adapter and fail-closed transport |
+| `atom-object-harness.bin` | ATOM-built native core composed with the portable named-object adapter and fail-closed transport |
 
 ## `native/`
 
@@ -130,7 +130,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | File | Role |
 | --- | --- |
 | `generate-native-core.mjs` | Assembles `native/atom.asm` with ATOM, executes that emitted core to prove a second identical generation, and writes or checks `assets/native-core.json` |
-| `generate-native-object-harness.mjs` | Links the shared ABI constants and Z80 object adapter, checks strict contracts and the one-bank gate, and freezes the binary and census |
+| `generate-native-object-harness.mjs` | Uses ATOM to link the shared ABI constants and Z80 object adapter, checks the one-bank gate, and writes or verifies the binary and census |
 | `verify-dependencies.mjs` | Checks installed runtime, tool-service and historical AZM package version ranges; remaining AZM requirement is not yet migrated |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 

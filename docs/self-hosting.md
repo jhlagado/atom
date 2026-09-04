@@ -126,5 +126,5 @@ host-service boundaries are complete.
 Direct tests supply caller-owned arenas and guarded source, record, and output
 intervals. Their proof profiles cover all 65,536 addresses. Byte differentials
 and subsystem tests execute the checked Atom-built image. Remaining historical
-comparison tests and the object/CP/M builders still require migration before
+comparison tests and the CP/M builder still require migration before
 the complete release gate can run under the ATOM-only policy.

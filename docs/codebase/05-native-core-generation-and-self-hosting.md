@@ -159,7 +159,7 @@ wrong symbol map or entry address were attached to otherwise equal bytes.
 Core generation formerly invoked an AZM translation and strict register check.
 That mandatory comparison has been removed after the earlier equivalence
 proofs. The source converter remains available, but it is not a bootstrap
-dependency. Other historical tests and the object/CP/M builders still require
+dependency. Other historical tests and the CP/M builder still require
 migration before the entire release gate is ATOM-only.
 
 The two-generation check retains the initialized-address comparison. It
