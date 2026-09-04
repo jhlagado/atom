@@ -294,7 +294,7 @@ function targetOptions(target = {}) {
   }
   const start = integer(target.start ?? 0, "target.start", 0, 0xffff);
   const capacity = integer(target.capacity ?? (0xffff - start), "target.capacity", 0, 0xffff);
-  if (start + capacity > 0xffff) {
+  if (start + capacity > 0x10000) {
     fail("target-range", "target start plus capacity exceeds Atom's non-wrapping native range");
   }
   return Object.freeze({ start, capacity });
@@ -726,6 +726,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       bridgeFailure = Object.freeze({ message, diagnostic: currentDiagnostic() });
     }
   };
+  // Native cursors are words. Only a range ending at 10000 can have a
+  // valid zero cursor representing its exclusive end. Explicit ORG values
+  // and IMAGE addresses remain literal 16-bit addresses and are not lifted.
+  const logicalCursor = (cursor) =>
+    cursor === 0 && target.start + target.capacity === 0x10000 ? 0x10000 : cursor;
   const toolServices = createAtomToolServiceGateway({
     sink,
     sourceRead: profile?.sourceRead ?? (({ part, offset }) => {
@@ -776,7 +781,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       if (bridgeFailure !== undefined) return ATOM_HOST_SINK_STATUS.TARGET_RANGE;
       return toolServices.dispatch(ATOM_TOOL_SERVICE.commit, {
         descriptor: runtime.cpu.ix,
-        finalCursor: pair(runtime.cpu.h, runtime.cpu.l),
+        finalCursor: logicalCursor(pair(runtime.cpu.h, runtime.cpu.l)),
         remaining: pair(runtime.cpu.d, runtime.cpu.e),
         highWater: logicalHighWater,
       }).status;
@@ -827,7 +832,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       layout.push(Object.freeze({ kind: "org", address, count: 0, source }));
       recordExtent(address, "ORG lies outside the target range");
     } else if (runtime.cpu.pc === symbols.AtomOutputReserve) {
-      const cursor = word(memory, symbols.AtomOutputCursor);
+      const cursor = logicalCursor(word(memory, symbols.AtomOutputCursor));
       const count = pair(runtime.cpu.h, runtime.cpu.l);
       layout.push(Object.freeze({ kind: "reserve", address: cursor, count, source: currentDiagnostic() }));
       recordExtent(cursor + count, "DS reservation lies outside the target range");

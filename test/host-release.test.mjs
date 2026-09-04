@@ -87,8 +87,10 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);
 
   const native = await loadNativeAtomCore();
-  const phase11 = JSON.parse(await fs.readFile("proofs/phase-11.json", "utf8"));
-  assert.equal(phase11.native.codeAndTables, native.codeBytes);
-  assert.equal(phase11.native.linkedResidentExtent, native.residentExtentBytes);
-  assert.equal(phase11.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);
+  // Phase 11 is a dated checkpoint. The executable self-host proof maintains
+  // the current account without rewriting historical qualification claims.
+  const selfHost = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
+  assert.equal(selfHost.native.codeAndTables, native.codeBytes);
+  assert.equal(selfHost.native.linkedResidentExtent, native.residentExtentBytes);
+  assert.equal(selfHost.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);
 });

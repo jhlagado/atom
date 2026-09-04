@@ -54,6 +54,23 @@ desktop runner also observes native `ORG` and uninitialized `DS` entries. It ret
 their highest logical extent and reports an intermediate out-of-range directive
 at its original source position.
 
+For a target ending exactly at `$10000`, the desktop runner converts a zero
+native cursor to the mathematical exclusive end, 65,536. This applies to the
+COMMIT cursor and the starting cursor of a `DS` reservation. IMAGE and PATCH
+addresses, explicit `ORG` operands, and symbol values remain 16-bit values.
+An explicit `ORG 0` is therefore out of range for such a target. A label after
+the last byte has value zero; use the host generation's `highWater` to measure
+the physical output extent.
+
+`ORG` changes the cursor without consuming remaining capacity. Reaching the
+exclusive end therefore need not leave remaining capacity zero. The desktop
+range checks reject further output even when unused capacity remains.
+
+The Atom NOBJ MAP stores the low word of the final cursor. Its reader applies
+the same exclusive-end interpretation when the declared target ends at
+`$10000`; used length remains an ordinary word. Other operating adapters have
+their own target limits and require separate qualification for this boundary.
+
 ## Atom entries
 
 `AtomOutputReset` accepts `HL=target start` and `DE=byte capacity`. It selects

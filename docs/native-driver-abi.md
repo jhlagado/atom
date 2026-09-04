@@ -33,6 +33,13 @@ range, both arena ranges, and the target extent before `AtomSinkBegin`. A
 configuration failure therefore opens no generation and changes no caller
 arena.
 
+The target start and capacity are unsigned words. Their mathematical sum may
+equal `$10000`, but may not exceed it. Capacity zero remains an empty range;
+a single descriptor cannot express 65,536 bytes. After output at `$FFFF`, the
+native cursor wraps to zero. Operating adapters supporting this target must
+interpret that cursor as the exclusive end and reject subsequent out-of-range
+output. Symbol values remain 16-bit words.
+
 ## Assembly sequence
 
 After validation, `AtomAssemble` performs this sequence:

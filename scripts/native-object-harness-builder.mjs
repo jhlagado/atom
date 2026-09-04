@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   assembleResolvedAtomProject,
+  loadNativeAtomCore,
   materializeAtomGeneration,
   writeAtomD8,
 } from "../src/host/index.mjs";
@@ -230,7 +231,9 @@ export async function buildNativeObjectHarness({
       workspaceSha256: createHash("sha256").update(workspaceBytes).digest("hex"),
     };
   }
-  const nativeCoreBytes = workspaceOrigin === undefined ? 12_396 : symbols.DR_CEND - origin;
+  const nativeCoreBytes = workspaceOrigin === undefined
+    ? (await loadNativeAtomCore()).residentExtentBytes
+    : symbols.DR_CEND - origin;
   const proofSymbols = Object.fromEntries([
     "DR_DETAI",
     "ST_DETAI",

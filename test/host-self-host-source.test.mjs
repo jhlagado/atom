@@ -13,11 +13,23 @@ const KEY_NAMES = Object.freeze({
   AtomTokenizerReset: "TK_RESET",
 });
 
+test("native source census matches the checked content and root include parts", async () => {
+  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+  const parts = await Promise.all(Array.from({ length: 5 }, (_, n) => fs.readFile(`native/atom-0${n}.asm`, "utf8")));
+  const root = await fs.readFile("native/atom.asm", "utf8");
+  const bytes = parts.reduce((sum, text) => sum + Buffer.byteLength(text), 0);
+  // The historical census calls all nonblank source records statements,
+  // including labels and register-contract annotations.
+  assert.equal(ledger.statistics.statements, parts.reduce((sum, text) => sum + text.split("\n").filter(line => line.trim()).length, 0));
+  assert.equal(ledger.statistics.sourceBytes, bytes);
+  assert.equal(ledger.statistics.checkedBytes, bytes + Buffer.byteLength(root));
+});
+
 test("the authoritative native symbol ledger is exact, scoped, and readable", async () => {
   const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
   assert.equal(ledger.format, "atom-native-symbol-ledger");
   assert.equal(ledger.version, 2);
-  assert.equal(ledger.symbols.length, 1316);
+  assert.equal(ledger.symbols.length, 1317);
 
   const globalNames = new Set();
   const privateNames = new Set();

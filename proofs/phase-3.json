@@ -8,7 +8,7 @@
     "AtomDriverValidateDescriptor": {
       "measuredInstructions": 6976,
       "maxInstructions": 17440,
-      "measuredCycles": 59253,
+      "measuredCycles": 59258,
       "maxCycles": 148140
     },
     "AtomAssembleFinish": {
@@ -20,7 +20,7 @@
     "AtomAssemble": {
       "measuredInstructions": 126659,
       "maxInstructions": 289250,
-      "measuredCycles": 1303847,
+      "measuredCycles": 1303852,
       "maxCycles": 2957190
     }
   }

@@ -106,8 +106,8 @@ test("the desktop host resolves, masks, and executes one project through native 
   assert.equal(result.native.carry, 0);
   assert.equal(result.execution.returnPc, 0xfffe);
   assert.equal(result.execution.finalSp, 0xfeff);
-  assert.equal(result.core.codeBytes, 11_682);
-  assert.equal(result.core.residentExtentBytes, 12_396);
+  assert.equal(result.core.codeBytes, 11_686);
+  assert.equal(result.core.residentExtentBytes, 12_400);
   const proof = JSON.parse(await fs.readFile("proofs/phase-4.json", "utf8"));
   assert.equal(result.execution.instructions, proof.integrationExecution.measuredInstructions);
   assert.equal(result.execution.cycles, proof.integrationExecution.measuredCycles);

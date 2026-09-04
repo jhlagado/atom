@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assembleCpmAtomSource } from "./cpm22-atom-source.mjs";
+import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -42,6 +43,7 @@ async function linkedSource() {
 }
 
 async function build() {
+  const nativeCore = await loadNativeAtomCore();
   const { bytes, symbols } = await assembleCpmAtomSource(await linkedSource(), { base: 0x100 });
   assert.ok(symbols.CP_RESIDENT_END <= 0x4000, "CP/M Atom resident exceeds its 16 KiB partition");
   assert.equal(bytes.length, symbols.CP_RESIDENT_END - 0x100);
@@ -81,11 +83,11 @@ async function build() {
       residentHeadroomBytes: symbols.CP_SOURCE_CACHE - symbols.CP_RESIDENT_END,
       singleSourceBaselineResidentBytes: 13681,
       multipartResidentDeltaBytes: bytes.length - 13681,
-      nativeCoreResidentBytes: 12396,
+      nativeCoreResidentBytes: nativeCore.residentExtentBytes,
       relocationHeaderBytes: 16,
       replacedHostStubBytes: 8,
       replacedSourceFallbackBytes: 5,
-      adapterResidentBytes: bytes.length - 16 - (12396 - 8 - 5),
+      adapterResidentBytes: bytes.length - 16 - (nativeCore.residentExtentBytes - 8 - 5),
       adapterCodeBytes,
       adapterImmutableBytes,
       adapterWorkspaceBytes,
@@ -108,31 +110,31 @@ async function build() {
       stackBytes: 0x0c00,
       representativeGeneratedBytes: 34,
       representativeInstructions: 147583,
-      representativeTStates: 1820876,
+      representativeTStates: 1820881,
       representativeCommandInstructions: 196866,
-      representativeCommandTStates: 2584966,
+      representativeCommandTStates: 2584971,
       representativeStackHighWaterBytes: 32,
       representativeBdosCalls: 43,
       representativeSourceRandomReads: 8,
       namedRepresentativeInstructions: 151360,
-      namedRepresentativeTStates: 1859519,
+      namedRepresentativeTStates: 1859524,
       namedRepresentativeCommandInstructions: 203649,
-      namedRepresentativeCommandTStates: 2648789,
+      namedRepresentativeCommandTStates: 2648794,
       namedRepresentativeBdosCalls: 41,
       namedRepresentativeSourceRandomReads: 8,
       includeRepresentativePartCount: 3,
       includeRepresentativeInstructions: 198630,
-      includeRepresentativeTStates: 2325153,
+      includeRepresentativeTStates: 2325158,
       includeRepresentativeCommandInstructions: 250919,
-      includeRepresentativeCommandTStates: 3114423,
+      includeRepresentativeCommandTStates: 3114428,
       includeRepresentativeStackHighWaterBytes: 32,
       includeRepresentativeBdosCalls: 60,
       includeRepresentativeSourceRandomReads: 13,
       largeRepresentativeSourceBytes: 16535,
       largeRepresentativeInstructions: 4228091,
-      largeRepresentativeTStates: 41169864,
+      largeRepresentativeTStates: 41169869,
       largeRepresentativeCommandInstructions: 4280540,
-      largeRepresentativeCommandTStates: 41960471,
+      largeRepresentativeCommandTStates: 41960476,
       largeRepresentativeBdosCalls: 1066,
       largeRepresentativeSourceRandomReads: 520,
       sha256: createHash("sha256").update(bytes).digest("hex"),

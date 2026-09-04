@@ -105,7 +105,7 @@ test("Atom assembles through named objects and publishes one patched flat image"
     toolProfile,
   });
 
-  assert.equal(result.core.residentExtentBytes, 12_396);
+  assert.equal(result.core.residentExtentBytes, 12_400);
   assert.deepEqual([...provider.bytes("build/program.bin")], [
     0x18, 0x02, 0x00, 0x00, 0x00, 0x1a, 0x7f, 0x80, 0xff,
   ]);
