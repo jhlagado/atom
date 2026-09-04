@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 
-import { compile } from "@jhlagado/azm";
 import { parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import {
@@ -12,7 +10,6 @@ import {
   loadNativeAtomCore,
   materializeAtomGeneration,
   resolveAtomProject,
-  translateResolvedAtomProjectToAzm,
 } from "../src/host/index.mjs";
 
 const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
@@ -37,39 +34,23 @@ const summarizeExecution = (execution) => ({
 });
 
 const pinned = await loadNativeAtomCore();
-const pinnedImage = parseIntelHex(pinned.hexText).memory.slice(0, pinned.residentExtentBytes);
+const pinnedProgram = parseIntelHex(pinned.hexText);
+const pinnedImage = pinnedProgram.memory.slice(0, pinned.residentExtentBytes);
 assert.deepEqual(firstImage.bytes, pinnedImage);
 
-const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "atom-measure-self-host-"));
-let oracleInitializedBytes;
-try {
-  const oraclePath = path.join(temporary, "atom.asm");
-  await fs.writeFile(oraclePath, translateResolvedAtomProjectToAzm(project));
-  const oracle = await compile(oraclePath, {
-    emitBin: false,
-    emitHex: true,
-    emitD8m: false,
-    emitLst: false,
-    symbolCase: "insensitive",
-    registerContracts: "strict",
-  });
-  assert.deepEqual(oracle.diagnostics.filter(({ severity }) => severity === "error"), []);
-  const oracleHex = oracle.artifacts.find(({ kind }) => kind === "hex");
-  const oracleProgram = parseIntelHex(oracleHex.text);
-  assert.deepEqual(oracleProgram.memory.slice(0, firstImage.bytes.length), firstImage.bytes);
-  oracleInitializedBytes = oracleProgram.writeRanges.reduce((sum, range) => sum + range.end - range.start, 0);
-  assert.equal(
-    oracleInitializedBytes,
-    first.generation.images.reduce((sum, operation) => sum + operation.bytes.length, 0),
-  );
-} finally {
-  await fs.rm(temporary, { recursive: true, force: true });
-}
+const pinnedAddresses = pinnedProgram.writeRanges.flatMap(({ start, end }) =>
+  Array.from({ length: end - start }, (_value, index) => start + index));
+const addresses = generation => generation.images.flatMap(operation =>
+  operation.bytes.map((_byte, index) => operation.address + index));
+assert.deepEqual(addresses(first.generation), pinnedAddresses);
+assert.deepEqual(addresses(second.generation), pinnedAddresses);
+const secondCore = createSelfHostedAtomCore(source, second.generation);
+assert.deepEqual(secondCore.symbols, selfHostedCore.symbols);
 
 console.log(JSON.stringify({
   labels: {
     native: "Measured from the checked self-host source under the pinned native core.",
-    equivalence: "Measured by byte comparison against the pinned AZM core, translated AZM source, and a second Atom generation.",
+    equivalence: "Measured by exact byte and initialized-address comparison against the pinned core and a second ATOM generation, including recovered ABI symbols.",
   },
   source: {
     statements: source.statistics.statements,
@@ -91,10 +72,11 @@ console.log(JSON.stringify({
   },
   firstGeneration: summarizeExecution(first.execution),
   secondGeneration: summarizeExecution(second.execution),
-  oracleInitializedBytes,
+  pinnedInitializedBytes: pinnedAddresses.length,
   equivalence: {
-    pinnedAzmCore: true,
-    translatedAzmSource: true,
+    pinnedCore: true,
+    initializedAddresses: true,
+    recoveredSymbols: true,
     secondAtomGeneration: true,
   },
   limits,

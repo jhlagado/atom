@@ -140,7 +140,7 @@ standalone subsystem link.
 
 ## Measured native account
 
-The current pinned strict-contract image divides into these measured ranges:
+The current pinned native image divides into these measured ranges:
 
 | Native module | Code and immutable bytes | Fixed workspace bytes |
 | --- | ---: | ---: |
@@ -195,7 +195,7 @@ the pinned image have explicit rebuild checks:
 
 | Generated file | Generator | Drift check |
 | --- | --- | --- |
-| `assets/native-core.json` | `scripts/generate-native-core.mjs` using Atom plus strict AZM comparison | `npm run verify:native-source` |
+| `assets/native-core.json` | `scripts/generate-native-core.mjs` using two executable ATOM generations | `npm run verify:native-source` |
 | `assets/atom-object-harness.bin` | `scripts/generate-native-object-harness.mjs` using the shared ABI constants and strict contracts | `npm run verify:native-object` |
 
 Native changes belong in `native/*.asm`, followed by
@@ -227,7 +227,7 @@ The best entry point depends on the change:
   the public host index.
 - For a self-host mismatch, begin with the checked native source and core
   generator, then compare the
-  first-generation, second-generation, and translated-AZM checks in
+  pinned-image, first-generation and second-generation checks in
   `test/host-self-host.test.mjs`.
 
 Atom is small enough to follow one behaviour through every boundary. A change

@@ -151,15 +151,11 @@ NATIVE/ATOM.ASM AND FIVE INCLUDED PARTS
         |                                           +-- COMPARE WITH PINNED CORE
         |
         +-- RECOVER SYMBOL MAP AND RUN FIRST CORE
-        |                                           |
-        |                                           +-- SECOND ATOM CORE
-        |                                               COMPARE WITH FIRST
-        |
-        +-- TRANSLATE THE SAME PREPARED PARTS TO AZM
                                                     |
-                                                    +-- STRICT-CONTRACT BUILD
+                                                    +-- SECOND ATOM CORE
                                                         COMPARE INITIALIZED
-                                                        ADDRESSES AND BYTES
+                                                        ADDRESSES, BYTES AND
+                                                        RECOVERED ABI SYMBOLS
 ```
 
 ## Data handoffs

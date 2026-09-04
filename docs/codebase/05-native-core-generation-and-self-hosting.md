@@ -3,13 +3,12 @@
 [← Host execution, artifacts, and interfaces](04-host-execution-artifacts-and-interfaces.md) | [Verification and maintenance →](06-verification-and-maintenance.md)
 
 Atom keeps one authoritative Z80 implementation in `.asm` and derives the
-pinned native image used by the desktop package. The same prepared source is
-translated to AZM syntax for an independent strict-contract build. Core
-generation and translation are part of the correctness boundary.
+pinned native image used by the desktop package. Core generation executes two
+ATOM generations over the same prepared source and compares their results.
 
 The self-host proof compares complete initialized-address sets and resident
-bytes across AZM and two Atom generations. It does not rely on two
-hand-maintained assembler implementations.
+bytes against the pinned image and across two ATOM generations. Recovered host
+ABI symbols must also agree. No second assembler runs in this build path.
 
 ## Native source and link entry
 
@@ -20,21 +19,22 @@ fail-closed host sink entries.
 
 The source uses Atom's bare directives and eight-character symbols. Comments
 beginning with `;@ROUTINE` and `;@EXPECTOUT` retain register-contract metadata.
-Atom ignores those comments. The Atom-to-AZM translator restores them as AZM
-annotations for the independent strict-contract build.
+Atom ignores those comments. They retain ABI documentation; native-core
+generation does not perform static register-contract analysis.
 
 ## Building the pinned core
 
 `scripts/generate-native-core.mjs` resolves `native/atom.asm`, runs the checked
 core over the ordered parts, and recovers the long host ABI names through
-`native/atom-symbols.json`. It then translates those same prepared bytes to AZM
-and enables strict register contracts.
+`native/atom-symbols.json`. The newly emitted core then assembles the same
+prepared parts again.
 
-Generation fails unless Atom and AZM produce the same initialized address set
-and every resident byte. On success, the script records:
+Generation fails unless both ATOM generations produce the same initialized
+address set, every resident byte and recovered ABI symbol. On success, the
+script records:
 
 - Intel HEX text;
-- every address or value in the D8 symbol table;
+- every recovered global ABI address or value;
 - a SHA-256 of the HEX text; and
 - a second SHA-256 covering the HEX and the sorted symbol map.
 
@@ -154,31 +154,18 @@ the assembler core and reproduce the same result. It catches errors that a
 simple byte comparison with the pinned image could miss if, for example, the
 wrong symbol map or entry address were attached to otherwise equal bytes.
 
-## Independent AZM translation
+## Retired core comparison
 
-`translateResolvedAtomProjectToAzm()` supplies a separate comparison path. It
-joins the already prepared Atom parts into one temporary AZM source while
-preserving part markers and performs the syntax rewrites needed by AZM:
+Core generation formerly invoked an AZM translation and strict register check.
+That mandatory comparison has been removed after the earlier equivalence
+proofs. The source converter remains available, but it is not a bootstrap
+dependency. Other historical tests and the object/CP/M builders still require
+migration before the entire release gate is ATOM-only.
 
-- bare Atom directives become dotted AZM directives;
-- both accepted `EQU` shapes become AZM equates;
-- `LOW()` becomes `LSB()`;
-- `HIGH()` becomes `MSB()`; and
-- one terminal `.end` is appended.
-
-The translator respects quoted text and semicolon comments while rewriting.
-It operates on `compilerBytes`, so host directives have already been masked and
-`INCBIN` has already been lowered.
-
-AZM assembles the translated source with case-insensitive symbols. The proof
-compares both:
-
-- the exact initialized address set; and
-- every resident byte through the Atom image extent.
-
-The address-set comparison distinguishes initialized zero bytes from
-uninitialized reservations. A flat byte comparison alone could treat both as
-the same fill value.
+The two-generation check retains the initialized-address comparison. It
+distinguishes initialized zero bytes from uninitialized reservations, which a
+flat byte comparison alone would treat as the same fill value. It does not
+replace whole-program static register analysis.
 
 ## Current measured self-host build
 
@@ -204,13 +191,13 @@ proof, not generic performance limits.
 
 ## Authority of each comparison
 
-The self-host lane has three distinct authorities:
+The self-host lane has three distinct checks:
 
 | Comparison | Faults it can expose |
 | --- | --- |
-| First Atom image versus pinned AZM image | Native parsing, symbols, encoding, directives, placement, patches, or output differ from the development build |
-| Second Atom generation versus first | Atom-emitted core, recovered symbols, ranges, or entry cannot reproduce the assembler |
-| Translated Atom source versus AZM | Atom and AZM disagree on initialized addresses or resident bytes for the exact self-host source |
+| First ATOM image versus pinned image | Source and checked bytes or initialized address sets have drifted |
+| Second ATOM generation versus first | ATOM-emitted core cannot reproduce the assembler's bytes and write coverage |
+| Recovered ABI symbols across generations | Entry addresses, ranges or named values differ despite matching bytes |
 
 All three are required. Passing one does not imply the others.
 

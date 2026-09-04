@@ -3,10 +3,9 @@
 Atom’s native source uses ordinary `.asm` filenames. The checked source under `native/`
 is the input to native-core generation, the self-host proof, the command line’s
 `atom self-host`, and the npm package. The repository retains no second native
-implementation. The development build also assembles an automatic translation
-of the same `.asm` source with strict register-contract checking, so the
-native source is checked by an independent toolchain without becoming a second
-source of truth.
+implementation. Native-core generation executes the checked ATOM seed, then
+executes the resulting core over the same source. Both generations must have
+identical initialized addresses, bytes and recovered host ABI symbols.
 
 This transition has two reasons for being staged. First, Atom stores only the
 first eight significant characters of a symbol, while the AZM source was
@@ -98,10 +97,11 @@ PR_PARSE:
         CALL EX_PARSE
 ```
 
-The host’s Atom-to-AZM contract adapter restores these as `.ROUTINE` and
-`.EXPECTOUT` annotations for development checks. The contract pass can
-therefore continue checking registers, flags, and stack balance against the
-`.asm` source. Atom ignores the comments while assembling the same bytes.
+The retained Atom-to-AZM converter can restore `.ROUTINE` and `.EXPECTOUT`
+annotations, but core generation and self-host verification no longer execute
+AZM. These comments remain ABI documentation. Direct execution tests check
+selected register, flag, stack and memory contracts; they are not a replacement
+whole-program static register analysis.
 
 ## Authority
 
@@ -110,11 +110,9 @@ The current checkpoint establishes the complete authority path:
 - `native/atom.asm` and its five ordered source parts are hand-edited source;
 - `npm run build:native-core` uses the checked pinned core to assemble those
   parts and writes the resulting image to `assets/native-core.json`;
-- the same prepared parts are translated to AZM syntax and assembled with
-  strict register contracts;
-- the build compares the exact initialized address set and every resident byte
-  between Atom and AZM before publishing the asset;
-- a second Atom generation must reproduce the first; and
+- the first emitted core executes the same source to produce a second generation;
+- both generations must reproduce the exact initialized address set, every
+  resident byte and recovered ABI symbol before publishing the asset; and
 - the encoder differential calls the checked `.asm` core directly across all
   3,445 claimed forms and the complete invalid-record corpus.
 
@@ -126,6 +124,7 @@ tokenizer, expressions, parser/patch, output, statements, driver, and all six
 host-service boundaries are complete.
 
 Direct tests supply caller-owned arenas and guarded source, record, and output
-intervals. Their proof profiles cover all 65,536 addresses. Strict contracts
-come from automatic Atom-to-AZM translation of the complete authoritative core;
-byte differentials and subsystem tests execute the checked Atom-built image.
+intervals. Their proof profiles cover all 65,536 addresses. Byte differentials
+and subsystem tests execute the checked Atom-built image. Remaining historical
+comparison tests and the object/CP/M builders still require migration before
+the complete release gate can run under the ATOM-only policy.

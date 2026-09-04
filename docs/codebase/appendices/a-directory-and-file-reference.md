@@ -12,7 +12,6 @@ the owner of a behavior quickly.
 | --- | --- |
 | `README.md` | Product overview, installation, current capability, measured native account, and correctness summary |
 | `package.json` | npm identity, public exports, `atom` and `azm-to-atom` binaries, package contents, dependencies, and verification scripts |
-| `package-lock.json` | Reproducible Node dependency resolution |
 | `LICENSE` | GPL-3.0-only license text |
 
 ## `src/` root
@@ -130,9 +129,9 @@ The `.asm` files are the sole editing authority for the native assembler.
 
 | File | Role |
 | --- | --- |
-| `generate-native-core.mjs` | Assembles `native/atom.asm` with Atom, proves exact equality through strict automatic AZM translation, and writes or checks `assets/native-core.json` |
+| `generate-native-core.mjs` | Assembles `native/atom.asm` with ATOM, executes that emitted core to prove a second identical generation, and writes or checks `assets/native-core.json` |
 | `generate-native-object-harness.mjs` | Links the shared ABI constants and Z80 object adapter, checks strict contracts and the one-bank gate, and freezes the binary and census |
-| `verify-dependencies.mjs` | Pins the sibling Debug80 branch and exact AZM/runtime source trees used by proofs |
+| `verify-dependencies.mjs` | Checks installed runtime, tool-service and historical AZM package version ranges; remaining AZM requirement is not yet migrated |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 
 ## `test/` native harness support
@@ -192,7 +191,8 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `host-artifacts.test.mjs` | NOBJ, materialized binary, Intel HEX, listing, D8, symbols, and source ranges |
 | `host-example.test.mjs` | Runs the shipped example verifier |
 | `host-package.test.mjs` | npm archive census, offline installation, installed CLI, absent AZM, bundled runtime, and installed self-host |
-| `host-self-host.test.mjs` | Authoritative source, first and second Atom generations, pinned core, and translated AZM equality |
+| `host-self-host.test.mjs` | Authoritative source, first and second ATOM generations, pinned bytes, initialized addresses and recovered ABI symbols |
+| `host-core-bootstrap.test.mjs` | Executes native-core verification with AZM imports forbidden and checks that verification leaves the reference unchanged |
 | `host-release.test.mjs` | Product documentation links and example case, package/public license policy, and proof/native measurement agreement |
 
 ## Measurement scripts under `test/`
@@ -209,7 +209,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `measure-integration.mjs` | Linked cross-module native account |
 | `measure-driver.mjs` | Multipart driver account and lifecycle observations |
 | `measure-host-native.mjs` | Complete linked desktop image, caller-owned regions, and host execution |
-| `measure-self-host.mjs` | Source generation, two Atom generations, AZM comparison, and execution totals |
+| `measure-self-host.mjs` | Two ATOM generations, pinned-image comparison, initialized addresses, ABI symbols and execution totals |
 
 ## `proofs/`
 
