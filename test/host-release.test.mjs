@@ -79,6 +79,9 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(metadata.scripts["release:check"], /npm test/);
   assert.ok(metadata.files.includes("examples"));
   assert.ok(metadata.files.includes("docs/codebase"));
+  for (const kind of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
+    assert.equal(metadata[kind]?.["@jhlagado/azm"], undefined, `AZM returned as a ${kind} entry`);
+  }
 
   const license = await fs.readFile("LICENSE", "utf8");
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);

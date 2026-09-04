@@ -160,8 +160,8 @@ Core generation formerly invoked an AZM translation and strict register check.
 That mandatory comparison has been removed after the earlier equivalence
 proofs. The source converter remains available, but it is not a bootstrap
 dependency. The native-object and CP/M builders also use ATOM. Historical
-comparison tests and the dependency gate still require migration before the
-entire release gate is ATOM-only.
+comparison results are retained as fixture data; normal tests and dependency
+checks do not execute or require AZM.
 
 The two-generation check retains the initialized-address comparison. It
 distinguishes initialized zero bytes from uninitialized reservations, which a

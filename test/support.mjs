@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { compileSource } from "@jhlagado/azm";
 import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
 
 import { loadNativeAtomCore } from "../src/host/index.mjs";
@@ -247,22 +246,6 @@ export async function createHarness() {
       );
     },
   };
-}
-
-export function azmBytes(source) {
-  const result = compileSource(`.org $4000\n${source}\n.end\n`, {
-    entryName: `<differential:${source}>`,
-  });
-  const errors = result.diagnostics.filter(({ severity }) => severity === "error");
-  assert.deepEqual(errors, [], `AZM rejected valid case ${source}: ${JSON.stringify(errors)}`);
-  return Array.from(result.bytes);
-}
-
-export function azmRejects(source) {
-  const result = compileSource(`.org $4000\n${source}\n.end\n`, {
-    entryName: `<negative:${source}>`,
-  });
-  return result.diagnostics.some(({ severity }) => severity === "error");
 }
 
 export function extent(symbols, start, end) {

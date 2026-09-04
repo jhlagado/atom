@@ -5,9 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { compile } from "@jhlagado/azm";
-import { parseIntelHex } from "@jhlagado/debug80-runtime";
-
 import {
   assembleAtomProject,
   translateAzmSourceToAtom,
@@ -125,7 +122,7 @@ test("AZM-to-Atom translation rejects every unsupported language boundary", () =
   translationError(".end\nnop\n", "content-after-end", 2, 1);
 });
 
-test("converted Atom source is byte-identical to AZM", async (t) => {
+test("converted Atom source has the specified instruction, data and string bytes", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "azm-to-atom-differential-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   const azmSource = [
@@ -150,17 +147,6 @@ test("converted Atom source is byte-identical to AZM", async (t) => {
   await fs.writeFile(azmPath, azmSource);
   await fs.writeFile(atomPath, translateAzmSourceToAtom(azmSource, { sourceName: "program.asm" }));
 
-  const oracle = await compile(azmPath, {
-    emitBin: false,
-    emitHex: true,
-    emitD8m: false,
-    emitLst: false,
-    symbolCase: "insensitive",
-  });
-  assert.deepEqual(oracle.diagnostics.filter(({ severity }) => severity === "error"), []);
-  const hex = oracle.artifacts.find(({ kind }) => kind === "hex");
-  assert.notEqual(hex, undefined);
-  const oracleProgram = parseIntelHex(hex.text);
   const assembled = await assembleAtomProject({
     root,
     entry: "program.atom.asm",
@@ -170,11 +156,15 @@ test("converted Atom source is byte-identical to AZM", async (t) => {
   for (const operation of [...assembled.generation.images, ...assembled.generation.patches]) {
     operation.bytes.forEach((byte, index) => atomBytes.set(operation.address + index, byte));
   }
-  const oracleAddresses = oracleProgram.writeRanges.flatMap(({ start, end }) =>
-    Array.from({ length: end - start }, (_, index) => start + index),
-  );
-  assert.deepEqual([...atomBytes.keys()], oracleAddresses);
-  assert.deepEqual([...atomBytes.values()], oracleAddresses.map((address) => oracleProgram.memory[address]));
+  // LD A,2; INC A; JR NZ,-5; data and words; filled reservation;
+  // already-aligned address $4010; CSTR "OK", PSTR "P", ISTR "I".
+  const expected = [
+    0x3e, 2, 0x3c, 0x20, 0xfb,
+    0x41, 0x5a, 0x4d, 2, 0x5a, 0, 0x40, 0x12, 0,
+    0x5a, 0x5a, 0x4f, 0x4b, 0, 1, 0x50, 0xc9,
+  ];
+  assert.deepEqual([...atomBytes.keys()], expected.map((_, index) => 0x4000 + index));
+  assert.deepEqual([...atomBytes.values()], expected);
 });
 
 test("azm-to-atom CLI writes .atom.asm once and reports positioned failures", async (t) => {

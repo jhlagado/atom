@@ -104,7 +104,7 @@ memory remain separate accounts.
 `test/cases.mjs` generates the complete Atom instruction corpus as source text
 plus ten-byte parsed records. For every valid case, the encoder lane:
 
-1. assembles the source independently with AZM;
+1. obtains independently captured bytes from the reviewed historical fixture;
 2. calls native `AtomFormLength` directly;
 3. calls native `AtomEncode` directly;
 4. compares length and every emitted byte; and
@@ -116,11 +116,18 @@ mnemonic, and a SHA-256 of the canonical source/record pairs. The proof first
 requires the generated set to match this census, so deleting a family cannot
 leave a misleading 100% differential result.
 
-The negative lane asks AZM to reject malformed source and requires both native
+The negative lane uses captured rejection results and requires both native
 length and encoding entries to reject the corresponding record without output.
 Additional systematic records cover unknown ordinals, unused operand-class
 holes, and hidden trailing operands. Targeted cases cover the DD/FD index-half
 collision rules that are easy to encode incorrectly.
+
+`test/reference-fixtures.mjs` loads the fixed reference corpus and checks its
+content digest. The corpus records 6,788 distinct requests: 6,262 successful
+byte arrays and 526 rejections, including expression and statement cases as
+well as instructions. Its provenance identifies the pre-migration test revision
+and exact historical assembler build. Unrecorded requests fail; there is no
+assembler fallback. New tests need independently reviewed expected results.
 
 ## Register and stack contracts
 
@@ -280,11 +287,9 @@ do not copy an earlier total into a new report.
 
 `package.json` pins standalone Debug80 Runtime and Z80 Tool Services Git
 revisions. `scripts/verify-dependencies.mjs` checks installed package version
-ranges, including the historical AZM requirement. It does not validate sibling
-repository branches or worktrees. Core, object and CP/M generation now use
-ATOM, as does the CP/M output-candidate measurement. The dependency gate and
-historical comparison tests must be migrated before the complete release gate
-can run under the ATOM-only policy.
+ranges. It does not validate sibling repository branches or worktrees. Core,
+object and CP/M generation use ATOM, as does the CP/M output-candidate
+measurement. Historical comparisons use fixed data without an AZM dependency.
 
 This pin protects the comparison set and emulator semantics. Updating it is a
 separate reviewed dependency checkpoint with fresh native and differential

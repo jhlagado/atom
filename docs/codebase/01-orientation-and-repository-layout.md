@@ -105,10 +105,10 @@ atom/
   package.json         PACKAGE EXPORT, COMMAND, DEPENDENCIES, AND TEST LANES
 ```
 
-The package uses JavaScript ESM and requires Node 20 or later. AZM and Debug80
-Runtime are local development dependencies. The published package bundles
-Debug80 Runtime but omits AZM. Development verification still compares Atom's
-native image against the checked reference build.
+The package uses JavaScript ESM and requires Node 20 or later. Debug80 Runtime
+and Z80 Tool Services are pinned standalone dependencies, bundled in the
+published package. AZM is not a dependency. Development verification compares
+ATOM output with the checked images and independently captured reference data.
 
 ## Native source layout
 

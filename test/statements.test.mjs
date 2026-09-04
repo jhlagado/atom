@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { validCases } from "./cases.mjs";
 import { createStatementsHarness } from "./statements-support.mjs";
-import { azmBytes } from "./support.mjs";
+import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createStatementsHarness();
 const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2g-memory.json", "utf8"));
@@ -196,11 +196,11 @@ test("forward global references resolve to append-only patch bytes", () => {
   assert.deepEqual(h.finalBytes(), [0x18, 0x01, 0x00]);
 });
 
-test("statement integration is byte-identical to AZM for every supported instruction form", () => {
+test("statement integration is byte-identical to the frozen reference for every supported instruction form", () => {
   for (const [index, item] of validCases().entries()) {
     const result = h.assemble(`${item.source}\n`);
     assert.equal(result.status, STATEMENT.OK, `${index}: ${item.source}`);
-    assert.deepEqual(h.finalBytes(), azmBytes(item.source), `${index}: ${item.source}`);
+    assert.deepEqual(h.finalBytes(), referenceBytes(item.source), `${index}: ${item.source}`);
   }
 });
 
@@ -224,19 +224,19 @@ test("unknown statements and invalid instructions retain their nested category",
   assert.deepEqual(h.operations(), []);
 });
 
-test("bare EQU is case-insensitive and byte-identical to AZM", () => {
+test("bare EQU is case-insensitive and byte-identical to the frozen reference", () => {
   const source = "Value eQu $42\nLD A,vAlUe\n";
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
-  assert.deepEqual(h.finalBytes(), azmBytes("Value EQU $42\nLD A,Value\n"));
+  assert.deepEqual(h.finalBytes(), referenceBytes("Value EQU $42\nLD A,Value\n"));
   assert.deepEqual(h.finalBytes(), [0x3e, 0x42]);
 });
 
-test("colon EQU is an equate, not an address label, and matches AZM", () => {
+test("colon EQU is an equate, not an address label, and matches the frozen reference", () => {
   const source = "Value: eQu 100\nLD A,VALUE\n";
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
-  assert.deepEqual(h.finalBytes(), azmBytes("Value: .equ 100\nLD A,Value\n"));
+  assert.deepEqual(h.finalBytes(), referenceBytes("Value: .equ 100\nLD A,Value\n"));
   assert.equal(h.find(h.pack("Value").key).status, STATUS.OK);
 });
 
@@ -290,7 +290,7 @@ test("EQU accepts the proved expression domain and word boundaries", () => {
   ].join("\n");
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
-  assert.deepEqual(h.finalBytes(), azmBytes(source));
+  assert.deepEqual(h.finalBytes(), referenceBytes(source));
 });
 
 test("forward-dependent and malformed EQU publish no declaration", () => {
@@ -320,12 +320,12 @@ test("private EQU requires a global scope and duplicate EQU is atomic", () => {
   assert.equal(h.memory[found.ix + 6] | (h.memory[found.ix + 7] << 8), 1);
 });
 
-test("bare ORG, DB, and DW are case-insensitive and match AZM", () => {
+test("bare ORG, DB, and DW are case-insensitive and match the frozen reference", () => {
   const source = "oRg $5000\ndB 1,$FF,-1,256\ndW $1234,-1\n";
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(0x5000), [1, 0xff, 0xff, 0, 0x34, 0x12, 0xff, 0xff]);
-  assert.deepEqual(h.finalBytes(0x5000), azmBytes("ORG $5000\nDB 1,$FF,-1,256\nDW $1234,-1\n"));
+  assert.deepEqual(h.finalBytes(0x5000), referenceBytes("ORG $5000\nDB 1,$FF,-1,256\nDW $1234,-1\n"));
 });
 
 test("DB decodes the tokenizer's one byte-string encoding", () => {
@@ -333,7 +333,7 @@ test("DB decodes the tokenizer's one byte-string encoding", () => {
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [0x41, 0x0a, 0x42, 0, 0x5c, 0x22]);
-  assert.deepEqual(h.finalBytes(), azmBytes("DB $41,$0A,$42,0,$5C,$22\n"));
+  assert.deepEqual(h.finalBytes(), referenceBytes("DB $41,$0A,$42,0,$5C,$22\n"));
 
   const failed = h.assemble('DB "ABC"\n', { capacity: 2 });
   assert.equal(failed.status, STATEMENT.OUTPUT);
@@ -345,9 +345,9 @@ test("character literals compose with expressions and instruction operands", () 
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [0x41, 0x62, 0x3b, 0x3e, 0x41, 0x08]);
-  assert.deepEqual(h.finalBytes().slice(0, 2), azmBytes("DB 'A','a'+1"));
-  assert.deepEqual(h.finalBytes().slice(3, 5), azmBytes("LD A,'A'"));
-  assert.deepEqual(h.finalBytes().slice(5), azmBytes("EX AF,AF'"));
+  assert.deepEqual(h.finalBytes().slice(0, 2), referenceBytes("DB 'A','a'+1"));
+  assert.deepEqual(h.finalBytes().slice(3, 5), referenceBytes("LD A,'A'"));
+  assert.deepEqual(h.finalBytes().slice(5), referenceBytes("EX AF,AF'"));
 });
 
 test("LOW and HIGH patch forward data and instruction bytes exactly", () => {
@@ -367,13 +367,13 @@ test("LOW and HIGH patch forward data and instruction bytes exactly", () => {
     0x0b, 0x40, 0x0b, 0, 0x40, 0,
     0x3e, 0x0b, 0x21, 0x40, 0, 0,
   ]);
-  const low = azmBytes("LD A,LSB(400BH)")[1];
-  const high = azmBytes("LD A,MSB(400BH)")[1];
+  const low = referenceBytes("LD A,LSB(400BH)")[1];
+  const high = referenceBytes("LD A,MSB(400BH)")[1];
   assert.deepEqual(h.finalBytes().slice(0, 6), [low, high, low, 0, high, 0]);
   assert.deepEqual(h.finalBytes().slice(6), [
-    ...azmBytes("LD A,LSB(400BH)"),
-    ...azmBytes("LD HL,MSB(400BH)"),
-    ...azmBytes("NOP"),
+    ...referenceBytes("LD A,LSB(400BH)"),
+    ...referenceBytes("LD HL,MSB(400BH)"),
+    ...referenceBytes("NOP"),
   ]);
 });
 
@@ -389,12 +389,12 @@ test("forward byte functions reject contexts whose range rule cannot be retained
   }
 });
 
-test("CSTR, PSTR, and ISTR are case-insensitive and byte-identical to AZM", () => {
+test("CSTR, PSTR, and ISTR are case-insensitive and byte-identical to the frozen reference", () => {
   const source = 'cStR "OK"\nPsTr "AB"\nISTR "OK"\nISTR ""\n';
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [0x4f, 0x4b, 0, 2, 0x41, 0x42, 0x4f, 0xcb]);
-  assert.deepEqual(h.finalBytes(), azmBytes('.cstr "OK"\n.pstr "AB"\n.istr "OK"\n.istr ""\n'));
+  assert.deepEqual(h.finalBytes(), referenceBytes('.cstr "OK"\n.pstr "AB"\n.istr "OK"\n.istr ""\n'));
 
   assert.equal(h.assemble('PSTR "A\\n"\n').status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [2, 0x41, 0x0a]);
@@ -439,7 +439,7 @@ test("labels compose with DB, DW, and uninitialized DS reservations", () => {
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(0x4100), [1, 2, 0x00, 0x41, 0x02, 0x41, 0, 0, 0xff]);
-  assert.deepEqual(h.finalBytes(0x4100), azmBytes(source));
+  assert.deepEqual(h.finalBytes(0x4100), referenceBytes(source));
   assert.deepEqual(h.outputState(), { cursor: 0x4109, remaining: 0xf7 });
 });
 
@@ -455,7 +455,7 @@ test("resolved symbol differences assemble in emitted data, but two-forward diff
   let result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(0x4100), [1, 2, 3, 3, 3, 0]);
-  assert.deepEqual(h.finalBytes(0x4100), azmBytes(source));
+  assert.deepEqual(h.finalBytes(0x4100), referenceBytes(source));
 
   source = [
     "ORG $4100",
@@ -468,7 +468,7 @@ test("resolved symbol differences assemble in emitted data, but two-forward diff
   result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(0x4100), [3, 0, 1, 2, 3]);
-  assert.deepEqual(h.finalBytes(0x4100), azmBytes(source));
+  assert.deepEqual(h.finalBytes(0x4100), referenceBytes(source));
 
   source = [
     "ORG $4100",
@@ -487,7 +487,7 @@ test("each data-list expression sees its own current output address", () => {
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(), [0x00, 0x01, 0x02, 0x40, 0x04, 0x40]);
-  assert.deepEqual(h.finalBytes(), azmBytes(source));
+  assert.deepEqual(h.finalBytes(), referenceBytes(source));
 });
 
 test("DS supports zero, trailing reservations, and an optional fill byte", () => {
@@ -499,14 +499,14 @@ test("DS supports zero, trailing reservations, and an optional fill byte", () =>
   result = h.assemble("ORG $5000\nDS 0,$AA\nDS 3,$AA\n");
   assert.equal(result.status, STATEMENT.OK);
   assert.deepEqual(h.finalBytes(0x5000), [0xaa, 0xaa, 0xaa]);
-  assert.deepEqual(h.finalBytes(0x5000), azmBytes("ORG $5000\nDS 0,$AA\nDS 3,$AA\n"));
+  assert.deepEqual(h.finalBytes(0x5000), referenceBytes("ORG $5000\nDS 0,$AA\nDS 3,$AA\n"));
 });
 
-test("ALIGN emits AZM-compatible initialized zero padding", () => {
+test("ALIGN emits initialized zero padding matching the frozen reference", () => {
   const source = "ORG 0101H\nDB 0AAH\nALIGN 4\nALIGNED:\nDB 055H\nALIGN 6\nDB 066H\n";
   const result = h.assemble(source);
   assert.equal(result.status, STATEMENT.OK);
-  assert.deepEqual(h.finalBytes(0x0101), azmBytes(source.replaceAll(/\b(ORG|DB|ALIGN)\b/g, (name) => `.${name.toLowerCase()}`)));
+  assert.deepEqual(h.finalBytes(0x0101), referenceBytes(source.replaceAll(/\b(ORG|DB|ALIGN)\b/g, (name) => `.${name.toLowerCase()}`)));
   assert.deepEqual(h.finalBytes(0x0101), [0xaa, 0, 0, 0x55, 0, 0, 0, 0x66]);
   const aligned = h.find(h.pack("ALIGNED").key);
   assert.equal(aligned.status, STATUS.OK);

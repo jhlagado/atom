@@ -134,14 +134,15 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `generate-cpm22.mjs` | Builds the CP/M executable with ATOM and the installed Tool Services renderer; verifies the checked bytes and census |
 | `cpm22-atom-source.mjs` | Private CP/M link preparation: deterministic short names, forward name aliases, bounded source parts and native ATOM assembly |
 | `measure-cpm22-output-candidates.mjs` | ATOM-derived code and workspace extents for two lower-bound output kernels |
-| `verify-dependencies.mjs` | Checks installed runtime, tool-service and historical AZM package version ranges; remaining AZM requirement is not yet migrated |
+| `verify-dependencies.mjs` | Checks installed standalone runtime and tool-service package version ranges |
 | `verify-example.mjs` | Runs the shipped CLI example in a temporary copy and verifies exact artifacts and manifest hashes |
 
 ## `test/` native harness support
 
 | File | Role |
 | --- | --- |
-| `support.mjs` | Encoder direct-entry AZM assembly, Debug80 stepping, complete memory audit, instruction comparison helpers, and execution statistics |
+| `support.mjs` | Checked-core encoder harness, Debug80 stepping, complete memory audit and execution statistics |
+| `reference-fixtures.mjs` | Digest-checked historical bytes and rejection results; unknown requests fail without an assembler fallback |
 | `symbol-support.mjs` | Checked-core symbol and pending direct-entry harness with guarded caller-owned arenas and complete memory auditing |
 | `tokenizer-support.mjs` | Checked-core tokenizer harness with guarded source, exact token/error observations, and complete memory auditing |
 | `expression-support.mjs` | Expression harness, token setup, symbol state, and result extraction |
@@ -178,7 +179,7 @@ The `.asm` files are the sole editing authority for the native assembler.
 | `host-atom-masking.test.mjs` | Equal lengths, CR/LF preservation, inactive bytes, and leaked-directive discrimination |
 | `host-incbin.test.mjs` | Binary recognition, confinement, snapshotting, lowering, bridge counts, listing, and D8 |
 | `host-atom-to-azm.test.mjs` | Atom-to-AZM syntax translation and initialized-address comparison |
-| `host-azm-to-atom.test.mjs` | Strict mapping and rejection census, CLI behavior, and exact AZM-to-Atom initialized-address and byte differential |
+| `host-azm-to-atom.test.mjs` | Strict mapping and rejection census, CLI behavior, and explicit initialized-address and byte expectations |
 | `host-node-source-reader.test.mjs` | Physical path casing, confinement, symlinks, identities, and snapshots |
 | `host-resolver.test.mjs` | Graph order, diamonds, repeats, cycles, and limits |
 | `host-placement.test.mjs` | Path-keyed bank assignments and placement failures |

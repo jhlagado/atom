@@ -1,6 +1,6 @@
 # Release checklist
 
-`npm run release:check` is the maintainer gate. It rebuilds the frozen proof
+`npm run release:check` is the maintainer gate. It checks the pinned proof
 dependencies, runs the complete native and host suite, verifies the checked
 self-host source and native core, and repeats the desktop and
 self-host measurements. `npm publish` invokes the same gate through
@@ -23,13 +23,17 @@ The release gate must establish:
   bytes and recovered ABI symbols; and
 - the pinned native core matches the authoritative `.asm` source.
 
-The ATOM-only migration is incomplete: CP/M generation,
-dependency checks and historical comparison tests still execute or require AZM.
-Do not run those paths as normal release work or publish this checkpoint as an
-ATOM-only toolchain. Native-core and object-harness generation, their guarded
-verification tests and the self-host measurement are migrated. The misleading `verify:strict-contracts`
-and `annotate:contracts` aliases are removed; static register analysis is not
-claimed by the replacement self-host checks.
+Normal builds, tests and measurements use ATOM. Historical comparison outputs
+are retained as reviewed fixture data under `test/fixtures/historical-assembly.json`;
+AZM is no longer a package or verification dependency. A new reference request
+must have independently reviewed expected bytes or rejection behavior. Tests
+must not generate their expected answers with ATOM. The source converters remain
+available, but do not execute AZM.
+
+The misleading `verify:strict-contracts` and `annotate:contracts` aliases are
+removed; static register analysis is not claimed by the replacement self-host
+checks. Successful local verification alone does not establish publication or
+completion of the separate output-range and Nucleus reconciliation work.
 
 Before publishing, also perform the repository checks that deliberately require
 network or release authority:

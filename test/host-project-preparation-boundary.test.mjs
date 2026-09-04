@@ -3,8 +3,11 @@ import fs from "node:fs";
 import { isBuiltin } from "node:module";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-const sourceDirectory = "../z80-tool-services/source-preparation";
+const sourceDirectory = path.dirname(fileURLToPath(import.meta.resolve(
+  "@jhlagado/z80-tool-services/source-preparation",
+)));
 
 function assertNeutralImports(source, name) {
   assert.doesNotMatch(source, /\bimport\s*\(/, `${name} uses dynamic import`);
@@ -40,6 +43,11 @@ test("neutral import proof rejects dynamic Atom imports", () => {
     () => assertNeutralImports('await import("../atom/source-profile.mjs")', "dynamic.mjs"),
     /uses dynamic import/,
   );
+});
+
+test("neutral import proof rejects external and escaping static imports", () => {
+  assert.throws(() => assertNeutralImports('import "atom-z80";', "static.mjs"), /imports external package/);
+  assert.throws(() => assertNeutralImports('import "../atom/index.mjs";', "static.mjs"), /imports outside neutral/);
 });
 
 test("project-preparation errors retain a frozen structured diagnostic", async () => {
