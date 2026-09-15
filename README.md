@@ -100,6 +100,13 @@ configurations from the remaining [TEC-1 adapter work](docs/tec-1-deployment.md)
 The [private tool-service boundary](docs/tool-services.md) records how Node,
 CP/M, Debug80, and later providers sit beneath the unchanged resident core.
 
+## Assembly commentary
+
+The [assembly commentary policy](docs/assembly-style.md) calls for an English
+narrative alongside assembly instructions, including register roles, compact
+symbol meanings and flag dependencies. High-level code remains lightly
+commented. Existing assembly comments will be updated separately.
+
 ## Correctness
 
 Atom's proof suite covers all 3,445 supported instruction forms, invalid forms,
