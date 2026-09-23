@@ -36,3 +36,16 @@ This is an execution seam, not a generic CPU contract. The adapter must retain
 the selected Atom core's reset state, memory protection ranges, flag semantics,
 stack behaviour and cycle accounting. A replacement is accepted only after
 the same Atom conformance record and host boundary tests pass.
+
+## Stage 3 Node/Deno gate
+
+`npm run verify:stage3` assembles the same small source project in separate
+temporary workspaces under Node and Deno. It compares the normalized console
+result, diagnostics and the SHA-256 plus size of every selected artifact
+(`.bin`, `.hex`, `.lst`, `.d8.json` and `.nobj`). Temporary workspace paths
+and runtime versions are deliberately excluded from the comparison.
+
+This proves host compatibility of the existing Atom seam; it does not claim
+that Debug80 Runtime is gone. A future Triptych native or WASM adapter must
+pass the same artifact and diagnostic comparison before it replaces the
+reference adapter.

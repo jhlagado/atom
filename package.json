@@ -68,6 +68,7 @@
     "build:stage1-record": "node scripts/generate-stage1-record.mjs",
     "verify:stage1-record": "node scripts/generate-stage1-record.mjs --check",
     "verify:deno-stage1": "deno run -A scripts/generate-stage1-record.mjs --check",
+    "verify:stage3": "node scripts/verify-stage3-node-deno.mjs",
     "update:package-census": "node scripts/package-census.mjs --update",
     "prepare:proof": "npm run verify:dependencies",
     "pretest": "npm run prepare:proof && npm run verify:native-source && npm run verify:native-object && npm run verify:cpm22 && npm run verify:cpm22-output-candidates",
