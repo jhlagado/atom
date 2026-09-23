@@ -12,8 +12,8 @@ const dependencies = [
   },
   {
     name: "@jhlagado/z80-tool-services",
-    minimum: [0, 1, 0],
-    upperExclusive: [0, 2, 0],
+    minimum: [0, 2, 0],
+    upperExclusive: [0, 3, 0],
   },
 ];
 

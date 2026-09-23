@@ -75,6 +75,10 @@ undefined checks, and output lifecycle control. Filesystem access, dependency
 graphs, listings, D8 maps, Intel HEX, and transactional file publication stay
 outside the resident assembler.
 
+The [host execution adapter](docs/host-execution-adapter.md) keeps the Z80
+substrate replaceable: Debug80 Runtime is the current reference adapter, while
+Triptych native/WASM adapters can be added against the same runner surface.
+
 This is a two-stage build, not a two-pass assembler. The native core reads the
 prepared source once. Forward references become append-only PATCH records when
 their final values are known.
