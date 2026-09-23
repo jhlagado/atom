@@ -48,3 +48,4 @@ export {
   NATIVE_ATOM_LIMITS,
 } from "./harness/native-atom-runner.mjs";
 export { createDebug80ExecutionAdapter } from "./harness/z80-execution-adapter.mjs";
+export { createTriptychWasmExecutionAdapter } from "./harness/triptych-wasm-execution-adapter.mjs";
