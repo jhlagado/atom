@@ -1,4 +1,4 @@
-import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+import { createZ80Runtime, parseIntelHex } from "@jhlagado/z80-runtime";
 
 /**
  * The smallest execution seam needed by the native Atom host.

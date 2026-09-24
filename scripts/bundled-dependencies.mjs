@@ -6,7 +6,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const modulesRoot = path.join(packageRoot, "node_modules");
 const scopeRoot = path.join(modulesRoot, "@jhlagado");
 const markerPath = path.join(modulesRoot, ".atom-pack-dependency-links.json");
-const dependencies = ["debug80-runtime", "z80-tool-services"];
+const dependencies = ["debug80-runtime", "z80-runtime", "z80-tool-services"];
 const packageManifestPath = path.join(packageRoot, "package.json");
 const bundledDependencies = dependencies.map((name) => `@jhlagado/${name}`);
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+import { createZ80Runtime, parseIntelHex } from "@jhlagado/z80-runtime";
 
 import { MNEMONICS } from "../src/abi.mjs";
 import { loadNativeAtomCore } from "../src/host/index.mjs";

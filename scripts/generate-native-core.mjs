@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { parseIntelHex } from "@jhlagado/debug80-runtime";
+import { parseIntelHex } from "@jhlagado/z80-runtime";
 
 import {
   assembleResolvedAtomProject,

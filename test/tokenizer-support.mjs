@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-import { createZ80Runtime, parseIntelHex } from "@jhlagado/debug80-runtime";
+import { createZ80Runtime, parseIntelHex } from "@jhlagado/z80-runtime";
 
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 

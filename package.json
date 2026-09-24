@@ -97,6 +97,7 @@
   },
   "dependencies": {
     "@jhlagado/debug80-runtime": "git+https://github.com/jhlagado/debug80-runtime.git#b7343aa8c38c248abbc6ee801b4af270d4843ad6",
+    "@jhlagado/z80-runtime": "git+https://github.com/jhlagado/z80-runtime.git#e4ee190",
     "@jhlagado/z80-tool-services": "git+https://github.com/jhlagado/z80-tool-services.git#853820c3008d6ab26f709c6bb05a6a7193072c60"
   },
   "engines": {

@@ -11,6 +11,11 @@ const dependencies = [
     upperExclusive: [0, 4, 0],
   },
   {
+    name: "@jhlagado/z80-runtime",
+    minimum: [0, 1, 0],
+    upperExclusive: [0, 2, 0],
+  },
+  {
     name: "@jhlagado/z80-tool-services",
     minimum: [0, 2, 0],
     upperExclusive: [0, 3, 0],

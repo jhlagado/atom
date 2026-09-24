@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { parseIntelHex } from "@jhlagado/debug80-runtime";
+import { parseIntelHex } from "@jhlagado/z80-runtime";
 
 function run(command, arguments_, options = {}) {
   return new Promise((resolve, reject) => {
@@ -49,6 +49,7 @@ test("the packed desktop CLI installs offline and assembles without AZM or an At
   await assert.rejects(fs.access(path.join(installDirectory, "node_modules", "@jhlagado", "azm")));
   await assert.rejects(fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "azm")));
   await fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "debug80-runtime"));
+  await fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "z80-runtime"));
   await fs.access(path.join(installedAtom, "node_modules", "@jhlagado", "z80-tool-services"));
   const metadata = JSON.parse(await fs.readFile(path.join(installedAtom, "package.json"), "utf8"));
   assert.equal(metadata.license, "GPL-3.0-only");
