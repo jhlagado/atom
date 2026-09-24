@@ -1,11 +1,11 @@
 {
   "name": "Atom Phase 6 native self-hosting proof",
   "source": {
-    "statements": 7333,
+    "statements": 7644,
     "sourceParts": 10,
-    "sourceBytes": 110044,
+    "sourceBytes": 130286,
     "checkedParts": 11,
-    "checkedBytes": 110317,
+    "checkedBytes": 130559,
     "globalSymbols": 876,
     "privateSymbols": 441
   },
@@ -20,10 +20,10 @@
     "declaredSymbols": 1316
   },
   "execution": {
-    "instructions": 102345070,
-    "cycles": 1091652444,
+    "instructions": 103479839,
+    "cycles": 1103596144,
     "serviceCalls": 13734,
-    "sourceReads": 270048,
+    "sourceReads": 311154,
     "maxInstructions": 400000000,
     "maxCycles": 4000000000
   },

@@ -178,10 +178,10 @@ The checked measurement records:
 
 | Observation | Measured value |
 | --- | ---: |
-| Flattened native statements | 7,333 |
+| Flattened native statements | 7,644 |
 | Native content parts | 10 |
 | Checked resolver parts, including entry | 11 |
-| Checked source bytes | 110,317 |
+| Checked source bytes | 130,559 |
 | Ledger global symbols | 876 |
 | Ledger private symbols | 441 |
 | Initialized resident bytes | 11,793 |
@@ -190,8 +190,8 @@ The checked measurement records:
 | Declared symbols | 1,316 |
 | Linked resident extent | 12,400 bytes |
 
-The first generation currently executes 102,345,070 instructions and
-1,091,652,444 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 103,479,839 instructions and
+1,103,596,144 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison
