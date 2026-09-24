@@ -56,3 +56,18 @@ Release evidence belongs in the current phase report and
 Hypothesis. A green test count alone is insufficient; record native size,
 fixed workspace, linked extent, self-host equivalence, package census, and the
 exact dependency commits.
+
+## GitHub release
+
+A tag named `v<package-version>` starts `.github/workflows/release.yml`. The
+workflow repeats the complete release gate and package census before it creates
+a public release containing:
+
+- `ATOM.COM`, copied byte for byte from the checked CP/M asset;
+- `ATOM.manifest.json`, recording its size, digest, addresses, source commit and
+  build provenance; and
+- `SHA256SUMS`, covering the executable and manifest.
+
+The preparation script rejects a tag that differs from `package.json`, an
+incomplete commit identity or an executable that differs from its checked CP/M
+census. Do not upload a locally rebuilt substitute to an existing release.

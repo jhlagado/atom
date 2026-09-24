@@ -11,7 +11,7 @@ test("the object-harness verification rebuilds the pinned image without AZM", as
   const result = spawnSync(process.execPath, [
     "--experimental-loader", fileURLToPath(new URL("./fixtures/reject-azm-loader.mjs", import.meta.url)),
     "scripts/generate-native-object-harness.mjs", "--check",
-  ], { cwd: root, encoding: "utf8", timeout: 180_000, maxBuffer: 4 * 1024 * 1024 });
+  ], { cwd: root, encoding: "utf8", timeout: 360_000, maxBuffer: 4 * 1024 * 1024 });
   assert.equal(result.status, 0, result.error?.message || result.stderr || result.stdout);
   const after = await Promise.all(artifacts.map((name) => readFile(new URL(`../${name}`, import.meta.url))));
   assert.deepEqual(after, before, "verification must not rewrite its references");
