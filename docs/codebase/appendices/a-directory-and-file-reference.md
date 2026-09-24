@@ -118,8 +118,8 @@ The modules below are exported by
 
 | File | Role |
 | --- | --- |
-| `atom-00.asm` through `atom-04.asm` | Authoritative native Atom source parts |
-| `atom.asm` | `%INCLUDE` entry that orders the five content parts through the normal host resolver |
+| `encoder.asm` through `host-services.asm` | Authoritative native modules in assembly order |
+| `atom.asm` | `%INCLUDE` entry that orders the ten modules through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
 | `named-object-adapter.asm` | Z80 adapter from Atom source and sink callbacks to the shared named-object request |
 

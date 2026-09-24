@@ -10,6 +10,12 @@ import {
   materializeAtomGeneration,
   writeAtomD8,
 } from "../src/host/index.mjs";
+import {
+  joinNativeCoreModules,
+  readNativeCoreModules,
+  replaceNativeSourceRead,
+  setNativeCoreOrigin,
+} from "./native-source-layout.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
@@ -78,12 +84,6 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
   return `${constants.join("\n")}\n${workspaceSource}\n${remainder.join("\n")}\n`;
 }
 
-function sourceReadTargetSource(target) {
-  const label = target ?? "NA_SREAD";
-  assert.match(label, /^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*$/, "invalid source-read target label");
-  return { label, source: `TK_SREAD:\nJP ${label}\n` };
-}
-
 async function linkedSource({
   origin,
   imageOrigin,
@@ -93,26 +93,11 @@ async function linkedSource({
   preludeSource,
   postludeSource,
 }) {
-  const parts = await Promise.all(
-    ["atom-00.asm", "atom-01.asm", "atom-02.asm", "atom-03.asm", "atom-04.asm"]
-      .map((name) => readFile(join(nativeRoot, name), "utf8")),
-  );
-  assert.match(parts[0], /^ORG 0\n/);
-  parts[0] = parts[0].replace(/^ORG 0/, originSource(origin));
-
-  const sourceReadStart = parts[1].indexOf("TK_SREAD:\n");
-  const sourceReadEnd = parts[1].indexOf(
-    ";@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY",
-    sourceReadStart,
-  );
-  assert.notEqual(sourceReadStart, -1, "native core omitted the source-read entry");
-  assert.notEqual(sourceReadEnd, -1, "native core omitted the source-read boundary");
-  const sourceRead = sourceReadTargetSource(sourceReadTarget);
-  parts[1] = `${parts[1].slice(0, sourceReadStart)}${sourceRead.source}${parts[1].slice(sourceReadEnd)}`;
-
-  const serviceStart = parts[4].indexOf("HS_SCBEG:\n");
-  assert.notEqual(serviceStart, -1, "native core omitted the host service tail");
-  parts[4] = parts[4].slice(0, serviceStart);
+  const sourceReadLabel = sourceReadTarget ?? "NA_SREAD";
+  let modules = await readNativeCoreModules(nativeRoot);
+  modules = setNativeCoreOrigin(modules, originSource(origin));
+  modules = replaceNativeSourceRead(modules, sourceReadLabel);
+  const core = joinNativeCoreModules(modules, { includeHostServices: false });
 
   const [sharedAbi, adapterText] = await Promise.all([
     readFile(fileURLToPath(import.meta.resolve("@jhlagado/z80-tool-services/native/z80-tool-services-v1.asmi")), "utf8"),
@@ -121,10 +106,10 @@ async function linkedSource({
   assert.ok(adapterText.includes(unavailableGateway), "native adapter gateway seam changed");
   let adapter = adapterText.replace(unavailableGateway, gatewaySource ?? unavailableGateway);
   if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
-  let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${parts.join("\n")}\n${sharedAbi}\n${adapter}${postludeSource === undefined ? "" : `\n${postludeSource}`}\nNP_END:\n`;
+  let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${core}\n${sharedAbi}\n${adapter}${postludeSource === undefined ? "" : `\n${postludeSource}`}\nNP_END:\n`;
   if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin, imageOrigin);
   return {
-    sourceReadTarget: sourceRead.label,
+    sourceReadTarget: sourceReadLabel,
     sourceText: atomSource,
   };
 }

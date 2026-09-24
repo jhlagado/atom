@@ -112,8 +112,8 @@ ATOM output with the checked images and independently captured reference data.
 
 ## Native source layout
 
-`native/atom.asm` is the linked-core entry. Its five ordered parts contain
-the native modules in dependency order:
+`native/atom.asm` is the core entry. Its ten ordered parts correspond to the
+native modules in dependency order:
 
 ```text
 encoder
@@ -154,9 +154,9 @@ The current pinned native image divides into these measured ranges:
 | Statements and directives | 1,358 | 24 |
 | Multipart driver | 617 | 9 |
 | Fail-closed host sink stubs | 8 | 0 |
-| **Total** | **11,682** | **714** |
+| **Total** | **11,686** | **714** |
 
-The linked resident extent is measured at 12,396 bytes, leaving 3,988 bytes
+The linked resident extent is measured at 12,400 bytes, leaving 3,984 bytes
 below a 16 KiB boundary. Host-backed source occupies no Z80 source page;
 caller-owned symbol, pending, descriptor, and stack storage remain separate
 accounts. The values above come from

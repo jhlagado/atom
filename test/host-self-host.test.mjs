@@ -12,6 +12,7 @@ import {
   materializeAtomGeneration,
   resolveAtomProject,
 } from "../src/host/index.mjs";
+import { NATIVE_CORE_MODULES } from "../scripts/native-source-layout.mjs";
 
 const SELF_HOST_BUDGETS = Object.freeze({
   maxInstructions: 200_000_000,
@@ -27,11 +28,7 @@ test("checked Atom source rebuilds the pinned core and then rebuilds itself byte
     entry: "atom.asm",
   });
   assert.deepEqual(project.parts.map(({ logicalIdentity }) => logicalIdentity), [
-    "atom-00.asm",
-    "atom-01.asm",
-    "atom-02.asm",
-    "atom-03.asm",
-    "atom-04.asm",
+    ...NATIVE_CORE_MODULES,
     "atom.asm",
   ]);
 
@@ -66,11 +63,11 @@ test("checked Atom source rebuilds the pinned core and then rebuilds itself byte
   assert.deepEqual(secondCore.symbols, selfHostedCore.symbols);
 
   assert.deepEqual(source.statistics, {
-    statements: 7170,
-    sourceBytes: 101536,
-    sourceParts: 5,
-    checkedParts: 6,
-    checkedBytes: 101685,
+    statements: 7333,
+    sourceBytes: 110044,
+    sourceParts: 10,
+    checkedParts: 11,
+    checkedBytes: 110317,
     globalSymbols: 876,
     privateSymbols: 441,
   });

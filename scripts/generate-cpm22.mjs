@@ -5,6 +5,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assembleCpmAtomSource } from "./cpm22-atom-source.mjs";
+import {
+  joinNativeCoreModules,
+  readNativeCoreModules,
+  replaceNativeSourceRead,
+  setNativeCoreOrigin,
+} from "./native-source-layout.mjs";
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -17,28 +23,15 @@ const finalImageModulePath = fileURLToPath(import.meta.resolve(
 ));
 
 async function linkedSource() {
-  const parts = await Promise.all(
-    ["atom-00.asm", "atom-01.asm", "atom-02.asm", "atom-03.asm", "atom-04.asm"]
-      .map((name) => readFile(join(nativeRoot, name), "utf8")),
-  );
-  assert.match(parts[0], /^ORG 0\n/);
-  parts[0] = parts[0].replace(/^ORG 0\n/, "ORG $0100\nJP CP_ENTRY\nDS 13\n");
-  const sourceReadStart = parts[1].indexOf("TK_SREAD:\n");
-  const sourceReadEnd = parts[1].indexOf(
-    ";@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY",
-    sourceReadStart,
-  );
-  assert.notEqual(sourceReadStart, -1, "native core omitted the source-read entry");
-  assert.notEqual(sourceReadEnd, -1, "native core omitted the source-read boundary");
-  parts[1] = `${parts[1].slice(0, sourceReadStart)}TK_SREAD:\nJP CP_SOURCE_READ_BYTE\n${parts[1].slice(sourceReadEnd)}`;
-  const serviceStart = parts[4].indexOf("HS_SCBEG:\n");
-  assert.notEqual(serviceStart, -1, "native core omitted the host service tail");
-  parts[4] = parts[4].slice(0, serviceStart);
+  let modules = await readNativeCoreModules(nativeRoot);
+  modules = setNativeCoreOrigin(modules, "ORG $0100\nJP CP_ENTRY\nDS 13");
+  modules = replaceNativeSourceRead(modules, "CP_SOURCE_READ_BYTE");
+  const core = joinNativeCoreModules(modules, { includeHostServices: false });
   const adapter = await readFile(join(nativeRoot, "cpm22-adapter.asm"), "utf8");
   const marker = ";@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@";
   assert.equal(adapter.split(marker).length, 2, "CP/M adapter must contain one final-image module marker");
   const linkedAdapter = adapter.replace(marker, await readFile(finalImageModulePath, "utf8"));
-  const atomSource = `${parts.join("\n")}\n${linkedAdapter}`;
+  const atomSource = `${core}\n${linkedAdapter}`;
   return atomSource;
 }
 

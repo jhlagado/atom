@@ -12,10 +12,9 @@ ABI symbols must also agree. No second assembler runs in this build path.
 
 ## Native source and link entry
 
-The native implementation is maintained under `native/`. Its link entry is
-`atom.asm`, whose `%INCLUDE` header orders five source parts. Those parts set
-origin zero, contain the nine native modules in link order, and finish with six
-fail-closed host sink entries.
+The native implementation is maintained under `native/`. Its entry is
+`atom.asm`, whose `%INCLUDE` header orders ten source parts. Each part contains
+one native module. The final module contains six fail-closed host sink entries.
 
 The source uses Atom's bare directives and eight-character symbols. Comments
 beginning with `;@ROUTINE` and `;@EXPECTOUT` retain register-contract metadata.
@@ -75,19 +74,24 @@ RAM before entering the assembler.
 
 ## Native source ledger
 
-The five content parts remain below the 65,535-byte per-part logical-offset
-limit. The sixth file is the entry and dependency header:
+The ten content parts remain below the 65,535-byte per-part logical-offset
+limit. The eleventh file is the entry and dependency header:
 
 ```asm
-%INCLUDE "atom-00.asm"
-%INCLUDE "atom-01.asm"
-%INCLUDE "atom-02.asm"
-%INCLUDE "atom-03.asm"
-%INCLUDE "atom-04.asm"
+%INCLUDE "encoder.asm"
+%INCLUDE "symbols.asm"
+%INCLUDE "tokenizer.asm"
+%INCLUDE "expression.asm"
+%INCLUDE "patch.asm"
+%INCLUDE "parser.asm"
+%INCLUDE "output.asm"
+%INCLUDE "statements.asm"
+%INCLUDE "driver.asm"
+%INCLUDE "host-services.asm"
 ```
 
 The host resolver orders those dependencies before `atom.asm`, so the checked
-self-host project presented to the native driver has six parts. The empty
+self-host project presented to the native driver has eleven parts. The empty
 entry still has its own identity and descriptor.
 
 `native/atom-symbols.json` records the complete original-to-short migration and
@@ -113,9 +117,9 @@ The self-host proof resolves `native/atom.asm` through the ordinary host
 project preparation and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 
-The pinned Atom-built native core assembles all six parts. The resulting
+The pinned Atom-built native core assembles all eleven parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
-events, execution measurements, and a complete 12,396-byte materialized image.
+events, execution measurements, and a complete 12,400-byte materialized image.
 
 The proof compares that image with the memory initialized by the pinned core's
 Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
@@ -174,20 +178,20 @@ The checked measurement records:
 
 | Observation | Measured value |
 | --- | ---: |
-| Flattened native statements | 7,166 |
-| Native content parts | 5 |
-| Checked resolver parts, including entry | 6 |
-| Checked source bytes | 101,641 |
+| Flattened native statements | 7,333 |
+| Native content parts | 10 |
+| Checked resolver parts, including entry | 11 |
+| Checked source bytes | 110,317 |
 | Ledger global symbols | 876 |
-| Ledger private symbols | 440 |
-| Initialized resident bytes | 11,789 |
+| Ledger private symbols | 441 |
+| Initialized resident bytes | 11,793 |
 | Reserved resident bytes | 607 |
-| Forward PATCH records | 1,938 |
-| Declared symbols | 1,315 |
-| Linked resident extent | 12,396 bytes |
+| Forward PATCH records | 1,939 |
+| Declared symbols | 1,316 |
+| Linked resident extent | 12,400 bytes |
 
-The first generation currently executes 101,840,573 instructions and
-1,086,338,471 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 102,345,070 instructions and
+1,091,652,444 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

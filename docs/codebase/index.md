@@ -32,6 +32,7 @@ behind the repository.
 
 ## Related references
 
+- [Native source map](native-source-map.md)
 - [Atom platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md)
 - [Architecture](../architecture.md)
 - [Language reference](../language-reference.md)

@@ -1,62 +1,23 @@
-EX_OSTAC: DS EX_OPERB*EX_OCAP
-EX_WEND:
-PT_CBEG:
-PT_KINDB EQU 1
-PT_KINDW EQU 2
-PT_KRELA EQU 3
-PT_KDISP EQU 4
-PT_KTB EQU 5
-PT_KLB EQU 6
-PT_KHB EQU 7
-;@ROUTINE IN IX,A OUT A,B,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,DE,ZERO
-PT_LOCAT:
-CP   3
-JR   NC,.INVALID
-LD   E,A
-LD   D,0
-PUSH DE
-CALL EN_LEN
-POP  DE
-JR   C,.INVALID
-LD   B,A
-LD   HL,EN_OP0
-ADD  HL,DE
-PUSH IX
-POP  DE
-ADD  HL,DE
-LD   A,(HL)
-SUB  EN_IIX
-CP   7
-JR   NC,.INVALID
-LD   E,A
-LD   D,0
-LD   HL,PT_OKIND
-ADD  HL,DE
-LD   A,(HL)
-OR   A
-JR   Z,.INVALID
-CP   PT_KDISP
-JR   Z,.DISPLACE
-DEC  B
-CP   PT_KINDW
-JR   NZ,.READY
-DEC  B
-.READY:
-OR   A
-RET
-.INVALID:
-XOR  A
-SCF
-RET
-.DISPLACE:
-LD   B,2
-OR   A
-RET
-PT_OKIND:
-DB PT_KDISP,PT_KDISP
-DB PT_KINDW,PT_KINDB,PT_KINDW
-DB 0,PT_KRELA
-PT_CEND:
+;==============================================================================
+;  Instruction and operand parser
+;==============================================================================
+;
+;  Recognise a mnemonic and classify up to three operands into the encoder's
+;  ten-byte instruction record. Expressions may produce concrete values or
+;  compact deferred references. The parser validates the complete form and
+;  preflights every required symbol and pending record before publishing any
+;  result.
+;
+;  Principal entries:
+;    PR_PUB    parse and publish one instruction from the current token stream
+;    PR_PARSE  build and validate the private instruction record
+;    PR_CREFE  check capacity for the published deferred references
+;    PR_QREFE  queue those references after output accepts the instruction
+;
+;  The parser workspace contains private build records and at most two public
+;  reference descriptions. Failure leaves the caller's instruction record and
+;  symbol state unchanged.
+
 PR_CBEG:
 PR_SOK EQU 0
 PR_SEOF EQU 1
@@ -1343,87 +1304,3 @@ PR_QBASE: DW 0
 PR_RBLD: DS PR_BRB*PR_RCAP
 PR_REFER: DS PR_PRB*PR_RCAP
 PR_WEND:
-OU_CBEG:
-OU_SCAP EQU 1
-OU_SINT EQU 2
-OU_SVRAN EQU 3
-OU_SRRAN EQU 4
-;@ROUTINE IN DE,HL OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-OU_RESET:
-LD   (OU_CURSO),HL
-LD   (OU_REM),DE
-XOR  A
-RET
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,SIGN,PARITY,HALFCARRY,HL,ZERO
-OU_CCAP:
-EX   DE,HL
-LD   HL,(OU_REM)
-OR   A
-SBC  HL,DE
-JR   C,OU_DCFAI
-XOR  A
-RET
-;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC,IX,IY
-OU_EMITB:
-LD   B,A
-LD   HL,1
-CALL OU_CCAP
-RET  C
-LD   A,B
-JR   OU_EBREA
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC,IX,IY
-OU_EMITW:
-LD   B,H
-LD   C,L
-LD   HL,2
-CALL OU_CCAP
-RET  C
-LD   A,C
-PUSH BC
-CALL OU_EBREA
-POP  BC
-RET  C
-LD   A,B
-JR   OU_EBREA
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-OU_RESER:
-PUSH HL
-CALL OU_CCAP
-POP  DE
-RET  C
-LD   HL,(OU_CURSO)
-ADD  HL,DE
-LD   (OU_CURSO),HL
-LD   HL,(OU_REM)
-OR   A
-SBC  HL,DE
-LD   (OU_REM),HL
-XOR  A
-RET
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-OU_SORIG:
-LD   (OU_CURSO),HL
-XOR  A
-RET
-;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY,DE,IX,IY
-OU_EBREA:
-LD   HL,(OU_CURSO)
-LD   C,0
-CALL HS_IB
-RET  C
-LD   HL,(OU_CURSO)
-INC  HL
-LD   (OU_CURSO),HL
-LD   HL,(OU_REM)
-DEC  HL
-LD   (OU_REM),HL
-XOR  A
-RET
-OU_DCFAI:
-LD   A,OU_SCAP
-SCF
-RET
-;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
-OU_EINS:
-LD   HL,(OU_CURSO)
-LD   (OU_IBEG),HL

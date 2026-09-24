@@ -46,6 +46,7 @@
     "native/atom-symbols.json",
     "scripts/native-object-harness-builder.mjs",
     "scripts/native-object-harness-builder.d.mts",
+    "scripts/native-source-layout.mjs",
     "src/abi.mjs",
     "src/host",
     "LICENSE",

@@ -1,3 +1,22 @@
+;==============================================================================
+;  Instruction encoder and RADIX-40 names
+;==============================================================================
+;
+;  Convert parsed instruction records into one to four Z80 bytes. This module
+;  also packs RADIX-40 names and recognises mnemonics because both operations
+;  share the compact name tables used by validation and encoding.
+;
+;  Principal entries:
+;    EN_R40PK  pack one case-insensitive name into three RADIX-40 words
+;    EN_RECOG  recognise a packed mnemonic and return its ordinal
+;    EN_LEN    validate a form and return its encoded length
+;    EN_VFORM  validate mnemonic and operand classes
+;    EN_NAME   validate and encode into the caller's four-byte destination
+;
+;  EN_SCRAT is a six-byte commit buffer. A failed encode leaves the caller's
+;  destination unchanged. The module has no dependency on source text, symbols
+;  or output services.
+
 ORG 0
 EN_MNEM EQU 0
 EN_OP0 EQU 1
@@ -1549,3 +1568,296 @@ LD   (EN_SCRAT+0),A
 LD   A,B
 JR   .SS1E2
 .JP:
+LD   A,(IX+EN_OP1)
+CP   EN_NONE
+JR   NZ,.JCONDITI
+LD   A,(IX+EN_OP0)
+CP   EN_MEMHL
+JR   Z,.JPHL
+CP   EN_MEMIX
+JR   Z,.JPINDEX
+CP   EN_MEMIY
+JR   Z,.JPINDEX
+LD   A,$C3
+JP   .SAV0E3
+.JCONDITI:
+LD   B,$C2
+CALL EN_COPCO
+JP   .SAV1E3
+.JPHL:
+LD   A,$E9
+JR   .SE1
+.JPINDEX:
+;@EXPECTOUT A
+CALL EN_PFOP
+LD   (EN_SCRAT+0),A
+LD   A,$E9
+JR   .SS1E2
+.CALL:
+LD   A,(IX+EN_OP1)
+CP   EN_NONE
+JR   NZ,.CCONDITI
+LD   A,$CD
+JP   .SAV0E3
+.CCONDITI:
+LD   B,$C4
+CALL EN_COPCO
+LD   (EN_SCRAT+0),A
+JR   AT_CV1TS
+.JR:
+LD   A,(IX+EN_OP1)
+CP   EN_NONE
+JR   NZ,.JCONDIT1
+LD   A,$18
+LD   (EN_SCRAT+0),A
+LD   A,(IX+EN_VAL0)
+JR   .SS1E2
+.JCONDIT1:
+LD   B,$20
+CALL EN_COPCO
+LD   (EN_SCRAT+0),A
+LD   A,(IX+EN_VAL1)
+JR   .SS1E2
+.DJNZ:
+LD   A,$10
+LD   (EN_SCRAT+0),A
+LD   A,(IX+EN_VAL0)
+.SS1E2:
+LD   (EN_SCRAT+1),A
+JR   EN_D2
+.EDTABLE:
+DW .COPCODE,.RET,.EX
+DW .IM,.RST,.INCDEC
+DW .STACK,.LD,.IN
+DW .OUT,.BIT,.ROTATE
+DW .ALU,.JP,.CALL
+DW .JR,.DJNZ
+.SE1:
+LD   (EN_SCRAT+0),A
+;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
+EN_D1:
+XOR  A
+INC  A
+RET
+;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
+EN_D2:
+LD   A,2
+OR   A
+RET
+;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
+EN_D3:
+LD   A,3
+OR   A
+RET
+;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
+EN_D4:
+LD   A,4
+OR   A
+RET
+;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
+AT_CV0TS:
+LD   L,(IX+EN_VAL0)
+LD   H,(IX+EN_VAL0+1)
+LD   (EN_SCRAT+1),HL
+JR   EN_D3
+;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
+AT_CV0T1:
+LD   L,(IX+EN_VAL0)
+LD   H,(IX+EN_VAL0+1)
+LD   (EN_SCRAT+2),HL
+JR   EN_D4
+;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
+AT_CV1TS:
+LD   L,(IX+EN_VAL1)
+LD   H,(IX+EN_VAL1+1)
+LD   (EN_SCRAT+1),HL
+JR   EN_D3
+;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
+AT_CV1T1:
+LD   L,(IX+EN_VAL1)
+LD   H,(IX+EN_VAL1+1)
+LD   (EN_SCRAT+2),HL
+JR   EN_D4
+;@ROUTINE IN A
+EN_SPPAF:
+PUSH AF
+;@EXPECTOUT A
+CALL EN_PFOP
+LD   (EN_SCRAT+0),A
+POP  AF
+RET
+;@ROUTINE IN A OUT A CLOBBERS F
+EN_PFOP:
+CP   EN_IXH
+JR   C,.PORDINAR
+CP   EN_IXL+1
+JR   C,.PREFIXIX
+CP   EN_IYH
+JR   C,.PORDINAR
+CP   EN_IYL+1
+JR   C,.PREFIXIY
+.PORDINAR:
+AND  1
+JR   NZ,.PREFIXIY
+.PREFIXIX:
+LD   A,$DD
+RET
+.PREFIXIY:
+LD   A,$FD
+RET
+EN_RECEN:
+EN_CODEE:
+EN_IBEG:
+EN_CTBEG:
+EN_COPC1:
+DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F
+DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2
+DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45
+EN_IOPCO: DB $46,$56,$5E
+EN_CTEND:
+EN_CNT EQU 69
+EN_TABLE:
+DW  $59E8
+DB  $00
+DW  $1A68
+DB  $00
+DW  $20A8
+DB  $00
+DW  $773E
+DB  $00
+DW  $133E
+DB  $00
+DW  $154C
+DB  $00
+DW  $1929
+DB  $00
+DW  $2318
+DB  $00
+DW  $3234
+DB  $7D
+DW  $7263
+DB  $06
+DW  $7353
+DB  $06
+DW  $7261
+DB  $00
+DW  $7351
+DB  $00
+DW  $584F
+DB  $00
+DW  $7354
+DB  $00
+DW  $7264
+DB  $00
+DW  $4BA9
+DB  $00
+DW  $4BA9
+DB  $70
+DW  $4BA4
+DB  $00
+DW  $4BA4
+DB  $70
+DW  $1549
+DB  $00
+DW  $1549
+DB  $70
+DW  $1544
+DB  $00
+DW  $1544
+DB  $70
+DW  $3A79
+DB  $00
+DW  $3A79
+DB  $70
+DW  $3A74
+DB  $00
+DW  $3A74
+DB  $70
+DW  $611C
+DB  $38
+DW  $60E9
+DB  $70
+DW  $611C
+DB  $19
+DW  $60E4
+DB  $70
+DW  $715C
+DB  $38
+DW  $715C
+DB  $57
+DW  $715C
+DB  $00
+DW  $2300
+DB  $00
+DW  $3A48
+DB  $00
+DW  $738C
+DB  $00
+DW  $3A73
+DB  $00
+DW  $19CB
+DB  $00
+DW  $675B
+DB  $32
+DW  $6668
+DB  $00
+DW  $4BA0
+DB  $00
+DW  $3A70
+DB  $00
+DW  $611C
+DB  $00
+DW  $0DFC
+DB  $00
+DW  $715B
+DB  $00
+DW  $779C
+DB  $00
+DW  $7263
+DB  $00
+DW  $7353
+DB  $00
+DW  $7260
+DB  $00
+DW  $7350
+DB  $00
+DW  $78A1
+DB  $00
+DW  $7991
+DB  $00
+DW  $78AC
+DB  $00
+DW  $78B3
+DB  $00
+DW  $799C
+DB  $00
+DW  $06E4
+DB  $00
+DW  $06E3
+DB  $00
+DW  $7A0A
+DB  $00
+DW  $7713
+DB  $00
+DW  $0874
+DB  $00
+DW  $986A
+DB  $00
+DW  $6090
+DB  $00
+DW  $1540
+DB  $00
+DW  $4100
+DB  $00
+DW  $12F4
+DB  $4B
+DW  $4150
+DB  $00
+DW  $1A9E
+DB  $A2
+EN_TEND:
+EN_IEND:
+EN_COREE:
+EN_WBEG:
+EN_SCRAT: DS 6
+EN_WEND:

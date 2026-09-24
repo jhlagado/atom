@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import test from "node:test";
 
+import { NATIVE_CORE_MODULES } from "../scripts/native-source-layout.mjs";
+
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",
   AtomEncoderCodeStart: "EN_CODEB",
@@ -15,7 +17,7 @@ const KEY_NAMES = Object.freeze({
 
 test("native source census matches the checked content and root include parts", async () => {
   const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
-  const parts = await Promise.all(Array.from({ length: 5 }, (_, n) => fs.readFile(`native/atom-0${n}.asm`, "utf8")));
+  const parts = await Promise.all(NATIVE_CORE_MODULES.map((name) => fs.readFile(`native/${name}`, "utf8")));
   const root = await fs.readFile("native/atom.asm", "utf8");
   const bytes = parts.reduce((sum, text) => sum + Buffer.byteLength(text), 0);
   // The historical census calls all nonblank source records statements,

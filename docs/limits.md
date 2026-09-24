@@ -34,7 +34,7 @@ The source service uses a 16-bit logical offset, so one part may contain at most
 65,535 bytes. Total source may be larger across the 255 ordered parts. The desktop
 runner retains immutable JavaScript snapshots and returns one byte at each
 `AtomSourceReadByte` call; it does not copy a source page into Z80 memory. The
-checked native self-host input is Measured 101,536 bytes in five content parts.
+checked native self-host input is Measured 110,044 bytes in ten content parts.
 
 The native target has a 16-bit start and capacity, with a mathematical
 exclusive end at most `$10000`. An explicit target starting at `$FFFF` with

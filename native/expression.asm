@@ -1,129 +1,20 @@
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_ILEND
-JP   Z,TK_UCHAR
-CP   $27
-JP   Z,TK_ICHAR
-CP   $5C
-JR   Z,.SCESCAPE
-CP   $20
-JP   C,TK_IB
-CP   $7F
-JP   NC,TK_IB
-LD   (TK_SVAL),A
-JR   .SCCLOSE
-.SCESCAPE:
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CP   $78
-JR   Z,.SCHEX
-CALL TK_DESCA
-JP   C,TK_IESCA
-LD   (TK_SVAL),A
-JR   .SCCLOSE
-.SCHEX:
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_HDIGI
-JP   NC,TK_IESCA
-ADD  A,A
-ADD  A,A
-ADD  A,A
-ADD  A,A
-LD   (TK_SVAL),A
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_HDIGI
-JP   NC,TK_IESCA
-LD   HL,TK_SVAL
-OR   (HL)
-LD   (TK_SVAL),A
-.SCCLOSE:
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_ILEND
-JP   Z,TK_UCHAR
-CP   $27
-JP   NZ,TK_ICHAR
-JP   TK_FNLEN
-TK_RCEND:
-;@ROUTINE OUT A,B,HL
-TK_LLEXE:
-LD   HL,(TK_REC+TK_LOFF)
-LD   A,(TK_REC+TK_LOFF1)
-LD   B,A
-RET
-TK_IBEG:
-TK_PTABL:
-DB $2C,TK_COMMA
-DB $3A,TK_COLON
-DB $28,TK_LPARE
-DB $29,TK_RPARE
-DB $2B,TK_PLUS
-DB $2D,TK_MINUS
-DB $2A,TK_STAR
-DB $2F,TK_SLASH
-DB $26,TK_AMPER
-DB $5E,TK_CARET
-DB $7C,TK_PIPE
-DB $7E,TK_TILDE
-DB $27,TK_APOST
-TK_PEND:
-TK_PCNT EQU (TK_PEND-TK_PTABL)/2
-TK_ETABL:
-DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C
-TK_ECNT EQU 7
-;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_DESCA:
-LD   HL,TK_ETABL
-LD   C,TK_ECNT
-.DELOOP:
-CP   (HL)
-JR   Z,.DEFOUND
-INC  HL
-INC  HL
-DEC  C
-JR   NZ,.DELOOP
-SCF
-RET
-.DEFOUND:
-INC  HL
-LD   A,(HL)
-RET
-;@ROUTINE IN A OUT A,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
-TK_ILEND:
-CP   $0A
-RET  Z
-CP   $0D
-RET
-TK_IEND:
-TK_CEND:
-TK_WBEG:
-TK_SRCBA: DW 0
-TK_SCURS: DW 0
-TK_SEND: DW 0
-TK_SOSTA: DW 0
-TK_SPART: DB 0
-TK_LHTOK: DB 0
-TK_EPEND: DB 0
-TK_SPTR: DW 0
-TK_BCNT: DB 0
-TK_PREV: DB 0
-TK_SOFF1: DW 0
-TK_SLEN: DB 0
-TK_SVAL: DW 0
-TK_DSEEN: DB 0
-TK_ESTAT EQU TK_SLEN
-TK_EPART EQU TK_SVAL
-TK_EOFF EQU TK_SVAL+1
-TK_REC: DS TK_RECB
-TK_TBUF: DS 256
-TK_WEND:
+;==============================================================================
+;  Expression evaluator
+;==============================================================================
+;
+;  Parse expressions with operator and value stacks. Concrete arithmetic uses
+;  signed 24-bit intermediates before the final word-domain check. A deferred
+;  result retains one unresolved symbol, a signed-byte addend and an optional
+;  LOW or HIGH transform so the output layer can create a compact patch.
+;
+;  Principal entries:
+;    EX_PARSE  parse an expression that must resolve immediately
+;    EX_PDEFR  parse an expression that may retain one forward reference
+;
+;  The evaluator owns fixed-capacity value and operator stacks. It returns
+;  precise statuses for syntax, range, division, capacity, symbol and unsupported
+;  forward-expression failures.
+
 EX_CBEG:
 EX_RESOL EQU 0
 EX_UNRES EQU 1
@@ -1352,3 +1243,5 @@ EX_EPART EQU EX_ACCUM
 EX_EOFF EQU EX_ACCUM+1
 EX_QUOTI EQU EX_LKEY+3
 EX_VSTAC: DS EX_VALB*EX_VCAP
+EX_OSTAC: DS EX_OPERB*EX_OCAP
+EX_WEND:
