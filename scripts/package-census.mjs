@@ -35,12 +35,13 @@ try {
   fail(`npm pack --dry-run did not return JSON: ${error.message}`);
 }
 
+const packageOwnedFiles = census.files.filter(({ path: pathname }) => !pathname.startsWith("node_modules/"));
 const observed = Object.freeze({
   format: "atom-package-census",
-  version: 1,
+  version: 2,
   package: `${census.name}@${census.version}`,
-  unpackedBytes: census.unpackedSize,
-  entries: census.entryCount,
+  packageOwnedUnpackedBytes: packageOwnedFiles.reduce((total, file) => total + file.size, 0),
+  packageOwnedEntries: packageOwnedFiles.length,
 });
 
 if (mode === "update") {
@@ -50,7 +51,7 @@ if (mode === "update") {
 }
 
 const expected = JSON.parse(fs.readFileSync(censusPath, "utf8"));
-for (const field of ["format", "version", "package", "unpackedBytes", "entries"]) {
+for (const field of ["format", "version", "package", "packageOwnedUnpackedBytes", "packageOwnedEntries"]) {
   if (expected[field] !== observed[field]) {
     process.stderr.write(`package-census: expected ${JSON.stringify(expected, null, 2)}\n`);
     process.stderr.write(`package-census: observed ${JSON.stringify(observed, null, 2)}\n`);

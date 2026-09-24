@@ -313,8 +313,10 @@ npm run release:check
 native and host tests, core and authoritative-source checks, and the final
 host and self-host measurements. `prepublishOnly` invokes the same gate.
 
-The exact npm archive census is a separate release audit, not a unit test. Run
-it only after packaged files are frozen:
+The platform-independent census of Atom-owned npm archive entries is a separate
+release audit, not a unit test. Bundled dependencies are checked by the offline
+installation proof because their optional files can differ by host platform.
+Run the census only after packaged files are frozen:
 
 ```sh
 npm run verify:package-census

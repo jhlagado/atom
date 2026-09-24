@@ -47,9 +47,11 @@ npm run verify:package-census
 
 The repository must be clean, the checkpoint commit must be pushed, visibility
 must be `PUBLIC`, and both repository and package metadata must say
-`GPL-3.0-only`. The package census is recorded only after all packaged files
-are frozen. Compressed archive size is observational because gzip output can
-vary with the npm toolchain.
+`GPL-3.0-only`. The package census records Atom-owned archive entries only and
+is recorded after all packaged files are frozen. Bundled dependencies retain
+their separate offline-install proof because npm may select different optional
+files on different host platforms. Compressed archive size is observational
+because gzip output can vary with the npm toolchain.
 
 Release evidence belongs in the current phase report and
 `proofs/phase-11.json`. Every number must be labelled Measured, Projected, or
