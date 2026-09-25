@@ -2,8 +2,8 @@
 ;  Symbols, private scope and pending references
 ;==============================================================================
 ;
-;  Store exact RADIX-40 symbol records in caller-owned memory. Each record owns
-;  the complete packed name and value; lookup is exact rather than hashed.
+;  Store exact RADIX-40 symbol records in caller-owned memory. Each record
+;  stores the complete packed name; lookup compares names exactly, not by hash.
 ;  Globals grow upward and remain for the build. Current-scope private symbols
 ;  grow downward from the opposite end and are discarded transactionally when
 ;  the next global label begins a scope. A separate upward-growing arena holds
@@ -20,10 +20,12 @@
 ;    SY_PEEK   inspect a matching pending reference without removing it
 ;    SY_TAKE   remove a matching pending reference after patch submission
 ;
-;  A symbol record is eight bytes: six packed-name bytes followed by a word
-;  value. Spare high bits in the final name byte hold signed-equate, defined and
-;  private flags. A pending record is seven bytes: symbol pointer, patch address,
-;  kind/diagnostic-anchor, signed addend and full source-part ordinal.
+;  A symbol record is eight bytes: six packed-name bytes followed by a word.
+;  For a defined symbol the word is its value; while unresolved it holds the
+;  first-reference source offset until SY_DECL replaces it. Spare high bits in
+;  the final name byte hold signed-equate, defined and private flags. A pending
+;  record is seven bytes: symbol pointer, patch address, kind/diagnostic-anchor,
+;  signed addend and full source-part ordinal.
 ;
 ;  Capacity checks occur before cursor publication. Scope changes are
 ;  transactional: undefined private labels or stale private pending references
@@ -57,7 +59,7 @@ SY_SPNSC EQU 4                ; A private name was used before a global scope.
 SY_SUPRI EQU 5                 ; A private symbol remains undefined at scope close.
 SY_SPCAP EQU 6                ; The pending arena cannot hold another record.
 SY_SPINV EQU 7                ; Symbol or pending state violates an internal invariant.
-SY_SADEF EQU 8                ; A pending reference was added to a defined symbol.
+SY_SADEF EQU 8                ; A pending append requested an already-defined symbol.
 SY_SPCA1 EQU 9                ; Retained status value for source-part capacity.
 
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
@@ -169,8 +171,9 @@ SY_FIND:
     JP   SY_GLPRI                  ; Return private-name-without-scope.
 
 ;@ROUTINE IN IX OUT ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,B,CARRY,A
-; Compare five full name bytes and the low three name bits in byte five. The
-; upper bits contain record flags and do not participate in identity.
+; Compare five full name bytes and the low three name bits in byte five. SY_FIND
+; has already selected the global or private search interval; the upper bits
+; contain record flags and do not participate in identity.
 
 SY_KEQUA:
     PUSH IX                        ; Move the candidate record pointer through the stack.
