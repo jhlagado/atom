@@ -2,13 +2,16 @@
 ;  Symbols, private scope and pending references
 ;==============================================================================
 ;
-;  Store exact RADIX-40 symbol records in caller-owned memory. Globals grow
-;  upward and remain for the build. Private symbols grow downward and are
-;  discarded when the next global label begins a scope. A separate arena holds
-;  unresolved references until the corresponding symbol is defined.
+;  Store exact RADIX-40 symbol records in caller-owned memory. Each record owns
+;  the complete packed name and value; lookup is exact rather than hashed.
+;  Globals grow upward and remain for the build. Current-scope private symbols
+;  grow downward from the opposite end and are discarded transactionally when
+;  the next global label begins a scope. A separate upward-growing arena holds
+;  unresolved patch descriptions until their symbol is defined.
 ;
 ;  Principal entries:
-;    SY_RESET  initialise symbol and pending arenas
+;    SY_RESET  initialise the symbol arena
+;    SY_RESE1  initialise the pending arena
 ;    SY_FIND   find an exact global or current-scope private name
 ;    SY_DECL   define a symbol without changing private scope
 ;    SY_DGLAB  define a global label and begin its private scope
@@ -17,10 +20,18 @@
 ;    SY_PEEK   inspect a matching pending reference without removing it
 ;    SY_TAKE   remove a matching pending reference after patch submission
 ;
+;  A symbol record is eight bytes: six packed-name bytes followed by a word
+;  value. Spare high bits in the final name byte hold signed-equate, defined and
+;  private flags. A pending record is seven bytes: symbol pointer, patch address,
+;  kind/diagnostic-anchor, signed addend and full source-part ordinal.
+;
 ;  Capacity checks occur before cursor publication. Scope changes are
-;  transactional, so an undefined private label leaves the old scope intact.
+;  transactional: undefined private labels or stale private pending references
+;  leave the previous scope intact. The output layer preserves pending
+;  transactionality by calling SY_TAKE only after its PATCH operation succeeds.
 
 SY_CBEG:
+; Symbol-record geometry and packed-name flag bits.
 SY_RECB EQU 8
 SY_RECB1 EQU 7
 SY_KMASK EQU $07
@@ -33,6 +44,7 @@ SY_NHMAS EQU $07
 SY_FSIGN EQU $20
 SY_FDEFI EQU $40
 SY_FPRIV EQU $80
+; Public status values. Symbol and pending capacity are distinct diagnostics.
 SY_SOK EQU 0
 SY_SNFOU EQU 1
 SY_SDUPL EQU 2
@@ -43,6 +55,8 @@ SY_SPCAP EQU 6
 SY_SPINV EQU 7
 SY_SADEF EQU 8
 SY_SPCA1 EQU 9
+; Initialise the symbol arena [HL,DE). Globals begin at HL; private records begin
+; at DE. No private scope exists until the first global label is committed.
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 SY_RESET:
 LD   (SY_ABASE),HL
@@ -52,6 +66,7 @@ LD   (SY_LBEG),DE
 XOR  A
 LD   (SY_SACTI),A
 RET
+; Initialise the independent pending arena [HL,DE).
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 SY_RESE1:
 LD   (SY_ABAS1),HL
@@ -59,6 +74,9 @@ LD   (SY_NEXT),HL
 LD   (SY_AEND1),DE
 XOR  A
 RET
+; Pack a source symbol at HL/B into the caller's six-byte key at DE. A leading
+; period selects private scope but is not part of the RADIX-40 payload, so both
+; global and private payloads retain up to eight characters.
 ;@ROUTINE IN B,HL,DE OUT A,DE,CARRY CLOBBERS BC,HL,IX,SIGN,PARITY,HALFCARRY,ZERO
 EN_PSYM:
 LD   A,B
@@ -78,6 +96,8 @@ CALL EN_R40PK
 JR   C,.PSINVALI
 PUSH DE
 DEC  DE
+; RADIX-40's final word uses only the low eleven bits. Mark private identity in
+; the final byte without changing the packed name.
 LD   A,(DE)
 OR   SY_FPRIV
 LD   (DE),A
@@ -95,6 +115,8 @@ XOR  A
 INC  A
 SCF
 RET
+; Find the exact key at HL. Its private flag selects the current private interval
+; or the permanent global interval. IX returns the matching eight-byte record.
 ;@ROUTINE IN HL OUT A,CARRY,IX CLOBBERS BC,HL,SIGN,PARITY,HALFCARRY,DE,ZERO
 SY_FIND:
 LD   (SY_OKEY),HL
@@ -131,6 +153,8 @@ RET
 JP   SY_NFRET
 .PNSCOPE:
 JP   SY_GLPRI
+; Compare five full name bytes and the low three name bits in byte five. The
+; upper bits contain record flags and do not participate in identity.
 ;@ROUTINE IN IX OUT ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,B,CARRY,A
 SY_KEQUA:
 PUSH IX
@@ -148,6 +172,9 @@ LD   A,(DE)
 XOR  (HL)
 AND  SY_NHMAS
 RET
+; Define key HL as value DE without changing private scope. An existing undefined
+; record is completed in place so pending pointers remain valid; an absent key is
+; inserted; an already defined key is a duplicate.
 ;@ROUTINE IN HL,DE OUT A,CARRY,IX CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 SY_DECL:
 LD   (SY_OKEY),HL
@@ -176,6 +203,8 @@ RET
 LD   A,SY_FDEFI
 ;@EXPECTOUT A,CARRY,IX
 JR   SY_INSER
+; Find or create an undefined record for key HL. B=0 reports an existing record;
+; B=1 reports a newly inserted record whose value is initially zero.
 ;@ROUTINE IN HL OUT A,CARRY,IX,B CLOBBERS C,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 SY_REF:
 LD   (SY_OKEY),HL
@@ -198,6 +227,8 @@ CALL SY_INSER
 RET  C
 LD   B,1
 RET
+; Insert SY_OKEY using flags A and value SY_OVAL. Prove the shared arena has one
+; complete record of room before moving either publication cursor.
 ;@ROUTINE IN A OUT A,CARRY,IX CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 SY_INSER:
 LD   (SY_OFLAG),A
@@ -207,6 +238,7 @@ LD   B,SY_RECB
 CALL AT_RHCAP
 JR   C,.NOCAP
 .HASCAP:
+; Global records extend SY_GEND upward. Private records move SY_LBEG downward.
 LD   HL,(SY_OKEY)
 LD   DE,5
 ADD  HL,DE
@@ -228,6 +260,7 @@ LD   (SY_LBEG),HL
 PUSH HL
 POP  IX
 .CINSERT:
+; Commit the exact key, merge definition flags and store the value.
 LD   HL,(SY_OKEY)
 PUSH IX
 POP  DE
@@ -245,6 +278,8 @@ RET
 LD   A,SY_SSCAP
 SCF
 RET
+; Validate and discard the current private scope, then leave a fresh active
+; private scope. SY_CSCOP is the commit-only half used after proof.
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 SY_ASCOP:
 CALL SY_VSCOP
@@ -256,6 +291,9 @@ LD   A,1
 LD   (SY_SACTI),A
 XOR  A
 RET
+; Define a global label and begin its private scope as one transaction. Existing
+; undefined globals are completed in place; missing globals need one record after
+; the old private region is reclaimed.
 ;@ROUTINE IN HL,DE OUT A,CARRY,IX CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 SY_DGLAB:
 LD   (SY_OKEY),HL
@@ -278,11 +316,14 @@ RET  NZ
 LD   A,1
 LD   (SY_OFLAG),A
 SY_GLVAL:
+; First prove that every old private symbol and pending pointer can be evicted.
 CALL SY_VSCOP
 RET  C
 LD   A,(SY_OFLAG)
 OR   A
 JR   Z,SY_GLCMT
+; A missing global is inserted only after checking capacity in the post-eviction
+; arena, where SY_LBEG will equal the arena end.
 LD   HL,(SY_AEND)
 LD   DE,(SY_GEND)
 LD   B,SY_RECB
@@ -297,6 +338,8 @@ LD   HL,(SY_OKEY)
 LD   DE,(SY_OVAL)
 CALL SY_DECL
 RET  NC
+; All failure cases were preflighted, so a commit-time declaration failure is an
+; internal invariant violation.
 LD   A,SY_SPINV
 SCF
 RET
@@ -314,6 +357,9 @@ SY_GLCAP:
 LD   A,SY_SSCAP
 SCF
 RET
+; Prove the current private scope is safe to discard. Every private record must
+; be defined, and no pending record may still point into private storage. The
+; second condition also catches an impossible stale reference to a defined local.
 ;@ROUTINE OUT A,CARRY CLOBBERS IX,DE,BC,ZERO,SIGN,PARITY,HALFCARRY,HL
 SY_VSCOP:
 LD   IX,(SY_LBEG)
@@ -327,6 +373,8 @@ LD   BC,SY_RECB
 ADD  IX,BC
 JR   SY_VSLOO
 SY_VPEND:
+; Walk the complete pending arena and inspect the private flag through each saved
+; symbol pointer.
 LD   IX,(SY_ABAS1)
 LD   DE,(SY_NEXT)
 SY_VPLOO:
@@ -354,6 +402,9 @@ SY_VINVA:
 LD   A,SY_SPINV
 SCF
 RET
+; Append one seven-byte pending record. Inputs are IX=symbol, DE=logical patch
+; address, B=kind/anchor, C=signed addend and A=source-part ordinal. Defined
+; symbols are rejected because their value should have been emitted directly.
 ;@ROUTINE IN A,IX,DE,BC OUT A,CARRY CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 SY_ADD:
 BIT  6,(IX+5)
@@ -367,6 +418,7 @@ LD   B,SY_RECB1
 CALL AT_RHCAP
 JR   C,.NCSTACK
 .HASCAP:
+; Capacity is proved; write fields in record order and publish SY_NEXT last.
 LD   HL,(SY_NEXT)
 PUSH IX
 POP  DE
@@ -402,6 +454,7 @@ RET
 LD   A,SY_SADEF
 SCF
 RET
+; Non-mutating preflight for one additional pending record.
 ;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 SY_CCAP:
 LD   HL,(SY_AEND1)
@@ -417,6 +470,9 @@ SY_CNCAP:
 LD   A,SY_SPCAP
 SCF
 RET
+; Find the first pending record for symbol IX. On success IX identifies the live
+; record while DE=patch address, B=kind/anchor and C=signed addend. The part byte
+; remains at (IX+6) for the caller to read before removal.
 ;@ROUTINE IN IX OUT A,CARRY,BC,DE,IX CLOBBERS SIGN,PARITY,HALFCARRY,ZERO,HL
 SY_PEEK:
 SY_FIND1:
@@ -451,6 +507,9 @@ SY_NFRET:
 LD   A,SY_SNFOU
 SCF
 RET
+; Remove the first pending record for symbol IX after the caller has submitted
+; its patch. Preserve the returned metadata and fill any hole with the final live
+; record so the arena remains dense without preserving record order.
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT BC,DE CLOBBERS HL,IX,SIGN,PARITY,HALFCARRY,BC,DE,ZERO
 SY_TAKE:
 CALL SY_FIND1
@@ -467,6 +526,7 @@ POP  DE
 OR   A
 SBC  HL,DE
 JR   Z,.TRETURN
+; The removed record was not last: copy the last record over its slot.
 LD   HL,(SY_NEXT)
 PUSH IX
 POP  DE
@@ -477,6 +537,7 @@ POP  DE
 POP  BC
 XOR  A
 RET
+; Compare record cursor IX with half-open end DE.
 ;@ROUTINE IN IX,DE OUT HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY CLOBBERS A
 AT_CIDE:
 PUSH IX
@@ -484,6 +545,8 @@ POP  HL
 OR   A
 SBC  HL,DE
 RET
+; Prove that the gap [DE,HL) contains at least B bytes. A non-zero high byte is
+; automatically sufficient because every current record size is below 256.
 ;@ROUTINE IN HL,DE,B OUT CARRY MAYBE-OUT ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 AT_RHCAP:
 OR   A
@@ -497,6 +560,10 @@ CP   B
 RET
 SY_CEND:
 SY_WBEG:
+; Twenty bytes of fixed workspace. The first fourteen bytes hold symbol-arena
+; cursors, current-scope state and transactional input; the final six hold the
+; pending arena's bounds and publication cursor.
+; Symbol-arena cursors and current-scope state.
 SY_ABASE: DW 0
 SY_AEND: DW 0
 SY_GEND: DW 0
@@ -505,6 +572,7 @@ SY_SACTI: DB 0
 SY_OKEY: DW 0
 SY_OVAL: DW 0
 SY_OFLAG: DB 0
+; Pending-arena cursors. SY_OSYM reuses the key pointer during pending scans.
 SY_ABAS1: DW 0
 SY_AEND1: DW 0
 SY_NEXT: DW 0
