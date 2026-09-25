@@ -66,6 +66,7 @@ CP_COMMAND_START    EQU $0081
 CP_ADAPTER_CODE_START:
 ; CP/M standardizes only the 8080 register set. Preserve the Z80 index
 ; registers promised by Atom's private tool-service client adapter.
+
 ;@ROUTINE IN C,DE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
 CP_BDOS:
 PUSH IX
@@ -142,6 +143,7 @@ CP_COMMAND_CODE_START:
 ; Accept no arguments, one source name, two explicit names, or `?`. With no
 ; names the checked defaults are INPUT.ASM and OUTPUT.COM. One source derives an
 ; output name with COM extension. All names are current-drive CP/M 8.3 names.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_PARSE_COMMAND:
 XOR  A
@@ -234,6 +236,7 @@ RET  C
 CALL CP_SET_BACKUP_FCB
 CALL CP_CHECK_WORK_NAME
 RET
+
 ;@ROUTINE IN DE,HL OUT A,B,DE,HL,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
 CP_OUTPUT_TYPE_EQUAL:
 LD   B,3
@@ -245,6 +248,7 @@ INC  DE
 INC  HL
 DJNZ CP_OUTPUT_TYPE_BYTE
 RET
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_CHECK_WORK_NAME:
 LD   HL,CP_INPUT_FCB
@@ -271,12 +275,14 @@ RET
 
 ; Refuse to claim pre-existing temporary or backup files. CP/M is
 ; single-tasking, so successful preflight reserves both names until return.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_CHECK_AUXILIARY_NAMES:
 CALL CP_SET_TEMP_FCB
 CALL CP_AUXILIARY_MUST_NOT_EXIST
 RET  C
 CALL CP_SET_BACKUP_FCB
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_AUXILIARY_MUST_NOT_EXIST:
 LD   DE,CP_WORK_FCB
@@ -309,6 +315,7 @@ JR   CP_SKIP_SPACES
 ; Parse one unquoted, current-drive 8.3 filename without consuming its
 ; trailing space. Carry reports an empty, overlong, wildcard, drive-qualified,
 ; or otherwise invalid field.
+
 ;@ROUTINE IN B,HL OUT A,B,HL,CARRY CLOBBERS C,D,ZERO,SIGN,PARITY,HALFCARRY
 CP_PARSE_FILENAME:
 LD   D,8
@@ -397,6 +404,7 @@ CP_COMMAND_CODE_END:
 
 CP_SOURCE_CODE_START:
 ; Prepare a blank ordinary FCB whose name/type fields are space-filled.
+
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_CLEAR_INPUT_FCB:
 LD   DE,CP_INPUT_FCB
@@ -433,6 +441,7 @@ RET
 
 ; Read one logical source byte through a 128-byte random-record cache. The
 ; pre-scan proves every requested record exists for the life of this transient.
+
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 CP_SOURCE_READ_BYTE:
 JP   CP_RESOLVED_READ_BYTE
@@ -440,6 +449,7 @@ JP   CP_RESOLVED_READ_BYTE
 ; Resolve the root source and its leading %INCLUDE graph. Names are retained
 ; as exact CP/M 8.3 identities, while descriptors are emitted in dependency-
 ; first order. No intermediate source-order file is involved.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 CP_RESOLVE_SOURCE:
 XOR  A
@@ -553,6 +563,7 @@ RET
 
 ; Scan and validate one source header. Mode zero discovers names; mode one
 ; reports A=1 when any dependency has not yet been emitted.
+
 ;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 CP_SCAN_PART:
 CALL CP_OPEN_PART
@@ -634,6 +645,7 @@ RET
 
 ; Parse INCLUDE, one quoted current-drive 8.3 filename, and the rest of its
 ; directive line. Discovery records the child; ordering checks its emitted bit.
+
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 CP_PARSE_INCLUDE:
 LD   DE,CP_INCLUDE_WORD
@@ -787,6 +799,7 @@ CALL CP_CLEAR_WORK_FCB
 JP   CP_CLEAR_FCB_TAIL
 
 ; Find an exact retained name, or append it if capacity remains.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 CP_FIND_OR_ADD_NAME:
 LD   C,0
@@ -849,6 +862,7 @@ ADD  HL,DE
 RET
 
 ; Rebuild and open the ordinary input FCB from one retained name.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_OPEN_PART:
 PUSH AF
@@ -885,6 +899,7 @@ RET
 ; Return the next raw source byte and advance HL. Carry with A=0 is EOF or an
 ; unsuccessful CP/M random read; carry with A=2 means the 16-bit offset wrapped.
 ; BC and DE survive for parsers.
+
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 CP_NEXT_SOURCE_BYTE:
 PUSH BC
@@ -970,6 +985,7 @@ RET
 
 ; Open a part on ordinal change, then return one byte. A line-leading percent
 ; is changed to a semicolon after preflight has proved it is %INCLUDE.
+
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 CP_RESOLVED_READ_BYTE:
 LD   E,A
@@ -1045,6 +1061,7 @@ CP_SOURCE_CODE_END:
 ; publication is delayed until COMMIT.
 CP_OUTPUT_CODE_START:
 HS_SCBEG:
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_BEG:
 ; Begin a fresh tentative generation. No file is created until COMMIT.
@@ -1214,6 +1231,7 @@ RET
 ; Convert the tentative binary image to Intel HEX while streaming 128-byte
 ; CP/M records from the source cache. The binary image remains in place for
 ; PATCH application until Atom calls this routine.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_WRITE_HEX:
 CALL ZTS_CPM_HEX_BEGIN
@@ -1239,22 +1257,26 @@ ZTS_CPM_FINAL_DATA_LEFT EQU CP_HEX_DATA_LEFT
 ;@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@
 
 ; Rebuild the single ordinary output FCB before each new BDOS operation phase.
+
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_COPY_OUTPUT_FCB:
 LD   HL,CP_OUTPUT_NAME
 LD   DE,CP_WORK_FCB
 LD   BC,12
 LDIR
+
 ;@ROUTINE IN DE OUT A,B,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_CLEAR_FCB_TAIL:
 XOR  A
 LD   B,24
+
 ;@ROUTINE IN A,B,DE OUT B,DE
 CP_CLEAR_WORK_FCB:
 LD   (DE),A
 INC  DE
 DJNZ CP_CLEAR_WORK_FCB
 RET
+
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_SET_TEMP_FCB:
 CALL CP_COPY_OUTPUT_FCB
@@ -1263,6 +1285,7 @@ LD   (CP_WORK_FCB+9),HL
 LD   A,'$'
 LD   (CP_WORK_FCB+11),A
 RET
+
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_SET_BACKUP_FCB:
 CALL CP_COPY_OUTPUT_FCB
@@ -1274,6 +1297,7 @@ RET
 
 ; Construct a CP/M rename FCB in the input FCB's dead storage. HL addresses
 ; the old 12-byte name and DE the new 12-byte name.
+
 ;@ROUTINE IN DE,HL CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_BUILD_RENAME:
 PUSH HL
@@ -1295,10 +1319,12 @@ LDIR
 RET
 
 CP_OUTPUT_CODE_END:
+
 ;@ROUTINE IN DE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_PRINT:
 LD   C,CP_PRINT_FUNCTION
 JP   CP_BDOS
+
 ;@ROUTINE IN HL OUT A CLOBBERS B,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_PRINT_NAME:
 INC  HL
@@ -1322,6 +1348,7 @@ CP   ' '
 CALL NZ,CP_PUTC
 DJNZ CP_PRINT_TYPE_BYTE
 RET
+
 ;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_PUTC:
 PUSH BC
@@ -1334,6 +1361,7 @@ POP  HL
 POP  DE
 POP  BC
 RET
+
 ;@ROUTINE IN A OUT A CLOBBERS BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_PRINT_HEX:
 PUSH AF
@@ -1343,6 +1371,7 @@ RRCA
 RRCA
 CALL CP_PRINT_NIBBLE
 POP  AF
+
 ;@ROUTINE IN A OUT A CLOBBERS BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_PRINT_NIBBLE:
 AND  $0F

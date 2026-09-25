@@ -64,10 +64,10 @@ test("checked Atom source rebuilds the pinned core and then rebuilds itself byte
 
   assert.deepEqual(source.statistics, {
     statements: 8636,
-    sourceBytes: 306407,
+    sourceBytes: 306631,
     sourceParts: 11,
     checkedParts: 12,
-    checkedBytes: 306717,
+    checkedBytes: 307633,
     globalSymbols: 876,
     privateSymbols: 441,
   });

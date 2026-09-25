@@ -129,6 +129,7 @@ EN_R4CBE:
 ; Pack B source characters at HL into the caller's six bytes at DE. Names are
 ; one to eight characters, ASCII case-insensitive, and are committed only after
 ; every character is proved representable.
+
 ;@ROUTINE IN B,HL,DE OUT DE,CARRY MAYBE-OUT ZERO CLOBBERS A,BC,HL,IX,SIGN,PARITY,HALFCARRY,ZERO
 EN_R40PK:
 LD   A,B
@@ -172,6 +173,7 @@ POP  HL
 XOR  A
 SCF
 RET
+
 ;@ROUTINE IN A,HL,IX OUT A,HL,IX CLOBBERS BC,DE,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 EN_PTHRE:
 ; Consume up to three of the remaining A characters, write one word at IX and
@@ -195,6 +197,7 @@ INC  IX
 INC  IX
 POP  AF
 RET
+
 ;@ROUTINE IN BC,HL OUT DE,HL,CARRY MAYBE-OUT ZERO CLOBBERS A,SIGN,PARITY,HALFCARRY,BC,ZERO
 EN_PGROU:
 ; Accumulate exactly C base-40 digits. B real characters are followed by zero
@@ -217,6 +220,7 @@ DEC  C
 JR   NZ,.PGLOOP
 OR   A
 RET
+
 ;@ROUTINE IN DE,A OUT DE CLOBBERS A,F
 AT_MA40:
 ; DE = DE*40 + A. Five doublings and one add are smaller than a general multiply.
@@ -237,6 +241,7 @@ INC  H
 EX   DE,HL
 POP  HL
 RET
+
 ;@ROUTINE IN A OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_R40CH:
 ; Map A-Z/a-z to 1..26, digits to 27..36 and underscore to 37. Codes 38 and 39
@@ -277,6 +282,7 @@ EN_RCBEG:
 ; Recognise a one-to-four-character mnemonic. The compact table stores the first
 ; packed word and the significant high byte of the padded second word. Its table
 ; position plus one is the public mnemonic ordinal.
+
 ;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
 EN_RECOG:
 LD   A,B
@@ -316,6 +322,7 @@ EN_VCBEG:
 ; Dispatch mnemonic A through a family table based at DE. Core ordinals 1..34
 ; share family zero. Later dense ordinal ranges are mapped by EN_CENDS to the
 ; RET, EX, IM, RST, INC/DEC, stack, LD, I/O, bit, rotate, ALU and branch families.
+
 ;@ROUTINE IN A,DE CLOBBERS B,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 AT_DMNEM:
 LD   B,A
@@ -353,6 +360,7 @@ EN_CENDS:
 DB 1,2,3,4,6,8,9,10,11,14,23,31,32,33,34,35
 ; Validate only mnemonic and operand classes. No EN_VAL byte is read here, which
 ; lets unresolved records obtain an exact field layout and instruction length.
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,B,DE,HL
 EN_LEN:
 EN_VFORM:
@@ -875,23 +883,27 @@ DW .VSTACK,.VLD,.VIN
 DW .VOUT,.VBIT,.VROTATE
 DW .VALU,.VJP,.VCALL
 DW .VJR,.VDJNZ
+
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 AT_INVAL:
 ; All invalid forms return A=0 with carry set and publish no output.
 XOR  A
 SCF
 RET
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 AT_RNOPE:
 ; Cascading operand-count checks: no operands, at most one, or at most two.
 LD   A,(IX+EN_OP0)
 CP   EN_NONE
 JR   NZ,AT_RBAD
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 AT_ROOP:
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,AT_RBAD
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 AT_RTOPE:
 LD   A,(IX+EN_OP2)
@@ -899,11 +911,13 @@ CP   EN_NONE
 JR   NZ,AT_RBAD
 OR   A
 RET
+
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 AT_RBAD:
 XOR  A
 SCF
 RET
+
 ;@ROUTINE IN A OUT CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_IR8:
 ; Carry set means ordinary eight-bit register B..L or A; class 6 is (HL), so it
@@ -914,6 +928,7 @@ CP   EN_A
 JR   Z,AT_PYES
 CP   A
 RET
+
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_IR16:
 ; Carry set means BC, DE, HL or SP.
@@ -921,6 +936,7 @@ CP   EN_BC
 JR   C,AT_PNO
 CP   EN_SP+1
 RET
+
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
 EN_IHIND:
 ; Preserve A while recognising IXH/IXL/IYH/IYL through their shared bit pattern.
@@ -932,6 +948,7 @@ LD   A,C
 POP  BC
 JR   Z,AT_PYES
 JR   AT_PNO
+
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
 EN_IINDE:
 ; Carry set means displacement-bearing (IX+d) or (IY+d).
@@ -939,6 +956,7 @@ CP   EN_IIX
 JR   C,AT_PNO
 CP   EN_IIY+1
 RET
+
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_ICOND:
 ; All eight condition classes, in hardware field order.
@@ -946,6 +964,7 @@ CP   EN_NZ
 JR   C,AT_PNO
 CP   EN_M+1
 RET
+
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_IRCON:
 ; The four condition classes implemented by JR.
@@ -953,6 +972,7 @@ CP   EN_NZ
 JR   C,AT_PNO
 CP   EN_CC+1
 RET
+
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_IBIND:
 ; Enumerated bit-number classes BIT0..BIT7.
@@ -960,10 +980,12 @@ CP   EN_BIT0
 JR   C,AT_PNO
 CP   EN_BIT7+1
 RET
+
 ;@ROUTINE IN A OUT CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 AT_PNO:
 CP   A
 RET
+
 ;@ROUTINE OUT CARRY CLOBBERS HALFCARRY
 AT_PYES:
 SCF
@@ -972,6 +994,7 @@ EN_VCEND:
 EN_RECBE:
 ; Validate and encode the record at IX, then commit its one-to-four bytes to DE.
 ; EN_CORE writes only EN_SCRAT; the caller destination is untouched on failure.
+
 ;@ROUTINE IN IX,DE OUT A,DE,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 EN_NAME:
 PUSH DE
@@ -989,6 +1012,7 @@ LDIR
 OR   A
 RET
 ; Encode a condition field into bits 3..5 and add the opcode-family base in B.
+
 ;@ROUTINE IN IX,B OUT A CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,CARRY
 EN_COPCO:
 LD   A,(IX+EN_OP0)
@@ -1000,6 +1024,7 @@ ADD  A,B
 RET
 ; Encode a record already proved by EN_VFORM. The mnemonic-family table mirrors
 ; the validator table so both paths make the same ordinal partition explicit.
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,B,DE,HL
 EN_CORE:
 LD   A,(IX+EN_MNEM)
@@ -1788,26 +1813,31 @@ DW .JR,.DJNZ
 .SE1:
 ; Common successful length returns. Carry is clear and A is the encoded length.
 LD   (EN_SCRAT+0),A
+
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_D1:
 XOR  A
 INC  A
 RET
+
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_D2:
 LD   A,2
 OR   A
 RET
+
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_D3:
 LD   A,3
 OR   A
 RET
+
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_D4:
 LD   A,4
 OR   A
 RET
+
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV0TS:
 ; Copy operand zero's word after one opcode byte.
@@ -1815,6 +1845,7 @@ LD   L,(IX+EN_VAL0)
 LD   H,(IX+EN_VAL0+1)
 LD   (EN_SCRAT+1),HL
 JR   EN_D3
+
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV0T1:
 ; Copy operand zero's word after a prefix/opcode pair.
@@ -1822,6 +1853,7 @@ LD   L,(IX+EN_VAL0)
 LD   H,(IX+EN_VAL0+1)
 LD   (EN_SCRAT+2),HL
 JR   EN_D4
+
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV1TS:
 ; Copy operand one's word after one opcode byte.
@@ -1829,6 +1861,7 @@ LD   L,(IX+EN_VAL1)
 LD   H,(IX+EN_VAL1+1)
 LD   (EN_SCRAT+1),HL
 JR   EN_D3
+
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV1T1:
 ; Copy operand one's word after a prefix/opcode pair.
@@ -1836,6 +1869,7 @@ LD   L,(IX+EN_VAL1)
 LD   H,(IX+EN_VAL1+1)
 LD   (EN_SCRAT+2),HL
 JR   EN_D4
+
 ;@ROUTINE IN A
 EN_SPPAF:
 ; Store the prefix chosen from operand class A while preserving A for field math.
@@ -1845,6 +1879,7 @@ CALL EN_PFOP
 LD   (EN_SCRAT+0),A
 POP  AF
 RET
+
 ;@ROUTINE IN A OUT A CLOBBERS F
 EN_PFOP:
 ; Map IX-family classes and even indexed-memory classes to DD; IY-family classes

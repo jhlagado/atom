@@ -57,6 +57,7 @@ SY_SADEF EQU 8
 SY_SPCA1 EQU 9
 ; Initialise the symbol arena [HL,DE). Globals begin at HL; private records begin
 ; at DE. No private scope exists until the first global label is committed.
+
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 SY_RESET:
 LD   (SY_ABASE),HL
@@ -67,6 +68,7 @@ XOR  A
 LD   (SY_SACTI),A
 RET
 ; Initialise the independent pending arena [HL,DE).
+
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 SY_RESE1:
 LD   (SY_ABAS1),HL
@@ -77,6 +79,7 @@ RET
 ; Pack a source symbol at HL/B into the caller's six-byte key at DE. A leading
 ; period selects private scope but is not part of the RADIX-40 payload, so both
 ; global and private payloads retain up to eight characters.
+
 ;@ROUTINE IN B,HL,DE OUT A,DE,CARRY CLOBBERS BC,HL,IX,SIGN,PARITY,HALFCARRY,ZERO
 EN_PSYM:
 LD   A,B
@@ -117,6 +120,7 @@ SCF
 RET
 ; Find the exact key at HL. Its private flag selects the current private interval
 ; or the permanent global interval. IX returns the matching eight-byte record.
+
 ;@ROUTINE IN HL OUT A,CARRY,IX CLOBBERS BC,HL,SIGN,PARITY,HALFCARRY,DE,ZERO
 SY_FIND:
 LD   (SY_OKEY),HL
@@ -155,6 +159,7 @@ JP   SY_NFRET
 JP   SY_GLPRI
 ; Compare five full name bytes and the low three name bits in byte five. The
 ; upper bits contain record flags and do not participate in identity.
+
 ;@ROUTINE IN IX OUT ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,B,CARRY,A
 SY_KEQUA:
 PUSH IX
@@ -175,6 +180,7 @@ RET
 ; Define key HL as value DE without changing private scope. An existing undefined
 ; record is completed in place so pending pointers remain valid; an absent key is
 ; inserted; an already defined key is a duplicate.
+
 ;@ROUTINE IN HL,DE OUT A,CARRY,IX CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 SY_DECL:
 LD   (SY_OKEY),HL
@@ -205,6 +211,7 @@ LD   A,SY_FDEFI
 JR   SY_INSER
 ; Find or create an undefined record for key HL. B=0 reports an existing record;
 ; B=1 reports a newly inserted record whose value is initially zero.
+
 ;@ROUTINE IN HL OUT A,CARRY,IX,B CLOBBERS C,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 SY_REF:
 LD   (SY_OKEY),HL
@@ -229,6 +236,7 @@ LD   B,1
 RET
 ; Insert SY_OKEY using flags A and value SY_OVAL. Prove the shared arena has one
 ; complete record of room before moving either publication cursor.
+
 ;@ROUTINE IN A OUT A,CARRY,IX CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 SY_INSER:
 LD   (SY_OFLAG),A
@@ -280,6 +288,7 @@ SCF
 RET
 ; Validate and discard the current private scope, then leave a fresh active
 ; private scope. SY_CSCOP is the commit-only half used after proof.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 SY_ASCOP:
 CALL SY_VSCOP
@@ -294,6 +303,7 @@ RET
 ; Define a global label and begin its private scope as one transaction. Existing
 ; undefined globals are completed in place; missing globals need one record after
 ; the old private region is reclaimed.
+
 ;@ROUTINE IN HL,DE OUT A,CARRY,IX CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 SY_DGLAB:
 LD   (SY_OKEY),HL
@@ -343,11 +353,13 @@ RET  NC
 LD   A,SY_SPINV
 SCF
 RET
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY
 SY_GLPRI:
 LD   A,SY_SPNSC
 SCF
 RET
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY
 SY_GLDUP:
 LD   A,SY_SDUPL
@@ -360,6 +372,7 @@ RET
 ; Prove the current private scope is safe to discard. Every private record must
 ; be defined, and no pending record may still point into private storage. The
 ; second condition also catches an impossible stale reference to a defined local.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS IX,DE,BC,ZERO,SIGN,PARITY,HALFCARRY,HL
 SY_VSCOP:
 LD   IX,(SY_LBEG)
@@ -405,6 +418,7 @@ RET
 ; Append one seven-byte pending record. Inputs are IX=symbol, DE=logical patch
 ; address, B=kind/anchor, C=signed addend and A=source-part ordinal. Defined
 ; symbols are rejected because their value should have been emitted directly.
+
 ;@ROUTINE IN A,IX,DE,BC OUT A,CARRY CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 SY_ADD:
 BIT  6,(IX+5)
@@ -455,6 +469,7 @@ LD   A,SY_SADEF
 SCF
 RET
 ; Non-mutating preflight for one additional pending record.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 SY_CCAP:
 LD   HL,(SY_AEND1)
@@ -473,6 +488,7 @@ RET
 ; Find the first pending record for symbol IX. On success IX identifies the live
 ; record while DE=patch address, B=kind/anchor and C=signed addend. The part byte
 ; remains at (IX+6) for the caller to read before removal.
+
 ;@ROUTINE IN IX OUT A,CARRY,BC,DE,IX CLOBBERS SIGN,PARITY,HALFCARRY,ZERO,HL
 SY_PEEK:
 SY_FIND1:
@@ -502,6 +518,7 @@ LD   B,(IX+4)
 LD   C,(IX+5)
 XOR  A
 RET
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY
 SY_NFRET:
 LD   A,SY_SNFOU
@@ -510,6 +527,7 @@ RET
 ; Remove the first pending record for symbol IX after the caller has submitted
 ; its patch. Preserve the returned metadata and fill any hole with the final live
 ; record so the arena remains dense without preserving record order.
+
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT BC,DE CLOBBERS HL,IX,SIGN,PARITY,HALFCARRY,BC,DE,ZERO
 SY_TAKE:
 CALL SY_FIND1
@@ -538,6 +556,7 @@ POP  BC
 XOR  A
 RET
 ; Compare record cursor IX with half-open end DE.
+
 ;@ROUTINE IN IX,DE OUT HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY CLOBBERS A
 AT_CIDE:
 PUSH IX
@@ -547,6 +566,7 @@ SBC  HL,DE
 RET
 ; Prove that the gap [DE,HL) contains at least B bytes. A non-zero high byte is
 ; automatically sufficient because every current record size is below 256.
+
 ;@ROUTINE IN HL,DE,B OUT CARRY MAYBE-OUT ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 AT_RHCAP:
 OR   A

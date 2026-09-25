@@ -72,6 +72,7 @@ ST_PSTR EQU 7              ; Emit a length-prefixed string.
 ST_ISTR EQU 8              ; Emit a string with bit 7 on its final byte.
 ST_ALIGN EQU 9             ; Advance to the next address boundary.
 ST_CNT EQU 9               ; Number of recognized directive names.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 DR_APART:
 ST_NEXT:
@@ -701,6 +702,7 @@ ST_SUCCE:
 ; the complete build. The driver decides whether another part follows.
 XOR  A                     ; Return ST_SOK with carry clear.
 RET                        ; Return control to the multipart driver.
+
 ;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
 EN_RDIR:
 ; Directive names are at most five characters. Pack the current lexeme into the
@@ -754,6 +756,7 @@ DW $15CC,$7080             ; CSTR
 DW $670C,$7080             ; PSTR
 DW $3B4C,$7080             ; ISTR
 DW $0829,$2DF0             ; ALIGN
+
 ;@ROUTINE OUT A CLOBBERS DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ST_STAKE:
 ; Consume one raw byte from the saved string cursor. The source service receives
@@ -768,18 +771,21 @@ LD   (ST_SPTR),HL          ; Persist the new cursor.
 LD   HL,ST_SREM            ; Address the raw-byte countdown.
 DEC  (HL)                  ; Account for the byte just consumed.
 RET                        ; Return it in A to the decoder.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 ST_NTKIN:
 ; Fetch a token and mirror its kind into A for compact statement dispatch.
 CALL TK_NEXT               ; Ask the tokenizer to publish the next token record.
 LD   A,(TK_REC+TK_KOFF)    ; Mirror its kind into the dispatch register.
 RET                        ; Preserve tokenizer carry and return both results.
+
 ;@ROUTINE OUT A,HL,IX,CARRY CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
 ST_PEXPR:
 ; Expressions see the current output address in BC so '$' and relative forms
 ; have statement-accurate meaning.
 LD   BC,(OU_CURSO)         ; Supply '$' as the current output address.
 JP   EX_PDEFR              ; Parse without publishing a new symbol reference.
+
 ;@ROUTINE OUT CARRY CLOBBERS A,HL,ZERO,SIGN,PARITY,HALFCARRY
 ST_CPOSI:
 ; Snapshot the current token's part and start offset as the statement diagnostic
@@ -789,6 +795,7 @@ LD   (ST_EPART),A          ; Save it as the diagnostic part.
 LD   HL,(TK_REC+TK_SOFF)   ; Read the token's zero-based source offset.
 LD   (ST_EOFF),HL          ; Save it as the diagnostic byte position.
 RET                        ; Return with the stable anchor recorded.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 ST_LFAIL:
 ; Lexical failures use the tokenizer's own exact error position rather than the
@@ -801,6 +808,7 @@ LD   (ST_EOFF),HL          ; Preserve that offset for the driver.
 LD   A,ST_SLEXI            ; Return the public lexical-failure category.
 SCF                        ; Mark statement failure.
 RET                        ; Return directly to the multipart driver.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY
 ST_EHERE:
 ; A token that cannot begin or continue a statement is normally an expression
@@ -809,28 +817,34 @@ CALL ST_CPOSI              ; Anchor the diagnostic at the unexpected token.
 LD   A,(TK_REC+TK_KOFF)    ; Read its token kind as detailed status.
 CP   TK_DIR                ; Is it a bare percent directive marker?
 JR   NZ,ST_ESAVE           ; No: classify it as statement/expression syntax.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_UDIR:
 LD   A,TK_DIR              ; Retain the unsupported directive token as detail.
 LD   C,ST_SDIR             ; Select the public directive-failure category.
 JR   ST_FAIL               ; Store detail and return failure.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_ESAVE:
 LD   A,(TK_REC+TK_KOFF)    ; Use the unexpected token kind as detailed status.
 LD   C,ST_SEXP             ; Select the statement/expression category.
 JR   ST_FAIL               ; Store detail and return failure.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_SFAIL:
 LD   C,ST_SSYM             ; Wrap A as a symbol-subsystem failure.
 JR   ST_FAIL               ; Store detail and return failure.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_IFAIL:
 LD   C,ST_SINS             ; Wrap A as an instruction/parser failure.
 JR   ST_FAIL               ; Store detail and return failure.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_OFAIL:
 LD   C,ST_SOUT             ; Wrap A as an output-subsystem failure.
 JR   ST_FAIL               ; Store detail and return failure.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_EFAIL:
 LD   C,ST_SEQUA            ; Wrap A as an EQU-specific failure.
@@ -841,9 +855,11 @@ JR   ST_EFAIL              ; Return it through the EQU wrapper.
 ST_EDELI:
 LD   A,EX_SEPRI            ; Detail: trailing token after EQU expression.
 JR   ST_EFAIL              ; Return it through the EQU wrapper.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ST_DFAIL:
 LD   C,ST_SDIR             ; Wrap A as a directive-argument failure.
+
 ;@ROUTINE IN A,C OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ST_FAIL:
 ; All nested failure adapters store the detailed component status from A, replace

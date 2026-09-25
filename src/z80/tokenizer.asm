@@ -103,6 +103,7 @@ TK_LOFF EQU 4
 TK_LOFF1 EQU 6
 TK_VOFF EQU 7
 TK_RECB EQU 9
+
 ;@ROUTINE IN A,HL,DE OUT A,IX,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 TK_RESET:
 ; Preserve all proposed state until end - begin proves the half-open range does
@@ -144,6 +145,7 @@ POP  AF
 LD   A,TK_SBSRA
 SCF
 RET
+
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 TK_SPEEK:
 ; Compare the current relative cursor with the validated part length. Equality
@@ -165,6 +167,7 @@ RET
 SCF
 RET
 ;@@ATOM_SOURCE_READ_BEGIN@@
+
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 TK_SREAD:
 ; Memory-backed fallback: translate the logical offset to an absolute address.
@@ -174,6 +177,7 @@ LD   A,(HL)
 OR   A
 RET
 ;@@ATOM_SOURCE_READ_END@@
+
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 TK_STAKE:
 ; Preserve BC because callers often use it as a length, radix or loop counter.
@@ -213,6 +217,7 @@ RET
 POP  BC
 SCF
 RET
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 TK_BEG:
 ; Start a tentative token. Until TK_CMT runs, the public record still describes
@@ -228,6 +233,7 @@ LD   (TK_SLEN),A
 LD   (TK_SVAL),A
 LD   (TK_SVAL+1),A
 RET
+
 ;@ROUTINE IN A OUT A,IX,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 TK_CMT:
 ; Publish all record fields only after the scanner has accepted the token.
@@ -247,6 +253,7 @@ LD   IX,TK_REC
 LD   A,(TK_REC+TK_KOFF)
 OR   A
 RET
+
 ;@ROUTINE IN A OUT A,IX,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
 TK_FIN:
 ; A completed non-EOL token marks this physical line as non-empty.
@@ -255,6 +262,7 @@ LD   A,1
 LD   (TK_LHTOK),A
 POP  AF
 JR   TK_CMT
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,SIGN,PARITY,ZERO
 TK_FAIL:
 ; Retain the lexical status, then rewind both cursors to the token's first byte.
@@ -272,6 +280,7 @@ LD   (TK_EOFF),HL
 LD   A,(TK_ESTAT)
 SCF
 RET
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 TK_ILETT:
 ; ASCII case-folding by bit 5 maps A-Z and a-z into the same 0..25 interval.
@@ -284,6 +293,7 @@ CP   26
 LD   A,C
 POP  BC
 RET
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 TK_INBEG:
 ; A name may begin with an ASCII letter or underscore.
@@ -293,6 +303,7 @@ CP   $5F
 JR   Z,TK_CYES
 OR   A
 RET
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 TK_INB:
 ; Continuation additionally permits decimal digits.
@@ -308,6 +319,7 @@ RET
 TK_CYES:
 SCF
 RET
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 TK_HDIGI:
 ; Convert one ASCII hexadecimal digit to 0..15. Carry set means valid.
@@ -329,6 +341,7 @@ RET
 .HEXNO:
 OR   A
 RET
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 TK_SNAME:
 ; Global names allow eight raw bytes. A private name allows nine because its
@@ -372,6 +385,7 @@ JP   TK_FIN
 TK_NTLON:
 LD   A,TK_SNTLO
 JP   TK_FAIL
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 TK_SDLED:
 ; Scan the entire digit-led name-continuation sequence first. This lets Intel
@@ -517,6 +531,7 @@ LD   (TK_SVAL),HL
 TK_FNUMB:
 LD   A,TK_NUMBE
 JP   TK_FIN
+
 ;@ROUTINE IN BC OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 TK_SBASE:
 ; Scan a prefix form. Entry B already counts '$' or '%'; C is 4 for hex and 1
@@ -604,6 +619,7 @@ JP   TK_FAIL
 TK_NOVER:
 LD   A,TK_SNOVE
 JP   TK_FAIL
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC
 TK_SSTRI:
 ; B counts the complete raw token, including quotes and escape bytes. Consume the
@@ -652,6 +668,7 @@ LD   A,B
 LD   (TK_SLEN),A
 LD   A,TK_STRIN
 JP   TK_FIN
+
 ;@ROUTINE IN B OUT A,B,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 TK_STAK1:
 ; Consume one string byte and increment its raw length. A zero result after INC
@@ -683,6 +700,7 @@ JP   TK_FAIL
 TK_IB:
 LD   A,TK_SIB
 JP   TK_FAIL
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,A
 TK_SCOMM:
 .SCLOOP:
@@ -694,6 +712,7 @@ CALL TK_ILEND
 RET  Z
 CALL TK_STAKE
 JR   .SCLOOP
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IY
 TK_NEXT:
 .NEXTLOOP:
@@ -895,6 +914,7 @@ LD   A,1
 LD   (TK_SLEN),A
 LD   A,TK_APOST
 JP   TK_FIN
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 TK_SCHAR:
 ; B begins at one for the opening quote. Consume the quote and first payload byte.
@@ -963,6 +983,7 @@ CP   $27
 JP   NZ,TK_ICHAR
 JP   TK_FNLEN
 TK_RCEND:
+
 ;@ROUTINE OUT A,B,HL
 TK_LLEXE:
 ; Return the current token's buffered lexeme pointer and raw byte length. This is
@@ -994,6 +1015,7 @@ TK_ETABL:
 ; backslash.
 DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C
 TK_ECNT EQU 7
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY
 TK_DESCA:
 ; Search the seven fixed escape pairs. Matching CP leaves carry clear; not found
@@ -1013,6 +1035,7 @@ RET
 INC  HL
 LD   A,(HL)
 RET
+
 ;@ROUTINE IN A OUT A,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
 TK_ILEND:
 ; Zero is set for either accepted physical line-ending byte.

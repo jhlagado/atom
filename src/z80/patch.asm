@@ -23,6 +23,7 @@ PT_KLB EQU 6                ; Apply LOW to a resolved word.
 PT_KHB EQU 7                ; Apply HIGH to a resolved word.
 ; A is operand index 0..2 and IX is the validated instruction record. Return A as
 ; base patch kind and B as byte offset from the instruction start.
+
 ;@ROUTINE IN IX,A OUT A,B,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,DE,ZERO
 PT_LOCAT:
     CP   3                  ; Only operand slots zero, one and two exist.

@@ -29,6 +29,7 @@ OU_SINT EQU 2
 OU_SVRAN EQU 3
 OU_SRRAN EQU 4
 ; Start a logical output interval at HL with DE bytes of remaining capacity.
+
 ;@ROUTINE IN DE,HL OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 OU_RESET:
 LD   (OU_CURSO),HL
@@ -36,6 +37,7 @@ LD   (OU_REM),DE
 XOR  A
 RET
 ; Non-mutating check that the remaining-capacity word can cover HL bytes.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,SIGN,PARITY,HALFCARRY,HL,ZERO
 OU_CCAP:
 EX   DE,HL
@@ -47,6 +49,7 @@ XOR  A
 RET
 ; Emit one IMAGE byte from A. Preflight the byte before calling the common sink
 ; and cursor-commit tail.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC,IX,IY
 OU_EMITB:
 LD   B,A
@@ -58,6 +61,7 @@ JR   OU_EBREA
 ; Emit HL little-endian as two IMAGE operations. Capacity for both bytes is
 ; proved first; sink failure on the second byte leaves the first tentative IMAGE
 ; accepted and the cursor advanced by one for the driver to abort.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC,IX,IY
 OU_EMITW:
 LD   B,H
@@ -74,6 +78,7 @@ LD   A,B
 JR   OU_EBREA
 ; Reserve HL logical bytes without IMAGE operations. Commit the cursor and
 ; remaining-capacity change only after the complete interval passes preflight.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 OU_RESER:
 PUSH HL
@@ -91,6 +96,7 @@ XOR  A
 RET
 ; Select a new logical origin. The platform sink validates the complete target
 ; extent and append-only policy at IMAGE submission or final commit.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 OU_SORIG:
 LD   (OU_CURSO),HL
@@ -98,6 +104,7 @@ XOR  A
 RET
 ; Submit A as one IMAGE byte at the current cursor. C=0 is the base output class.
 ; Publish cursor and capacity changes only after HS_IB accepts the operation.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY,DE,IX,IY
 OU_EBREA:
 LD   HL,(OU_CURSO)
@@ -119,6 +126,7 @@ RET
 ; Encode and emit the parsed instruction at IX. The encoder commits into the
 ; private four-byte buffer; output and pending capacity are both proved before
 ; the first IMAGE operation is submitted.
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
 OU_EINS:
 LD   HL,(OU_CURSO)
@@ -170,6 +178,7 @@ SCF
 RET
 ; Resolve every pending record for the defined symbol at IX. Each loop peeks one
 ; record, computes and submits its final bytes, then removes that exact record.
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 OU_RSLV:
 ; Resolution is valid only after the symbol has a final value.
@@ -339,6 +348,7 @@ SCF
 RET
 ; Require the signed/unsigned 16-bit expression domain -32768..65535. A zero top
 ; byte admits non-negative words; FF is valid only with bit 15 set.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,BC,DE,HL,IX,IY
 OU_RWDOM:
 LD   A,(OU_RVAL+2)

@@ -22,7 +22,6 @@ const repositoryRoot = resolve(scriptDirectory, "../../..");
 const nativeRoot = join(repositoryRoot, "src", "z80");
 const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
 const unavailableGateway = [
-  "; Fail-closed transport replaced by a concrete platform binding.",
   ";@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY",
   "NA_GATE:",
   "LD   A,ZT_UNAV",

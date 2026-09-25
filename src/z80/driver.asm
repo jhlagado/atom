@@ -84,6 +84,7 @@ DR_DPEND EQU 9              ; Pending-arena exclusive end.
 DR_DTBEG EQU 11             ; Target origin.
 DR_DTB EQU 13               ; Target capacity in bytes.
 DR_DESCB EQU 15             ; Complete descriptor size.
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 DR_ASM:
 ; Keep the descriptor address in resident workspace. Later subsystem calls are
@@ -234,6 +235,7 @@ DR_IFAIL:
     LD   A,DR_SINT          ; Classify impossible reset rejection internally.
     SCF                     ; Mark assembly as failed.
     RET                     ; No generation exists to abort yet.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,IX,SIGN,PARITY,HALFCARRY,HL,ZERO,IY
 DR_VDESC:
 ; Reload the immutable descriptor and require at least one part. A byte count
@@ -323,6 +325,7 @@ DR_VAREN:
 .RANGEOK:
     XOR  A                  ; Return configuration success with carry clear.
     RET                     ; All structural checks have passed.
+
 ;@ROUTINE IN IX,C OUT HL,DE CLOBBERS A,B,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 DR_LRANG:
 ; Address field C in the descriptor, read two adjacent little-endian words and
@@ -342,6 +345,7 @@ DR_LRANG:
     LD   L,A                ; Complete the second word in HL.
     EX   DE,HL              ; Return first word in HL and second in DE.
     RET                     ; The descriptor itself remains unchanged.
+
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,HL,DE
 DR_VRANG:
 ; Compute end - begin. No borrow means the half-open range does not wrap.
@@ -378,6 +382,7 @@ DR_CFAI1:
     LD   A,DR_SCFG          ; Return the broad public configuration category.
     SCF                     ; Mark descriptor validation as failed.
     RET                     ; No resident subsystem or sink was touched.
+
 ;@ROUTINE OUT A,CARRY,IX CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY,HL,BC,IY
 DR_AFIN:
 ; Search the live pending arena for a diagnostic anchor. Exactly one pending
@@ -460,6 +465,7 @@ DR_FINT:
     LD   A,ST_SINT          ; Report a statement-layer internal invariant.
     SCF                     ; Mark finalization as failed.
     RET                     ; The driver will translate and abort.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC
 DR_VSPTR:
 ; First test the upward-growing global range [SY_ABASE, SY_GEND). Preserve the

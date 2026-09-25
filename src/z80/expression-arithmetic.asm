@@ -9,6 +9,7 @@
 ;
 ; Load the low bytes and sign bytes used by the 24-bit add/subtract paths. A is
 ; the left low byte, HL points at the right result and B/C retain both signs.
+
 ;@ROUTINE OUT A,BC,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 EX_LARIT:
 LD   A,(EX_LVAL+2)        ; Load the left operand's sign/high byte.
@@ -20,6 +21,7 @@ LD   HL,EX_RVAL           ; Point at the in-place right/result record.
 RET                       ; Return both signs, low byte and result pointer.
 ; Add signed 24-bit operands into EX_RVAL. Equal-sign inputs may overflow only
 ; if the result sign changes; mixed-sign inputs cannot overflow.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,SIGN,PARITY,HALFCARRY,DE,ZERO
 EX_ADD:
 CALL EX_LARIT             ; Load low byte, both signs and result pointer.
@@ -43,12 +45,14 @@ XOR  D                    ; Bit 7 set means the result sign changed.
 BIT  7,A                  ; Did equal-sign addition cross the signed limit?
 JP   NZ,EX_ROPER          ; Yes: report range at the saved operator.
 ; Shared arithmetic success tail clears carry and returns EX_RESOL in A.
+
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS SIGN,PARITY,HALFCARRY
 EX_AOK:
 XOR  A                    ; Return EX_RESOL and clear carry.
 RET                       ; Complete the arithmetic operation successfully.
 ; Subtract EX_RVAL from EX_LVAL into EX_RVAL. Different-sign inputs may overflow
 ; only if the result sign differs from the left operand.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,SIGN,PARITY,HALFCARRY,DE,ZERO,IX,IY
 EX_SUBTR:
 CALL EX_LARIT             ; Load low byte, both signs and result pointer.
@@ -73,6 +77,7 @@ BIT  7,A                  ; Did the result change from the left sign?
 JP   NZ,EX_ROPER          ; Yes: report range at the saved operator.
 JR   EX_AOK               ; Otherwise return resolved success.
 ; Apply bitwise AND to all three bytes of the 24-bit working values.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 EX_AND:
 LD   HL,EX_RVAL           ; Point at the right/result low byte.
@@ -88,6 +93,7 @@ DJNZ .ANDLOOP             ; Repeat for middle and high bytes.
 XOR  A                    ; Return resolved success with carry clear.
 RET                       ; Leave the 24-bit result in EX_RVAL.
 ; Apply bitwise XOR to all three bytes of the 24-bit working values.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 EX_XOR:
 LD   HL,EX_RVAL           ; Point at the right/result low byte.
@@ -103,6 +109,7 @@ DJNZ .XORLOOP             ; Repeat for middle and high bytes.
 XOR  A                    ; Return resolved success with carry clear.
 RET                       ; Leave the 24-bit result in EX_RVAL.
 ; Apply bitwise OR to all three bytes of the 24-bit working values.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 EX_OR:
 LD   HL,EX_RVAL           ; Point at the right/result low byte.
@@ -119,6 +126,7 @@ XOR  A                    ; Return resolved success with carry clear.
 RET                       ; Leave the 24-bit result in EX_RVAL.
 ; Shift the little-endian 24-bit value at HL left by one bit. Carry propagates
 ; from low to high byte and reports the bit discarded from the sign byte.
+
 ;@ROUTINE IN HL OUT A,HL,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EX_SL24:
 LD   A,(HL)               ; Load the low byte.
@@ -135,6 +143,7 @@ LD   (HL),A               ; Store the shifted high byte.
 RET                       ; Return final carry and high byte in A.
 ; Validate the right operand as a count from 0 through 23, then shift the left
 ; operand repeatedly. A sign change on any step reports signed 24-bit overflow.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE,IX,IY
 EX_SLEFT:
 CALL EX_SCNT              ; Validate and return a count from zero through 23.
@@ -164,6 +173,7 @@ RET                       ; Leave EX_RVAL ready for the value stack.
 ; Copy the left operand to EX_RVAL, then perform an arithmetic right shift for
 ; each requested bit. SRA preserves the 24-bit sign in the high byte and RR
 ; propagates it through the lower sixteen bits.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE,IX,IY
 EX_SRIGH:
 CALL EX_SCNT              ; Validate and return a count from zero through 23.
@@ -189,6 +199,7 @@ XOR  A                    ; Return resolved success with carry clear.
 RET                       ; Leave the shifted value in EX_RVAL.
 ; Accept only a non-negative 24-bit shift count less than 24. Any non-zero upper
 ; byte or low byte of 24 and above is a range error at the operator position.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
 EX_SCNT:
 LD   A,(EX_RVAL+2)        ; Read the count's high/sign byte.
@@ -204,6 +215,7 @@ OR   A                    ; Clear carry while preserving count A.
 RET                       ; Return the validated count.
 ; Multiply signed 24-bit operands by shift and add. Magnitude preparation makes
 ; the loop unsigned; EX_SRES records whether the final result must be negated.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 EX_MULTI:
 CALL EX_PMAGN             ; Copy both operands as unsigned magnitudes and signs.
@@ -257,6 +269,7 @@ RET  C                    ; Preserve the helper's failure contract.
 XOR  A                    ; Return resolved success with carry clear.
 RET                       ; Leave the signed result in EX_RVAL.
 ; Select quotient mode and share the signed long-division implementation.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 EX_DIVID:
 XOR  A                    ; Select quotient output mode.
@@ -264,6 +277,7 @@ LD   (EX_DRMOD),A         ; Store the division/remainder selector.
 JR   EX_DCOMM             ; Share signed long division.
 ; Select remainder mode. The final remainder uses the dividend's sign rather
 ; than the quotient's XOR sign.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 EX_REMAI:
 LD   A,1                  ; Select remainder output mode.
@@ -271,6 +285,7 @@ LD   (EX_DRMOD),A         ; Store the division/remainder selector.
 ; Divide magnitudes with 24 rounds of restoring long division. EX_MLEFT is the
 ; shifting dividend, EX_MRIGH the divisor, EX_ACCUM the partial remainder and
 ; EX_QUOTI the quotient.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,SIGN,PARITY,HALFCARRY,ZERO
 EX_DCOMM:
 ; Reject zero before magnitude conversion.
@@ -341,6 +356,7 @@ LD   A,EX_SDZER           ; Select division-by-zero status.
 JP   EX_FOPER             ; Anchor failure at '/' or '%'.
 ; Copy both signed operands to magnitude workspace, record their signs and
 ; negate negative inputs. The quotient/product sign is left-sign XOR right-sign.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,BC,DE,HL,IX,IY,SIGN,PARITY,HALFCARRY
 EX_PMAGN:
 LD   HL,EX_LVAL           ; Point at the signed left operand.
@@ -370,20 +386,24 @@ LD   (EX_SRES),A          ; Preserve the product/quotient sign.
 OR   A                    ; Return carry clear with result sign in Z/NZ.
 RET                       ; Leave both magnitude operands prepared.
 ; Negate the normal result slot in place.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A,BC,DE,IX,IY
 EX_NRES:
 LD   HL,EX_RVAL           ; Select the ordinary result value.
 JR   EX_NAHL              ; Share 24-bit two's-complement negation.
 ; Negate the copied left magnitude in place.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A,BC,DE,IX,IY
 EX_NMLEF:
 LD   HL,EX_MLEFT          ; Select the copied left magnitude.
 JR   EX_NAHL              ; Share 24-bit two's-complement negation.
 ; Negate the copied right magnitude and fall through to the shared 24-bit body.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,A,BC,DE,IX,IY,SIGN,PARITY,HALFCARRY
 EX_NMRIG:
 LD   HL,EX_MRIGH          ; Select the copied right magnitude.
 ; Form the two's complement of the little-endian 24-bit value at HL.
+
 ;@ROUTINE IN HL OUT A,CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY
 EX_NAHL:
 LD   A,(HL)               ; Load the low byte.
@@ -403,6 +423,7 @@ LD   (HL),A               ; Store the negated high byte.
 XOR  A                    ; Return success with carry clear.
 RET                       ; Leave the negated value in place.
 ; Complement all three bytes of EX_RVAL for unary '~'.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A
 EX_CRES:
 LD   HL,EX_RVAL           ; Point at the result low byte.
@@ -421,6 +442,7 @@ XOR  A                    ; Return success with carry clear.
 RET                       ; Leave the complemented value in EX_RVAL.
 ; Add EX_MLEFT to the 24-bit product accumulator. Carry reports unsigned
 ; overflow beyond the high byte.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
 EX_AALEF:
 LD   HL,EX_ACCUM          ; Point at the product accumulator low byte.
@@ -437,12 +459,14 @@ ADC  A,(HL)               ; Add accumulator high byte and carry.
 LD   (HL),A               ; Store the new high product byte.
 RET                       ; Return carry as overflow beyond bit 23.
 ; Shift the multiplication multiplicand left by one bit.
+
 ;@ROUTINE OUT CARRY,ZERO MAYBE-OUT BC,DE CLOBBERS A,HL,SIGN,PARITY,HALFCARRY,IX,IY,BC,DE
 EX_MLSHI:
 LD   HL,EX_MLEFT          ; Select the multiplicand magnitude.
 JP   EX_SL24              ; Tail-call one 24-bit left shift.
 ; Shift the unsigned multiplier magnitude right by one bit. SRL clears the high
 ; sign position and the shared tail rotates carry through the low sixteen bits.
+
 ;@ROUTINE OUT CARRY,ZERO MAYBE-OUT BC,DE CLOBBERS A,HL,SIGN,PARITY,HALFCARRY,IX,IY,BC,DE
 EX_MRSHI:
 LD   HL,EX_MRIGH+2        ; Point at the multiplier high byte.
@@ -450,6 +474,7 @@ LD   A,(HL)               ; Load it for an unsigned shift.
 SRL  A                    ; Shift in zero and expose bit 0 in carry.
 ; Store the already-shifted high byte in A, then rotate the two lower bytes at
 ; HL-1 and HL-2 through carry. The arithmetic right-shift path also enters here.
+
 ;@ROUTINE IN A,HL OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 EX_SRL16:
 LD   (HL),A               ; Store the shifted high byte.
@@ -464,6 +489,7 @@ LD   (HL),A               ; Store the shifted low byte.
 RET                       ; Return flags from the final low-byte rotation.
 ; Compare the partial remainder with the divisor as unsigned 24-bit magnitudes,
 ; most-significant byte first. Carry means remainder is smaller.
+
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY
 EX_RALDI:
 LD   A,(EX_ACCUM+2)       ; Load the remainder high byte.
@@ -479,6 +505,7 @@ DEC  HL                   ; Point at the divisor low byte.
 CP   (HL)                 ; Complete the unsigned 24-bit comparison.
 RET                       ; Carry means remainder is smaller.
 ; Subtract the divisor magnitude from the partial remainder in place.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,C,DE,HL,SIGN,PARITY,HALFCARRY
 EX_RSDIV:
 LD   HL,EX_ACCUM          ; Point at the remainder low byte.
@@ -505,6 +532,7 @@ LD   (HL),A               ; Store the new remainder high byte.
 RET                       ; Return final subtraction flags.
 ; Expand the resolved word in HL into EX_RVAL and clear both the 24-bit high
 ; byte and the deferred-state marker.
+
 ;@ROUTINE IN HL OUT CARRY,ZERO CLOBBERS A,SIGN,PARITY,HALFCARRY
 EX_SRW:
 LD   (EX_RVAL),HL         ; Store the resolved low sixteen bits.
@@ -514,6 +542,7 @@ LD   (EX_RUNRE),A        ; Mark the result concrete.
 RET                      ; Return carry clear from XOR.
 ; Require a resolved 24-bit result in the final word domain. Positive values may
 ; reach $00FFFF; negative values must be sign-extended from $FF8000..$FFFFFF.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,HL
 EX_REQW:
 LD   A,(EX_RVAL+2)       ; Load the 24-bit result's extension byte.
@@ -529,6 +558,7 @@ LD   A,EX_SRANG          ; Select final word-range failure.
 JR   EX_FHERE            ; Anchor it at the current delimiter token.
 ; Require the 24-bit deferred addend to be exactly sign-extended from one byte:
 ; $000000..$00007F or $FFFF80..$FFFFFF.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE,IX,IY
 EX_RADDE:
 LD   A,(EX_RVAL+2)       ; Load the deferred addend extension byte.
@@ -554,6 +584,7 @@ OR   A                   ; Clear carry while preserving the addend byte.
 RET                      ; Accept $00..$7F.
 ; Advance the tokenizer. A lexical failure carries the tokenizer's own source
 ; position rather than the expression's current operator or token position.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 EX_NTOK:
 CALL TK_NEXT             ; Ask the tokenizer to publish the next record.
@@ -561,32 +592,38 @@ RET  NC                  ; Return it unchanged on lexical success.
 LD   A,EX_SLEXI          ; Select the expression lexical category.
 JR   EX_FTOKE            ; Use the tokenizer's exact failure position.
 ; Report a numeric range error at the operator whose calculation failed.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
 EX_ROPER:
 LD   A,EX_SRANG          ; Select arithmetic/range failure.
 JR   EX_FOPER            ; Anchor it at the saved operator position.
 ; Use the current token's stored source position for primary, delimiter and
 ; capacity failures.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 EX_FHERE:
 LD   HL,TK_REC+TK_POFF   ; Point at current token part and offset fields.
 JR   EX_FPOSI            ; Copy that position and return failure.
 ; Use the saved operator position for arithmetic and unsupported-form failures.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 EX_FOPER:
 LD   HL,EX_OPART         ; Point at saved operator part and offset fields.
 JR   EX_FPOSI            ; Copy that position and return failure.
 ; Use the saved name position for symbol packing and lookup failures.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 EX_FSYM:
 LD   HL,EX_SPART         ; Point at saved symbol part and offset fields.
 JR   EX_FPOSI            ; Copy that position and return failure.
 ; Use the tokenizer's independently recorded failure position for lexical errors.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 EX_FTOKE:
 LD   HL,TK_EPART         ; Point at tokenizer failure part and offset fields.
 ; Copy the contiguous part-and-offset triple at HL into the public expression
 ; error fields, preserve the status in A and set carry.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 EX_FPOSI:
 PUSH BC                  ; Preserve caller BC across the three-byte copy.

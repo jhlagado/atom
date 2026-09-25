@@ -17,21 +17,27 @@
 ;  Without interception, execution reaches HS_FCLOS and returns A=$FF, carry set.
 
 HS_SCBEG:
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_BEG:
     NOP                     ; Reserve the BEGIN hook; fall through when unbound.
+
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_IB:
     NOP                     ; Reserve the IMAGE-byte hook; fall through unbound.
+
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_PB:
     NOP                     ; Reserve the PATCH-byte hook; fall through unbound.
+
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_PW:
     NOP                     ; Reserve the PATCH-word hook; fall through unbound.
+
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_CMT:
     NOP                     ; Reserve the COMMIT hook; fall through when unbound.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_ABORT:
 HS_FCLOS:

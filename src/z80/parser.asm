@@ -80,6 +80,7 @@ PR_GPNUM EQU 241
 PR_GC EQU 242
 ; Enter after the statement layer has recognised and consumed the mnemonic. A
 ; is its ordinal and TK_REC already contains the first operand or EOL.
+
 ;@ROUTINE IN A,BC,DE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_PUB:
 ; Preserve A while common call state and scratch records are reset.
@@ -94,6 +95,7 @@ LD   (PR_SCRAT+EN_MNEM),A
 JR   PR_POPER
 ; Standalone entry: fetch, diagnose and recognise the mnemonic before joining
 ; the operand path shared with PR_PUB.
+
 ;@ROUTINE IN BC,DE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_PARSE:
 LD   (PR_IADR),BC
@@ -172,6 +174,7 @@ OR   A
 RET
 ; Initialise the private ten-byte record to mnemonic 0, three EN_NONE operands
 ; and zero values. Clear every per-instruction mask and reference count.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,B,HL,SIGN,PARITY,HALFCARRY
 PR_ISCRA:
 LD   HL,PR_SCRAT
@@ -198,6 +201,7 @@ LD   (PR_UMASK),A
 RET
 ; Fetch one token and translate tokenizer failures into parser status while
 ; preserving the tokenizer's exact source part and offset.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_NTOK:
 CALL TK_NEXT
@@ -211,6 +215,7 @@ SCF
 RET
 ; Select operand A. PR_CPTR points at its class byte and PR_VPTR at its word
 ; value, allowing all later normalisers to operate on the selected slot.
+
 ;@ROUTINE IN A OUT CARRY,ZERO CLOBBERS A,DE,HL,SIGN,PARITY,HALFCARRY
 PR_SOP:
 LD   E,A
@@ -227,6 +232,7 @@ LD   (PR_VPTR),HL
 RET
 ; Carry clear identifies token kinds that can begin an expression without a
 ; leading name or parenthesis. Names and '(' are dispatched separately.
+
 ;@ROUTINE IN A OUT CARRY,ZERO CLOBBERS SIGN,PARITY,HALFCARRY
 PR_IESTA:
 CP   TK_NUMBE
@@ -244,6 +250,7 @@ RET
 ; Parse one selected operand. Short names first pass through the register and
 ; condition table. Other names and all numeric starters enter the expression
 ; evaluator. Parentheses select memory or port syntax.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_POP:
 LD   A,(TK_REC+TK_KOFF)
@@ -290,6 +297,7 @@ RET
 ; Evaluate with caller-managed symbol publication. BC gives '$' its instruction
 ; address. Resolved values go directly to the selected value slot; unresolved
 ; values first become private build-reference records.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_PEXPR:
 LD   BC,(PR_IADR)
@@ -298,6 +306,7 @@ JR   C,PR_EFAIL
 CP   EX_UNRES
 JR   Z,PR_AREF
 ; Store the concrete word in HL at the selected operand value pointer.
+
 ;@ROUTINE IN HL OUT CARRY,ZERO CLOBBERS DE,SIGN,PARITY,HALFCARRY,A
 PR_SHVAL:
 LD   DE,(PR_VPTR)
@@ -312,6 +321,7 @@ RET
 ; HL carries its signed addend. The entry also captures operand index, transform
 ; and the evaluator's retained symbol position. The unresolved mask prevents
 ; concrete range checks from inspecting the placeholder zero value.
+
 ;@ROUTINE IN IX,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX
 PR_AREF:
 ; Save the addend because address calculation uses HL.
@@ -366,6 +376,7 @@ LD   A,PR_SRCAP
 JP   PR_FESYM
 ; Return the address of build-reference A. Each record is thirteen bytes and the
 ; capacity is two, so a single conditional add selects the second record.
+
 ;@ROUTINE IN A OUT DE CLOBBERS HL,A,F
 PR_BRADR:
 LD   DE,PR_RBLD
@@ -391,6 +402,7 @@ RET
 ; lexeme is packed case-insensitively and scanned against exact RADIX-40 values.
 ; Names of four or more characters cannot be operand words and fall through to
 ; expression parsing as symbols.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 PR_LOW:
 CALL TK_LLEXE
@@ -426,6 +438,7 @@ RET
 ; Parse a parenthesised operand after the opening '(' has been seen. The first
 ; inner token distinguishes a concrete memory/port word from an absolute
 ; expression or an IX/IY displacement expression.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_PMEMO:
 ; Consume '(' and inspect the first token inside it.
@@ -530,6 +543,7 @@ LD   A,(PR_ICLAS)
 LD   (HL),A
 JP   PR_NTOK
 ; Require and consume the closing ')' for an expression or fixed indirect form.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
 PR_RRPAR:
 LD   A,(TK_REC+TK_KOFF)
@@ -538,6 +552,7 @@ JP   NZ,PR_EDELI
 JP   PR_NTOK
 ; Copy the tokenizer's numeric word to the selected value slot. This retained
 ; helper has no caller in the current parser path.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,DE,HL,SIGN,PARITY,HALFCARRY
 PR_STVAL:
 LD   HL,(TK_REC+TK_VOFF)
@@ -546,6 +561,7 @@ JP   PR_SHVAL
 ; ADD, ADC and SBC require an explicit accumulator when using their eight-bit
 ; form. Any two-operand ALU form whose first operand is A is collapsed to the
 ; encoder's canonical one-operand record.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,HL,ZERO,BC,DE
 PR_NAALI:
 LD   A,(PR_SCRAT+EN_MNEM)
@@ -598,6 +614,7 @@ CALL PR_RAREF
 XOR  A
 RET
 ; Rewrite build-reference operand index 1 to 0 after accumulator-alias collapse.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS B,SIGN,PARITY,HALFCARRY,DE,HL,A
 PR_RAREF:
 XOR  A
@@ -620,6 +637,7 @@ JR   .RALOOP
 ; Resolve provisional numeric classes after the mnemonic and complete operand
 ; list are known. FMASK records byte-immediate candidates that may later widen;
 ; CMASK records occurrences of C that may be a condition rather than register C.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
 PR_NNUMB:
 XOR  A
@@ -678,6 +696,7 @@ JR   .NLOOP
 ; Convert one bare generic number according to its mnemonic and operand index.
 ; Enumerated operands encode their value in the class itself. Branches select a
 ; word or relative class. All remaining numbers start as flexible imm8.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO,BC,DE
 PR_NBNUM:
 LD   A,(PR_SCRAT+EN_MNEM)
@@ -786,6 +805,7 @@ LD   (HL),A
 XOR  A
 RET
 ; Load the selected operand's little-endian word into HL.
+
 ;@ROUTINE OUT HL CLOBBERS A
 PR_SVAL:
 LD   HL,(PR_VPTR)
@@ -795,6 +815,7 @@ LD   H,(HL)
 LD   L,A
 RET
 ; Clear the selected value once its information has moved into an enum class.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 PR_CSVAL:
 LD   HL,(PR_VPTR)
@@ -804,6 +825,7 @@ INC  HL
 LD   (HL),A
 RET
 ; Require the selected value to fit unsigned eight-bit range.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE,IX,IY
 PR_RBVAL:
 CALL PR_SVAL
@@ -812,6 +834,7 @@ OR   A
 RET  Z
 JP   PR_VRANG
 ; Return a one-hot bit for operand index A: 0 -> 1, 1 -> 2, 2 -> 4.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 PR_IBIT:
 OR   A
@@ -825,6 +848,7 @@ RET
 ; order is: provisional classes, each ambiguous C as condition, widened numeric
 ; classes, then condition alternatives on the widened record. Success returns
 ; the encoder-reported length in A.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 PR_VCAND:
 CALL PR_VCUR
@@ -843,6 +867,7 @@ RET  NC
 LD   A,PR_SIFOR
 JP   PR_FBEG
 ; Validate the current private instruction record without examining its values.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 PR_VCUR:
 LD   IX,PR_SCRAT
@@ -850,6 +875,7 @@ JP   EN_VFORM
 ; Try each operand marked in CMASK as condition C. Change only one occurrence at
 ; a time, restore register C after a failed validation and stop at the first
 ; complete valid form.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY,HL
 PR_TCOND:
 XOR  A
@@ -881,6 +907,7 @@ SCF
 RET
 ; Widen every flexible imm8 candidate to imm16 before the second validation
 ; pass. The chosen form later determines each deferred reference's patch width.
+
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS SIGN,PARITY,HALFCARRY,B,DE,HL,A
 PR_WFLEX:
 XOR  A
@@ -905,6 +932,7 @@ JR   .WLOOP
 ; Check every resolved concrete value against its selected operand class. Values
 ; with a bit in UMASK remain zero placeholders and are checked later when their
 ; symbols resolve.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
 PR_CCVAL:
 XOR  A
@@ -989,6 +1017,7 @@ CALL PR_SHVAL
 JR   .CVNEXT
 ; Turn private build references into public symbol-reference descriptions. The
 ; first pass locates the encoded field and final patch kind for each operand.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,IY
 PR_FREFE:
 XOR  A
@@ -1165,6 +1194,7 @@ XOR  A
 RET
 ; Inspect one build key without mutation. Not-found increments the exact missing
 ; count; scope and other symbol failures retain their nested status.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,IY
 PR_PREF:
 LD   A,(PR_RSCAN)
@@ -1184,6 +1214,7 @@ LD   (PR_SSTAT),A
 LD   A,PR_SSYM
 JP   PR_FREF
 ; Compare the two six-byte packed keys. Carry clear means identical.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,B
 PR_CRKEY:
 LD   HL,PR_RBLD
@@ -1211,6 +1242,7 @@ LD   A,PR_SINT
 JP   PR_FREF
 ; Return public-reference address A. Two fixed nine-byte slots cover the parser
 ; reference capacity.
+
 ;@ROUTINE IN A OUT HL CLOBBERS DE,A,F
 PR_PRADR:
 LD   HL,PR_REFER
@@ -1223,6 +1255,7 @@ RET
 ; for every reference and that each symbol remains undefined. Each pending entry
 ; is seven bytes, including its full source-part ordinal; allocation happens in
 ; PR_QREFE after output accepts the instruction.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO,IX
 PR_CREFE:
 ; Multiply the reference count by seven.
@@ -1266,6 +1299,7 @@ RET
 ; Queue every public reference after the encoded bytes have been accepted. DE
 ; supplies the instruction's logical start address. A second preflight protects
 ; direct callers and keeps this entry self-contained.
+
 ;@ROUTINE IN DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 PR_QREFE:
 LD   (PR_QBASE),DE
@@ -1357,6 +1391,7 @@ SCF
 RET
 ; Commit the fully validated private record to the caller's destination and
 ; return IX pointing at it. No earlier parser path writes the destination.
+
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 PR_CMT:
 LD   HL,PR_SCRAT
@@ -1392,6 +1427,7 @@ PR_RRANG:
 LD   A,PR_SRRAN
 JR   PR_FBEG
 ; Use the current token position for token-local syntax and value failures.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 PR_FHERE:
 LD   HL,TK_REC+TK_POFF
@@ -1399,11 +1435,13 @@ JR   PR_FPOSI
 ; Use the instruction's mnemonic position for form and relative-range failures.
 ; PR_PARSE captures this position. The statement layer supplies its own outer
 ; position when it calls PR_PUB.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 PR_FBEG:
 LD   HL,PR_IPART
 ; Copy a contiguous part-and-offset triple into the parser error fields, preserve
 ; the status in A and set carry.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 PR_FPOSI:
 LD   (PR_ESTAT),A

@@ -39,6 +39,7 @@ NA_WLEN EQU 399
 
 ; Validate and retain the configuration. The common workspace may end exactly at
 ; $10000 but may not wrap past it. Reset handles and invalidate the source cache.
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_INIT:
 PUSH IX
@@ -81,6 +82,7 @@ RET
 ; Initialize the common request block. A is the operation. Clear all sixteen
 ; bytes first so no field from a prior provider call leaks into the next one;
 ; return HL at the request-block base for the gateway.
+
 ;@ROUTINE IN A OUT HL CLOBBERS A,BC,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 NA_REQ:
 LD   C,A
@@ -105,6 +107,7 @@ RET
 ; Invoke the selected platform service. The platform replaces NA_GATE or
 ; routes it to its native gateway. Carry reports transport/provider failure;
 ; the checked image's default gateway always fails closed.
+
 ;@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_CALL:
 CALL NA_GATE
@@ -115,6 +118,7 @@ RET
 ; Open one named object. A=operation, C=provider selector, HL=name and B=byte
 ; length. Copy the name into common workspace before the gateway can switch
 ; banks. Success returns the provider's opaque handle in DE.
+
 ;@ROUTINE IN A,B,C,HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_OPEN:
 LD   D,A
@@ -177,6 +181,7 @@ SCF
 RET
 
 ; Submit a handle-only operation. A=operation, C=selector and DE=handle.
+
 ;@ROUTINE IN A,C,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_HCALL:
 PUSH BC
@@ -191,6 +196,7 @@ JP   NA_CALL
 
 ; Seek an object to one 16-bit absolute byte offset. C=selector, DE=handle,
 ; HL=offset.
+
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SEEK:
 PUSH BC
@@ -210,6 +216,7 @@ JP   NA_CALL
 
 ; Transfer through the fixed common 128-byte buffer. A=read/write, C=selector,
 ; DE=handle and B=count. Success returns the provider's result count in HL.
+
 ;@ROUTINE IN A,B,C,DE OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_TRANS:
 PUSH AF
@@ -242,6 +249,7 @@ RET
 
 ; Close the current source object if one is open, then invalidate its part/cache
 ; identity only after the provider accepts CLOSE.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SCLOS:
 LD   DE,(NA_SHAND)
@@ -264,6 +272,7 @@ RET
 
 ; Open the source name associated with part A. Each three-byte name-table entry
 ; is pointer followed by one-byte length. Only one source handle stays open.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SOPEN:
 LD   (NA_WPART),A
@@ -301,6 +310,7 @@ RET
 ; readable object handle. A part change closes and reopens by name. A cache miss
 ; seeks to the exact requested offset and fills from there, so the assembler may
 ; reread tokens without retaining a whole source part in Z80 memory.
+
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 NA_SREAD:
 PUSH BC
@@ -379,6 +389,7 @@ RET
 ; Write B bytes already held in the transfer buffer to the open output. Require
 ; an exact provider byte count and invalidate source-cache contents that shared
 ; the transfer area.
+
 ;@ROUTINE IN B OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_WRITE:
 LD   A,B
@@ -407,6 +418,7 @@ RET
 ; Fill the tentative output from its current append cursor to relative offset
 ; HL. Backward IMAGE calls are rejected. Forward gaps are written as zero blocks
 ; no larger than the common 128-byte transfer buffer.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_FILL:
 EX   DE,HL
@@ -469,6 +481,7 @@ XOR  A
 RET
 
 ; Convert absolute target address HL to the flat output-relative offset.
+
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY
 NA_REL:
 LD   DE,(NA_TBASE)
@@ -480,6 +493,7 @@ SCF
 RET
 
 ; Seek the output object to relative offset HL.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_OSEEK:
 LD   IX,(NA_CFG)
@@ -490,6 +504,7 @@ JP   NA_SEEK
 ; Begin a tentative flat-image object. Capture the descriptor's target base,
 ; reject a nested generation, and reset append/high-water offsets after OPEN.
 HS_SCBEG:
+
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_BEG:
 PUSH BC
@@ -533,6 +548,7 @@ RET
 ; Append one IMAGE byte. Address class C must be zero for this flat target.
 ; Convert the logical address to a flat offset, zero-fill any forward gap, write
 ; the byte and advance both cursor and high-water mark.
+
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_IB:
 PUSH BC
@@ -572,6 +588,7 @@ RET
 ; Patch one earlier byte. Address class C must be zero and the address must lie
 ; below the initialized high-water mark. Seek, replace one byte, then restore the
 ; append cursor on success; a provider failure is left for driver-level abort.
+
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PB:
 PUSH BC
@@ -614,6 +631,7 @@ RET
 ; Patch one earlier little-endian word. Address class C must be zero and both
 ; bytes must lie below high water. Write low byte first, then restore the append
 ; cursor on success; a provider failure is left for driver-level abort.
+
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PW:
 PUSH IX
@@ -658,6 +676,7 @@ RET
 ; Commit the highest of the final logical cursor and highest IMAGE extent. This
 ; materializes trailing DS/ORG reservations as zeros, closes the source object,
 ; then asks the provider to atomically publish the tentative output.
+
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
 HS_CMT:
 CALL NA_REL
@@ -689,6 +708,7 @@ RET
 
 ; Abort an open generation and close any source handle. Attempt both cleanups;
 ; output-abort failure takes precedence, otherwise return a source-close failure.
+
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_ABORT:
 PUSH BC
@@ -741,6 +761,7 @@ POP  BC
 RET
 
 ; Fail-closed transport replaced by a concrete platform binding.
+
 ;@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_GATE:
 LD   A,ZT_UNAV
