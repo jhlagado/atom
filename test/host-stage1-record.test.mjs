@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const script = fileURLToPath(new URL("../scripts/generate-stage1-record.mjs", import.meta.url));
+const denoProbe = spawnSync("deno", ["--version"], { encoding: "utf8" });
+if (denoProbe.error && denoProbe.error.code !== "ENOENT") throw denoProbe.error;
+if (!denoProbe.error && denoProbe.status !== 0) {
+  throw new Error(`Deno version check failed: ${denoProbe.stderr.trim()}`);
+}
+const denoAvailable = !denoProbe.error;
 
 const run = (command, arguments_) => new Promise((resolve, reject) => {
   const child = spawn(command, arguments_, { cwd: fileURLToPath(new URL("..", import.meta.url)), stdio: ["ignore", "pipe", "pipe"] });
@@ -18,14 +24,10 @@ const run = (command, arguments_) => new Promise((resolve, reject) => {
   child.on("close", (status) => resolve({ status, stdout, stderr }));
 });
 
-test("the Stage 1 Atom result is reproducible under Node and Deno", async () => {
+test("the Stage 1 Atom result is reproducible under Node", async () => {
   const node = await run(process.execPath, [script, "--check"]);
   assert.equal(node.status, 0, node.stderr);
   assert.equal(node.stdout, "stage-1 Atom conformance record: ok\n");
-
-  const deno = await run("deno", ["run", "-A", script, "--check"]);
-  assert.equal(deno.status, 0, deno.stderr);
-  assert.equal(deno.stdout, "stage-1 Atom conformance record: ok\n");
 
   const record = JSON.parse(await readFile(new URL("../proofs/stage-1-atom-host.json", import.meta.url), "utf8"));
   assert.equal(record.schema, "z80-portable-conformance-v1");
@@ -33,4 +35,10 @@ test("the Stage 1 Atom result is reproducible under Node and Deno", async () => 
   assert.equal(record.diagnostic, null);
   assert.deepEqual(record.artifact.bytes, [0x3e, 0x2a, 0x76]);
   assert.deepEqual(record.provenance.compatibleHosts, ["node", "deno"]);
+});
+
+test("the Stage 1 Atom result is reproducible under Deno", { skip: !denoAvailable }, async () => {
+  const deno = await run("deno", ["run", "-A", script, "--check"]);
+  assert.equal(deno.status, 0, deno.stderr);
+  assert.equal(deno.stdout, "stage-1 Atom conformance record: ok\n");
 });

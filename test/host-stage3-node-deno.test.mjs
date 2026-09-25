@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const script = fileURLToPath(new URL("../scripts/verify-stage3-node-deno.mjs", import.meta.url));
+const denoProbe = spawnSync("deno", ["--version"], { encoding: "utf8" });
+if (denoProbe.error && denoProbe.error.code !== "ENOENT") throw denoProbe.error;
+if (!denoProbe.error && denoProbe.status !== 0) {
+  throw new Error(`Deno version check failed: ${denoProbe.stderr.trim()}`);
+}
+const denoAvailable = !denoProbe.error;
 
 function run() {
   return new Promise((resolve, reject) => {
@@ -22,7 +28,7 @@ function run() {
   });
 }
 
-test("Stage 3 Node and Deno Atom CLI results are identical", async () => {
+test("Stage 3 Node and Deno Atom CLI results are identical", { skip: !denoAvailable }, async () => {
   const result = await run();
   assert.equal(result.status, 0, result.stderr);
   const record = JSON.parse(result.stdout);
