@@ -2,22 +2,36 @@
 ;  Instruction encoder and RADIX-40 names
 ;==============================================================================
 ;
-;  Convert parsed instruction records into one to four Z80 bytes. This module
-;  also packs RADIX-40 names and recognises mnemonics because both operations
-;  share the compact name tables used by validation and encoding.
+;  Convert one parser record into the exact one-to-four-byte Z80 instruction.
+;  The encoder is deliberately independent of source syntax, symbols and output
+;  services: it sees only a mnemonic ordinal, three operand classes and three
+;  little-endian operand values.
+;
+;  Validation and encoding share one mnemonic-family dispatcher. The validator
+;  checks record shape and returns its encoded length without reading values;
+;  the parser uses that property while unresolved operands still contain zero
+;  placeholders. EN_NAME validates again, encodes into private scratch and only
+;  then copies the successful bytes to the caller's destination.
+;
+;  Most instruction families are equations over register, condition or bit
+;  fields. Opcode/name lookup tables are retained for the genuinely irregular
+;  core opcodes, IM modes and mnemonic names; two small address tables dispatch
+;  the shared families. DD and FD forms are derived from the ordinary HL encoding
+;  by adding a prefix and, for indexed memory, a displacement.
 ;
 ;  Principal entries:
 ;    EN_R40PK  pack one case-insensitive name into three RADIX-40 words
-;    EN_RECOG  recognise a packed mnemonic and return its ordinal
+;    EN_RECOG  recognise mnemonic text and return its ordinal
 ;    EN_LEN    validate a form and return its encoded length
 ;    EN_VFORM  validate mnemonic and operand classes
 ;    EN_NAME   validate and encode into the caller's four-byte destination
 ;
-;  EN_SCRAT is a six-byte commit buffer. A failed encode leaves the caller's
-;  destination unchanged. The module has no dependency on source text, symbols
-;  or output services.
+;  EN_SCRAT is six bytes because the RADIX-40 packer needs three words. Encoding
+;  uses at most its first four bytes. A failed pack or encode leaves the caller's
+;  destination unchanged.
 
 ORG 0
+; Ten-byte parsed-instruction record shared with the parser and output layer.
 EN_MNEM EQU 0
 EN_OP0 EQU 1
 EN_OP1 EQU 2
@@ -25,6 +39,8 @@ EN_OP2 EQU 3
 EN_VAL0 EQU 4
 EN_VAL1 EQU 6
 EN_VAL2 EQU 8
+; Operand-class ordinals. The register families deliberately mirror the Z80
+; bit fields where possible: B..A are 0..7 and BC..SP are 8..11.
 EN_B EQU 0
 EN_C EQU 1
 EN_D EQU 2
@@ -75,6 +91,8 @@ EN_RST56 EQU 87
 EN_IM0 EQU 88
 EN_IM2 EQU 90
 EN_NONE EQU 255
+; Mnemonic ordinals are generated in compact-table order. Ordinals 1..34 are
+; singleton core instructions; 35..69 form the dispatched instruction families.
 AT_MNOP EQU 1
 AT_MRET EQU 35
 AT_MEX EQU 36
@@ -108,6 +126,9 @@ AT_MLAST EQU AT_MDJNZ
 EN_COREB:
 EN_CODEB:
 EN_R4CBE:
+; Pack B source characters at HL into the caller's six bytes at DE. Names are
+; one to eight characters, ASCII case-insensitive, and are committed only after
+; every character is proved representable.
 ;@ROUTINE IN B,HL,DE OUT DE,CARRY MAYBE-OUT ZERO CLOBBERS A,BC,HL,IX,SIGN,PARITY,HALFCARRY,ZERO
 EN_R40PK:
 LD   A,B
@@ -128,6 +149,8 @@ POP  HL
 PUSH DE
 LD   IX,EN_SCRAT
 LD   A,B
+; Encode characters 0..2 and 3..5 as complete RADIX-40 words. The final call
+; stores characters 6..7 directly as c6*40+c7 in the third word.
 CALL EN_PTHRE
 CALL EN_PTHRE
 LD   B,A
@@ -151,6 +174,8 @@ SCF
 RET
 ;@ROUTINE IN A,HL,IX OUT A,HL,IX CLOBBERS BC,DE,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 EN_PTHRE:
+; Consume up to three of the remaining A characters, write one word at IX and
+; return the remaining count in A.
 CP   3
 JR   C,.PTSHORT
 LD   B,3
@@ -172,6 +197,8 @@ POP  AF
 RET
 ;@ROUTINE IN BC,HL OUT DE,HL,CARRY MAYBE-OUT ZERO CLOBBERS A,SIGN,PARITY,HALFCARRY,BC,ZERO
 EN_PGROU:
+; Accumulate exactly C base-40 digits. B real characters are followed by zero
+; padding, so each group has one canonical packed representation.
 LD   DE,0
 .PGLOOP:
 LD   A,B
@@ -192,6 +219,7 @@ OR   A
 RET
 ;@ROUTINE IN DE,A OUT DE CLOBBERS A,F
 AT_MA40:
+; DE = DE*40 + A. Five doublings and one add are smaller than a general multiply.
 PUSH HL
 LD   H,D
 LD   L,E
@@ -211,6 +239,8 @@ POP  HL
 RET
 ;@ROUTINE IN A OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_R40CH:
+; Map A-Z/a-z to 1..26, digits to 27..36 and underscore to 37. Codes 38 and 39
+; remain unused; zero is reserved for padding.
 CP   $61
 JR   C,.R4UPPER
 CP   $7A+1
@@ -244,6 +274,9 @@ SCF
 RET
 EN_R4CEN:
 EN_RCBEG:
+; Recognise a one-to-four-character mnemonic. The compact table stores the first
+; packed word and the significant high byte of the padded second word. Its table
+; position plus one is the public mnemonic ordinal.
 ;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
 EN_RECOG:
 LD   A,B
@@ -280,6 +313,9 @@ SCF
 RET
 EN_RCEND:
 EN_VCBEG:
+; Dispatch mnemonic A through a family table based at DE. Core ordinals 1..34
+; share family zero. Later dense ordinal ranges are mapped by EN_CENDS to the
+; RET, EX, IM, RST, INC/DEC, stack, LD, I/O, bit, rotate, ALU and branch families.
 ;@ROUTINE IN A,DE CLOBBERS B,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 AT_DMNEM:
 LD   B,A
@@ -313,7 +349,10 @@ EX   DE,HL
 LD   A,B
 JP   (HL)
 EN_CENDS:
+; Exclusive cumulative family-end offsets from AT_MRET.
 DB 1,2,3,4,6,8,9,10,11,14,23,31,32,33,34,35
+; Validate only mnemonic and operand classes. No EN_VAL byte is read here, which
+; lets unresolved records obtain an exact field layout and instruction length.
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,B,DE,HL
 EN_LEN:
 EN_VFORM:
@@ -325,6 +364,8 @@ JP   NC,AT_INVAL
 LD   DE,.VDTABLE
 JR   AT_DMNEM
 .VCORE:
+; The first thirteen core opcodes are one byte; the remaining core group carries
+; an ED prefix. All core instructions reject operands.
 CALL AT_RNOPE
 RET  C
 LD   A,(IX+EN_MNEM)
@@ -334,6 +375,7 @@ ADD  A,2
 OR   A
 RET
 .VRET:
+; RET is either operand-free or takes one of the eight condition classes.
 LD   A,(IX+EN_OP0)
 CP   EN_NONE
 JR   Z,.VL1NOPER
@@ -351,6 +393,7 @@ XOR  A
 INC  A
 RET
 .VEX:
+; EX admits only AF,AF', DE,HL and (SP),HL/IX/IY.
 CALL AT_RTOPE
 RET  C
 LD   A,(IX+EN_OP0)
@@ -372,6 +415,7 @@ LD   A,(IX+EN_OP1)
 CP   EN_HL
 JR   .VZL1
 .VIM:
+; IM mode is encoded in its enumerated operand class, not in the value word.
 CALL AT_ROOP
 RET  C
 LD   A,(IX+EN_OP0)
@@ -390,6 +434,8 @@ CP   EN_RST56+1
 JP   NC,AT_INVAL
 JP   EN_D1
 .VIDEC:
+; INC/DEC cover r, rr, IX/IY, index halves, (HL), and indexed memory. Prefix and
+; displacement determine the returned length.
 CALL AT_ROOP
 RET  C
 LD   A,(IX+EN_OP0)
@@ -413,6 +459,7 @@ CALL EN_IINDE
 JP   C,EN_D3
 JP   AT_INVAL
 .VSTACK:
+; PUSH/POP accept the four ordinary stack pairs plus IX and IY.
 CALL AT_ROOP
 RET  C
 LD   A,(IX+EN_OP0)
@@ -433,6 +480,10 @@ JP   Z,EN_D2
 JP   AT_INVAL
 EN_LVBEG EQU $
 .VLD:
+; LD is the broadest family. Dispatch first by destination class, then prove the
+; exact source pairing and its length. Index-half rules are intentionally strict:
+; two half registers must belong to the same IX or IY family, and ordinary H/L
+; cannot mix with an index half. Indexed memory uses the real H/L register field.
 CALL AT_RTOPE
 RET  C
 LD   A,(IX+EN_OP0)
@@ -465,6 +516,8 @@ CALL EN_IINDE
 JP   C,.VLINDEXE
 JP   AT_INVAL
 .VLR8:
+; Ordinary eight-bit destination: r, n, (HL), absolute/BC/DE memory when A, the
+; special I/R transfers when A, indexed memory, or an index-half source.
 LD   A,(IX+EN_OP1)
 CALL EN_IR8
 JP   C,EN_D1
@@ -511,6 +564,8 @@ CP   EN_A
 JP   NZ,AT_INVAL
 JP   EN_D2
 .VLHALF:
+; Half-register forms require an index prefix and reject H/L collisions. XOR bit
+; 3 below proves that source and destination belong to the same IX/IY family.
 LD   A,(IX+EN_OP1)
 CALL EN_IHIND
 JR   C,.VLHFAMIL
@@ -526,6 +581,8 @@ XOR  B
 AND  $08
 JR   .VNL2
 .VLR16:
+; Ordinary pair destinations accept immediate and absolute loads, LD SP,HL, and
+; Atom's two pair-copy expansions from DE. IX/IY destinations branch separately.
 LD   A,(IX+EN_OP1)
 CP   EN_IMM16
 JP   Z,EN_D3
@@ -597,6 +654,7 @@ CP   EN_IMM8
 JR   .VZL4
 EN_LVEND EQU $
 .VIN:
+; IN r,(C), IN (C), or IN A,(n). Bare IN (C) has one parsed operand.
 LD   A,(IX+EN_OP0)
 CP   EN_PORTC
 JR   Z,.VIONE
@@ -617,6 +675,7 @@ CALL AT_ROOP
 RET  C
 JP   EN_D2
 .VOUT:
+; OUT (C),r, OUT (C),0, or OUT (n),A.
 CALL AT_RTOPE
 RET  C
 LD   A,(IX+EN_OP0)
@@ -636,6 +695,8 @@ CALL EN_IR8
 JP   C,EN_D2
 JP   AT_INVAL
 .VBIT:
+; BIT/RES/SET use an enumerated bit class followed by register, (HL), or indexed
+; memory. Indexed RES/SET may carry a third destination register; BIT may not.
 LD   A,(IX+EN_OP0)
 CALL EN_IBIND
 JP   NC,AT_INVAL
@@ -660,6 +721,8 @@ CALL AT_RTOPE
 RET  C
 JP   EN_D2
 .VROTATE:
+; Rotate/shift takes an ordinary register, (HL), or indexed memory. Indexed forms
+; may optionally copy the result to an ordinary register.
 LD   A,(IX+EN_OP0)
 CALL EN_IR8
 JR   C,.VRPLAIN
@@ -679,6 +742,9 @@ JP   AT_INVAL
 .VRPLAIN:
 JP   .VIONE
 .VALU:
+; One-operand ALU forms cover byte register/memory/immediate operands. The parser
+; has already removed an explicit A alias. Two-operand records are the 16-bit
+; ADD/ADC/SBC families and retain their explicit destination.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,.VA16
@@ -738,6 +804,7 @@ CALL EN_IR16
 JP   C,EN_D1
 JP   AT_INVAL
 .VJP:
+; JP accepts an absolute word, (HL), (IX), (IY), or condition plus absolute word.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,.VJCONDIT
@@ -774,6 +841,8 @@ JR   .VAL3
 .VCCONDIT:
 JR   .VJCONDIT
 .VJR:
+; JR has an unconditional relative form and only the four hardware-supported
+; conditions NZ, Z, NC and C.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,.VJCONDI1
@@ -799,6 +868,7 @@ CP   EN_REL8
 JP   Z,EN_D2
 JR   AT_INVAL
 .VDTABLE:
+; Validator family table selected by AT_DMNEM.
 DW .VCORE,.VRET,.VEX
 DW .VIM,.VRST,.VIDEC
 DW .VSTACK,.VLD,.VIN
@@ -807,11 +877,13 @@ DW .VALU,.VJP,.VCALL
 DW .VJR,.VDJNZ
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 AT_INVAL:
+; All invalid forms return A=0 with carry set and publish no output.
 XOR  A
 SCF
 RET
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 AT_RNOPE:
+; Cascading operand-count checks: no operands, at most one, or at most two.
 LD   A,(IX+EN_OP0)
 CP   EN_NONE
 JR   NZ,AT_RBAD
@@ -834,6 +906,8 @@ SCF
 RET
 ;@ROUTINE IN A OUT CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_IR8:
+; Carry set means ordinary eight-bit register B..L or A; class 6 is (HL), so it
+; is excluded from this predicate despite sharing the hardware field range.
 CP   EN_MEMHL
 RET  C
 CP   EN_A
@@ -842,12 +916,14 @@ CP   A
 RET
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_IR16:
+; Carry set means BC, DE, HL or SP.
 CP   EN_BC
 JR   C,AT_PNO
 CP   EN_SP+1
 RET
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
 EN_IHIND:
+; Preserve A while recognising IXH/IXL/IYH/IYL through their shared bit pattern.
 PUSH BC
 LD   C,A
 AND  $F6
@@ -858,24 +934,28 @@ JR   Z,AT_PYES
 JR   AT_PNO
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
 EN_IINDE:
+; Carry set means displacement-bearing (IX+d) or (IY+d).
 CP   EN_IIX
 JR   C,AT_PNO
 CP   EN_IIY+1
 RET
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_ICOND:
+; All eight condition classes, in hardware field order.
 CP   EN_NZ
 JR   C,AT_PNO
 CP   EN_M+1
 RET
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_IRCON:
+; The four condition classes implemented by JR.
 CP   EN_NZ
 JR   C,AT_PNO
 CP   EN_CC+1
 RET
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 EN_IBIND:
+; Enumerated bit-number classes BIT0..BIT7.
 CP   EN_BIT0
 JR   C,AT_PNO
 CP   EN_BIT7+1
@@ -890,6 +970,8 @@ SCF
 RET
 EN_VCEND:
 EN_RECBE:
+; Validate and encode the record at IX, then commit its one-to-four bytes to DE.
+; EN_CORE writes only EN_SCRAT; the caller destination is untouched on failure.
 ;@ROUTINE IN IX,DE OUT A,DE,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 EN_NAME:
 PUSH DE
@@ -906,6 +988,7 @@ LD   HL,EN_SCRAT
 LDIR
 OR   A
 RET
+; Encode a condition field into bits 3..5 and add the opcode-family base in B.
 ;@ROUTINE IN IX,B OUT A CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,CARRY
 EN_COPCO:
 LD   A,(IX+EN_OP0)
@@ -915,12 +998,16 @@ ADD  A,A
 ADD  A,A
 ADD  A,B
 RET
+; Encode a record already proved by EN_VFORM. The mnemonic-family table mirrors
+; the validator table so both paths make the same ordinal partition explicit.
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,B,DE,HL
 EN_CORE:
 LD   A,(IX+EN_MNEM)
 LD   DE,.EDTABLE
 JP   AT_DMNEM
 .COPCODE:
+; Core opcode ordinals index the irregular one-byte/ED-suffixed table. Ordinals
+; 1..13 are direct bytes; 14..34 use the shared ED-prefix tail.
 LD   B,A
 DEC  A
 LD   E,A
@@ -934,6 +1021,7 @@ JP   C,.SE1
 LD   B,A
 JP   .SEBE2
 .RET:
+; Conditional RET is C0 | cc<<3; plain RET is the singleton C9.
 LD   A,(IX+EN_OP0)
 CP   EN_NONE
 JR   Z,.RETPLAIN
@@ -944,6 +1032,8 @@ JP   .SE1
 LD   A,$C9
 JP   .SE1
 .EX:
+; EX AF,AF', EX DE,HL and EX (SP),HL are singletons. IX/IY stack exchange adds
+; the selected prefix before the E3 opcode.
 LD   A,(IX+EN_OP0)
 CP   EN_AF
 JR   Z,.EXAF
@@ -967,6 +1057,7 @@ JP   .SE1
 LD   A,$E3
 JP   .SE1
 .IM:
+; IM's three enumerated classes select the irregular ED suffix table.
 LD   A,(IX+EN_OP0)
 SUB  EN_IM0
 LD   E,A
@@ -977,6 +1068,7 @@ LD   A,(HL)
 LD   B,A
 JP   .SEBE2
 .RST:
+; RST classes are ordered vectors, so C7 | vector produces the opcode.
 LD   A,(IX+EN_OP0)
 SUB  EN_RST0
 ADD  A,A
@@ -985,6 +1077,8 @@ ADD  A,A
 ADD  A,$C7
 JP   .SE1
 .INCDEC:
+; B begins as the byte-field base 04/05. Pair handling replaces it with 03/0B;
+; memory handling adds 30 to produce 34/35. Indexed forms add prefix/displacement.
 LD   A,(IX+EN_MNEM)
 SUB  AT_MINC-4
 LD   B,A
@@ -1015,6 +1109,7 @@ LD   A,(IX+EN_VAL0)
 LD   (EN_SCRAT+2),A
 JP   EN_D3
 .IDREGIST:
+; INC/DEC r = base | r<<3.
 LD   A,(IX+EN_OP0)
 .TSAB:
 ADD  A,A
@@ -1023,6 +1118,7 @@ ADD  A,A
 ADD  A,B
 JP   .SE1
 .IDPAIR:
+; INC/DEC rr = 03/0B | pair<<4.
 LD   A,B
 CP   4
 LD   B,$03
@@ -1035,6 +1131,7 @@ AND  3
 ADD  A,A
 JR   .TSAB
 .IDIPAIR:
+; IX/IY pair operations reuse the HL opcode behind DD/FD.
 CALL EN_SPPAF
 LD   A,B
 CP   4
@@ -1044,6 +1141,7 @@ LD   A,$2B
 .IDIPREAD:
 JP   .SS1E2
 .IDHALF:
+; Index halves reuse H/L field values behind their family prefix.
 LD   A,(IX+EN_OP0)
 CALL EN_SPPAF
 AND  7
@@ -1057,6 +1155,7 @@ LD   A,B
 ADD  A,$30
 JP   .SE1
 .STACK:
+; PUSH/POP use C5/C1 | pair<<4. IX/IY reuse the HL field behind DD/FD.
 LD   A,(IX+EN_MNEM)
 CP   AT_MPUSH
 LD   B,$C5
@@ -1078,6 +1177,8 @@ ADD  A,$20
 JP   .SS1E2
 EN_LEBEG EQU $
 .LD:
+; Encoding follows the same destination-first partition as validation. Keeping
+; these paths parallel makes the least regular Z80 family auditable.
 LD   A,(IX+EN_OP0)
 CALL EN_IR8
 JR   C,.LDREG8
@@ -1106,6 +1207,8 @@ CP   EN_MEMHL
 JP   Z,.LDMEMHL
 JP   .LINDEXED
 .LDREG8:
+; Ordinary register destinations divide into register, immediate, memory,
+; special-register, indexed-memory and index-half sources.
 LD   A,(IX+EN_OP1)
 CALL EN_IR8
 JR   C,.LDREGREG
@@ -1128,6 +1231,7 @@ CALL EN_IINDE
 JR   C,.LRINDEXE
 JR   .LRHALF
 .LDREGREG:
+; LD r,r' = 40 | destination<<3 | source.
 LD   B,A
 LD   A,(IX+EN_OP0)
 ADD  A,A
@@ -1137,6 +1241,7 @@ ADD  A,B
 ADD  A,$40
 JP   .SE1
 .LDREGIMM:
+; LD r,n = 06 | destination<<3, followed by the low value byte.
 LD   A,(IX+EN_OP0)
 ADD  A,A
 ADD  A,A
@@ -1147,6 +1252,7 @@ LD   (EN_SCRAT+0),A
 LD   A,(IX+EN_VAL1)
 JP   .SS1E2
 .LRMHL:
+; LD r,(HL) = 46 | destination<<3.
 LD   A,(IX+EN_OP0)
 ADD  A,A
 ADD  A,A
@@ -1154,11 +1260,13 @@ ADD  A,A
 ADD  A,$46
 JP   .SE1
 .LDAABS:
+; LD A,(nn) is 3A followed by the absolute word.
 LD   A,$3A
 .SAV1E3:
 LD   (EN_SCRAT+0),A
 JP   AT_CV1TS
 .LAMPAIR:
+; LD A,(BC/DE) uses 0A/1A, derived from the two memory classes.
 SUB  EN_MEMBC
 ADD  A,A
 ADD  A,A
@@ -1167,6 +1275,7 @@ ADD  A,A
 ADD  A,$0A
 JP   .SE1
 .LASPECIA:
+; LD A,I/R uses ED 57/5F.
 LD   B,$57
 CP   EN_I
 JR   Z,.LASREADY
@@ -1179,6 +1288,7 @@ LD   (EN_SCRAT+0),A
 LD   A,B
 JP   .SS1E2
 .LRINDEXE:
+; Indexed memory reuses the (HL) opcode after DD/FD and inserts displacement.
 PUSH AF
 ;@EXPECTOUT A
 CALL EN_PFOP
@@ -1193,6 +1303,7 @@ POP  AF
 LD   A,(IX+EN_VAL1)
 JP   .SS2E3
 .LRHALF:
+; An index-half source reuses H/L's source field behind the selected prefix.
 LD   A,(IX+EN_OP1)
 CALL EN_SPPAF
 AND  7
@@ -1203,6 +1314,8 @@ ADD  A,A
 ADD  A,A
 JR   .LHOPCODE
 .LDHALF:
+; An index-half destination likewise reuses H/L's destination field. Validation
+; has already proved that both halves, when present, use the same index family.
 CALL EN_SPPAF
 AND  7
 ADD  A,A
@@ -1216,6 +1329,9 @@ ADD  A,B
 ADD  A,$40
 JP   .SS1E2
 .LDREG16:
+; Pair destinations cover immediate words and absolute loads. Atom also retains
+; two pair-copy expansions: LD HL,DE emits LD H,D / LD L,E, while LD BC,DE emits
+; LD B,D / LD C,E. LD SP,HL/IX/IY uses the hardware F9 form below.
 LD   A,(IX+EN_OP1)
 CP   EN_IMM16
 JR   Z,.LR1IMM
@@ -1233,6 +1349,7 @@ LD   (EN_SCRAT+0),A
 ADD  A,9
 JP   .SS1E2
 .LR1IMM:
+; LD rr,nn = 01 | rr<<4 followed by the word.
 LD   A,(IX+EN_OP0)
 AND  3
 ADD  A,A
@@ -1242,6 +1359,7 @@ ADD  A,A
 INC  A
 JP   .SAV1E3
 .LR1ABS:
+; HL has the direct 2A form; BC/DE/SP use ED 4B/5B/7B.
 LD   A,(IX+EN_OP0)
 CP   EN_HL
 JR   Z,.LDHLABS
@@ -1262,6 +1380,7 @@ JP   AT_CV1T1
 LD   A,$2A
 JP   .SAV1E3
 .LDSP:
+; LD SP,HL is F9; IX/IY use the same opcode behind their prefix.
 LD   A,(IX+EN_OP1)
 CP   EN_HL
 LD   A,$F9
@@ -1273,6 +1392,7 @@ LD   (EN_SCRAT+0),A
 LD   A,$F9
 JP   .SS1E2
 .LI16:
+; LD IX/IY,nn and LD IX/IY,(nn) are prefixed HL forms 21 and 2A.
 CALL EN_SPPAF
 LD   A,(IX+EN_OP1)
 CP   EN_IMM16
@@ -1282,6 +1402,7 @@ LD   A,$2A
 .LI1OPCOD:
 JR   .SS1CV1TS
 .LSTARGET:
+; LD I/R,A uses ED 47/4F.
 LD   B,$47
 CP   EN_I
 JR   Z,.LSTREADY
@@ -1289,6 +1410,8 @@ LD   B,$4F
 .LSTREADY:
 JP   .SEBE2
 .LDMEMABS:
+; Absolute-memory stores select A, HL, ordinary pairs or IX/IY and append the
+; destination address word from operand zero.
 LD   A,(IX+EN_OP1)
 CP   EN_A
 JR   Z,.LDABSA
@@ -1324,6 +1447,7 @@ LD   (EN_SCRAT+0),A
 LD   A,$22
 JR   .SS1CV0TS
 .LMPAIR:
+; LD (BC/DE),A uses 02/12.
 SUB  EN_MEMBC
 ADD  A,A
 ADD  A,A
@@ -1332,6 +1456,7 @@ ADD  A,A
 ADD  A,$02
 JP   .SE1
 .LDMEMHL:
+; LD (HL),r uses 70 | r; LD (HL),n is 36 n.
 LD   A,(IX+EN_OP1)
 CP   EN_IMM8
 JR   Z,.LMHIMM
@@ -1341,6 +1466,8 @@ JP   .SE1
 LD   A,$36
 JP   .SAV1E2
 .LINDEXED:
+; LD (IX/IY+d),r reuses 70 | r. The immediate form is four bytes because both
+; displacement and immediate data follow the prefixed 36 opcode.
 LD   A,(IX+EN_OP0)
 ;@EXPECTOUT A
 CALL EN_PFOP
@@ -1364,6 +1491,8 @@ LD   (EN_SCRAT+3),A
 JP   EN_D4
 EN_LEEND EQU $
 .IN:
+; ED input forms encode the register field in bits 3..5. Immediate-port input is
+; the singleton DB followed by the port byte.
 LD   A,(IX+EN_OP0)
 CP   EN_PORTC
 JR   Z,.INBARE
@@ -1386,6 +1515,7 @@ JP   .SAV1E2
 LD   B,A
 JP   .SEBE2
 .OUT:
+; ED output forms mirror IN; OUT (C),0 has the dedicated ED 71 encoding.
 LD   A,(IX+EN_OP0)
 CP   EN_IMM8
 JR   Z,.OIMMEDIA
@@ -1406,6 +1536,8 @@ LD   (EN_SCRAT+0),A
 LD   A,(IX+EN_VAL0)
 JP   .SS1E2
 .BIT:
+; CB bit families are operation<<6 | bit<<3 | register. Indexed memory emits
+; DD/FD CB displacement opcode, with field 6 when no destination register exists.
 LD   A,(IX+EN_MNEM)
 SUB  AT_MBIT-1
 ADD  A,A
@@ -1441,6 +1573,8 @@ LD   A,(IX+EN_OP1)
 LD   E,(IX+EN_VAL1)
 JR   .CITAIL
 .ROTATE:
+; Rotate/shift bases advance in steps of eight. SLS shares SLL's hardware base,
+; so ordinals at and after the alias are folded down by one.
 LD   A,(IX+EN_MNEM)
 SUB  AT_MRLC
 CP   7
@@ -1456,12 +1590,15 @@ CALL EN_IINDE
 JR   C,.RINDEXED
 LD   A,(IX+EN_OP0)
 .CBPLAIN:
+; Plain register and (HL) forms are CB followed by base | register field.
 AND  7
 ADD  A,B
 LD   B,A
 LD   A,$CB
 JP   .SPBE2
 .RINDEXED:
+; Indexed rotate/shift can optionally copy the result to a register; otherwise
+; field 6 denotes memory-only operation.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 LD   A,6
@@ -1474,6 +1611,7 @@ LD   B,A
 LD   A,(IX+EN_OP0)
 LD   E,(IX+EN_VAL0)
 .CITAIL:
+; Indexed CB byte order is prefix, CB, displacement, opcode.
 ;@EXPECTOUT A
 CALL EN_PFOP
 LD   (EN_SCRAT+0),A
@@ -1484,6 +1622,9 @@ LD   (EN_SCRAT+2),A
 LD   A,B
 JP   .SS3E4
 .ALU:
+; The byte family ordinal is already the hardware operation field. One-operand
+; records use register/memory/immediate equations; two-operand records are the
+; separate 16-bit ADD/ADC/SBC forms.
 LD   A,(IX+EN_MNEM)
 SUB  AT_MADD
 ADD  A,A
@@ -1507,10 +1648,12 @@ ADD  A,B
 ADD  A,$80
 JP   .SE1
 .AIMMEDIA:
+; ALU A,n = C6 | operation<<3 followed by the immediate byte.
 LD   A,B
 ADD  A,$C6
 JP   .SS0V0E2
 .ALUHALF:
+; IXH/IXL/IYH/IYL reuse H/L fields behind DD/FD.
 LD   A,(IX+EN_OP0)
 CALL EN_SPPAF
 AND  7
@@ -1518,11 +1661,13 @@ ADD  A,B
 ADD  A,$80
 JP   .SS1E2
 .AINDEXED:
+; ALU A,(IX/IY+d) reuses the (HL) field 6 and inserts displacement.
 CALL EN_SPPAF
 LD   A,B
 ADD  A,$86
 JP   .SS1V0E3
 .ALU16:
+; ADC/SBC HL,rr use ED 4A/42 | rr<<4.
 LD   A,(IX+EN_MNEM)
 CP   AT_MADD
 JR   Z,.ADD16
@@ -1541,6 +1686,8 @@ ADD  A,B
 LD   B,A
 JP   .SEBE2
 .ADD16:
+; ADD HL,rr is 09 | rr<<4. IX/IY use a prefix and map a self operand to the HL
+; field while BC, DE and SP retain their ordinary pair fields.
 LD   A,(IX+EN_OP1)
 CP   EN_IX
 JR   Z,.A1SELF
@@ -1568,6 +1715,7 @@ LD   (EN_SCRAT+0),A
 LD   A,B
 JR   .SS1E2
 .JP:
+; Absolute JP is C3 nn; JP (HL) is E9 and IX/IY add their prefix.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,.JCONDITI
@@ -1581,6 +1729,7 @@ JR   Z,.JPINDEX
 LD   A,$C3
 JP   .SAV0E3
 .JCONDITI:
+; JP cc,nn = C2 | cc<<3 followed by operand one's word.
 LD   B,$C2
 CALL EN_COPCO
 JP   .SAV1E3
@@ -1594,6 +1743,7 @@ LD   (EN_SCRAT+0),A
 LD   A,$E9
 JR   .SS1E2
 .CALL:
+; CALL nn is CD nn; CALL cc,nn = C4 | cc<<3.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,.CCONDITI
@@ -1605,6 +1755,7 @@ CALL EN_COPCO
 LD   (EN_SCRAT+0),A
 JR   AT_CV1TS
 .JR:
+; JR e is 18 e; JR cc,e = 20 | cc<<3 for the four accepted conditions.
 LD   A,(IX+EN_OP1)
 CP   EN_NONE
 JR   NZ,.JCONDIT1
@@ -1619,6 +1770,7 @@ LD   (EN_SCRAT+0),A
 LD   A,(IX+EN_VAL1)
 JR   .SS1E2
 .DJNZ:
+; DJNZ is 10 followed by the parser-computed displacement.
 LD   A,$10
 LD   (EN_SCRAT+0),A
 LD   A,(IX+EN_VAL0)
@@ -1626,6 +1778,7 @@ LD   A,(IX+EN_VAL0)
 LD   (EN_SCRAT+1),A
 JR   EN_D2
 .EDTABLE:
+; Encoder family table selected by AT_DMNEM.
 DW .COPCODE,.RET,.EX
 DW .IM,.RST,.INCDEC
 DW .STACK,.LD,.IN
@@ -1633,6 +1786,7 @@ DW .OUT,.BIT,.ROTATE
 DW .ALU,.JP,.CALL
 DW .JR,.DJNZ
 .SE1:
+; Common successful length returns. Carry is clear and A is the encoded length.
 LD   (EN_SCRAT+0),A
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 EN_D1:
@@ -1656,30 +1810,35 @@ OR   A
 RET
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV0TS:
+; Copy operand zero's word after one opcode byte.
 LD   L,(IX+EN_VAL0)
 LD   H,(IX+EN_VAL0+1)
 LD   (EN_SCRAT+1),HL
 JR   EN_D3
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV0T1:
+; Copy operand zero's word after a prefix/opcode pair.
 LD   L,(IX+EN_VAL0)
 LD   H,(IX+EN_VAL0+1)
 LD   (EN_SCRAT+2),HL
 JR   EN_D4
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV1TS:
+; Copy operand one's word after one opcode byte.
 LD   L,(IX+EN_VAL1)
 LD   H,(IX+EN_VAL1+1)
 LD   (EN_SCRAT+1),HL
 JR   EN_D3
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 AT_CV1T1:
+; Copy operand one's word after a prefix/opcode pair.
 LD   L,(IX+EN_VAL1)
 LD   H,(IX+EN_VAL1+1)
 LD   (EN_SCRAT+2),HL
 JR   EN_D4
 ;@ROUTINE IN A
 EN_SPPAF:
+; Store the prefix chosen from operand class A while preserving A for field math.
 PUSH AF
 ;@EXPECTOUT A
 CALL EN_PFOP
@@ -1688,6 +1847,8 @@ POP  AF
 RET
 ;@ROUTINE IN A OUT A CLOBBERS F
 EN_PFOP:
+; Map IX-family classes and even indexed-memory classes to DD; IY-family classes
+; and odd indexed-memory classes to FD. Validation guarantees A is prefixable.
 CP   EN_IXH
 JR   C,.PORDINAR
 CP   EN_IXL+1
@@ -1709,6 +1870,8 @@ EN_RECEN:
 EN_CODEE:
 EN_IBEG:
 EN_CTBEG:
+; Irregular core opcodes. The first thirteen are direct one-byte instructions;
+; the remaining entries are suffixes emitted after ED.
 EN_COPC1:
 DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F
 DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2
@@ -1716,6 +1879,8 @@ DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45
 EN_IOPCO: DB $46,$56,$5E
 EN_CTEND:
 EN_CNT EQU 69
+; Compact mnemonic table in ordinal order. Each three-byte entry stores the
+; first packed RADIX-40 word and the significant high byte of the second word.
 EN_TABLE:
 DW  $59E8
 DB  $00
@@ -1859,5 +2024,6 @@ EN_TEND:
 EN_IEND:
 EN_COREE:
 EN_WBEG:
+; Shared private commit area: six bytes for packed names, first four for opcodes.
 EN_SCRAT: DS 6
 EN_WEND:
