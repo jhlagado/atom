@@ -21,15 +21,42 @@ bin/          installed command-line programs
 docs/         current user and contributor documentation
 examples/     small source projects
 proofs/       checked measurements, memory maps and boundary counts
-scripts/      build, measurement and release programs
+scripts/      build, validation and release programs
 src/host/     Node host, public API, renderers and execution adapters
 src/z80/      Z80 core, native adapters and symbol ledger
 test/         native, host, package and self-host tests
 ```
 
 Files in `src/` are authoritative source. Files in `assets/` are generated and
-must be rebuilt through their scripts. JSON files in `proofs/` are active test
-inputs.
+must be rebuilt through their scripts. Every JSON record remaining in `proofs/`
+is consumed by a test, build check, package check or release step.
+
+## Maintainer tools
+
+The scripts build the native images, verify selected host integrations, and
+prepare packages. The installed command-line programs live in `bin/`.
+
+| File | Purpose |
+| --- | --- |
+| `scripts/bundled-dependencies.mjs` | Create temporary workspace links for offline npm packaging, then remove the links and restore `package.json`. |
+| `scripts/cpm22-atom-source.mjs` | Prepare source names and parts for the native CP/M build. |
+| `scripts/generate-cpm22.mjs` | Build or verify the CP/M executable and its census. |
+| `scripts/generate-native-core.mjs` | Assemble the core twice and build or verify its checked image and symbols. |
+| `scripts/generate-native-object-harness.mjs` | Build or verify the standalone object-service harness. |
+| `scripts/generate-stage1-record.mjs` | Build or check the small portable-host conformance record. |
+| `scripts/measure-cpm22-output-candidates.mjs` | Measure CP/M output-kernel alternatives and verify their recorded sizes. |
+| `scripts/package-census.mjs` | Record or check the files and unpacked size in the npm package. |
+| `scripts/prepare-github-release.mjs` | Prepare the CP/M executable, release metadata and checksums. |
+| `scripts/verify-dependencies.mjs` | Check installed shared-package versions against supported release ranges. |
+| `scripts/verify-example.mjs` | Build the shipped example and check its generated artifacts. |
+| `scripts/verify-stage3-node-deno.mjs` | Compare CLI output from Node and Deno. |
+| `scripts/verify-triptych-wasm.mjs` | Optionally compare Atom execution through the Triptych WASM adapter; requires its local module. |
+
+The native measurement commands use `test/measure-*.mjs` because they share the
+native harnesses and fixtures; they report code, workspace and execution costs.
+The separate `measure:cpm22-output-candidates` command measures alternative
+CP/M output kernels. Without `--check`, it updates
+`proofs/cpm22-output-candidates.json`.
 
 ## Build path
 
