@@ -3,9 +3,9 @@
   "source": {
     "statements": 8627,
     "sourceParts": 10,
-    "sourceBytes": 219854,
+    "sourceBytes": 252237,
     "checkedParts": 11,
-    "checkedBytes": 220127,
+    "checkedBytes": 252510,
     "globalSymbols": 876,
     "privateSymbols": 441
   },
@@ -20,10 +20,10 @@
     "declaredSymbols": 1316
   },
   "execution": {
-    "instructions": 108538840,
-    "cycles": 1157096142,
+    "instructions": 110409746,
+    "cycles": 1177122790,
     "serviceCalls": 13734,
-    "sourceReads": 493042,
+    "sourceReads": 559036,
     "maxInstructions": 400000000,
     "maxCycles": 4000000000
   },
