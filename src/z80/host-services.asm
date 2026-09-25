@@ -19,25 +19,25 @@
 HS_SCBEG:
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_BEG:
-NOP
+    NOP                     ; Reserve the BEGIN hook; fall through when unbound.
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_IB:
-NOP
+    NOP                     ; Reserve the IMAGE-byte hook; fall through unbound.
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_PB:
-NOP
+    NOP                     ; Reserve the PATCH-byte hook; fall through unbound.
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_PW:
-NOP
+    NOP                     ; Reserve the PATCH-word hook; fall through unbound.
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_CMT:
-NOP
+    NOP                     ; Reserve the COMMIT hook; fall through when unbound.
 ;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 HS_ABORT:
 HS_FCLOS:
 ; One fail-closed tail serves every unbound operation.
-SCF
-SBC  A,A
-RET
+    SCF                     ; Mark the host operation as failed.
+    SBC  A,A                ; Convert the set carry into status $FF.
+    RET                     ; Return failure to the platform-neutral core.
 HS_SCEND:
 HS_REND:
