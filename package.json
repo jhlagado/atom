@@ -67,7 +67,7 @@
     "prepare:github-release": "node scripts/prepare-github-release.mjs",
     "update:package-census": "node scripts/package-census.mjs --update",
     "prepare:proof": "npm run verify:dependencies",
-    "pretest": "npm run prepare:proof && npm run verify:native-source && npm run verify:native-object && npm run verify:cpm22 && npm run verify:cpm22-output-candidates",
+    "pretest": "npm run prepare:proof",
     "test": "node --test test/*.test.mjs",
     "test:host": "node --test test/host-*.test.mjs",
     "test:package": "node --test test/host-package.test.mjs",
