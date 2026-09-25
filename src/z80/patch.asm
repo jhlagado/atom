@@ -3,10 +3,10 @@
 ;==============================================================================
 ;
 ;  Locate the encoded field associated with one operand in a form the encoder has
-;  already validated. The result identifies the field offset and its base patch
-;  kind: byte, word, relative displacement or index displacement. Callers may
-;  subsequently substitute truncate, LOW or HIGH byte transforms: statements
-;  select truncation for DB, while the parser applies LOW/HIGH expressions.
+;  already validated. The result identifies the field offset and its base kind:
+;  byte, word, relative displacement or index displacement. Patch records also
+;  support low-byte truncation, LOW and HIGH transforms. DB selects truncation;
+;  unresolved LOW/HIGH expressions retain their transform for later patching.
 ;
 ;  Principal entry:
 ;    PT_LOCAT  map an operand index to its encoded field and patch kind
