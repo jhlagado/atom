@@ -6,6 +6,23 @@ import {
   NATIVE_CORE_MODULES,
   setNativeCoreOrigin,
 } from "../src/host/build/z80-source-layout.mjs";
+import { MNEMONICS } from "../src/host/abi.mjs";
+
+const instructionNames = new Set(MNEMONICS.filter(Boolean));
+
+function instructionMnemonic(line) {
+  const statement = line.trimStart()
+    .replace(/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*:\s*/, "")
+    .trimStart();
+  const mnemonic = /^([A-Za-z]+)\b/.exec(statement)?.[1]?.toUpperCase();
+  return instructionNames.has(mnemonic) ? mnemonic : undefined;
+}
+
+function assertInstructionExplanation(line, location) {
+  if (instructionMnemonic(line) !== undefined) {
+    assert.match(line, /\s;\s+\S/, `${location} needs an inline instruction explanation`);
+  }
+}
 
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",
@@ -27,6 +44,20 @@ test("native origin replacement accepts and preserves source indentation", () =>
   assert.equal(result.get("encoder.asm"), "    ORG $0100\n    JP ENTRY\n    DS 13\n    NOP\n");
 });
 
+test("inline instruction commentary also covers label-prefixed instructions", () => {
+  assert.throws(
+    () => assertInstructionExplanation("ENTRY: NOP", "sample.asm:1"),
+    /sample\.asm:1 needs an inline instruction explanation/,
+  );
+  assert.doesNotThrow(() => assertInstructionExplanation("ENTRY: NOP ; No operation."));
+  assert.throws(
+    () => assertInstructionExplanation("    ENTRY: NOP", "sample.asm:2"),
+    /sample\.asm:2 needs an inline instruction explanation/,
+  );
+  assert.doesNotThrow(() => assertInstructionExplanation("    ENTRY: NOP ; No operation."));
+  assert.doesNotThrow(() => assertInstructionExplanation("DATA: DB 1"));
+});
+
 test("maintained Z80 source follows the readable layout convention", async () => {
   const names = (await fs.readdir("src/z80")).filter((name) => name.endsWith(".asm"));
   for (const name of names) {
@@ -36,6 +67,7 @@ test("maintained Z80 source follows the readable layout convention", async () =>
       const line = lines[index];
       assert.doesNotMatch(line, /\t/, `${name}:${index + 1} contains a tab`);
       if (line === "" || line.startsWith(";")) continue;
+      assertInstructionExplanation(line, `${name}:${index + 1}`);
       if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*:(?:\s|$)/.test(line)) continue;
       if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*\s+EQU\s/.test(line)) continue;
       assert.match(line, /^ {4}\S/, `${name}:${index + 1} must indent non-label assembly by four spaces`);
