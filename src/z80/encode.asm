@@ -243,359 +243,359 @@ EN_CORE:
 EN_LEBEG EQU $
 .LD:
 
-; Encoding follows the same destination-first partition as validation. Keeping
-; these paths parallel makes the least regular Z80 family auditable.
+; Destination-first dispatch mirrors the form validator. Each branch below
+; handles a source class already accepted for that destination.
 
-    LD   A,(IX+EN_OP0)
-    CALL EN_IR8
-    JR   C,.LDREG8
-    LD   A,(IX+EN_OP0)
-    CALL EN_IHIND
-    JP   C,.LDHALF
-    LD   A,(IX+EN_OP0)
-    CALL EN_IR16
-    JP   C,.LDREG16
-    LD   A,(IX+EN_OP0)
-    CP   EN_IX
-    JP   Z,.LI16
-    CP   EN_IY
-    JP   Z,.LI16
-    CP   EN_I
-    JP   Z,.LSTARGET
-    CP   EN_R
-    JP   Z,.LSTARGET
-    CP   EN_MABS
-    JP   Z,.LDMEMABS
-    CP   EN_MEMBC
-    JP   Z,.LMPAIR
-    CP   EN_MEMDE
-    JP   Z,.LMPAIR
-    CP   EN_MEMHL
-    JP   Z,.LDMEMHL
-    JP   .LINDEXED
+    LD   A,(IX+EN_OP0)       ; Load the destination class.
+    CALL EN_IR8              ; Test for an ordinary eight-bit register.
+    JR   C,.LDREG8           ; Carry selects byte-register destinations.
+    LD   A,(IX+EN_OP0)       ; Reload the class for the index-half test.
+    CALL EN_IHIND            ; Test for IXH, IXL, IYH or IYL.
+    JP   C,.LDHALF           ; Index-half destinations need a prefix.
+    LD   A,(IX+EN_OP0)       ; Reload the class for the pair test.
+    CALL EN_IR16             ; Test for BC,DE,HL or SP.
+    JP   C,.LDREG16          ; Ordinary pairs use their shared encoder path.
+    LD   A,(IX+EN_OP0)       ; Check index pairs and special destinations.
+    CP   EN_IX               ; Check the IX pair destination.
+    JP   Z,.LI16             ; Reuse the prefixed-pair encoder.
+    CP   EN_IY               ; IY has the same source forms as IX.
+    JP   Z,.LI16             ; Reuse its prefix-aware path.
+    CP   EN_I                ; I loads only from A.
+    JP   Z,.LSTARGET          ; Select the ED-prefixed special-register form.
+    CP   EN_R                ; R also loads only from A.
+    JP   Z,.LSTARGET          ; Reuse the I/R transfer path.
+    CP   EN_MABS             ; Check for the absolute destination (nn).
+    JP   Z,.LDMEMABS         ; Its source selects the store opcode.
+    CP   EN_MEMBC            ; Check for the indirect destination (BC).
+    JP   Z,.LMPAIR           ; (BC) stores only A.
+    CP   EN_MEMDE            ; Check for the indirect destination (DE).
+    JP   Z,.LMPAIR           ; Reuse the matching (DE) store path.
+    CP   EN_MEMHL            ; Check for the unprefixed destination (HL).
+    JP   Z,.LDMEMHL          ; Encode its register or immediate source.
+    JP   .LINDEXED           ; Remaining accepted destinations are (IX/IY+d).
 .LDREG8:
 
 ; Ordinary register destinations divide into register, immediate, memory,
 ; special-register, indexed-memory and index-half sources.
 
-    LD   A,(IX+EN_OP1)
-    CALL EN_IR8
-    JR   C,.LDREGREG
-    LD   A,(IX+EN_OP1)
-    CP   EN_IMM8
-    JR   Z,.LDREGIMM
-    CP   EN_MEMHL
-    JR   Z,.LRMHL
-    CP   EN_MABS
-    JR   Z,.LDAABS
-    CP   EN_MEMBC
-    JR   Z,.LAMPAIR
-    CP   EN_MEMDE
-    JR   Z,.LAMPAIR
-    CP   EN_I
-    JR   Z,.LASPECIA
-    CP   EN_R
-    JR   Z,.LASPECIA
-    CALL EN_IINDE
-    JR   C,.LRINDEXE
-    JR   .LRHALF
+    LD   A,(IX+EN_OP1)       ; Load the source class for this byte register.
+    CALL EN_IR8              ; Test for an ordinary byte-register source.
+    JR   C,.LDREGREG         ; Carry selects the register-to-register form.
+    LD   A,(IX+EN_OP1)       ; Reload source for the remaining tests.
+    CP   EN_IMM8             ; Check for an immediate byte.
+    JR   Z,.LDREGIMM         ; Emit opcode followed by the low value byte.
+    CP   EN_MEMHL            ; Check for the unprefixed (HL) source.
+    JR   Z,.LRMHL            ; Use the one-byte indirect load form.
+    CP   EN_MABS             ; Check for an absolute-memory source (nn).
+    JR   Z,.LDAABS           ; Validation allows this source only for A.
+    CP   EN_MEMBC            ; Check for the accumulator's (BC) source.
+    JR   Z,.LAMPAIR          ; Select the 0A opcode family.
+    CP   EN_MEMDE            ; Check for the accumulator's (DE) source.
+    JR   Z,.LAMPAIR          ; The adjacent class selects 1A in the same path.
+    CP   EN_I                ; Check for the I special-register source.
+    JR   Z,.LASPECIA         ; Only A accepts this ED-prefixed transfer.
+    CP   EN_R                ; Check for the R special-register source.
+    JR   Z,.LASPECIA         ; Reuse the same A-destination path.
+    CALL EN_IINDE            ; Test for indexed memory with a displacement.
+    JR   C,.LRINDEXE         ; Carry selects the DD/FD memory path.
+    JR   .LRHALF             ; Validator leaves only an index-half source.
 .LDREGREG:
 
 ; LD r,r' = 40 | destination<<3 | source.
 
-    LD   B,A
-    LD   A,(IX+EN_OP0)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,B
-    ADD  A,$40
-    JP   .SE1
+    LD   B,A                 ; Keep the source register field in B.
+    LD   A,(IX+EN_OP0)       ; Load the destination register field.
+    ADD  A,A                 ; Move its field toward opcode bits 3..5.
+    ADD  A,A                 ; Continue shifting the destination field.
+    ADD  A,A                 ; Finish placing the destination field.
+    ADD  A,B                 ; Add the source register field in bits 0..2.
+    ADD  A,$40               ; Add the LD r,r' opcode-family base.
+    JP   .SE1                ; Emit the one-byte register transfer.
 .LDREGIMM:
 
 ; LD r,n = 06 | destination<<3, followed by the low value byte.
 
-    LD   A,(IX+EN_OP0)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,6
+    LD   A,(IX+EN_OP0)       ; Load the destination register field.
+    ADD  A,A                 ; Shift it toward opcode bits 3..5.
+    ADD  A,A                 ; Continue the three-bit field shift.
+    ADD  A,A                 ; Finish placing the destination field.
+    ADD  A,6                 ; Add the immediate-load opcode base.
 .SAV1E2:
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_VAL1)
-    JP   .SS1E2
+    LD   (EN_SCRAT+0),A      ; Stage the opcode before the immediate value.
+    LD   A,(IX+EN_VAL1)      ; Load the source operand's low value byte.
+    JP   .SS1E2              ; Append the value and return a two-byte length.
 .LRMHL:
 
 ; LD r,(HL) = 46 | destination<<3.
 
-    LD   A,(IX+EN_OP0)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$46
-    JP   .SE1
+    LD   A,(IX+EN_OP0)       ; Load the destination register field.
+    ADD  A,A                 ; Shift it toward opcode bits 3..5.
+    ADD  A,A                 ; Continue the destination-field shift.
+    ADD  A,A                 ; Finish placing the destination field.
+    ADD  A,$46               ; Add the LD r,(HL) opcode base.
+    JP   .SE1                ; Emit the one-byte indirect load.
 .LDAABS:
 
 ; LD A,(nn) is 3A followed by the absolute word.
 
-    LD   A,$3A
+    LD   A,$3A               ; Select LD A,(nn).
 .SAV1E3:
-    LD   (EN_SCRAT+0),A
-    JP   AT_CV1TS
+    LD   (EN_SCRAT+0),A      ; Stage opcode before operand one's value word.
+    JP   AT_CV1TS            ; Append operand one's 16-bit value.
 .LAMPAIR:
 
 ; LD A,(BC/DE) uses 0A/1A, derived from the two memory classes.
 
-    SUB  EN_MEMBC
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$0A
-    JP   .SE1
+    SUB  EN_MEMBC            ; Convert (BC)/(DE) to selector zero or one.
+    ADD  A,A                 ; Start shifting selector toward bit 4.
+    ADD  A,A                 ; Continue shifting the selector.
+    ADD  A,A                 ; Continue shifting the selector.
+    ADD  A,A                 ; Finish the four-bit pair-field shift.
+    ADD  A,$0A               ; Add the LD A,(BC)/(DE) opcode base.
+    JP   .SE1                ; Emit the one-byte accumulator load.
 .LASPECIA:
 
 ; LD A,I/R uses ED 57/5F.
 
-    LD   B,$57
-    CP   EN_I
-    JR   Z,.LASREADY
-    LD   B,$5F
+    LD   B,$57               ; Prepare LD A,I's ED suffix.
+    CP   EN_I                ; A still holds the source class I or R.
+    JR   Z,.LASREADY         ; Keep 57 for I.
+    LD   B,$5F               ; Select 5F for R.
 .LASREADY:
 .SEBE2:
-    LD   A,$ED
+    LD   A,$ED               ; Supply the ED prefix for the shared tail.
 .SPBE2:
-    LD   (EN_SCRAT+0),A
-    LD   A,B
-    JP   .SS1E2
+    LD   (EN_SCRAT+0),A      ; Stage ED or CB before the selected opcode byte.
+    LD   A,B                 ; Load the ED suffix or CB opcode byte.
+    JP   .SS1E2              ; Append it and return a two-byte length.
 .LRINDEXE:
 
 ; Indexed memory reuses the (HL) opcode after DD/FD and inserts displacement.
 
-    PUSH AF
+    PUSH AF                  ; Preserve flags from the indexed-class test.
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_OP0)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$46
-    LD   (EN_SCRAT+1),A
-    POP  AF
-    LD   A,(IX+EN_VAL1)
-    JP   .SS2E3
+    CALL EN_PFOP             ; Select DD or FD from the indexed source class.
+    LD   (EN_SCRAT+0),A      ; Stage the index prefix as byte zero.
+    LD   A,(IX+EN_OP0)       ; Load the destination register field.
+    ADD  A,A                 ; Begin shifting toward opcode bits 3..5.
+    ADD  A,A                 ; Continue shifting the destination field.
+    ADD  A,A                 ; Complete the field shift.
+    ADD  A,$46               ; Form 46 | destination<<3 for indexed memory.
+    LD   (EN_SCRAT+1),A      ; Stage the prefixed LD opcode as byte one.
+    POP  AF                  ; Restore entry flags after the field arithmetic.
+    LD   A,(IX+EN_VAL1)      ; Load the indexed source displacement.
+    JP   .SS2E3              ; Append displacement and return length three.
 .LRHALF:
 
 ; An index-half source reuses H/L's source field behind the selected prefix.
 
-    LD   A,(IX+EN_OP1)
-    CALL EN_SPPAF
-    AND  7
-    LD   B,A
-    LD   A,(IX+EN_OP0)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    JR   .LHOPCODE
+    LD   A,(IX+EN_OP1)       ; Load IXH/IXL/IYH/IYL as the prefix selector.
+    CALL EN_SPPAF            ; Stage DD/FD and restore the source class in A.
+    AND  7                   ; Keep the source's H/L register field.
+    LD   B,A                 ; Hold that field while forming the destination.
+    LD   A,(IX+EN_OP0)       ; Load the ordinary destination register field.
+    ADD  A,A                 ; Begin shifting toward opcode bits 3..5.
+    ADD  A,A                 ; Continue shifting the destination field.
+    ADD  A,A                 ; Complete the field shift.
+    JR   .LHOPCODE            ; Join the shared register-field calculation.
 .LDHALF:
 
-; An index-half destination likewise reuses H/L's destination field. Validation
-; has already proved that both halves, when present, use the same index family.
+; An index-half destination reuses H/L's destination field. Validation has
+; already matched the index family when both operands are index halves.
 
-    CALL EN_SPPAF
-    AND  7
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    LD   B,A
-    LD   A,(IX+EN_OP1)
-    AND  7
+    CALL EN_SPPAF            ; Stage the destination's DD/FD prefix.
+    AND  7                   ; Keep its H/L register field.
+    ADD  A,A                 ; Begin shifting toward opcode bits 3..5.
+    ADD  A,A                 ; Continue shifting the destination field.
+    ADD  A,A                 ; Complete the field shift.
+    LD   B,A                 ; Hold destination field while loading source.
+    LD   A,(IX+EN_OP1)       ; Load the validated source register class.
+    AND  7                   ; Keep its three-bit register field.
 .LHOPCODE:
-    ADD  A,B
-    ADD  A,$40
-    JP   .SS1E2
+    ADD  A,B                 ; Combine source and destination register fields.
+    ADD  A,$40               ; Add the LD r,r' opcode-family base.
+    JP   .SS1E2              ; Append the opcode and return a two-byte length.
 .LDREG16:
 
-; Pair destinations cover immediate words and absolute loads. Atom also retains
-; two pair-copy expansions: LD HL,DE emits LD H,D / LD L,E, while LD BC,DE emits
-; LD B,D / LD C,E. LD SP,HL/IX/IY uses the hardware F9 form below.
+; Pair destinations cover immediate words and absolute loads. Two pair copies
+; expand into byte-register transfers: HL,DE becomes H,D then L,E; BC,DE
+; becomes B,D then C,E. LD SP,HL/IX/IY uses the F9 form below.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_IMM16
-    JR   Z,.LR1IMM
-    CP   EN_MABS
-    JR   Z,.LR1ABS
-    LD   A,(IX+EN_OP0)
-    CP   EN_SP
-    JR   Z,.LDSP
-    CP   EN_HL
-    LD   A,$62
-    JR   Z,.LDLEGACY
-    LD   A,$42
+    LD   A,(IX+EN_OP1)       ; Load the pair destination's source class.
+    CP   EN_IMM16            ; Check for a 16-bit immediate source.
+    JR   Z,.LR1IMM           ; Encode its pair opcode and following word.
+    CP   EN_MABS             ; Check for an absolute-memory source.
+    JR   Z,.LR1ABS           ; Select direct HL or ED-prefixed pair loading.
+    LD   A,(IX+EN_OP0)       ; Other accepted forms depend on the destination.
+    CP   EN_SP               ; SP has dedicated HL/IX/IY source forms.
+    JR   Z,.LDSP             ; Encode LD SP,HL/IX/IY.
+    CP   EN_HL               ; HL selects Atom's DE-to-HL pair-copy form.
+    LD   A,$62               ; Prepare LD H,D, the first byte-register copy.
+    JR   Z,.LDLEGACY         ; Keep 62 when the destination is HL.
+    LD   A,$42               ; BC instead starts with LD B,D.
 .LDLEGACY:
-    LD   (EN_SCRAT+0),A
-    ADD  A,9
-    JP   .SS1E2
+    LD   (EN_SCRAT+0),A      ; Stage LD H,D or LD B,D.
+    ADD  A,9                 ; Form LD L,E or LD C,E as the second opcode.
+    JP   .SS1E2              ; Return both expanded copy opcodes.
 .LR1IMM:
 
 ; LD rr,nn = 01 | rr<<4 followed by the word.
 
-    LD   A,(IX+EN_OP0)
-    AND  3
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    INC  A
-    JP   .SAV1E3
+    LD   A,(IX+EN_OP0)       ; Load the validated BC/DE/HL/SP pair class.
+    AND  3                   ; Reduce it to the hardware pair field.
+    ADD  A,A                 ; Begin shifting the pair field toward bits 4..5.
+    ADD  A,A                 ; Continue the four-bit field shift.
+    ADD  A,A                 ; Continue shifting the pair field.
+    ADD  A,A                 ; Complete the shift above the low opcode bits.
+    INC  A                   ; Add the LD rr,nn opcode base 01.
+    JP   .SAV1E3             ; Append operand one's 16-bit value.
 .LR1ABS:
 
 ; HL has the direct 2A form; BC/DE/SP use ED 4B/5B/7B.
 
-    LD   A,(IX+EN_OP0)
-    CP   EN_HL
-    JR   Z,.LDHLABS
-    AND  3
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$4B
-    LD   B,A
-    LD   A,$ED
-    LD   (EN_SCRAT+0),A
-    LD   A,B
+    LD   A,(IX+EN_OP0)       ; HL has an unprefixed load opcode.
+    CP   EN_HL               ; Check whether the destination is HL.
+    JR   Z,.LDHLABS          ; Select LD HL,(nn) when it is.
+    AND  3                   ; Reduce BC/DE/SP to the ED pair field.
+    ADD  A,A                 ; Begin shifting the pair field toward bits 4..5.
+    ADD  A,A                 ; Continue the four-bit shift.
+    ADD  A,A                 ; Continue shifting the pair field.
+    ADD  A,A                 ; Complete the pair-field shift.
+    ADD  A,$4B               ; Form ED 4B/5B/7B for BC/DE/SP.
+    LD   B,A                 ; Keep the ED suffix while staging its prefix.
+    LD   A,$ED               ; Select the extended-instruction prefix.
+    LD   (EN_SCRAT+0),A      ; Stage ED before the pair-load suffix.
+    LD   A,B                 ; Restore the suffix for the shared word tail.
 .SS1CV1TS:
-    LD   (EN_SCRAT+1),A
-    JP   AT_CV1T1
+    LD   (EN_SCRAT+1),A      ; Stage the opcode after the first prefix byte.
+    JP   AT_CV1T1            ; Append operand one's 16-bit value.
 .LDHLABS:
-    LD   A,$2A
-    JP   .SAV1E3
+    LD   A,$2A               ; Select the direct LD HL,(nn) opcode.
+    JP   .SAV1E3             ; Append operand one's word after opcode 2A.
 .LDSP:
 
 ; LD SP,HL is F9; IX/IY use the same opcode behind their prefix.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_HL
-    LD   A,$F9
-    JP   Z,.SE1
-    LD   A,(IX+EN_OP1)
+    LD   A,(IX+EN_OP1)       ; Load the validated HL/IX/IY source pair.
+    CP   EN_HL               ; HL uses F9 without a prefix.
+    LD   A,$F9               ; Prepare the common LD SP,pair opcode.
+    JP   Z,.SE1              ; Emit the one-byte HL form when it matched.
+    LD   A,(IX+EN_OP1)       ; Reload IX or IY to select its prefix.
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,$F9
-    JP   .SS1E2
+    CALL EN_PFOP             ; Select DD or FD from the source pair.
+    LD   (EN_SCRAT+0),A      ; Stage the index prefix.
+    LD   A,$F9               ; Both indexed forms reuse LD SP,HL's opcode.
+    JP   .SS1E2              ; Append F9 and return a two-byte length.
 .LI16:
 
 ; LD IX/IY,nn and LD IX/IY,(nn) are prefixed HL forms 21 and 2A.
 
-    CALL EN_SPPAF
-    LD   A,(IX+EN_OP1)
-    CP   EN_IMM16
-    LD   A,$21
-    JR   Z,.LI1OPCOD
-    LD   A,$2A
+    CALL EN_SPPAF            ; Stage DD/FD for the IX/IY destination pair.
+    LD   A,(IX+EN_OP1)       ; Read whether the source is immediate or memory.
+    CP   EN_IMM16            ; Immediate pairs use opcode 21.
+    LD   A,$21               ; Prepare LD IX/IY,nn.
+    JR   Z,.LI1OPCOD         ; Keep 21 for the immediate form.
+    LD   A,$2A               ; Absolute memory uses the HL-form opcode 2A.
 .LI1OPCOD:
-    JR   .SS1CV1TS
+    JR   .SS1CV1TS           ; Append opcode and operand one's value word.
 .LSTARGET:
 
 ; LD I/R,A uses ED 47/4F.
 
-    LD   B,$47
-    CP   EN_I
-    JR   Z,.LSTREADY
-    LD   B,$4F
+    LD   B,$47               ; Prepare LD I,A's ED suffix.
+    CP   EN_I                ; A still holds the I or R destination class.
+    JR   Z,.LSTREADY         ; Keep 47 for I.
+    LD   B,$4F               ; Select 4F for R.
 .LSTREADY:
-    JP   .SEBE2
+    JP   .SEBE2              ; Emit ED and the selected I/R transfer suffix.
 .LDMEMABS:
 
 ; Absolute-memory stores select A, HL, ordinary pairs or IX/IY and append the
 ; destination address word from operand zero.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_A
-    JR   Z,.LDABSA
-    CALL EN_IR16
-    JR   NC,.LAINDEX
-    CP   EN_HL
-    JR   Z,.LDABSHL
-    AND  3
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$43
-    LD   B,A
-    LD   A,$ED
-    LD   (EN_SCRAT+0),A
-    LD   A,B
+    LD   A,(IX+EN_OP1)       ; Load the source for the absolute destination.
+    CP   EN_A                ; A uses the direct 32 opcode.
+    JR   Z,.LDABSA           ; Route the accumulator store to its tail.
+    CALL EN_IR16             ; Test for BC, DE, HL or SP as the source pair.
+    JR   NC,.LAINDEX         ; Otherwise validation leaves IX or IY here.
+    CP   EN_HL               ; HL stores without the ED prefix.
+    JR   Z,.LDABSHL          ; Select direct opcode 22 for HL.
+    AND  3                   ; Reduce BC/DE/SP to the ED pair field.
+    ADD  A,A                 ; Begin shifting the pair field toward bits 4..5.
+    ADD  A,A                 ; Continue the four-bit shift.
+    ADD  A,A                 ; Continue shifting the pair field.
+    ADD  A,A                 ; Complete the pair-field shift.
+    ADD  A,$43               ; Form ED 43/53/73 for BC/DE/SP.
+    LD   B,A                 ; Keep the suffix while staging ED.
+    LD   A,$ED               ; Select the extended-instruction prefix.
+    LD   (EN_SCRAT+0),A      ; Stage ED before the pair-store suffix.
+    LD   A,B                 ; Restore the suffix for the address tail.
 .SS1CV0TS:
-    LD   (EN_SCRAT+1),A
-    JP   AT_CV0T1
+    LD   (EN_SCRAT+1),A      ; Stage the opcode after the prefix.
+    JP   AT_CV0T1            ; Append operand zero's 16-bit value.
 .LDABSA:
-    LD   A,$32
+    LD   A,$32               ; Select LD (nn),A.
 .SAV0E3:
-    LD   (EN_SCRAT+0),A
-    JP   AT_CV0TS
+    LD   (EN_SCRAT+0),A      ; Stage opcode before operand zero's value word.
+    JP   AT_CV0TS            ; Append operand zero's 16-bit value.
 .LDABSHL:
-    LD   A,$22
-    JR   .SAV0E3
+    LD   A,$22               ; Select the direct LD (nn),HL opcode.
+    JR   .SAV0E3             ; Append operand zero's value word.
 .LAINDEX:
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,$22
-    JR   .SS1CV0TS
+    CALL EN_PFOP             ; Select DD or FD from the IX/IY source pair.
+    LD   (EN_SCRAT+0),A      ; Stage the index prefix before opcode 22.
+    LD   A,$22               ; The indexed store reuses LD (nn),HL's opcode.
+    JR   .SS1CV0TS           ; Append opcode and operand zero's value word.
 .LMPAIR:
 
 ; LD (BC/DE),A uses 02/12.
 
-    SUB  EN_MEMBC
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$02
-    JP   .SE1
+    SUB  EN_MEMBC            ; Convert (BC)/(DE) to selector zero or one.
+    ADD  A,A                 ; Start shifting selector toward bit 4.
+    ADD  A,A                 ; Continue shifting the pair selector.
+    ADD  A,A                 ; Continue the four-bit shift.
+    ADD  A,A                 ; Complete the shift above opcode base 02.
+    ADD  A,$02               ; Form 02 for (BC) or 12 for (DE).
+    JP   .SE1                ; Emit the one-byte accumulator store.
 .LDMEMHL:
 
 ; LD (HL),r uses 70 | r; LD (HL),n is 36 n.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_IMM8
-    JR   Z,.LMHIMM
-    ADD  A,$70
-    JP   .SE1
+    LD   A,(IX+EN_OP1)       ; Load the register or immediate source class.
+    CP   EN_IMM8             ; Immediate data uses opcode 36.
+    JR   Z,.LMHIMM           ; Route immediate stores to their two-byte form.
+    ADD  A,$70               ; Combine the register field with base 70.
+    JP   .SE1                ; Emit LD (HL),r in one byte.
 .LMHIMM:
-    LD   A,$36
-    JP   .SAV1E2
+    LD   A,$36               ; Select LD (HL),n.
+    JP   .SAV1E2             ; Append the immediate byte after opcode 36.
 .LINDEXED:
 
 ; LD (IX/IY+d),r reuses 70 | r. The immediate form is four bytes because both
 ; displacement and immediate data follow the prefixed 36 opcode.
 
-    LD   A,(IX+EN_OP0)
+    LD   A,(IX+EN_OP0)       ; Load the destination's IX+d or IY+d class.
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_OP1)
-    CP   EN_IMM8
-    JR   Z,.LIIMM
-    ADD  A,$70
+    CALL EN_PFOP             ; Select the index prefix from destination class.
+    LD   (EN_SCRAT+0),A      ; Store the prefix as byte zero.
+    LD   A,(IX+EN_OP1)       ; Load the register or immediate source class.
+    CP   EN_IMM8             ; Immediate stores need opcode 36 and four bytes.
+    JR   Z,.LIIMM            ; Route the immediate form to its four-byte path.
+    ADD  A,$70               ; Combine the real register field with base 70.
 .SS1V0E3:
-    LD   (EN_SCRAT+1),A
-    LD   A,(IX+EN_VAL0)
-    JP   .SS2E3
+    LD   (EN_SCRAT+1),A      ; Stage the opcode after the prefix.
+    LD   A,(IX+EN_VAL0)      ; Load operand zero's indexed displacement.
+    JP   .SS2E3              ; Use the shared three-byte displacement tail.
 .LIIMM:
-    LD   A,$36
-    LD   (EN_SCRAT+1),A
-    LD   A,(IX+EN_VAL0)
-    LD   (EN_SCRAT+2),A
-    LD   A,(IX+EN_VAL1)
+    LD   A,$36               ; Select the indexed immediate-store opcode.
+    LD   (EN_SCRAT+1),A      ; Stage 36 after the index prefix.
+    LD   A,(IX+EN_VAL0)      ; Load the indexed destination's displacement.
+    LD   (EN_SCRAT+2),A      ; Store displacement before immediate data.
+    LD   A,(IX+EN_VAL1)      ; Load the immediate data byte.
 .SS3E4:
-    LD   (EN_SCRAT+3),A
-    JP   EN_D4
+    LD   (EN_SCRAT+3),A      ; Store the final byte of the four-byte encoding.
+    JP   EN_D4               ; Return the four-byte instruction length.
 EN_LEEND EQU $
 .IN:
 
