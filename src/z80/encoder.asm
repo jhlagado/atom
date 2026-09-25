@@ -382,26 +382,26 @@ EN_CENDS:
 
 EN_LEN:
 EN_VFORM:
-    LD   A,(IX+EN_MNEM)
-    OR   A
-    JP   Z,AT_INVAL
-    CP   AT_MLAST+1
-    JP   NC,AT_INVAL
-    LD   DE,.VDTABLE
-    JR   AT_DMNEM
+    LD   A,(IX+EN_MNEM)     ; Load the parsed mnemonic ordinal.
+    OR   A                   ; Test for the reserved zero ordinal.
+    JP   Z,AT_INVAL          ; Reject zero before indexing a family table.
+    CP   AT_MLAST+1          ; Compare with the exclusive upper bound.
+    JP   NC,AT_INVAL         ; Reject ordinals outside the supported set.
+    LD   DE,.VDTABLE         ; Select the validation-family address table.
+    JR   AT_DMNEM             ; Dispatch with the record's original ordinal.
 .VCORE:
 
 ; The first thirteen core opcodes are one byte; the remaining core group carries
 ; an ED prefix. All core instructions reject operands.
 
-    CALL AT_RNOPE
-    RET  C
-    LD   A,(IX+EN_MNEM)
-    CP   14
-    SBC  A,A
-    ADD  A,2
-    OR   A
-    RET
+    CALL AT_RNOPE            ; Require all three operand slots to be empty.
+    RET  C                   ; Keep the invalid-form result on any operand.
+    LD   A,(IX+EN_MNEM)     ; Reload the ordinal after the arity check.
+    CP   14                  ; Split one-byte and ED-prefixed core forms.
+    SBC  A,A                 ; Set A to $FF below 14, or zero otherwise.
+    ADD  A,2                 ; Convert that selector to an encoded length.
+    OR   A                   ; Clear carry and set flags from the length.
+    RET                      ; Return the one- or two-byte instruction length.
 .VRET:
 
 ; RET is either operand-free or takes one of the eight condition classes.
@@ -942,127 +942,127 @@ EN_LVEND EQU $
 ; All invalid forms return A=0 with carry set and publish no output.
 
 AT_INVAL:
-    XOR  A
-    SCF
-    RET
+    XOR  A                   ; Clear the length returned for an invalid form.
+    SCF                      ; Mark validation failure in carry.
+    RET                      ; Return without publishing encoded bytes.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Cascading operand-count checks: no operands, at most one, or at most two.
 
 AT_RNOPE:
-    LD   A,(IX+EN_OP0)
-    CP   EN_NONE
-    JR   NZ,AT_RBAD
+    LD   A,(IX+EN_OP0)      ; Read the first operand slot.
+    CP   EN_NONE             ; The sentinel means that the slot is empty.
+    JR   NZ,AT_RBAD          ; Reject any operand in this no-operand form.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Require operand slots one and two to be empty, allowing at most one operand.
 
 AT_ROOP:
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,AT_RBAD
+    LD   A,(IX+EN_OP1)      ; Read the second operand slot.
+    CP   EN_NONE             ; A one-operand form leaves this slot empty.
+    JR   NZ,AT_RBAD          ; Reject a second operand when one is disallowed.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Require operand slot two to be empty, allowing at most two operands.
 
 AT_RTOPE:
-    LD   A,(IX+EN_OP2)
-    CP   EN_NONE
-    JR   NZ,AT_RBAD
-    OR   A
-    RET
+    LD   A,(IX+EN_OP2)      ; Read the third and final operand slot.
+    CP   EN_NONE             ; Require the third operand slot to be empty.
+    JR   NZ,AT_RBAD          ; Reject a supplied third operand.
+    OR   A                   ; Clear carry to report valid operand count.
+    RET                      ; Return the successful arity check.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return the common invalid-form result with carry set.
 
 AT_RBAD:
-    XOR  A
-    SCF
-    RET
+    XOR  A                   ; Clear the length for an invalid operand count.
+    SCF                      ; Mark the arity check as failed.
+    RET                      ; Return the shared invalid-form result.
 
 ;@ROUTINE IN A OUT CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Carry set means ordinary eight-bit register B..L or A; class 6 is (HL), so it
 ; is excluded from this predicate despite sharing the hardware field range.
 
 EN_IR8:
-    CP   EN_MEMHL
-    RET  C
-    CP   EN_A
-    JR   Z,AT_PYES
-    CP   A
-    RET
+    CP   EN_MEMHL            ; Values below class six are B through L.
+    RET  C                   ; Accept those ordinary register classes.
+    CP   EN_A                ; Check the remaining ordinary register class.
+    JR   Z,AT_PYES           ; Accept A, but not the (HL) class at six.
+    CP   A                   ; Clear carry for every class not accepted above.
+    RET                      ; Return the predicate result in carry.
 
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Carry set means BC, DE, HL or SP.
 
 EN_IR16:
-    CP   EN_BC
-    JR   C,AT_PNO
-    CP   EN_SP+1
-    RET
+    CP   EN_BC               ; Reject classes below the first register pair.
+    JR   C,AT_PNO            ; Values below BC are not 16-bit pairs.
+    CP   EN_SP+1             ; Compare against the exclusive pair upper bound.
+    RET                      ; Carry accepts BC, DE, HL and SP.
 
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Preserve A while recognising IXH/IXL/IYH/IYL through their shared bit pattern.
 
 EN_IHIND:
-    PUSH BC
-    LD   C,A
-    AND  $F6
-    CP   EN_IXH
-    LD   A,C
-    POP  BC
-    JR   Z,AT_PYES
-    JR   AT_PNO
+    PUSH BC                  ; Preserve BC while C holds the original class.
+    LD   C,A                 ; Save the operand class before masking A.
+    AND  $F6                 ; Map all four index halves to one bit pattern.
+    CP   EN_IXH              ; Compare with the shared IXH pattern.
+    LD   A,C                 ; Restore the operand class for the caller.
+    POP  BC                  ; Restore the caller's BC value.
+    JR   Z,AT_PYES           ; Accept when the reduced pattern matched.
+    JR   AT_PNO              ; Return carry clear for every other class.
 
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Carry set means displacement-bearing (IX+d) or (IY+d).
 
 EN_IINDE:
-    CP   EN_IIX
-    JR   C,AT_PNO
-    CP   EN_IIY+1
-    RET
+    CP   EN_IIX              ; Reject classes below indexed IX memory.
+    JR   C,AT_PNO            ; Only IX+d and IY+d belong to this range.
+    CP   EN_IIY+1            ; Compare against the exclusive IY+d bound.
+    RET                      ; Carry is set only for the two indexed classes.
 
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; All eight condition classes, in hardware field order.
 
 EN_ICOND:
-    CP   EN_NZ
-    JR   C,AT_PNO
-    CP   EN_M+1
-    RET
+    CP   EN_NZ               ; Reject classes before the condition range.
+    JR   C,AT_PNO            ; NZ is the first encoded condition class.
+    CP   EN_M+1              ; Compare against the exclusive condition bound.
+    RET                      ; Carry accepts all eight Z80 conditions.
 
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; The four condition classes implemented by JR.
 
 EN_IRCON:
-    CP   EN_NZ
-    JR   C,AT_PNO
-    CP   EN_CC+1
-    RET
+    CP   EN_NZ               ; Reject classes before the JR condition range.
+    JR   C,AT_PNO            ; NZ is the first condition supported by JR.
+    CP   EN_CC+1             ; Stop after C, the last JR condition class.
+    RET                      ; Carry accepts NZ, Z, NC and C.
 
 ;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Enumerated bit-number classes BIT0..BIT7.
 
 EN_IBIND:
-    CP   EN_BIT0
-    JR   C,AT_PNO
-    CP   EN_BIT7+1
-    RET
+    CP   EN_BIT0             ; Reject classes below enumerated bit zero.
+    JR   C,AT_PNO            ; Only the eight bit-number classes are accepted.
+    CP   EN_BIT7+1           ; Compare against the exclusive bit-number bound.
+    RET                      ; Carry accepts BIT0 through BIT7.
 
 ;@ROUTINE IN A OUT CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return the common predicate result for a value outside the accepted range.
 
 AT_PNO:
-    CP   A
-    RET
+    CP   A                   ; Compare A with itself to clear carry.
+    RET                      ; Return the predicate's rejected result.
 
 ;@ROUTINE OUT CARRY CLOBBERS HALFCARRY
 ; Return the common predicate result for a value inside the accepted range.
 
 AT_PYES:
-    SCF
-    RET
+    SCF                      ; Set carry to mark the predicate as successful.
+    RET                      ; Return the accepted-class result.
 EN_VCEND:
 EN_RECBE:
 
