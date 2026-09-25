@@ -299,38 +299,38 @@ EN_RCBEG:
 ; position plus one is the public mnemonic ordinal.
 
 EN_RECOG:
-    LD   A,B
-    CP   5
-    JR   NC,.RNFOUND
-    LD   DE,EN_SCRAT
-    CALL EN_R40PK
-    RET  C
-    LD   IX,EN_TABLE
-    LD   B,EN_CNT
-    LD   C,1
+    LD   A,B                 ; Check the text length before packing it.
+    CP   5                   ; Four characters is the longest mnemonic.
+    JR   NC,.RNFOUND         ; Reject longer text without touching the table.
+    LD   DE,EN_SCRAT         ; Use private scratch for the packed name.
+    CALL EN_R40PK            ; Validate and pack the case-folded text.
+    RET  C                   ; Propagate an invalid length or character.
+    LD   IX,EN_TABLE         ; Point at the first three-byte mnemonic entry.
+    LD   B,EN_CNT            ; Compare against every supported mnemonic.
+    LD   C,1                 ; Entry zero represents mnemonic ordinal one.
 .RLOOP:
-    LD   A,(EN_SCRAT+0)
-    CP   (IX+0)
-    JR   NZ,.RNEXT
-    LD   A,(EN_SCRAT+1)
-    CP   (IX+1)
-    JR   NZ,.RNEXT
-    LD   A,(EN_SCRAT+3)
-    CP   (IX+2)
-    JR   NZ,.RNEXT
-    LD   A,C
-    OR   A
-    RET
+    LD   A,(EN_SCRAT+0)     ; Read the first packed word's low byte.
+    CP   (IX+0)              ; Compare it with this table entry.
+    JR   NZ,.RNEXT           ; Skip the remaining comparisons on mismatch.
+    LD   A,(EN_SCRAT+1)     ; Read the first packed word's high byte.
+    CP   (IX+1)              ; Compare the second byte of the packed name.
+    JR   NZ,.RNEXT           ; A mismatch rejects this candidate mnemonic.
+    LD   A,(EN_SCRAT+3)     ; Read the padded word's high byte.
+    CP   (IX+2)              ; Compare its stored high byte with the entry.
+    JR   NZ,.RNEXT           ; Try the next mnemonic if this byte differs.
+    LD   A,C                 ; The table position is the mnemonic ordinal.
+    OR   A                   ; Clear carry to report a successful match.
+    RET                      ; Return the ordinal in A.
 .RNEXT:
-    INC  IX
-    INC  IX
-    INC  IX
-    INC  C
-    DJNZ .RLOOP
+    INC  IX                  ; Move from the low to high byte of the entry.
+    INC  IX                  ; Move to the entry's distinguishing byte.
+    INC  IX                  ; Advance to the next three-byte entry.
+    INC  C                   ; Keep the ordinal aligned with the table row.
+    DJNZ .RLOOP              ; Check the remaining mnemonic entries.
 .RNFOUND:
-    XOR  A
-    SCF
-    RET
+    XOR  A                   ; Return zero when no mnemonic matches.
+    SCF                      ; Set carry to mark an unknown mnemonic.
+    RET                      ; Return the unrecognised-name result.
 EN_RCEND:
 EN_VCBEG:
 
@@ -340,36 +340,36 @@ EN_VCBEG:
 ; RET, EX, IM, RST, INC/DEC, stack, LD, I/O, bit, rotate, ALU and branch families.
 
 AT_DMNEM:
-    LD   B,A
-    CP   AT_MRET
-    JR   NC,.DMAPPED
-    XOR  A
-    JR   .DREADY
+    LD   B,A                 ; Preserve the mnemonic for the selected handler.
+    CP   AT_MRET             ; Core ordinals all use family zero.
+    JR   NC,.DMAPPED         ; Later ordinals need a family-table lookup.
+    XOR  A                   ; Select entry zero for a core instruction.
+    JR   .DREADY             ; Use the common address-table dispatch below.
 .DMAPPED:
-    SUB  AT_MRET
-    PUSH BC
-    LD   HL,EN_CENDS
-    LD   C,1
+    SUB  AT_MRET             ; Convert the ordinal to a zero-based offset.
+    PUSH BC                  ; Preserve the ordinal and caller's C register.
+    LD   HL,EN_CENDS         ; Point at exclusive ends of family ranges.
+    LD   C,1                 ; Begin at family one; core uses family zero.
 .DCLOOP:
-    CP   (HL)
-    JR   C,.DCREADY
-    INC  HL
-    INC  C
-    JR   .DCLOOP
+    CP   (HL)                ; Compare against this family's exclusive end.
+    JR   C,.DCREADY          ; Select the first range containing the offset.
+    INC  HL                  ; Advance to the next family boundary.
+    INC  C                   ; Advance the corresponding family index.
+    JR   .DCLOOP             ; Continue until a range contains the ordinal.
 .DCREADY:
-    LD   A,C
-    POP  BC
+    LD   A,C                 ; Use the matching family index for dispatch.
+    POP  BC                  ; Restore the original ordinal in B.
 .DREADY:
-    ADD  A,A
-    LD   L,A
-    LD   H,0
-    ADD  HL,DE
-    LD   E,(HL)
-    INC  HL
-    LD   D,(HL)
-    EX   DE,HL
-    LD   A,B
-    JP   (HL)
+    ADD  A,A                 ; Convert the family index to a word offset.
+    LD   L,A                 ; Place the offset in the low byte of HL.
+    LD   H,0                 ; Form the offset with a zero high byte.
+    ADD  HL,DE               ; Address the selected handler pointer.
+    LD   E,(HL)              ; Load the handler address's low byte.
+    INC  HL                  ; Advance to the high byte of that address.
+    LD   D,(HL)              ; Complete the 16-bit handler address in DE.
+    EX   DE,HL                ; Put the handler address in the jump register.
+    LD   A,B                 ; Restore the mnemonic ordinal for the handler.
+    JP   (HL)                ; Enter the selected family handler.
 EN_CENDS:
 
 ; Exclusive cumulative family-end offsets from AT_MRET.
