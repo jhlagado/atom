@@ -7,7 +7,8 @@ import { createIntegrationHarness, PATCH_KIND } from "./integration-support.mjs"
 import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createIntegrationHarness({ contracts: process.env.ATOM_INTEGRATION_CONTRACTS ?? "strict" });
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2e-memory.json", "utf8"));
+const integrationProof = JSON.parse(fs.readFileSync("proofs/phase-2e.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync(`proofs/${integrationProof.memoryProfile}`, "utf8"));
 const STATUS = Object.freeze({
   OK: 0,
   INVALID_FORM: 9,

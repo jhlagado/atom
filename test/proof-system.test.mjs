@@ -39,6 +39,14 @@ test("strict proof memory profile covers exactly 64 KiB without gaps or overlaps
   }
 });
 
+test("parser and integration proofs share their identical memory profile", () => {
+  const parserProof = JSON.parse(fs.readFileSync("proofs/phase-2c.json", "utf8"));
+  const integrationProof = JSON.parse(fs.readFileSync("proofs/phase-2e.json", "utf8"));
+
+  assert.equal(parserProof.memoryProfile, "parser-integration-memory.json");
+  assert.equal(integrationProof.memoryProfile, parserProof.memoryProfile);
+});
+
 test("generated valid corpus exactly matches the frozen AZM form census", () => {
   const cases = validCases();
   const counts = {};
