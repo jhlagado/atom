@@ -74,7 +74,7 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);
 
   const native = await loadNativeAtomCore();
-  const selfHost = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
+  const selfHost = JSON.parse(await fs.readFile("proofs/self-host.json", "utf8"));
   assert.equal(selfHost.native.codeAndTables, native.codeBytes);
   assert.equal(selfHost.native.linkedResidentExtent, native.residentExtentBytes);
   assert.equal(selfHost.native.physicalMarginBelow16KiB, 0x4000 - native.residentExtentBytes);

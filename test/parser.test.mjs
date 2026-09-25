@@ -8,7 +8,7 @@ import { createParserHarness, PARSER_STATUS } from "./parser-support.mjs";
 
 const h = await createParserHarness({ contracts: process.env.ATOM_PARSER_CONTRACTS ?? "strict" });
 const census = JSON.parse(fs.readFileSync("proofs/azm-form-census.json", "utf8"));
-const parserProof = JSON.parse(fs.readFileSync("proofs/phase-2c.json", "utf8"));
+const parserProof = JSON.parse(fs.readFileSync("proofs/parser.json", "utf8"));
 const memoryProfile = JSON.parse(fs.readFileSync(`proofs/${parserProof.memoryProfile}`, "utf8"));
 const valid = validCases();
 const invalid = invalidCases().filter(({ source }) => referenceRejects(source));
@@ -19,7 +19,7 @@ function resolve(value) {
   return h.symbols[value];
 }
 
-test("Phase 2c memory profile covers exactly 64 KiB without gaps or overlap", () => {
+test("parser memory profile covers exactly 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),

@@ -7,7 +7,7 @@ import { createStatementsHarness } from "./statements-support.mjs";
 import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createStatementsHarness();
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2g-memory.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync("proofs/statements-memory.json", "utf8"));
 const STATUS = Object.freeze({
   OK: 0,
   NOT_FOUND: 1,
@@ -33,7 +33,7 @@ function resolve(value) {
   return h.symbols[value];
 }
 
-test("Phase 2g memory profile covers exactly 64 KiB without gaps or overlap", () => {
+test("statements memory profile covers exactly 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),
@@ -61,7 +61,7 @@ test("published mnemonic continuation preserves the existing parser record", () 
   const parsed = h.parsePublished(item.source);
   assert.equal(parsed.carry, 0);
   assert.deepEqual(h.record(), Array.from(item.record));
-  const execution = JSON.parse(fs.readFileSync("proofs/phase-2g.json", "utf8")).executionBudgets;
+  const execution = JSON.parse(fs.readFileSync("proofs/statements.json", "utf8")).executionBudgets;
   for (const [entry, observed] of Object.entries(h.statistics)) {
     assert.equal(observed.instructions, execution[entry].measuredInstructions, `${entry}: measured instruction drift`);
     assert.equal(observed.cycles, execution[entry].measuredCycles, `${entry}: measured cycle drift`);
@@ -599,8 +599,8 @@ test("directive output helpers return directly and enforce exact capacities", ()
   assert.deepEqual(h.outputState(), { cursor: 0x5000, remaining: 1 });
 });
 
-test("Phase 2g measured public-entry execution matches the pinned observations", () => {
-  const execution = JSON.parse(fs.readFileSync("proofs/phase-2g.json", "utf8")).executionBudgets;
+test("statements measured public-entry execution matches the pinned observations", () => {
+  const execution = JSON.parse(fs.readFileSync("proofs/statements.json", "utf8")).executionBudgets;
   for (const [entry, budget] of Object.entries(execution)) {
     const observed = h.statistics[entry];
     assert.ok(observed, `${entry}: no runtime observation`);

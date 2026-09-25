@@ -2,7 +2,7 @@
   "name": "Atom authoritative streaming output correctness proof",
   "source": "../src/z80/atom.asm",
   "nativeCore": "../assets/native-core.json",
-  "memoryProfile": "phase-2f-memory.json",
+  "memoryProfile": "output-memory.json",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 128,

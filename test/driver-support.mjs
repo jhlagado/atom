@@ -14,7 +14,7 @@ const writeWord = (memory, address, value) => {
   memory[address] = value & 0xff;
   memory[address + 1] = value >>> 8;
 };
-const manifest = JSON.parse(fs.readFileSync("proofs/phase-3.json", "utf8"));
+const manifest = JSON.parse(fs.readFileSync("proofs/driver.json", "utf8"));
 
 const PROOF_SYMBOLS = Object.freeze({
   AtomDriverProofAdapterWorkspaceStart: 0x6000,

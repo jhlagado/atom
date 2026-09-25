@@ -7,7 +7,7 @@ import { createOutputHarness } from "./output-support.mjs";
 import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createOutputHarness();
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2f-memory.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync("proofs/output-memory.json", "utf8"));
 
 function resolve(value) {
   if (typeof value === "number") return value;
@@ -15,7 +15,7 @@ function resolve(value) {
   return h.symbols[value];
 }
 
-test("Phase 2f memory profile covers exactly 64 KiB without gaps or overlap", () => {
+test("output memory profile covers exactly 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),

@@ -1,5 +1,5 @@
 {
-  "authority": "Frozen AZM instruction-form census for Atom Phase 1",
+  "authority": "Frozen AZM instruction-form census used to verify encoder coverage",
   "caseCount": 3445,
   "mnemonicCount": 69,
   "canonicalSourceRecordSha256": "6f497f3f3e5b2d08a518dc3042390a9f6b0fa5ff8313f0a9b6e6024bdd3293fb",

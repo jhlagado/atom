@@ -276,8 +276,8 @@ test("the native driver can begin a clean generation after an aborted one", () =
   assert.equal(h.lifecycle().committed, 1);
 });
 
-test("Phase 3 memory profile covers exactly 64 KiB without gaps or overlap", () => {
-  const profile = JSON.parse(fs.readFileSync("proofs/phase-3-memory.json", "utf8"));
+test("driver memory profile covers exactly 64 KiB without gaps or overlap", () => {
+  const profile = JSON.parse(fs.readFileSync("proofs/driver-memory.json", "utf8"));
   const resolve = (value) => typeof value === "number" ? value : h.symbols[value];
   const regions = profile.regions.map((region) => ({
     ...region,
@@ -298,8 +298,8 @@ test("Phase 3 memory profile covers exactly 64 KiB without gaps or overlap", () 
   }
 });
 
-test("Phase 3 measured public-entry execution matches pinned observations", () => {
-  const execution = JSON.parse(fs.readFileSync("proofs/phase-3.json", "utf8")).executionBudgets;
+test("driver measured public-entry execution matches pinned observations", () => {
+  const execution = JSON.parse(fs.readFileSync("proofs/driver.json", "utf8")).executionBudgets;
   for (const [entry, budget] of Object.entries(execution)) {
     const observed = h.statistics[entry];
     assert.ok(observed, `${entry}: no runtime observation`);

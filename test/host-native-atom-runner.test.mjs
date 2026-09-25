@@ -124,7 +124,7 @@ test("the desktop host resolves, masks, and executes one project through native 
   assert.equal(result.execution.finalSp, 0xfeff);
   assert.equal(result.core.codeBytes, 11_686);
   assert.equal(result.core.residentExtentBytes, 12_400);
-  const proof = JSON.parse(await fs.readFile("proofs/phase-4.json", "utf8"));
+  const proof = JSON.parse(await fs.readFile("proofs/host-runner.json", "utf8"));
   assert.equal(
     result.execution.instructions,
     proof.integrationExecution.measuredInstructions,
@@ -711,10 +711,10 @@ test("the linked service entries fail closed when host interception is absent", 
   }
 });
 
-test("the Phase 4 host memory profile covers exactly 64 KiB", async () => {
+test("the host runner host memory profile covers exactly 64 KiB", async () => {
   const core = await loadNativeAtomCore();
   const profile = JSON.parse(
-    await fs.readFile("proofs/phase-4-memory.json", "utf8"),
+    await fs.readFile("proofs/host-runner-memory.json", "utf8"),
   );
   const resolve = (value) =>
     typeof value === "number" ? value : core.symbols[value];

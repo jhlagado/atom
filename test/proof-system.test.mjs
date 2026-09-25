@@ -6,7 +6,7 @@ import test from "node:test";
 import { validCases } from "./cases.mjs";
 import { createHarness } from "./support.mjs";
 
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-1-memory.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync("proofs/encoder-memory.json", "utf8"));
 const formCensus = JSON.parse(fs.readFileSync("proofs/azm-form-census.json", "utf8"));
 const harness = await createHarness();
 
@@ -40,8 +40,8 @@ test("strict proof memory profile covers exactly 64 KiB without gaps or overlaps
 });
 
 test("parser and integration proofs share their identical memory profile", () => {
-  const parserProof = JSON.parse(fs.readFileSync("proofs/phase-2c.json", "utf8"));
-  const integrationProof = JSON.parse(fs.readFileSync("proofs/phase-2e.json", "utf8"));
+  const parserProof = JSON.parse(fs.readFileSync("proofs/parser.json", "utf8"));
+  const integrationProof = JSON.parse(fs.readFileSync("proofs/integration.json", "utf8"));
 
   assert.equal(parserProof.memoryProfile, "parser-integration-memory.json");
   assert.equal(integrationProof.memoryProfile, parserProof.memoryProfile);

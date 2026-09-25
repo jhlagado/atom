@@ -6,7 +6,7 @@ import { M } from "../src/host/abi.mjs";
 import { createTokenizerHarness, TOKEN, TOKEN_STATUS } from "./tokenizer-support.mjs";
 
 const h = await createTokenizerHarness();
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2b-memory.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync("proofs/tokenizer-memory.json", "utf8"));
 
 function resolve(value) {
   if (typeof value === "number") return value;
@@ -19,7 +19,7 @@ function first(source, options) {
   return h.next(`first token of ${JSON.stringify(String(source).slice(0, 40))}`);
 }
 
-test("Phase 2b memory profile covers exactly 64 KiB without gaps or overlap", () => {
+test("tokenizer memory profile covers exactly 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),
@@ -309,7 +309,7 @@ test("raw string length accepts 254 and 255 bytes and rejects 256 atomically", (
   assert.deepEqual(result.record.bytes, before);
 });
 
-test("punctuation is complete for the Phase 2b expression surface", () => {
+test("punctuation is complete for the tokenizer expression surface", () => {
   const source = ", : ( ) + - * / & ^ | ~ << >> $ %\n";
   const { tokens, error } = h.tokenize(source);
   assert.equal(error, undefined);

@@ -1,7 +1,7 @@
 {
-  "name": "Atom Phase 1 encoder correctness proof",
+  "name": "Atom Z80 instruction encoder proof",
   "source": "../src/z80/atom.asm",
-  "memoryProfile": "phase-1-memory.json",
+  "memoryProfile": "encoder-memory.json",
   "contracts": "strict",
   "executionBudgets": {
     "AtomFormLength": {

@@ -10,7 +10,7 @@ const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
 const word = (memory, address) => memory[address] | (memory[address + 1] << 8);
-const manifest = JSON.parse(fs.readFileSync("proofs/phase-2f.json", "utf8"));
+const manifest = JSON.parse(fs.readFileSync("proofs/output.json", "utf8"));
 
 const PROOF_SYMBOLS = Object.freeze({
   AtomOutputProofAdapterWorkspaceStart: 0x6000,

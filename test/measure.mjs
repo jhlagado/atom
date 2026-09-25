@@ -31,13 +31,6 @@ const result = {
     nativeCoreSha256: core.artifactSha256,
     historicalReference: "test/fixtures/historical-assembly.json",
   },
-  historicalPhase1Authority: {
-    repository: "/Users/johnhardy/projects/debug80",
-    branch: "main",
-    head: "b4046badd29b1dd1bc146029728bacaa5e5fe603",
-    azmTree: "7889245c380334768f62805e73c13e979aa9f8c8",
-    runtimeTree: "a921abc89dcbd88211dd008e705b69d646cfb9bb",
-  },
   resident: {
     total: extent(s, "AtomEncoderCoreStart", "AtomEncoderCoreEnd"),
     code: extent(s, "AtomEncoderCodeStart", "AtomEncoderCodeEnd"),

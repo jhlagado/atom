@@ -2,7 +2,7 @@
   "name": "Atom authoritative symbol and pending-reference correctness proof",
   "source": "../src/z80/atom.asm",
   "nativeCore": "../assets/native-core.json",
-  "memoryProfile": "phase-2a-memory.json",
+  "memoryProfile": "symbols-memory.json",
   "proofCapacity": {
     "symbolRecords": 8,
     "pendingRecords": 4

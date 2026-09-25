@@ -10,7 +10,7 @@ const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
 const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
-const manifest = JSON.parse(fs.readFileSync("proofs/phase-2d.json", "utf8"));
+const manifest = JSON.parse(fs.readFileSync("proofs/expression.json", "utf8"));
 
 const PROOF_SYMBOLS = Object.freeze({
   AtomExpressionProofSourceStart: 0x8000,

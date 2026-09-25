@@ -2,7 +2,7 @@
   "name": "Atom authoritative streaming tokenizer correctness proof",
   "source": "../src/z80/atom.asm",
   "nativeCore": "../assets/native-core.json",
-  "memoryProfile": "phase-2b-memory.json",
+  "memoryProfile": "tokenizer-memory.json",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 512,

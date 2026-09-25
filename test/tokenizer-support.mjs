@@ -10,7 +10,7 @@ const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
 const RETURN_SENTINEL = 0x80fe;
 const pair = (high, low) => ((high & 0xff) << 8) | (low & 0xff);
-const proofManifest = JSON.parse(fs.readFileSync("proofs/phase-2b.json", "utf8"));
+const proofManifest = JSON.parse(fs.readFileSync("proofs/tokenizer.json", "utf8"));
 
 const PROOF_SYMBOLS = Object.freeze({
   AtomTokenizerProofSourceStart: 0x8000,

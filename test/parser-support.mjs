@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 import { createIntegrationHarness } from "./integration-support.mjs";
 
-const manifest = JSON.parse(fs.readFileSync("proofs/phase-2c.json", "utf8"));
+const manifest = JSON.parse(fs.readFileSync("proofs/parser.json", "utf8"));
 
 export const PARSER_STATUS = Object.freeze({
   OK: 0,

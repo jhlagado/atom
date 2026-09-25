@@ -1,5 +1,5 @@
 {
-  "name": "Atom Phase 4 Mac host/native integration proof",
+  "name": "Atom host runner integration proof",
   "source": "../src/z80/atom.asm",
   "contracts": "strict",
   "targetCpu": "Zilog Z80",

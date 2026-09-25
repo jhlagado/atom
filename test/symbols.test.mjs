@@ -7,8 +7,8 @@ import { createSymbolHarness } from "./symbol-support.mjs";
 
 const h = await createSymbolHarness();
 const s = h.symbols;
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2a-memory.json", "utf8"));
-const proofManifest = JSON.parse(fs.readFileSync("proofs/phase-2a.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync("proofs/symbols-memory.json", "utf8"));
+const proofManifest = JSON.parse(fs.readFileSync("proofs/symbols.json", "utf8"));
 
 const STATUS = Object.freeze({
   OK: 0,
@@ -34,7 +34,7 @@ function resolve(value) {
   return s[value];
 }
 
-test("Phase 2a memory profile covers all 64 KiB without gaps or overlap", () => {
+test("symbols memory profile covers all 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),
@@ -295,7 +295,7 @@ test("defined private symbols cannot be evicted with stale pending entries", () 
   assert.equal(h.advanceScope().status, STATUS.OK);
 });
 
-test("measured public-entry execution remains inside Phase 2a budgets", () => {
+test("measured public-entry execution remains inside symbols budgets", () => {
   for (const [entry, budget] of Object.entries(proofManifest.executionBudgets)) {
     const observed = h.statistics[entry];
     assert.ok(observed, `${entry}: no runtime observation`);

@@ -7,7 +7,7 @@ import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const STACK_RETURN_SLOT = 0xfefe;
 const RETURN_SENTINEL = 0x80fe;
-const proofManifest = JSON.parse(fs.readFileSync("proofs/phase-1.json", "utf8"));
+const proofManifest = JSON.parse(fs.readFileSync("proofs/encoder.json", "utf8"));
 const PROOF_SYMBOLS = Object.freeze({
   AtomHarnessInputBefore: 0x7fff,
   AtomHarnessInput: 0x8000,

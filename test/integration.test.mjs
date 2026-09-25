@@ -7,7 +7,7 @@ import { createIntegrationHarness, PATCH_KIND } from "./integration-support.mjs"
 import { referenceBytes } from "./reference-fixtures.mjs";
 
 const h = await createIntegrationHarness({ contracts: process.env.ATOM_INTEGRATION_CONTRACTS ?? "strict" });
-const integrationProof = JSON.parse(fs.readFileSync("proofs/phase-2e.json", "utf8"));
+const integrationProof = JSON.parse(fs.readFileSync("proofs/integration.json", "utf8"));
 const memoryProfile = JSON.parse(fs.readFileSync(`proofs/${integrationProof.memoryProfile}`, "utf8"));
 const STATUS = Object.freeze({
   OK: 0,
@@ -25,7 +25,7 @@ function resolve(value) {
   return h.symbols[value];
 }
 
-test("Phase 2e memory profile covers exactly 64 KiB without gaps or overlap", () => {
+test("integration memory profile covers exactly 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),

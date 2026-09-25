@@ -6,7 +6,7 @@ import { referenceBytes } from "./reference-fixtures.mjs";
 import { createExpressionHarness, EXPRESSION } from "./expression-support.mjs";
 
 const h = await createExpressionHarness({ contracts: process.env.ATOM_EXPRESSION_CONTRACTS ?? "strict" });
-const memoryProfile = JSON.parse(fs.readFileSync("proofs/phase-2d-memory.json", "utf8"));
+const memoryProfile = JSON.parse(fs.readFileSync("proofs/expression-memory.json", "utf8"));
 
 function resolve(value) {
   if (typeof value === "number") return value;
@@ -14,7 +14,7 @@ function resolve(value) {
   return h.symbols[value];
 }
 
-test("Phase 2d memory profile covers exactly 64 KiB without gaps or overlap", () => {
+test("expression memory profile covers exactly 64 KiB without gaps or overlap", () => {
   const regions = memoryProfile.regions.map((region) => ({
     ...region,
     startAddress: resolve(region.start),
