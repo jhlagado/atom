@@ -9,15 +9,14 @@ const executable = fileURLToPath(new URL("../bin/atom.mjs", import.meta.url));
 const activeDocuments = [
   "README.md",
   "docs/index.md",
-  "docs/architecture.md",
-  "docs/assembly-style.md",
   "docs/atom-object-format.md",
   "docs/azm-to-atom.md",
+  "docs/codebase.md",
   "docs/command-line.md",
   "docs/cpm22.md",
   "docs/language-reference.md",
-  "docs/limits.md",
-  "docs/release-checklist.md",
+  "docs/maintenance.md",
+  "docs/programming-api.md",
 ];
 
 function run(arguments_) {
@@ -73,12 +72,11 @@ test("desktop CLI help and package documentation describe the same contract", as
   }
 
   assert.match(documents.get("README.md"), /With no explicit output, Atom\s+writes `build\/main\.bin`/);
-  assert.match(commandGuide, /Output selection is affirmative/);
-  assert.match(commandGuide, /There is no\s+default bundle of artifacts/);
+  assert.match(commandGuide, /Atom writes only the files you name/);
 });
 
 test("native CP/M command forms remain explicit in package documentation", async () => {
-  const documents = await readDocuments(["docs/command-line.md", "docs/cpm22.md"]);
+  const documents = await readDocuments(["docs/cpm22.md"]);
   for (const [filename, source] of documents) {
     for (const command of ["ATOM", "ATOM SOURCE", "ATOM SOURCE OUTPUT"]) {
       assert.ok(source.includes(command), `${filename} omits ${command}`);
@@ -98,5 +96,5 @@ test("active documentation uses platform terms rather than machine-specific desk
     assert.doesNotMatch(source, /\bspell(?:ing|ings|ed)\b/i, `${filename} uses imprecise format terminology`);
   }
   await assert.rejects(fs.access("docs/mac-host-integration.md"));
-  await fs.access("docs/architecture.md");
+  await fs.access("docs/codebase.md");
 });

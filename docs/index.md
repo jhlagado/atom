@@ -1,24 +1,21 @@
 # Atom documentation
 
-Start with the [command-line guide](command-line.md) to assemble a program, or
-the [language reference](language-reference.md) for Atom syntax.
+Use the [command-line guide](command-line.md) to assemble a program. The
+[language reference](language-reference.md) defines the source format.
 
-## Using Atom
+## User guides
 
 - [Command line](command-line.md)
 - [Language reference](language-reference.md)
-- [Native CP/M program](cpm22.md)
-- [Limits and capacities](limits.md)
-- [Converting existing AZM source](azm-to-atom.md)
+- [CP/M program](cpm22.md)
+- [Programming API](programming-api.md)
 
-## Understanding Atom
+## Technical references
 
-- [Architecture](architecture.md)
 - [Object format](atom-object-format.md)
-- [Engineering manual](codebase/index.md)
+- [Codebase guide](codebase.md)
+- [Converting AZM source](azm-to-atom.md)
 
-## Maintaining Atom
+## Maintenance
 
-- [Assembly commentary and layout](assembly-style.md)
-- [Release checklist](release-checklist.md)
-
+- [Development and release guide](maintenance.md)

@@ -1,17 +1,17 @@
 # Atom language reference
 
-Atom source is case-insensitive. Symbol matching ignores ASCII letter case;
-the same rule applies to instructions, registers, directives,
-hexadecimal digits, and host-preprocessor names. A semicolon begins a comment.
-One source line contains at most one label, equate, directive, or instruction,
+Atom source is case-insensitive. Symbol matching ignores ASCII letter case.
+The same rule applies to instructions, registers, directives,
+hexadecimal digits and host-preprocessor names. A semicolon begins a comment.
+One source line contains at most one label, equate, directive or instruction,
 although a label may precede an instruction or data directive on the same line.
 
 ## Names and scope
 
 An assembler name begins with an ASCII letter or underscore and continues with
-ASCII letters, digits, or underscores. A global name contains one through eight
+ASCII letters, digits or underscores. A global name contains one through eight
 characters. A private name starts with `.` and contains one through eight
-significant characters after that prefix. Names are exact RADIX-40 values;
+significant characters after that prefix. Names are exact RADIX-40 values.
 Atom rejects an overlength name instead of truncating or hashing it.
 
 ```asm
@@ -24,7 +24,7 @@ NEXT:
 A global label starts a new private scope. Private symbols from the previous
 scope are then evicted. Atom reports an error if one of them still has an
 unresolved reference. A private label requires a preceding global label, can
-cross a source-part boundary, and remains visible until the next global label.
+cross a source-part boundary and remains visible until the next global label.
 
 `NAME EQU EXPRESSION` and `NAME: EQU EXPRESSION` declare a resolved constant
 without changing private scope. The colon is optional and has no label effect.
@@ -68,21 +68,21 @@ unary + - ~
 parentheses and values
 ```
 
-Division truncates toward zero; remainder has the dividend's sign. Shift counts
+Division truncates toward zero. Remainder has the dividend's sign. Shift counts
 range from 0 through 23. Concrete evaluation uses signed 24-bit intermediates
 and accepts a final word-domain value from -32,768 through 65,535.
 
 A forward reference must fit Atom's stored affine form: one symbol with a
-constant addend from -128 through 127. `TARGET`, `TARGET+5`, `5+TARGET`, and
+constant addend from -128 through 127. `TARGET`, `TARGET+5`, `5+TARGET` and
 `TARGET-(2*3)` qualify. Two unresolved symbols, multiplication of an unresolved
-symbol, and unary negation of an unresolved symbol do not.
+symbol and unary negation of an unresolved symbol do not.
 
 `LOW(EXPRESSION)` returns bits 0–7 and `HIGH(EXPRESSION)` returns bits 8–15.
 Concrete expressions may nest these functions. A forward byte function must
 be the outermost operation and may retain one affine symbol, as in
 `HIGH(TARGET+5)`. Further arithmetic such as `LOW(TARGET)+1` is rejected.
 Forward byte functions are valid in fixed immediate or absolute fields and in
-`DB` or `DW`; they are rejected for relative branches and IX/IY displacements,
+`DB` or `DW`. They are rejected for relative branches and IX/IY displacements,
 whose range calculation cannot be retained in the compact pending record.
 `LOW` and `HIGH` remain legal symbol names when they are not followed by `(`.
 
@@ -92,9 +92,9 @@ Atom accepts the complete Z80 instruction set, including CB, ED, DD and FD
 encodings, IX/IY displacement forms, index-half registers and the undocumented
 `SLL` operation with the `SLS` alias.
 
-Branch width is explicit. Atom never promotes `JR` to `JP`; a relative target
+Branch width is explicit. Atom never promotes `JR` to `JP`. A relative target
 outside -128 through 127 is an error. Enumerated operands are also checked:
-`RST` accepts only multiples of eight from 0 through 56, and `IM` accepts 0, 1,
+`RST` accepts only multiples of eight from 0 through 56 and `IM` accepts 0, 1,
 or 2.
 
 Instruction values use these domains:
@@ -105,9 +105,9 @@ Instruction values use these domains:
 | IX/IY displacement | -128 through 127 |
 | `JR` or `DJNZ` target | -128 through 127 bytes from the end of the instruction |
 | 16-bit immediate or absolute address | -32,768 through 65,535 |
-| `BIT`, `RES`, or `SET` index | 0 through 7 |
-| `RST` vector | 0, 8, 16, 24, 32, 40, 48, or 56 |
-| `IM` mode | 0, 1, or 2 |
+| `BIT`, `RES` or `SET` index | 0 through 7 |
+| `RST` vector | 0, 8, 16, 24, 32, 40, 48 or 56 |
+| `IM` mode | 0, 1 or 2 |
 
 Negative 16-bit values retain their two's-complement word encoding. Byte-sized
 instruction operands do not truncate: `LD A,$100` is an error. `DB` has the
@@ -115,7 +115,7 @@ separate truncating rule described below.
 
 The DD/FD validation follows the processor rather than treating index halves as
 ordinary H and L replacements. For example, `LD A,IXH` and `LD IXH,IXL` are
-valid, `LD IXH,H` is not, and the H in `LD H,(IX+1)` is the real H register.
+valid, `LD IXH,H` is not and the H in `LD H,(IX+1)` is the real H register.
 
 ## Assembler directives
 
@@ -144,12 +144,12 @@ ISTR "TOKEN"
   patches.
 - `DW` emits comma-separated expressions as little-endian words. Forward
   affine expressions produce word patches. Strings are not accepted.
-- `DS COUNT` reserves uninitialized storage. `DS COUNT,FILL` emits initialized
+- `DS COUNT` reserves uninitialised storage. `DS COUNT,FILL` emits initialised
   fill bytes. Both expressions must already be resolved.
-- `ALIGN BOUNDARY` emits initialized zero bytes up to the next address divisible
-  by a resolved positive boundary. An already aligned address emits nothing;
-  the boundary need not be a power of two.
-- `INCBIN "PATH"` emits the complete binary file as initialized bytes. The path
+- `ALIGN BOUNDARY` emits initialised zero bytes up to the next address divisible
+  by a resolved positive boundary. An already aligned address emits nothing.
+  The boundary need not be a power of two.
+- `INCBIN "PATH"` emits the complete binary file as initialised bytes. The path
   is relative to the source file containing the directive and must remain
   inside the project root. Paths use ASCII. The Node host snapshots the file
   before native assembly. One binary may contain from zero through 65,535
@@ -160,7 +160,7 @@ ISTR "TOKEN"
   no bytes.
 
 In `DB` and `DW`, `$` is reevaluated at the address of each list item. Strings
-decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\`, and `\xHH` to one byte.
+decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\` and `\xHH` to one byte.
 
 ## Host directives
 
@@ -177,9 +177,9 @@ The Node host consumes preprocessing directives before the Z80 assembler runs:
 
 `%DEFINE` binds one immutable 16-bit preprocessor value. It does not substitute
 text and does not declare an assembler symbol. Source definitions are allowed
-only in the entry file's leading header; included files receive the frozen
+only in the entry file's leading header. Included files receive the frozen
 definition environment. Command-line `-DNAME[=value]` definitions behave the
-same way, and a duplicate name is an error.
+same way. A duplicate name is an error.
 
 `%INCLUDE` is import-once dependency discovery, not C-style textual inclusion.
 It is allowed only in a part's leading header. Dependencies are assembled once,
@@ -190,17 +190,17 @@ Body `%IF` blocks may select source lines but cannot include files.
 The host replaces directives and inactive lines with spaces while preserving
 every CR and LF byte. The native assembler therefore receives no `%` directive
 but can still report positions in the original source. `%` remains available
-for a binary literal when followed by `0` or `1`, and as remainder otherwise.
+for a binary literal when followed by `0` or `1` and as remainder otherwise.
 
 The native CP/M profile implements leading `%INCLUDE` only. It does not parse
-`%DEFINE`, conditional directives, or `INCBIN`.
+`%DEFINE`, conditional directives or `INCBIN`.
 
 ## Not supported
 
 Atom does not currently implement macros, op expansion, automatic branch
 promotion, dotted directives, typed layout, modules or imports with
 namespace semantics, repeated textual inclusion, string-valued equates,
-forward equates, or banked output. Filesystem work, dependency resolution,
-conditional assembly, listing generation, D8 maps, Intel HEX, and artifact
+forward equates or banked output. Filesystem work, dependency resolution,
+conditional assembly, listing generation, D8 maps, Intel HEX and artifact
 publication are host or operating-adapter services rather than resident
 assembler features.

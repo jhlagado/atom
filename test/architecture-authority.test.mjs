@@ -6,24 +6,20 @@ const document = (name) =>
   fs.readFileSync(new URL(`../docs/${name}`, import.meta.url), "utf8");
 
 test("Atom owns its portable architecture boundary", () => {
-  const architecture = document("architecture.md");
+  const architecture = document("codebase.md");
 
-  assert.match(architecture, /This document defines Atom's ownership/);
-  assert.match(architecture, /native Z80 assembler inside a host-managed build/);
-  assert.match(architecture, /AtomSourceReadByte/);
-  assert.match(architecture, /Debug80 Runtime/);
-  assert.match(architecture, /Filesystem access,[\s\S]*Streaming tokenization/);
+  assert.match(architecture, /Z80 assembler core and the operating code around it/);
+  assert.match(architecture, /Host responsibilities[\s\S]*Z80 responsibilities/);
+  assert.match(architecture, /same core on the processor/);
+  assert.match(architecture, /Debug80/);
 });
 
 test("source preparation has no serialized ordering format", () => {
-  const preparation = fs.readFileSync(
-    new URL("../docs/codebase/02-host-source-preparation.md", import.meta.url),
-    "utf8",
-  );
+  const preparation = document("codebase.md");
 
-  assert.match(preparation, /preparation does not write an\s+intermediate file/);
-  assert.match(preparation, /at most 255\s+parts/);
-  assert.match(preparation, /deterministic depth-first postorder/);
+  assert.match(preparation, /depth-first postorder/);
+  assert.match(preparation, /Every file remains a distinct source part/);
+  assert.doesNotMatch(preparation, /source plan|manifest/i);
 });
 
 test("public Atom reference docs avoid historical proof vocabulary", () => {
@@ -35,12 +31,9 @@ test("public Atom reference docs avoid historical proof vocabulary", () => {
 });
 
 test("desktop integration uses the standalone package boundary", () => {
-  const integration = fs.readFileSync(
-    new URL("../docs/codebase/04-host-execution-artifacts-and-interfaces.md", import.meta.url),
-    "utf8",
-  );
+  const integration = document("programming-api.md");
 
-  assert.match(integration, /`assembleAtomProject\(\)` is the complete filesystem-to-generation entry/);
-  assert.match(integration, /A tool such as Debug80 can import `atom-z80`/);
+  assert.match(integration, /import \{ assembleAtomProject, renderAtomArtifacts \} from "atom-z80"/);
+  assert.match(integration, /Import these functions from `atom-z80`/);
   assert.doesNotMatch(integration, /packages\/atom|node_modules\/atom-z80/);
 });

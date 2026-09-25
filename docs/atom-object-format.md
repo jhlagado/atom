@@ -2,7 +2,7 @@
 
 Atom uses the NOBJ append-only record model but does not claim conformance with
 Nucleus NOBJ 0.1. The Nucleus `MAP` describes compiler runtime vectors,
-initialized storage, BSS, and stack layout. An assembler cannot infer those
+initialised storage, BSS and stack layout. An assembler cannot infer those
 properties from an arbitrary Z80 image. Atom therefore uses a distinct minor
 version and flat map revision.
 
@@ -14,7 +14,7 @@ BEGIN IMAGE* PATCH* MAP COMMIT EOF
 ```
 
 The kinds retain the Nucleus assignments: `BEGIN=$01`, `IMAGE=$02`,
-`PATCH=$03`, `MAP=$04`, and `COMMIT=$05`.
+`PATCH=$03`, `MAP=$04` and `COMMIT=$05`.
 
 ## BEGIN
 
@@ -34,13 +34,13 @@ The 15-byte payload has the common NOBJ shape:
 
 ## IMAGE and PATCH
 
-Both payloads begin with bank `u8`, address `u16`, and one or more bytes. Atom
+Both payloads begin with bank `u8`, address `u16` and one or more bytes. Atom
 uses bank zero. IMAGE records retain assembly order and have monotonically
 increasing, non-overlapping extents. PATCH records contain final replacement
 bytes and retain symbol-resolution order. A PATCH carries no symbol name or
 relocation expression.
 
-An assembly with no initialized byte may contain no IMAGE record. `usedLength`
+An assembly with no initialised byte may contain no IMAGE record. `usedLength`
 still includes the highest `ORG` or uninitialized `DS` extent.
 
 ## Flat MAP
@@ -64,9 +64,9 @@ storage semantics.
 ## COMMIT
 
 The seven-byte payload contains total record count `u16`, entry bank `u8`,
-entry address `u16`, and CRC `u16`. CRC-16/CCITT-FALSE uses polynomial `$1021`,
-initial value `$FFFF`, no reflection, and no final XOR. It covers every byte
+entry address `u16` and CRC `u16`. CRC-16/CCITT-FALSE uses polynomial `$1021`,
+initial value `$FFFF`, no reflection and no final XOR. It covers every byte
 through the high byte of the COMMIT entry address and excludes the stored CRC.
 
 `parseAtomNobj` validates framing, profile version, record order, record count,
-map revision, and CRC before returning metadata.
+map revision and CRC before returning metadata.

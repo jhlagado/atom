@@ -14,7 +14,7 @@ azm-to-atom source.asm
 ```
 
 The default output is `source.atom.asm`. An existing output file is never
-overwritten. Choose another destination with `--output`, or inspect the result
+overwritten. Choose another destination with `--output` or inspect the result
 without creating a file:
 
 ```sh
@@ -24,7 +24,7 @@ azm-to-atom --stdout source/main.asm
 
 The converter reads the complete input before writing anything. A failed
 conversion therefore cannot leave a partial `.asm` file. Command misuse
-returns status 2, a conversion or filesystem failure returns status 1, and a
+returns status 2, a conversion or filesystem failure returns status 1 and a
 successful conversion returns status 0.
 
 Diagnostics name the AZM input line and column:
@@ -37,15 +37,15 @@ source/main.asm:18:1: AZM directive .INCLUDE has no Atom equivalent
 
 The converter handles:
 
-- the complete Z80 instruction syntax shared by AZM and Atom;
-- AZM underscore locals, translated to Atom dot-prefixed private labels;
-- `.ORG`, `.DB`, `.DW`, `.DS`, `.ALIGN`, `.CSTR`, `.PSTR`, and `.ISTR`,
-  translated to Atom's bare directives;
-- dotted or alias `EQU`, including the common colon form;
-- `LSB()` and `MSB()`, translated to `LOW()` and `HIGH()`;
-- `0X` and `0B` numeric prefixes, translated to `$` and `%`;
-- Intel `H` and `B` suffixes without alteration;
-- `.ROUTINE` and `.EXPECTOUT`, retained as Atom proof annotations; and
+- the complete Z80 instruction syntax shared by AZM and Atom
+- AZM underscore locals, translated to Atom dot-prefixed private labels
+- `.ORG`, `.DB`, `.DW`, `.DS`, `.ALIGN`, `.CSTR`, `.PSTR` and `.ISTR`,
+  translated to Atom's bare directives
+- dotted or alias `EQU`, including the common colon form
+- `LSB()` and `MSB()`, translated to `LOW()` and `HIGH()`
+- `0X` and `0B` numeric prefixes, translated to `$` and `%`
+- Intel `H` and `B` suffixes without alteration
+- `.ROUTINE` and `.EXPECTOUT`, retained as Atom proof annotations
 - a final `.END`, which is removed because Atom consumes the complete source
   stream.
 
@@ -73,7 +73,7 @@ START:
 ```
 
 Symbol names are checked during conversion. Atom's eight-character global
-and private-name limits are enforced, and declarations that differ only by
+and private-name limits are enforced. Declarations that differ only by
 case are rejected. An AZM local must follow a global label. Because Atom
 requires `EQU` expressions to be resolved immediately, the converter also
 rejects an equate that refers forward.
@@ -83,17 +83,17 @@ rejects an equate that refers forward.
 The converter reports an error for semantics Atom cannot preserve:
 
 - `.INCLUDE` and `.IMPORT`, because AZM textual inclusion and module loading
-  are not Atom's import-once `%INCLUDE` model;
-- `.IF`, `.ELSE`, and `.ENDIF`, because AZM expressions are not Atom host
-  preprocessor conditions;
-- ops and chained instruction lines;
-- types, unions, fields, enums, layout casts, `SIZEOF()`, and `OFFSET()`;
-- exported declarations, contract-policy controls, and register-contract
-  suppressions;
-- string-valued equates, typed `.DS`, and AZM output-range directives;
+  are not Atom's import-once `%INCLUDE` model
+- `.IF`, `.ELSE` and `.ENDIF`, because AZM expressions are not Atom host
+  preprocessor conditions
+- ops and chained instruction lines
+- types, unions, fields, enums, layout casts, `SIZEOF()` and `OFFSET()`
+- exported declarations, contract-policy controls and register-contract
+  suppressions
+- string-valued equates, typed `.DS` and AZM output-range directives
 - multi-byte single-quoted strings and escapes outside Atom's byte-string
-  escape set;
-- symbol formats or lengths that Atom cannot represent; and
+  escape set
+- symbol formats or lengths that Atom cannot represent
 - any statement head that is neither an Atom instruction nor a supported
   directive.
 
@@ -113,9 +113,9 @@ const atomSource = translateAzmSourceToAtom(azmSource, {
 });
 ```
 
-The function returns one LF-normalized string. It throws `AtomAssemblyError`
-with category `translation`, a stable error code, and a `diagnostic` containing
-`logicalIdentity`, `line`, and `column`. It performs no filesystem work and
+The function returns one LF-normalised string. It throws `AtomAssemblyError`
+with category `translation`, a stable error code and a `diagnostic` containing
+`logicalIdentity`, `line` and `column`. It performs no filesystem work and
 does not require AZM at runtime.
 
 Automated tests cover the direct mappings, every rejected language boundary and

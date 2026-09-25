@@ -40,7 +40,6 @@
     "assets/atom-object-harness.bin",
     "bin",
     "docs/*.md",
-    "docs/codebase",
     "examples",
     "src/z80/*.asm",
     "src/z80/atom-symbols.json",

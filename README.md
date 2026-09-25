@@ -40,6 +40,6 @@ in `.COM`, `.BIN` or `.HEX`.
 
 - [Atom books and reference](https://debug80.com/atom/)
 - [Repository documentation](docs/index.md)
-- [Engineering manual](docs/codebase/index.md)
+- [Codebase guide](docs/codebase.md)
 
 Atom is licensed under [GPL-3.0-only](LICENSE).

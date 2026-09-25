@@ -1,7 +1,7 @@
-# Atom command-line assembler
+# Command line
 
-The `atom` command prepares a project, runs the native Z80 assembler, renders
-the requested files, and publishes them. Node.js 20 or later is required.
+The `atom` command runs the Z80 assembler through Debug80 and writes the output
+files you request. It requires Node.js 20 or later.
 
 ## Basic use
 
@@ -32,17 +32,15 @@ atom src/main.asm build/main.com
 ```
 
 Output paths may also be named with `-o` or `--output`. Each path selects one
-format by suffix. Atom recognizes `.bin`, `.hex`, `.com`, `.nobj`, `.lst`, and
+format by suffix. Atom recognises `.bin`, `.hex`, `.com`, `.nobj`, `.lst` and
 `.d8.json`, without case sensitivity. A command cannot repeat a format or
 destination path. Atom renders and stages every requested file before replacing
-an earlier output; a failed build publishes none.
+an earlier output. A failed build publishes none.
 
-Output selection is affirmative: Atom writes the files you name. There is no
-default bundle of artifacts to suppress with negative switches. If you want
-only HEX, name only a `.hex` path. If you want BIN, listing, and D8, name those
-three paths.
+Atom writes only the files you name. To produce only Intel HEX, name one `.hex`
+path. To produce BIN, listing and D8 files, name those three paths.
 
-## Includes, conditions, and binary data
+## Includes, conditions and binary data
 
 The Node preparation stage resolves `%INCLUDE` relative to the importing file.
 Each exact source identity is imported once, including repeated direct imports
@@ -55,7 +53,7 @@ Use `-D` for command definitions:
 atom -DDEBUG -DMODE=2 src/main.asm build/main.bin
 ```
 
-Values accept decimal, `$FFFF`, `%1010`, `0FFFFH`, and `1010B` forms. Quote or
+Values accept decimal, `$FFFF`, `%1010`, `0FFFFH` and `1010B` forms. Quote or
 escape `$` forms when the shell would expand them.
 
 `INCBIN` paths are relative to the containing source file:
@@ -65,9 +63,9 @@ FONT: INCBIN "assets/font.bin"
 ```
 
 Source and binary paths are confined to the project root, checked for exact
-case, and snapshotted before assembly.
+case and snapshotted before assembly.
 
-## Node project files
+## Project files
 
 A JSON project records repeatable desktop build policy:
 
@@ -90,17 +88,15 @@ atom --project atom.json
 ```
 
 Project paths are relative to the JSON file. Command output paths replace the
-project output list, and command definitions override project definitions:
+project output list. Command definitions override project definitions:
 
 ```sh
 atom --project atom.json -DDEBUG=1 build/debug.com
 ```
 
-The `assembler` field is optional for the `atom` command because the command
-itself selects Atom. Shared `.asm` projects should still set it to `atom`.
-Neutral tools must not infer the assembler from `.asm`; they should require an
-explicit `atom` or `azm` selection. The `atom` command rejects `azm` and `auto`
-instead of choosing a source format from the filename.
+The `assembler` field is optional when the `atom` command reads the project.
+Tools that support more than one assembler should require an explicit value
+rather than infer a language from the `.asm` extension.
 
 JSON belongs to the Node-hosted frontend. Native CP/M and TEC profiles do not
 contain a JSON parser.
@@ -112,10 +108,10 @@ zero and leaves placement to source `ORG` directives. The `cpm22` target starts
 and enters at `$0100`.
 
 A COM file has no header. Atom therefore accepts `.com` only when the rendered
-load base and entry are both `$0100`, the output is flat bank zero, and the
+load base and entry are both `$0100`, the output is flat bank zero and the
 image fits the CP/M address range. If no target is named, a `.com` output
 selects the `cpm22` target. An explicit incompatible target or source placement
-is an error; choosing a suffix never silently moves labels.
+is an error. Choosing a suffix never silently moves labels.
 
 ## Self-hosting
 
@@ -127,7 +123,7 @@ atom self-host
 ```
 
 The default output is `build/atom.bin` in the current directory. Another
-positive output path can be supplied after `self-host`. Project, target, and
+output path can be supplied after `self-host`. Project, target and
 definition options are disabled for this fixed source build.
 
 ## Options
@@ -141,26 +137,10 @@ definition options are disabled for this fixed source build.
 -V, --version          package version
 ```
 
-Invalid command syntax returns status 2. Preparation, assembly, rendering, or
-publication failure returns status 1. Success, help, and version return zero.
-Diagnostics go to standard error; successful output paths go to standard
+Invalid command syntax returns status 2. Preparation, assembly, rendering or
+publication failure returns status 1. Success, help and version return zero.
+Diagnostics go to standard error. Successful output paths go to standard
 output.
 
-## Native CP/M command
-
-The native CP/M image uses the smaller positional form:
-
-```text
-ATOM
-ATOM SOURCE
-ATOM SOURCE OUTPUT
-ATOM ?
-```
-
-`ATOM` reads `INPUT.ASM` and writes `OUTPUT.COM`. `ATOM HELLO` reads
-`HELLO.ASM` and writes `HELLO.COM`. An explicit output suffix selects `.COM`,
-`.BIN`, or `.HEX`. Native source composition uses leading `%INCLUDE`
-directives. Native profiles do not parse project JSON.
-
-See [Native Atom on CP/M 2.2](cpm22.md) for its filesystem rules, limits, and
-transactional publication.
+The native [CP/M program](cpm22.md) has a smaller positional command line and
+does not read JSON project files.

@@ -6,14 +6,9 @@ import test from "node:test";
 import { ATOM_VERSION, loadNativeAtomCore } from "../src/host/index.mjs";
 
 const codebaseDocuments = [
-  "docs/codebase/index.md",
-  "docs/codebase/01-orientation-and-repository-layout.md",
-  "docs/codebase/02-host-source-preparation.md",
-  "docs/codebase/03-native-z80-assembly-pipeline.md",
-  "docs/codebase/04-host-execution-artifacts-and-interfaces.md",
-  "docs/codebase/05-native-core-generation-and-self-hosting.md",
-  "docs/codebase/06-verification-and-maintenance.md",
-  "docs/codebase/native-source-map.md",
+  "docs/codebase.md",
+  "docs/maintenance.md",
+  "docs/programming-api.md",
 ];
 
 const productDocuments = [
@@ -22,12 +17,8 @@ const productDocuments = [
   "docs/command-line.md",
   "docs/cpm22.md",
   "docs/language-reference.md",
-  "docs/architecture.md",
-  "docs/assembly-style.md",
   "docs/atom-object-format.md",
   "docs/azm-to-atom.md",
-  "docs/limits.md",
-  "docs/release-checklist.md",
   ...codebaseDocuments,
   "examples/hello/README.md",
 ];
@@ -74,7 +65,7 @@ test("the product documentation, release gate, license, and measured account agr
   assert.equal(metadata.scripts.prepublishOnly, "npm run release:check");
   assert.match(metadata.scripts["release:check"], /npm test/);
   assert.ok(metadata.files.includes("examples"));
-  assert.ok(metadata.files.includes("docs/codebase"));
+  assert.ok(metadata.files.includes("docs/*.md"));
   for (const kind of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
     assert.equal(metadata[kind]?.["@jhlagado/azm"], undefined, `AZM returned as a ${kind} entry`);
   }
