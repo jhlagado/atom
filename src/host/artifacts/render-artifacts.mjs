@@ -142,7 +142,6 @@ function uniqueSymbols(generation, project) {
 export function writeAtomListing(project, generation, { fill = 0 } = {}) {
   const { byLine, final } = sourceRanges(project, generation, fill);
   const output = [];
-  let listingLine = 0;
   for (const item of sourceLines(project)) {
     const ranges = byLine.get(item.key) ?? [];
     const initialized = ranges.filter(({ kind }) => kind !== "directive");
@@ -161,7 +160,6 @@ export function writeAtomListing(project, generation, { fill = 0 } = {}) {
         : `${hex4(chunk[0])}  ${chunk.map((address) => hex2(final.get(address) ?? fill)).join(" ").padEnd(23)}`;
       const identity = index === 0 ? `${item.part.logicalIdentity}:${item.line}`.padEnd(24) : "".padEnd(24);
       output.push(`${gutter}  ${identity}${index === 0 ? item.source : ""}`.trimEnd());
-      listingLine += 1;
     }
   }
   output.push("", "Symbols:");
