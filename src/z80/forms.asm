@@ -238,8 +238,8 @@ PR_NBNUM:
     JR   .SENUM                      ; Store class and clear its value.
 .NRST:
 
-; RST vectors run from 0 to 56 by eights. Shift the vector index and add
-; the first restart class.
+; RST vectors run from 0 to 56 by eights. Divide the vector value by eight to
+; obtain its class index, then add the first restart class.
 
     CALL PR_SVAL                     ; Load the requested restart vector.
     LD   A,H                         ; A legal vector has no high byte.
@@ -442,7 +442,6 @@ PR_WFLEX:
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
 ; Check each resolved value against its selected class. UMASK bits mark
 ; placeholders checked after their symbols resolve.
-; symbols resolve.
 
 PR_CCVAL:
     XOR  A                           ; Begin with operand index zero.
