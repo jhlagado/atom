@@ -58,10 +58,10 @@ function splitComment(line) {
     ) {
       quote = character;
     } else if (quote === "" && character === ";") {
-      return { source: line.slice(0, index), comment: line.slice(index), commentColumn: index + 1 };
+      return { source: line.slice(0, index), comment: line.slice(index) };
     }
   }
-  return { source: line, comment: "", commentColumn: line.length + 1 };
+  return { source: line, comment: "" };
 }
 
 function decodedQuotedLength(source, start, context) {

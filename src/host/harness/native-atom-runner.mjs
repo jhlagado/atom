@@ -290,7 +290,6 @@ function snapshotProject(project) {
       "resolved Atom project exceeds the native 255-part limit",
     );
   }
-  let totalBytes = 0;
   const parts = project.parts.map((part, ordinal) => {
     if (
       part === null ||
@@ -346,7 +345,6 @@ function snapshotProject(project) {
         bytes: include.bytes.slice(),
       });
     });
-    totalBytes += part.compilerBytes.length;
     return Object.freeze({
       ordinal,
       bank: 0,
@@ -358,7 +356,6 @@ function snapshotProject(project) {
   });
   return Object.freeze({
     parts: Object.freeze(parts),
-    totalBytes,
   });
 }
 

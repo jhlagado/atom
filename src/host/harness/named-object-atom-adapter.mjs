@@ -23,7 +23,6 @@ export function createNamedObjectAtomAdapter({ provider, sourceNames, outputName
   let outputHandle = 0;
   let target;
   let outputCursor = 0;
-  let highWater = 0;
   let images = [];
   let patches = [];
   let initialized = new Set();
@@ -98,7 +97,6 @@ export function createNamedObjectAtomAdapter({ provider, sourceNames, outputName
       outputHandle = opened.handle;
       target = Object.freeze({ ...context.target });
       outputCursor = 0;
-      highWater = target.start;
       images = [];
       patches = [];
       initialized = new Set();
@@ -121,7 +119,6 @@ export function createNamedObjectAtomAdapter({ provider, sourceNames, outputName
       status = write(Uint8Array.from(operation.bytes));
       if (status !== 0) return status;
       for (let index = 0; index < operation.bytes.length; index += 1) initialized.add(operation.address + index);
-      highWater = Math.max(highWater, operation.address + operation.bytes.length);
       images.push(Object.freeze({ ...operation, bytes: frozen(operation.bytes) }));
       return NAMED_OBJECT_STATUS.success;
     },
@@ -156,7 +153,6 @@ export function createNamedObjectAtomAdapter({ provider, sourceNames, outputName
       }
       const status = fillTo(context.highWater - target.start);
       if (status !== 0) return status;
-      highWater = context.highWater;
       const closed = closeSource();
       if (closed !== 0) return reject(closed, "source-close");
       const committed = client.commit(outputHandle);
@@ -166,7 +162,7 @@ export function createNamedObjectAtomAdapter({ provider, sourceNames, outputName
         target,
         finalCursor: context.finalCursor,
         remaining: context.remaining,
-        highWater,
+        highWater: context.highWater,
         images: Object.freeze(images.slice()),
         patches: Object.freeze(patches.slice()),
       });
