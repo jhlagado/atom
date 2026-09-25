@@ -406,116 +406,116 @@ EN_VFORM:
 
 ; RET is either operand-free or takes one of the eight condition classes.
 
-    LD   A,(IX+EN_OP0)
-    CP   EN_NONE
-    JR   Z,.VL1NOPER
-    CALL EN_ICOND
-    JP   NC,AT_INVAL
-    CALL AT_ROOP
-    RET  C
-    XOR  A
-    INC  A
-    RET
+    LD   A,(IX+EN_OP0)       ; Read the optional condition operand.
+    CP   EN_NONE             ; The sentinel selects operand-free RET.
+    JR   Z,.VL1NOPER         ; Check that all remaining slots are also empty.
+    CALL EN_ICOND            ; Test the operand against all eight conditions.
+    JP   NC,AT_INVAL         ; Reject a value outside the condition range.
+    CALL AT_ROOP             ; Require the second and third slots to be empty.
+    RET  C                   ; Preserve a malformed-arity failure.
+    XOR  A                   ; Start the successful one-byte length result.
+    INC  A                   ; Set the returned length to one.
+    RET                      ; Return the conditional RET length.
 .VL1NOPER:
-    CALL AT_RNOPE
-    RET  C
-    XOR  A
-    INC  A
-    RET
+    CALL AT_RNOPE            ; Require all three slots to be empty.
+    RET  C                   ; Reject any hidden trailing operand.
+    XOR  A                   ; Start the successful one-byte length result.
+    INC  A                   ; Set the returned length to one.
+    RET                      ; Return the operand-free RET length.
 .VEX:
 
 ; EX admits only AF,AF', DE,HL and (SP),HL/IX/IY.
 
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CP   EN_AF
-    JR   Z,.VEAF
-    CP   EN_DE
-    JR   Z,.VEDE
-    CP   EN_MEMSP
-    JP   NZ,AT_INVAL
-    JP   .VLSP
+    CALL AT_RTOPE            ; Allow no more than two EX operands.
+    RET  C                   ; Reject a third operand before pair checks.
+    LD   A,(IX+EN_OP0)       ; Read the first member of the EX pair.
+    CP   EN_AF               ; Check for the AF,AF' exchange form.
+    JR   Z,.VEAF             ; Validate its second operand separately.
+    CP   EN_DE               ; Check for the DE,HL exchange form.
+    JR   Z,.VEDE             ; Validate HL as the second operand.
+    CP   EN_MEMSP            ; The remaining form starts with (SP).
+    JP   NZ,AT_INVAL         ; Reject every other first operand.
+    JP   .VLSP               ; Validate HL/IX/IY and choose its length.
 .VEAF:
-    LD   A,(IX+EN_OP1)
-    CP   EN_APRIM
+    LD   A,(IX+EN_OP1)       ; Read the partner of the AF register pair.
+    CP   EN_APRIM            ; Only AF' completes this exchange form.
 .VZL1:
-    JP   Z,EN_D1
-    JP   AT_INVAL
+    JP   Z,EN_D1             ; Accept the matching pair as a one-byte form.
+    JP   AT_INVAL            ; Reject any second operand that did not match.
 .VEDE:
-    LD   A,(IX+EN_OP1)
-    CP   EN_HL
-    JR   .VZL1
+    LD   A,(IX+EN_OP1)       ; Read the partner of DE.
+    CP   EN_HL               ; Only HL completes the DE,HL form.
+    JR   .VZL1               ; Reuse the shared match and length result.
 .VIM:
 
 ; IM mode is encoded in its enumerated operand class, not in the value word.
 
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CP   EN_IM0
-    JP   C,AT_INVAL
-    CP   EN_IM2+1
-    JP   NC,AT_INVAL
-    JP   EN_D2
+    CALL AT_ROOP             ; Allow one operand and reject trailing slots.
+    RET  C                   ; Stop if an extra operand was supplied.
+    LD   A,(IX+EN_OP0)       ; The mode is carried by this operand class.
+    CP   EN_IM0              ; Reject modes below IM 0.
+    JP   C,AT_INVAL          ; Values below the first mode are invalid.
+    CP   EN_IM2+1            ; Compare with the exclusive upper mode bound.
+    JP   NC,AT_INVAL         ; Reject values above IM 2.
+    JP   EN_D2               ; Every IM mode uses the same two-byte length.
 .VRST:
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CP   EN_RST0
-    JP   C,AT_INVAL
-    CP   EN_RST56+1
-    JP   NC,AT_INVAL
-    JP   EN_D1
+    CALL AT_ROOP             ; Allow one operand and reject trailing slots.
+    RET  C                   ; Stop if an extra operand was supplied.
+    LD   A,(IX+EN_OP0)       ; Read the enumerated restart-vector class.
+    CP   EN_RST0             ; Reject values below vector zero.
+    JP   C,AT_INVAL          ; The vector classes begin at RST 0.
+    CP   EN_RST56+1          ; Compare with the exclusive RST 56 bound.
+    JP   NC,AT_INVAL         ; Reject classes above the final vector.
+    JP   EN_D1               ; Every restart instruction encodes in one byte.
 .VIDEC:
 
-; INC/DEC cover r, rr, IX/IY, index halves, (HL), and indexed memory. Prefix and
-; displacement determine the returned length.
+; INC/DEC cover byte registers, register pairs, IX/IY, index halves, (HL), and
+; indexed memory. Prefix and displacement determine the returned length.
 
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CALL EN_IR8
-    JP   C,EN_D1
-    LD   A,(IX+EN_OP0)
-    CALL EN_IR16
-    JP   C,EN_D1
-    LD   A,(IX+EN_OP0)
-    CP   EN_IX
-    JP   Z,EN_D2
-    CP   EN_IY
-    JP   Z,EN_D2
-    CALL EN_IHIND
-    JP   C,EN_D2
-    LD   A,(IX+EN_OP0)
-    CP   EN_MEMHL
-    JP   Z,EN_D1
-    CALL EN_IINDE
+    CALL AT_ROOP             ; Allow one operand and reject trailing slots.
+    RET  C                   ; Stop if more than one operand was supplied.
+    LD   A,(IX+EN_OP0)       ; Test the operand as an ordinary byte register.
+    CALL EN_IR8              ; Carry accepts B,C,D,E,H,L or A.
+    JP   C,EN_D1             ; Ordinary byte registers need one opcode byte.
+    LD   A,(IX+EN_OP0)       ; Reload the class for the 16-bit register test.
+    CALL EN_IR16             ; Carry accepts BC,DE,HL or SP.
+    JP   C,EN_D1             ; Ordinary pairs also need one opcode byte.
+    LD   A,(IX+EN_OP0)       ; Check the index-register pair classes.
+    CP   EN_IX               ; IX uses a DD-prefixed instruction.
+    JP   Z,EN_D2             ; The prefix makes the instruction two bytes.
+    CP   EN_IY               ; IY uses the corresponding FD prefix.
+    JP   Z,EN_D2             ; Its instruction length is also two bytes.
+    CALL EN_IHIND            ; Test for IXH, IXL, IYH or IYL.
+    JP   C,EN_D2             ; An index half adds one prefix byte.
+    LD   A,(IX+EN_OP0)       ; Reload the operand after the class predicate.
+    CP   EN_MEMHL            ; Check for the unprefixed (HL) memory form.
+    JP   Z,EN_D1             ; INC/DEC (HL) uses one opcode byte.
+    CALL EN_IINDE            ; Test for indexed memory with a displacement.
 .VCL3:
-    JP   C,EN_D3
-    JP   AT_INVAL
+    JP   C,EN_D3             ; Prefix and displacement make a three-byte form.
+    JP   AT_INVAL            ; Reject every operand class not accepted above.
 .VSTACK:
 
 ; PUSH/POP accept the four ordinary stack pairs plus IX and IY.
 
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CP   EN_BC
-    JP   Z,EN_D1
-    CP   EN_DE
-    JP   Z,EN_D1
-    CP   EN_HL
-    JP   Z,EN_D1
-    CP   EN_AF
-    JP   Z,EN_D1
+    CALL AT_ROOP             ; Allow one operand and reject trailing slots.
+    RET  C                   ; Stop if a second operand was supplied.
+    LD   A,(IX+EN_OP0)       ; Read the stack-pair operand class.
+    CP   EN_BC               ; Check the first ordinary stack pair.
+    JP   Z,EN_D1             ; PUSH/POP BC needs one opcode byte.
+    CP   EN_DE               ; Compare with the next ordinary pair.
+    JP   Z,EN_D1             ; PUSH/POP DE also needs one opcode byte.
+    CP   EN_HL               ; Compare with the HL stack pair.
+    JP   Z,EN_D1             ; PUSH/POP HL needs one opcode byte.
+    CP   EN_AF               ; AF is the fourth ordinary stack pair.
+    JP   Z,EN_D1             ; PUSH/POP AF uses the unprefixed form.
 .VIL2:
-    CP   EN_IX
-    JP   Z,EN_D2
-    CP   EN_IY
+    CP   EN_IX               ; Check for the IX class.
+    JP   Z,EN_D2             ; Accept IX as a two-byte form.
+    CP   EN_IY               ; Check for the IY class.
 .VZL2:
-    JP   Z,EN_D2
-    JP   AT_INVAL
+    JP   Z,EN_D2             ; Return two bytes when the prior test matched.
+    JP   AT_INVAL            ; Reject the unmatched operand form.
 EN_LVBEG EQU $
 .VLD:
 
