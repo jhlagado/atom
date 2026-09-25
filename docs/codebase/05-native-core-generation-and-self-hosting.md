@@ -82,6 +82,7 @@ limit. The eleventh file is the entry and dependency header:
 %INCLUDE "symbols.asm"
 %INCLUDE "tokenizer.asm"
 %INCLUDE "expression.asm"
+%INCLUDE "expression-arithmetic.asm"
 %INCLUDE "patch.asm"
 %INCLUDE "parser.asm"
 %INCLUDE "output.asm"

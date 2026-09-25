@@ -75,7 +75,8 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
   const remainder = code.filter((line) => {
     const match = /^([A-Z_]+) EQU (.*)$/.exec(line);
     if (match === null || !required.has(match[1])) return true;
-    assert.match(match[2], /^\d+$/, `workspace constant ${match[1]} is no longer a literal`);
+    const literal = match[2].replace(/;.*$/, "").trim();
+    assert.match(literal, /^\d+$/, `workspace constant ${match[1]} is no longer a literal`);
     required.delete(match[1]);
     constants.push(line);
     return false;

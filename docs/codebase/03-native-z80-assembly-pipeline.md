@@ -177,7 +177,8 @@ drained it.
 
 ## Expression evaluator
 
-The expression section begins at `EX_CBEG` in `src/z80/expression.asm`. It
+The expression section begins at `EX_CBEG` in `src/z80/expression.asm`; its
+concrete arithmetic kernels continue in `src/z80/expression-arithmetic.asm`. It
 implements precedence parsing with a value stack and an operator stack. Each
 stack has 16 entries. Values use signed 24-bit
 intermediates plus metadata for concrete or deferred state. Operators carry
