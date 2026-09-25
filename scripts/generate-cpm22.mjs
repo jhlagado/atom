@@ -52,8 +52,7 @@ async function build() {
     bytes,
     report: {
       format: "atom-cpm22-census",
-      version: 6,
-      nativeCoreHead: "23afbf6cffe0311059e2af7b8db31ee8559bc121",
+      version: 7,
       loadAddress: 0x100,
       entryAddress: symbols.CP_ENTRY,
       returnAddress: symbols.CP_RETURN,

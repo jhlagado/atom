@@ -27,7 +27,7 @@ test("the GitHub release contains the checked CP/M executable and provenance", a
   const executableSha256 = createHash("sha256").update(executable).digest("hex");
   assert.deepEqual(manifest, {
     format: "atom-cpm22-release",
-    version: 1,
+    version: 2,
     release: "0.3.0",
     tag: "v0.3.0",
     platform: "CP/M 2.2",
@@ -44,7 +44,6 @@ test("the GitHub release contains the checked CP/M executable and provenance", a
     },
     build: {
       assembler: "ATOM",
-      nativeCoreHead: "23afbf6cffe0311059e2af7b8db31ee8559bc121",
     },
     license: "GPL-3.0-only",
   });

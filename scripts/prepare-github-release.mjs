@@ -42,7 +42,7 @@ assert.equal(sha256, census.sha256, "ATOM.COM digest differs from its checked ce
 
 const manifest = {
   format: "atom-cpm22-release",
-  version: 1,
+  version: 2,
   release: metadata.version,
   tag,
   platform: "CP/M 2.2",
@@ -59,7 +59,6 @@ const manifest = {
   },
   build: {
     assembler: "ATOM",
-    nativeCoreHead: census.nativeCoreHead,
   },
   license: metadata.license,
 };
