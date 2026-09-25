@@ -1119,40 +1119,38 @@ HS_SCBEG:
 ; Begin a fresh tentative generation. No file is created until COMMIT.
 
 HS_BEG:
-    XOR  A
-    LD   (CP_OUTPUT_OPEN),A
-    LD   (CP_BACKED_UP),A
-    RET
+    XOR  A ; Start both output-transaction flags in the clear state.
+    LD   (CP_OUTPUT_OPEN),A ; No temporary output file is open yet.
+    LD   (CP_BACKED_UP),A ; No previous output has been moved aside.
+    RET ; Return success with carry clear.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Store one IMAGE or byte-PATCH value in the private CP/M target image.
+; IMAGE and byte PATCH share this translation into the tentative RAM image.
+; The core has already checked target capacity and patch order.
 
 HS_IB:
 HS_PB:
-
-; IMAGE and byte PATCH share the same address translation because both write the
-; still-private TPA image. The core has already proved capacity and patch order.
-
-    PUSH AF
-    LD   DE,CP_OUTPUT_START-CP_TARGET_START
-    ADD  HL,DE
-    POP  AF
-    LD   (HL),A
-    XOR  A
-    RET
+    PUSH AF ; Preserve the value while translating its logical address.
+    LD   DE,CP_OUTPUT_START-CP_TARGET_START ; Form the target-to-image offset.
+    ADD  HL,DE ; Point at the byte's location in the private image.
+    POP  AF ; Recover the byte supplied by the core.
+    LD   (HL),A ; Store it without publishing a file yet.
+    XOR  A ; Return success with carry clear.
+    RET ; Finish the IMAGE or byte-PATCH operation.
 
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Store one little-endian word at its translated logical address.
 
 HS_PW:
-    EX   DE,HL
-    LD   BC,CP_OUTPUT_START-CP_TARGET_START
-    ADD  HL,BC
-    LD   (HL),E
-    INC  HL
-    LD   (HL),D
-    XOR  A
-    RET
+    EX   DE,HL ; Put the logical address in HL and the word in DE.
+    LD   BC,CP_OUTPUT_START-CP_TARGET_START ; Form the image translation.
+    ADD  HL,BC ; Point at the word's first byte in the private image.
+    LD   (HL),E ; Store the low byte at the lower address.
+    INC  HL ; Advance to the word's high-byte position.
+    LD   (HL),D ; Store the high byte in little-endian order.
+    XOR  A ; Return success with carry clear.
+    RET ; Finish the word-PATCH operation.
 
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert the final logical cursor to image length, create the temporary file and
@@ -1160,136 +1158,135 @@ HS_PW:
 ; image; HEX streams records through the shared final-image helper below.
 
 HS_CMT:
-    LD   DE,CP_TARGET_START
-    OR   A
-    SBC  HL,DE
-    LD   (CP_OUTPUT_REMAINING),HL
-    LD   HL,CP_OUTPUT_START
-    LD   (CP_OUTPUT_CURSOR),HL
-    CALL CP_SET_TEMP_FCB
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_DELETE_FUNCTION
-    CALL CP_BDOS
-    CALL CP_SET_TEMP_FCB
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_MAKE_FUNCTION
-    CALL CP_BDOS
-    INC  A
-    JP   Z,CP_COMMIT_FAILURE
-    LD   A,1
-    LD   (CP_OUTPUT_OPEN),A
-    LD   A,(CP_OUTPUT_FORMAT)
-    CP   2
-    JR   NZ,CP_WRITE_LOOP
-    CALL CP_WRITE_HEX
-    JP   C,CP_COMMIT_FAILURE
-    JR   CP_WRITE_CLOSE
+    LD   DE,CP_TARGET_START ; Load the image's logical base address.
+    OR   A ; Clear carry before subtracting the base from the final cursor.
+    SBC  HL,DE ; Convert the final address into an image byte count.
+    LD   (CP_OUTPUT_REMAINING),HL ; Retain bytes to write as records.
+    LD   HL,CP_OUTPUT_START ; Point at the first byte of the tentative image.
+    LD   (CP_OUTPUT_CURSOR),HL ; Seed the sequential record cursor.
+    CALL CP_SET_TEMP_FCB ; Select the transaction's temporary filename.
+    LD   DE,CP_WORK_FCB ; Pass its FCB to the delete service.
+    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
+    CALL CP_BDOS ; Delete the temp name before creating the new file.
+    CALL CP_SET_TEMP_FCB ; Rebuild the FCB for file creation.
+    LD   DE,CP_WORK_FCB ; Pass the temp FCB to the make service.
+    LD   C,CP_MAKE_FUNCTION ; Select CP/M make-file function 22.
+    CALL CP_BDOS ; Create the tentative output file.
+    INC  A ; Convert BDOS's $FF failure result to zero.
+    JP   Z,CP_COMMIT_FAILURE ; Abort if CP/M could not create the temp file.
+    LD   A,1 ; Mark that abort must close the open temp file.
+    LD   (CP_OUTPUT_OPEN),A ; Record ownership of the new file.
+    LD   A,(CP_OUTPUT_FORMAT) ; Read the format selected from the extension.
+    CP   2 ; Format two is Intel HEX.
+    JR   NZ,CP_WRITE_LOOP ; Write COM and BIN as raw image records.
+    CALL CP_WRITE_HEX ; Serialize the image as Intel HEX text.
+    JP   C,CP_COMMIT_FAILURE ; Leave HEX write failures for the abort path.
+    JR   CP_WRITE_CLOSE ; Close the completed HEX temporary file.
 CP_WRITE_LOOP:
-    LD   HL,(CP_OUTPUT_REMAINING)
-    LD   A,H
-    OR   L
-    JR   Z,CP_WRITE_CLOSE
-    LD   DE,(CP_OUTPUT_CURSOR)
-    LD   C,CP_DMA_FUNCTION
-    CALL CP_BDOS
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_WRITE_FUNCTION
-    CALL CP_BDOS
-    OR   A
-    JP   NZ,CP_COMMIT_FAILURE
-    LD   HL,(CP_OUTPUT_CURSOR)
-    LD   DE,128
-    ADD  HL,DE
-    LD   (CP_OUTPUT_CURSOR),HL
-    LD   HL,(CP_OUTPUT_REMAINING)
-    LD   DE,128
-    OR   A
-    SBC  HL,DE
-    JR   NC,CP_WRITE_MORE
-    LD   HL,0
+    LD   HL,(CP_OUTPUT_REMAINING) ; Read the unconsumed image byte count.
+    LD   A,H ; Test its high byte first.
+    OR   L ; Zero means every image byte has been written.
+    JR   Z,CP_WRITE_CLOSE ; Close the temporary file at the end of the image.
+    LD   DE,(CP_OUTPUT_CURSOR) ; Select the next 128-byte source block.
+    LD   C,CP_DMA_FUNCTION ; Point CP/M's DMA at that block.
+    CALL CP_BDOS ; Install the image block as the transfer buffer.
+    LD   DE,CP_WORK_FCB ; Pass the temporary file's FCB to CP/M.
+    LD   C,CP_WRITE_FUNCTION ; Select sequential record-write function 21.
+    CALL CP_BDOS ; Append one 128-byte image record.
+    OR   A ; Zero indicates a successful record write.
+    JP   NZ,CP_COMMIT_FAILURE ; Abort publication after a failed write.
+    LD   HL,(CP_OUTPUT_CURSOR) ; Read the current image-block address.
+    LD   DE,128 ; Advance by one CP/M record.
+    ADD  HL,DE ; Select the following image block.
+    LD   (CP_OUTPUT_CURSOR),HL ; Retain its address for the next iteration.
+    LD   HL,(CP_OUTPUT_REMAINING) ; Reload bytes not yet covered by records.
+    LD   DE,128 ; Subtract the record size from that remainder.
+    OR   A ; Clear carry before the subtraction.
+    SBC  HL,DE ; Calculate the byte count after this record.
+    JR   NC,CP_WRITE_MORE ; Keep a non-negative remainder unchanged.
+    LD   HL,0 ; Saturate a partial final record's remainder at zero.
 CP_WRITE_MORE:
-    LD   (CP_OUTPUT_REMAINING),HL
-    JR   CP_WRITE_LOOP
+    LD   (CP_OUTPUT_REMAINING),HL ; Save the count for the next loop test.
+    JR   CP_WRITE_LOOP ; Write another record or begin publication.
+
+; Close temp, move an existing output to backup, rename temp to final, then
+; delete the backup. Preflight proved the backup name was initially unused.
+
 CP_WRITE_CLOSE:
-
-; Publication transaction: close temp, defensively remove the backup name that
-; preflight required to be absent, rename an existing output to backup, rename
-; temp to final, then delete the backup.
-
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_CLOSE_FUNCTION
-    CALL CP_BDOS
-    INC  A
-    JP   Z,CP_COMMIT_FAILURE
-    XOR  A
-    LD   (CP_OUTPUT_OPEN),A
-    CALL CP_SET_BACKUP_FCB
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_DELETE_FUNCTION
-    CALL CP_BDOS
-    LD   HL,CP_OUTPUT_NAME
-    LD   DE,CP_WORK_FCB
-    CALL CP_BUILD_RENAME
-    LD   DE,CP_RENAME_FCB
-    LD   C,CP_RENAME_FUNCTION
-    CALL CP_BDOS
-    INC  A
-    JR   Z,CP_NO_BACKUP
-    LD   A,1
-    LD   (CP_BACKED_UP),A
+    LD   DE,CP_WORK_FCB ; Pass the temporary file's FCB to the close service.
+    LD   C,CP_CLOSE_FUNCTION ; Select CP/M close-file function 16.
+    CALL CP_BDOS ; Flush and close the completed temporary file.
+    INC  A ; Convert BDOS's $FF close failure to zero.
+    JP   Z,CP_COMMIT_FAILURE ; Keep the previous final file on close failure.
+    XOR  A ; Prepare the closed-file state.
+    LD   (CP_OUTPUT_OPEN),A ; Prevent abort from closing the file again.
+    CALL CP_SET_BACKUP_FCB ; Name the backup file for the selected output.
+    LD   DE,CP_WORK_FCB ; Pass its FCB to the delete service.
+    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
+    CALL CP_BDOS ; Delete the backup name before renaming the current output.
+    LD   HL,CP_OUTPUT_NAME ; Supply the current final name as rename source.
+    LD   DE,CP_WORK_FCB ; Supply the backup name as rename destination.
+    CALL CP_BUILD_RENAME ; Build a CP/M rename FCB for the old output.
+    LD   DE,CP_RENAME_FCB ; Pass the completed rename FCB to CP/M.
+    LD   C,CP_RENAME_FUNCTION ; Select CP/M rename-file function 23.
+    CALL CP_BDOS ; Move an existing final output to the backup name.
+    INC  A ; Set zero when CP/M returned $FF for the rename.
+    JR   Z,CP_NO_BACKUP ; Skip backup state when the rename did not succeed.
+    LD   A,1 ; Mark that the old final output is now recoverable as backup.
+    LD   (CP_BACKED_UP),A ; Let abort restore it if the next rename fails.
 CP_NO_BACKUP:
-    CALL CP_SET_TEMP_FCB
-    LD   HL,CP_WORK_FCB
-    LD   DE,CP_OUTPUT_NAME
-    CALL CP_BUILD_RENAME
-    LD   DE,CP_RENAME_FCB
-    LD   C,CP_RENAME_FUNCTION
-    CALL CP_BDOS
-    INC  A
-    JP   Z,CP_COMMIT_FAILURE
-    CALL CP_SET_BACKUP_FCB
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_DELETE_FUNCTION
-    CALL CP_BDOS
-    XOR  A
-    LD   (CP_BACKED_UP),A
-    RET
+    CALL CP_SET_TEMP_FCB ; Select the completed temporary output name.
+    LD   HL,CP_WORK_FCB ; Supply the temporary name as rename source.
+    LD   DE,CP_OUTPUT_NAME ; Supply the requested final name as destination.
+    CALL CP_BUILD_RENAME ; Build the CP/M rename FCB for publication.
+    LD   DE,CP_RENAME_FCB ; Pass the completed rename FCB to CP/M.
+    LD   C,CP_RENAME_FUNCTION ; Select CP/M rename-file function 23.
+    CALL CP_BDOS ; Publish the completed output under its final name.
+    INC  A ; Convert BDOS's $FF rename failure result to zero.
+    JP   Z,CP_COMMIT_FAILURE ; Preserve the backup until abort restores it.
+    CALL CP_SET_BACKUP_FCB ; Rebuild the backup name for cleanup.
+    LD   DE,CP_WORK_FCB ; Pass the backup FCB to the delete service.
+    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
+    CALL CP_BDOS ; Ask CP/M to remove the old output after publication.
+    XOR  A ; Clear the transaction state after cleanup attempts.
+    LD   (CP_BACKED_UP),A ; Clear the flag after attempting backup deletion.
+    RET ; Report successful publication with carry clear.
 CP_COMMIT_FAILURE:
-    LD   A,1
-    SCF
-    RET
+    LD   A,1 ; Return a nonzero sink status for the failed commit.
+    SCF ; Mark the sink operation as failed.
+    RET ; Let the driver call HS_ABORT to restore the prior output.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Close/delete any temporary output and restore the backup if commit had already
 ; moved the previous final file aside. Cleanup is idempotent for early failures.
 
 HS_ABORT:
-    LD   A,(CP_OUTPUT_OPEN)
-    OR   A
-    JR   Z,CP_ABORT_DELETE
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_CLOSE_FUNCTION
-    CALL CP_BDOS
+    LD   A,(CP_OUTPUT_OPEN) ; Check whether the temporary file is open.
+    OR   A ; Set zero when no close operation is required.
+    JR   Z,CP_ABORT_DELETE ; Continue directly to removing the temp name.
+    LD   DE,CP_WORK_FCB ; Pass the temporary file's FCB to CP/M.
+    LD   C,CP_CLOSE_FUNCTION ; Select CP/M close-file function 16.
+    CALL CP_BDOS ; Close the temporary file before deleting it.
 CP_ABORT_DELETE:
-    CALL CP_SET_TEMP_FCB
-    LD   DE,CP_WORK_FCB
-    LD   C,CP_DELETE_FUNCTION
-    CALL CP_BDOS
-    LD   A,(CP_BACKED_UP)
-    OR   A
-    JR   Z,CP_ABORT_DONE
-    CALL CP_SET_BACKUP_FCB
-    LD   HL,CP_WORK_FCB
-    LD   DE,CP_OUTPUT_NAME
-    CALL CP_BUILD_RENAME
-    LD   DE,CP_RENAME_FCB
-    LD   C,CP_RENAME_FUNCTION
-    CALL CP_BDOS
+    CALL CP_SET_TEMP_FCB ; Rebuild the temporary file's FCB.
+    LD   DE,CP_WORK_FCB ; Pass the temporary FCB to CP/M.
+    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
+    CALL CP_BDOS ; Attempt to remove the uncommitted temporary output.
+    LD   A,(CP_BACKED_UP) ; Check whether commit moved an old output aside.
+    OR   A ; Set zero when there is no prior output to restore.
+    JR   Z,CP_ABORT_DONE ; Finish after attempting temporary-file deletion.
+    CALL CP_SET_BACKUP_FCB ; Rebuild the backup file's FCB.
+    LD   HL,CP_WORK_FCB ; Supply the backup name as rename source.
+    LD   DE,CP_OUTPUT_NAME ; Supply the requested output name as destination.
+    CALL CP_BUILD_RENAME ; Build a CP/M rename FCB for restoration.
+    LD   DE,CP_RENAME_FCB ; Pass the completed rename FCB to CP/M.
+    LD   C,CP_RENAME_FUNCTION ; Select CP/M rename-file function 23.
+    CALL CP_BDOS ; Attempt to restore the previous output name.
 CP_ABORT_DONE:
-    XOR  A
-    LD   (CP_OUTPUT_OPEN),A
-    LD   (CP_BACKED_UP),A
-    RET
+    XOR  A ; Clear the temporary-file and backup state.
+    LD   (CP_OUTPUT_OPEN),A ; Clear the open flag after cleanup attempts.
+    LD   (CP_BACKED_UP),A ; Clear backup state after all cleanup attempts.
+    RET ; Finish cleanup with the flags cleared.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert the tentative binary image to Intel HEX while streaming 128-byte
