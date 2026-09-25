@@ -34,7 +34,7 @@ The source service uses a 16-bit logical offset, so one part may contain at most
 65,535 bytes. Total source may be larger across the 255 ordered parts. The desktop
 runner retains immutable JavaScript snapshots and returns one byte at each
 `AtomSourceReadByte` call; it does not copy a source page into Z80 memory. The
-checked native self-host input is Measured 452,288 bytes in thirteen content
+checked native self-host input is Measured 470,670 bytes in thirteen content
 parts.
 
 The native target has a 16-bit start and capacity, with a mathematical
@@ -100,8 +100,8 @@ The resolver, Node runner, and native driver share one part limit.
 | Bank ordinal | 0–255; zero for the current Atom output profile |
 
 The desktop runner's default execution budgets are 200,000,000 Z80 instructions
-and 2,000,000,000 T-states. Atom's measured self-build uses 122,179,272
-instructions and 1,304,027,818 T-states.
+and 2,000,000,000 T-states. Atom's measured self-build uses 123,255,690
+instructions and 1,315,635,392 T-states.
 
 `assembleResolvedAtomProject()` uses the default desktop runner arena layout
 unless the caller supplies `nativeMemoryLayout`. Native targets choose arena

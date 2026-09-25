@@ -55,83 +55,83 @@
 ; encoder's canonical one-operand record.
 
 PR_NAALI:
-    LD   A,(PR_SCRAT+EN_MNEM)
-    CP   AT_MADD
-    JR   C,.ASUCCESS
-    CP   AT_MCP+1
-    JR   NC,.ASUCCESS
-    LD   A,(PR_OPCNT)
-    CP   1
-    JR   NZ,.MAALIAS
+    LD   A,(PR_SCRAT+EN_MNEM)       ; Read the current mnemonic ordinal.
+    CP   AT_MADD                     ; Is it below the contiguous ALU family?
+    JR   C,.ASUCCESS                 ; Leave non-ALU instructions unchanged.
+    CP   AT_MCP+1                    ; Is it above the last ALU mnemonic?
+    JR   NC,.ASUCCESS                ; Leave non-ALU instructions unchanged.
+    LD   A,(PR_OPCNT)                ; Read the parsed operand count.
+    CP   1                           ; Does the source contain one operand?
+    JR   NZ,.MAALIAS                 ; Two operands may contain explicit A.
 
 ; A one-operand ADD/ADC/SBC would silently imply A, which Atom does not permit.
 
-    LD   A,(PR_SCRAT+EN_MNEM)
-    CP   AT_MADD
-    JR   Z,.RACCUMUL
-    CP   AT_MADC
-    JR   Z,.RACCUMUL
-    CP   AT_MSBC
-    JR   NZ,.ASUCCESS
+    LD   A,(PR_SCRAT+EN_MNEM)       ; Recover the one-operand ALU mnemonic.
+    CP   AT_MADD                     ; ADD requires an explicit accumulator.
+    JR   Z,.RACCUMUL                 ; Reject the omitted accumulator.
+    CP   AT_MADC                     ; ADC has the same source requirement.
+    JR   Z,.RACCUMUL                 ; Reject the omitted accumulator.
+    CP   AT_MSBC                     ; SBC also requires the explicit A.
+    JR   NZ,.ASUCCESS                ; Other one-operand forms are canonical.
 .RACCUMUL:
-    LD   A,PR_SIFOR
-    JP   PR_FBEG
+    LD   A,PR_SIFOR                  ; Select the invalid-form status.
+    JP   PR_FBEG                     ; Diagnose it at the mnemonic position.
 .MAALIAS:
-    CP   2
-    JR   NZ,.ASUCCESS
-    LD   A,(PR_SCRAT+EN_OP0)
-    CP   EN_A
-    JR   NZ,.ASUCCESS
-    LD   A,(PR_SCRAT+EN_OP1)
+    CP   2                           ; Only two operands qualify for collapse.
+    JR   NZ,.ASUCCESS                ; Leave every other arity unchanged.
+    LD   A,(PR_SCRAT+EN_OP0)         ; Inspect the first operand class.
+    CP   EN_A                        ; Is the explicit destination A?
+    JR   NZ,.ASUCCESS                ; Preserve another destination.
+    LD   A,(PR_SCRAT+EN_OP1)         ; Load the source operand class to move.
 
 ; Shift operand 1's class and value into operand 0, then clear operand 1 and
 ; reduce the arity to one.
 
-    LD   (PR_SCRAT+EN_OP0),A
-    LD   HL,(PR_SCRAT+EN_VAL1)
-    LD   (PR_SCRAT+EN_VAL0),HL
-    LD   A,EN_NONE
-    LD   (PR_SCRAT+EN_OP1),A
-    XOR  A
-    LD   (PR_SCRAT+EN_VAL1),A
-    LD   (PR_SCRAT+EN_VAL1+1),A
-    INC  A
-    LD   (PR_OPCNT),A
+    LD   (PR_SCRAT+EN_OP0),A         ; Move the source class into slot zero.
+    LD   HL,(PR_SCRAT+EN_VAL1)       ; Load source operand one's value.
+    LD   (PR_SCRAT+EN_VAL0),HL       ; Move it into canonical value slot zero.
+    LD   A,EN_NONE                   ; Prepare the absent-operand class.
+    LD   (PR_SCRAT+EN_OP1),A         ; Clear the former source class.
+    XOR  A                           ; Prepare zero bytes and count base.
+    LD   (PR_SCRAT+EN_VAL1),A        ; Clear the former value's low byte.
+    LD   (PR_SCRAT+EN_VAL1+1),A      ; Clear the former value's high byte.
+    INC  A                           ; The canonical record has one operand.
+    LD   (PR_OPCNT),A                ; Publish its reduced arity.
 
 ; If the removed second operand carried a deferred reference, remap its operand
 ; index from one to zero and shift the unresolved mask with the record.
 
-    LD   A,(PR_UMASK)
-    AND  2
-    JR   Z,.ASUCCESS
-    LD   A,1
-    LD   (PR_UMASK),A
-    CALL PR_RAREF
+    LD   A,(PR_UMASK)                ; Read the unresolved-operand mask.
+    AND  2                           ; Did operand one carry a reference?
+    JR   Z,.ASUCCESS                 ; No reference metadata needs remapping.
+    LD   A,1                         ; Operand zero is now unresolved instead.
+    LD   (PR_UMASK),A                ; Publish the shifted mask.
+    CALL PR_RAREF                    ; Retarget matching build records.
 .ASUCCESS:
-    XOR  A
-    RET
+    XOR  A                           ; Return success with carry clear.
+    RET                              ; Continue with numeric normalisation.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS B,SIGN,PARITY,HALFCARRY,DE,HL,A
 ; Rewrite build-reference operand index 1 to 0 after accumulator-alias collapse.
 
 PR_RAREF:
-    XOR  A
-    LD   B,A
+    XOR  A                           ; Start at build-reference index zero.
+    LD   B,A                         ; B is the current record index.
 .RALOOP:
-    LD   A,(PR_RBCNT)
-    CP   B
-    RET  Z
-    LD   A,B
-    CALL PR_BRADR
-    LD   HL,PR_BLDOP
-    ADD  HL,DE
-    LD   A,(HL)
-    CP   1
-    JR   NZ,.RANEXT
-    LD   (HL),0
+    LD   A,(PR_RBCNT)                ; Read the private record count.
+    CP   B                           ; Have all records been visited?
+    RET  Z                           ; Return when index equals count.
+    LD   A,B                         ; Select the current build record.
+    CALL PR_BRADR                    ; Return its base address in DE.
+    LD   HL,PR_BLDOP                 ; Load the operand-index field offset.
+    ADD  HL,DE                       ; Address that field in the record.
+    LD   A,(HL)                      ; Read the referenced operand index.
+    CP   1                           ; Did it name removed operand one?
+    JR   NZ,.RANEXT                  ; Leave other references untouched.
+    LD   (HL),0                      ; Retarget it to canonical operand zero.
 .RANEXT:
-    INC  B
-    JR   .RALOOP
+    INC  B                           ; Advance to the next build record.
+    JR   .RALOOP                     ; Continue within the proved count.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
 ; Resolve provisional numeric classes after the mnemonic and complete operand
@@ -139,63 +139,63 @@ PR_RAREF:
 ; CMASK records occurrences of C that may be a condition rather than register C.
 
 PR_NNUMB:
-    XOR  A
-    LD   (PR_FMASK),A
-    LD   (PR_CMASK),A
-    LD   (PR_SINDE),A
+    XOR  A                           ; Initialise pass masks and index.
+    LD   (PR_FMASK),A                ; No numeric operand is flexible yet.
+    LD   (PR_CMASK),A                ; No C operand is ambiguous yet.
+    LD   (PR_SINDE),A                ; Begin with operand index zero.
 .NLOOP:
-    LD   A,(PR_SINDE)
-    LD   B,A
-    LD   A,(PR_OPCNT)
-    CP   B
-    RET  Z
-    LD   A,B
-    CALL PR_SOP
-    LD   HL,(PR_CPTR)
-    LD   A,(HL)
-    CP   PR_GC
-    JR   Z,.NC
-    CP   PR_GPNUM
-    JR   Z,.NPNUMBER
-    CP   PR_GNUMB
-    JR   NZ,.NNEXT
-    CALL PR_NBNUM
-    RET  C
-    JR   .NNEXT
+    LD   A,(PR_SINDE)                ; Load the current operand index.
+    LD   B,A                         ; Keep it across the count load.
+    LD   A,(PR_OPCNT)                ; Read the number of parsed operands.
+    CP   B                           ; Has the loop reached that count?
+    RET  Z                           ; Return after the final operand.
+    LD   A,B                         ; Restore the current operand index.
+    CALL PR_SOP                      ; Select its class and value slots.
+    LD   HL,(PR_CPTR)                ; Address the provisional class.
+    LD   A,(HL)                      ; Read that class.
+    CP   PR_GC                       ; Is it ambiguous register/condition C?
+    JR   Z,.NC                       ; Record both possible meanings.
+    CP   PR_GPNUM                    ; Is it a parenthesised generic number?
+    JR   Z,.NPNUMBER                 ; Choose memory or immediate-port class.
+    CP   PR_GNUMB                    ; Is it a bare generic number?
+    JR   NZ,.NNEXT                   ; Fixed classes need no conversion.
+    CALL PR_NBNUM                    ; Classify the bare numeric operand.
+    RET  C                           ; Preserve an enum range error.
+    JR   .NNEXT                      ; Advance after classification.
 .NC:
 
 ; Prefer register C initially and record the alternative condition meaning for
 ; candidate validation.
 
-    LD   (HL),EN_C
-    LD   A,(PR_SINDE)
-    CALL PR_IBIT
-    LD   HL,PR_CMASK
-    OR   (HL)
-    LD   (HL),A
-    JR   .NNEXT
+    LD   (HL),EN_C                   ; Prefer ordinary register C initially.
+    LD   A,(PR_SINDE)                ; Recover its operand index.
+    CALL PR_IBIT                     ; Convert the index to a one-hot bit.
+    LD   HL,PR_CMASK                 ; Address the condition-candidate mask.
+    OR   (HL)                        ; Preserve any earlier ambiguous C.
+    LD   (HL),A                      ; Mark this operand as a candidate.
+    JR   .NNEXT                      ; Continue with the next operand.
 .NPNUMBER:
 
 ; Parenthesised numbers are absolute memory except in IN and OUT, where they are
 ; the immediate eight-bit port form.
 
-    LD   A,(PR_SCRAT+EN_MNEM)
-    CP   AT_MIN
-    JR   Z,.NPB
-    CP   AT_MOUT
-    JR   Z,.NPB
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_MABS
-    JR   .NNEXT
+    LD   A,(PR_SCRAT+EN_MNEM)       ; Read the instruction mnemonic.
+    CP   AT_MIN                      ; Does IN use an immediate port number?
+    JR   Z,.NPB                      ; Require an unsigned byte port.
+    CP   AT_MOUT                     ; Does OUT use an immediate port number?
+    JR   Z,.NPB                      ; Require an unsigned byte port.
+    LD   HL,(PR_CPTR)                ; Reopen the selected class slot.
+    LD   (HL),EN_MABS                ; Otherwise use absolute memory.
+    JR   .NNEXT                      ; Continue with the next operand.
 .NPB:
-    CALL PR_RBVAL
-    RET  C
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_IMM8
+    CALL PR_RBVAL                    ; Require a byte-sized concrete port.
+    RET  C                           ; Return its value-range diagnostic.
+    LD   HL,(PR_CPTR)                ; Reopen the selected class slot.
+    LD   (HL),EN_IMM8                ; Use the immediate-byte port class.
 .NNEXT:
-    LD   HL,PR_SINDE
-    INC  (HL)
-    JR   .NLOOP
+    LD   HL,PR_SINDE                 ; Address the operand scan index.
+    INC  (HL)                        ; Advance to the next operand.
+    JR   .NLOOP                      ; Repeat within the parsed operand count.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO,BC,DE
 ; Convert one bare generic number according to its mnemonic and operand index.
@@ -203,169 +203,169 @@ PR_NNUMB:
 ; word or relative class. All remaining numbers start as flexible imm8.
 
 PR_NBNUM:
-    LD   A,(PR_SCRAT+EN_MNEM)
-    CP   AT_MIM
-    JR   Z,.NIM
-    CP   AT_MRST
-    JR   Z,.NRST
-    CP   AT_MBIT
-    JR   C,.NBRANCH
-    CP   AT_MSET+1
-    JR   C,.NBIT
+    LD   A,(PR_SCRAT+EN_MNEM)       ; Read the value's mnemonic context.
+    CP   AT_MIM                      ; Does IM require an enumerated mode?
+    JR   Z,.NIM                      ; Convert values 0..2 into IM classes.
+    CP   AT_MRST                     ; Does RST require an enumerated vector?
+    JR   Z,.NRST                     ; Convert eight legal vectors to classes.
+    CP   AT_MBIT                     ; Is the mnemonic below BIT/RES/SET?
+    JR   C,.NBRANCH                  ; Try branch and general numbers.
+    CP   AT_MSET+1                   ; Is it in the BIT through SET family?
+    JR   C,.NBIT                     ; Classify operand zero as a bit number.
 .NBRANCH:
 
 ; Absolute JP and CALL retain the target word. JR and DJNZ are converted to a
 ; signed displacement only after the final instruction length is known.
 
-    LD   A,(PR_SCRAT+EN_MNEM)
-    CP   AT_MJP
-    JR   Z,.NW
-    CP   AT_MCALL
-    JR   Z,.NW
-    CP   AT_MJR
-    JR   Z,.NRELATIV
-    CP   AT_MDJNZ
-    JR   Z,.NRELATIV
-    CP   AT_MOUT
-    JR   NZ,.NFLEXIBL
+    LD   A,(PR_SCRAT+EN_MNEM)       ; Reload the mnemonic for branch classes.
+    CP   AT_MJP                      ; JP targets are absolute words.
+    JR   Z,.NW                       ; Select the immediate-word class.
+    CP   AT_MCALL                    ; CALL targets are also absolute words.
+    JR   Z,.NW                       ; Select the immediate-word class.
+    CP   AT_MJR                      ; JR targets become relative bytes.
+    JR   Z,.NRELATIV                 ; Defer displacement calculation.
+    CP   AT_MDJNZ                    ; DJNZ uses the same relative form.
+    JR   Z,.NRELATIV                 ; Defer displacement calculation.
+    CP   AT_MOUT                     ; OUT admits the special literal zero.
+    JR   NZ,.NFLEXIBL                ; Other numbers start as flexible bytes.
 
 ; OUT (C),0 has a dedicated operand class. Other OUT numbers remain byte values
 ; and are validated by the complete form.
 
-    CALL PR_SVAL
-    LD   A,H
-    OR   L
-    JR   NZ,.NFLEXIBL
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_ZERO
-    XOR  A
-    RET
+    CALL PR_SVAL                     ; Load the concrete OUT operand value.
+    LD   A,H                         ; Combine both bytes to test for zero.
+    OR   L                           ; Z means the complete word is zero.
+    JR   NZ,.NFLEXIBL                ; Nonzero uses ordinary byte handling.
+    LD   HL,(PR_CPTR)                ; Address the selected class slot.
+    LD   (HL),EN_ZERO                ; Encode the dedicated OUT (C),0 class.
+    XOR  A                           ; Return success with carry clear.
+    RET                              ; The zero word is already canonical.
 .NIM:
 
 ; IM accepts only the enumerated values 0, 1 and 2.
 
-    CALL PR_SVAL
-    LD   A,H
-    OR   A
-    JP   NZ,PR_VRANG
-    LD   A,L
-    CP   3
-    JP   NC,PR_VRANG
-    ADD  A,EN_IM0
-    JR   .SENUM
+    CALL PR_SVAL                     ; Load the requested interrupt mode.
+    LD   A,H                         ; A legal mode has no high byte.
+    OR   A                           ; Set Z only when the high byte is zero.
+    JP   NZ,PR_VRANG                 ; Reject a nonzero high byte.
+    LD   A,L                         ; Recover the low-byte mode number.
+    CP   3                           ; Modes 0, 1 and 2 are the entire domain.
+    JP   NC,PR_VRANG                 ; Reject mode 3 or above.
+    ADD  A,EN_IM0                    ; Convert the value to its enum class.
+    JR   .SENUM                      ; Store class and clear its value.
 .NRST:
 
 ; RST accepts the eight vectors from 0 through 56 in steps of eight. Rotate the
 ; vector index down and add the first restart class.
 
-    CALL PR_SVAL
-    LD   A,H
-    OR   A
-    JP   NZ,PR_VRANG
-    LD   A,L
-    CP   57
-    JP   NC,PR_VRANG
-    AND  7
-    JP   NZ,PR_VRANG
-    LD   A,L
-    RRCA
-    RRCA
-    RRCA
-    AND  7
-    ADD  A,EN_RST0
-    JR   .SENUM
+    CALL PR_SVAL                     ; Load the requested restart vector.
+    LD   A,H                         ; A legal vector has no high byte.
+    OR   A                           ; Set Z only when the high byte is zero.
+    JP   NZ,PR_VRANG                 ; Reject a value above 255 immediately.
+    LD   A,L                         ; Recover the low-byte vector address.
+    CP   57                          ; The largest legal vector is 56.
+    JP   NC,PR_VRANG                 ; Reject 57 and above.
+    AND  7                           ; Legal vectors are multiples of eight.
+    JP   NZ,PR_VRANG                 ; Reject a non-aligned vector.
+    LD   A,L                         ; Reload the validated vector.
+    RRCA                             ; Shift the aligned vector right once.
+    RRCA                             ; The value is now vector / 4.
+    RRCA                             ; Vector / 8 gives restart index 0..7.
+    AND  7                           ; Keep the three-bit restart index.
+    ADD  A,EN_RST0                   ; Convert the index to its restart class.
+    JR   .SENUM                      ; Store class and clear its value.
 .NBIT:
 
 ; BIT, RES and SET encode their first operand in the class and require 0..7.
 
-    LD   A,(PR_SINDE)
-    OR   A
-    JR   NZ,.NFLEXIBL
-    CALL PR_SVAL
-    LD   A,H
-    OR   A
-    JP   NZ,PR_VRANG
-    LD   A,L
-    CP   8
-    JP   NC,PR_VRANG
-    ADD  A,EN_BIT0
+    LD   A,(PR_SINDE)                ; Read this numeric operand's index.
+    OR   A                           ; Is it operand zero, the bit number?
+    JR   NZ,.NFLEXIBL                ; Later operands use ordinary handling.
+    CALL PR_SVAL                     ; Load the requested bit number.
+    LD   A,H                         ; A legal bit has no high byte.
+    OR   A                           ; Set Z only when the high byte is zero.
+    JP   NZ,PR_VRANG                 ; Reject values above 255.
+    LD   A,L                         ; Recover the low-byte bit number.
+    CP   8                           ; Bit numbers range from zero to seven.
+    JP   NC,PR_VRANG                 ; Reject eight and above.
+    ADD  A,EN_BIT0                   ; Convert the number to its enum class.
 .SENUM:
 
 ; The enumerated class now carries the value, so clear the redundant word slot.
 
-    LD   HL,(PR_CPTR)
-    LD   (HL),A
-    CALL PR_CSVAL
-    XOR  A
-    RET
+    LD   HL,(PR_CPTR)                ; Address the selected operand class.
+    LD   (HL),A                      ; Store the value-bearing enum class.
+    CALL PR_CSVAL                    ; Clear the now-redundant value word.
+    XOR  A                           ; Return success with carry clear.
+    RET                              ; Continue with the next operand.
 .NW:
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_IMM16
-    XOR  A
-    RET
+    LD   HL,(PR_CPTR)                ; Address the selected operand class.
+    LD   (HL),EN_IMM16               ; Mark an absolute sixteen-bit target.
+    XOR  A                           ; Return success with carry clear.
+    RET                              ; Preserve the target value word.
 .NRELATIV:
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_REL8
-    XOR  A
-    RET
+    LD   HL,(PR_CPTR)                ; Address the selected operand class.
+    LD   (HL),EN_REL8                ; Mark a relative target.
+    XOR  A                           ; Return success with carry clear.
+    RET                              ; Preserve the absolute target for now.
 .NFLEXIBL:
 
 ; Begin with imm8 and remember this operand in FMASK. If no byte-form candidate
 ; validates, PR_WFLEX widens every marked operand to imm16 and tries again.
 
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_IMM8
-    LD   A,(PR_SINDE)
-    CALL PR_IBIT
-    LD   HL,PR_FMASK
-    OR   (HL)
-    LD   (HL),A
-    XOR  A
-    RET
+    LD   HL,(PR_CPTR)                ; Address the selected operand class.
+    LD   (HL),EN_IMM8                ; Try the shortest numeric class first.
+    LD   A,(PR_SINDE)                ; Recover the operand index.
+    CALL PR_IBIT                     ; Convert it to a one-hot bit.
+    LD   HL,PR_FMASK                 ; Address the flexible-value mask.
+    OR   (HL)                        ; Preserve earlier flexible operands.
+    LD   (HL),A                      ; Mark this one for possible widening.
+    XOR  A                           ; Return success with carry clear.
+    RET                              ; Validation chooses the final width.
 
 ;@ROUTINE OUT HL CLOBBERS A
 ; Load the selected operand's little-endian word into HL.
 
 PR_SVAL:
-    LD   HL,(PR_VPTR)
-    LD   A,(HL)
-    INC  HL
-    LD   H,(HL)
-    LD   L,A
-    RET
+    LD   HL,(PR_VPTR)                ; Load the selected value-slot address.
+    LD   A,(HL)                      ; Read its little-endian low byte.
+    INC  HL                          ; Advance to the high byte.
+    LD   H,(HL)                      ; Place the high byte in H.
+    LD   L,A                         ; Complete the value in HL.
+    RET                              ; Return the concrete operand word.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 ; Clear the selected value once its information has moved into an enum class.
 
 PR_CSVAL:
-    LD   HL,(PR_VPTR)
-    XOR  A
-    LD   (HL),A
-    INC  HL
-    LD   (HL),A
-    RET
+    LD   HL,(PR_VPTR)                ; Load the selected value-slot address.
+    XOR  A                           ; Prepare a zero for both bytes.
+    LD   (HL),A                      ; Clear the low byte.
+    INC  HL                          ; Advance to the high byte.
+    LD   (HL),A                      ; Clear the high byte.
+    RET                              ; The class now carries the value.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE,IX,IY
 ; Require the selected value to fit unsigned eight-bit range.
 
 PR_RBVAL:
-    CALL PR_SVAL
-    LD   A,H
-    OR   A
-    RET  Z
-    JP   PR_VRANG
+    CALL PR_SVAL                     ; Load the selected concrete value.
+    LD   A,H                         ; An unsigned byte needs high byte zero.
+    OR   A                           ; Set Z when the value is within 0..255.
+    RET  Z                           ; Return success with carry clear.
+    JP   PR_VRANG                    ; Report an out-of-range value otherwise.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Return a one-hot bit for operand index A: 0 -> 1, 1 -> 2, 2 -> 4.
 
 PR_IBIT:
-    OR   A
-    JR   NZ,.IBDOUBLE
-    INC  A
-    RET
+    OR   A                           ; Is the operand index zero?
+    JR   NZ,.IBDOUBLE                ; Double either nonzero index.
+    INC  A                           ; Convert index zero to bit value one.
+    RET                              ; Return the one-hot mask.
 .IBDOUBLE:
-    ADD  A,A
-    RET
+    ADD  A,A                         ; Convert index one/two to bit two/four.
+    RET                              ; Return the one-hot mask.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Select an encoder-valid interpretation for the normalised record. Candidate
@@ -374,28 +374,28 @@ PR_IBIT:
 ; the encoder-reported length in A.
 
 PR_VCAND:
-    CALL PR_VCUR
-    RET  NC
-    CALL PR_TCOND
-    RET  NC
-    LD   A,(PR_FMASK)
-    OR   A
-    JR   Z,.IFORM
-    CALL PR_WFLEX
-    CALL PR_VCUR
-    RET  NC
-    CALL PR_TCOND
-    RET  NC
+    CALL PR_VCUR                     ; Try provisional register/byte classes.
+    RET  NC                          ; Keep the first complete valid form.
+    CALL PR_TCOND                    ; Try each ambiguous C as condition C.
+    RET  NC                          ; Keep the first valid condition form.
+    LD   A,(PR_FMASK)                ; Read the flexible numeric-operand mask.
+    OR   A                           ; Can any byte class widen to a word?
+    JR   Z,.IFORM                    ; No remaining form can validate.
+    CALL PR_WFLEX                    ; Widen every marked byte candidate.
+    CALL PR_VCUR                     ; Validate the widened register-C form.
+    RET  NC                          ; Keep it when valid.
+    CALL PR_TCOND                    ; Retry condition C after widening.
+    RET  NC                          ; Keep the first complete valid form.
 .IFORM:
-    LD   A,PR_SIFOR
-    JP   PR_FBEG
+    LD   A,PR_SIFOR                  ; Select invalid-form status.
+    JP   PR_FBEG                     ; Diagnose it at the mnemonic position.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Validate the current private instruction record without examining its values.
 
 PR_VCUR:
-    LD   IX,PR_SCRAT
-    JP   EN_VFORM
+    LD   IX,PR_SCRAT                 ; Point IX at the private record.
+    JP   EN_VFORM                    ; Return the encoder validator's result.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY,HL
 ; Try each operand marked in CMASK as condition C. Change only one occurrence at
@@ -403,58 +403,58 @@ PR_VCUR:
 ; complete valid form.
 
 PR_TCOND:
-    XOR  A
-    LD   (PR_SINDE),A
+    XOR  A                           ; Begin with operand index zero.
+    LD   (PR_SINDE),A                ; Publish the condition scan index.
 .TCLOOP:
-    LD   A,(PR_SINDE)
-    CP   3
-    JR   Z,.TCFAILED
-    LD   B,A
-    CALL PR_IBIT
-    LD   HL,PR_CMASK
-    AND  (HL)
-    JR   Z,.TCNEXT
-    LD   A,B
-    CALL PR_SOP
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_CC
-    PUSH HL
-    CALL PR_VCUR
-    POP  HL
-    RET  NC
-    LD   (HL),EN_C
+    LD   A,(PR_SINDE)                ; Load the current operand index.
+    CP   3                           ; Have all three record slots been tried?
+    JR   Z,.TCFAILED                 ; No condition form validated.
+    LD   B,A                         ; Preserve index across conversion.
+    CALL PR_IBIT                     ; Convert the index to a one-hot mask.
+    LD   HL,PR_CMASK                 ; Address the ambiguous-C mask.
+    AND  (HL)                        ; Is this operand an ambiguity candidate?
+    JR   Z,.TCNEXT                   ; Skip fixed operands.
+    LD   A,B                         ; Restore the candidate operand index.
+    CALL PR_SOP                      ; Select its class slot.
+    LD   HL,(PR_CPTR)                ; Load the selected class address.
+    LD   (HL),EN_CC                  ; Temporarily interpret C as condition C.
+    PUSH HL                          ; Preserve the class address.
+    CALL PR_VCUR                     ; Test the complete modified record.
+    POP  HL                          ; Recover it without changing flags.
+    RET  NC                          ; Keep EN_CC when the form validates.
+    LD   (HL),EN_C                   ; Restore register C after failure.
 .TCNEXT:
-    LD   HL,PR_SINDE
-    INC  (HL)
-    JR   .TCLOOP
+    LD   HL,PR_SINDE                 ; Address the condition scan index.
+    INC  (HL)                        ; Advance to the next operand slot.
+    JR   .TCLOOP                     ; Continue until a candidate validates.
 .TCFAILED:
-    SCF
-    RET
+    SCF                              ; Report every condition choice failed.
+    RET                              ; Ambiguous slots are register C again.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS SIGN,PARITY,HALFCARRY,B,DE,HL,A
 ; Widen every flexible imm8 candidate to imm16 before the second validation
 ; pass. The chosen form later determines each deferred reference's patch width.
 
 PR_WFLEX:
-    XOR  A
-    LD   (PR_SINDE),A
+    XOR  A                           ; Begin with operand index zero.
+    LD   (PR_SINDE),A                ; Publish the widening scan index.
 .WLOOP:
-    LD   A,(PR_SINDE)
-    CP   3
-    RET  Z
-    LD   B,A
-    CALL PR_IBIT
-    LD   HL,PR_FMASK
-    AND  (HL)
-    JR   Z,.WNEXT
-    LD   A,B
-    CALL PR_SOP
-    LD   HL,(PR_CPTR)
-    LD   (HL),EN_IMM16
+    LD   A,(PR_SINDE)                ; Load the current operand index.
+    CP   3                           ; Have all record slots been visited?
+    RET  Z                           ; Return after the final slot.
+    LD   B,A                         ; Preserve index across conversion.
+    CALL PR_IBIT                     ; Convert the index to a one-hot mask.
+    LD   HL,PR_FMASK                 ; Address the flexible-value mask.
+    AND  (HL)                        ; Was this a byte candidate?
+    JR   Z,.WNEXT                    ; Leave fixed classes unchanged.
+    LD   A,B                         ; Restore the flexible operand index.
+    CALL PR_SOP                      ; Select its class slot.
+    LD   HL,(PR_CPTR)                ; Load the selected class address.
+    LD   (HL),EN_IMM16               ; Widen it to a word immediate.
 .WNEXT:
-    LD   HL,PR_SINDE
-    INC  (HL)
-    JR   .WLOOP
+    LD   HL,PR_SINDE                 ; Address the widening scan index.
+    INC  (HL)                        ; Advance to the next operand slot.
+    JR   .WLOOP                      ; Continue through the fixed three slots.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
 ; Check every resolved concrete value against its selected operand class. Values
@@ -462,94 +462,94 @@ PR_WFLEX:
 ; symbols resolve.
 
 PR_CCVAL:
-    XOR  A
-    LD   (PR_SINDE),A
+    XOR  A                           ; Begin with operand index zero.
+    LD   (PR_SINDE),A                ; Publish the concrete-value scan index.
 .CVLOOP:
-    LD   A,(PR_SINDE)
-    LD   B,A
-    LD   A,(PR_OPCNT)
-    CP   B
-    RET  Z
-    LD   A,B
-    CALL PR_SOP
-    LD   A,(PR_SINDE)
-    CALL PR_IBIT
-    LD   HL,PR_UMASK
-    AND  (HL)
-    JR   NZ,.CVNEXT
+    LD   A,(PR_SINDE)                ; Load the current operand index.
+    LD   B,A                         ; Preserve it across the count load.
+    LD   A,(PR_OPCNT)                ; Read the number of parsed operands.
+    CP   B                           ; Has the loop reached that count?
+    RET  Z                           ; Return after the final value.
+    LD   A,B                         ; Restore the current operand index.
+    CALL PR_SOP                      ; Select its class and value slots.
+    LD   A,(PR_SINDE)                ; Reload the index for mask conversion.
+    CALL PR_IBIT                     ; Convert it to a one-hot bit.
+    LD   HL,PR_UMASK                 ; Address the unresolved-value mask.
+    AND  (HL)                        ; Is this value still a placeholder?
+    JR   NZ,.CVNEXT                  ; Defer its range check until resolution.
 
 ; Word and absolute classes need no further range conversion. Byte, relative and
 ; indexed classes have class-specific checks below.
 
-    LD   HL,(PR_CPTR)
-    LD   A,(HL)
-    CP   EN_IMM8
-    JR   Z,.CHKB
-    CP   EN_REL8
-    JR   Z,.CRELATIV
-    CP   EN_IIX
-    JR   Z,.CDISPLAC
-    CP   EN_IIY
-    JR   Z,.CDISPLAC
+    LD   HL,(PR_CPTR)                ; Address the selected operand class.
+    LD   A,(HL)                      ; Read the class that defines its range.
+    CP   EN_IMM8                     ; Does it require an unsigned byte?
+    JR   Z,.CHKB                     ; Check the value against 0..255.
+    CP   EN_REL8                     ; Is it a relative-branch target?
+    JR   Z,.CRELATIV                 ; Convert and check signed displacement.
+    CP   EN_IIX                      ; Is it an IX signed displacement?
+    JR   Z,.CDISPLAC                 ; Check the signed-byte representation.
+    CP   EN_IIY                      ; Is it an IY signed displacement?
+    JR   Z,.CDISPLAC                 ; Check the same signed-byte range.
 .CVNEXT:
-    LD   HL,PR_SINDE
-    INC  (HL)
-    JR   .CVLOOP
+    LD   HL,PR_SINDE                 ; Address the concrete-value scan index.
+    INC  (HL)                        ; Advance to the next operand.
+    JR   .CVLOOP                     ; Continue within the operand count.
 .CHKB:
-    CALL PR_RBVAL
-    RET  C
-    JR   .CVNEXT
+    CALL PR_RBVAL                    ; Require an unsigned eight-bit value.
+    RET  C                           ; Preserve the range diagnostic.
+    JR   .CVNEXT                     ; Continue after a valid byte.
 .CDISPLAC:
 
 ; IX/IY displacement accepts exactly -128..127 represented as a sign-extended
 ; word or a positive low byte.
 
-    CALL PR_SVAL
-    LD   A,H
-    OR   A
-    JR   Z,.CDPOSITI
-    INC  A
-    JP   NZ,PR_VRANG
-    BIT  7,L
-    JP   Z,PR_VRANG
-    JR   .CVNEXT
+    CALL PR_SVAL                     ; Load the signed displacement word.
+    LD   A,H                         ; Inspect its sign-extension byte.
+    OR   A                           ; Zero denotes a non-negative value.
+    JR   Z,.CDPOSITI                 ; Check the positive half separately.
+    INC  A                           ; $FF wraps for negative candidates.
+    JP   NZ,PR_VRANG                 ; Reject any other high byte.
+    BIT  7,L                         ; Negative low bytes need bit 7 set.
+    JP   Z,PR_VRANG                  ; Reject -256..-129 representations.
+    JR   .CVNEXT                     ; Accept -128..-1 and continue.
 .CDPOSITI:
-    BIT  7,L
-    JP   NZ,PR_VRANG
-    JR   .CVNEXT
+    BIT  7,L                         ; Positive bytes must be below $80.
+    JP   NZ,PR_VRANG                 ; Reject 128..255.
+    JR   .CVNEXT                     ; Accept 0..127 and continue.
 .CRELATIV:
 
 ; Convert an absolute branch target to target-(instruction address+length). The
 ; 16-bit addition and subtraction deliberately wrap at $FFFF, matching the Z80
 ; program counter, then the result must fit a signed byte.
 
-    CALL PR_SVAL
-    LD   DE,(PR_IADR)
-    LD   A,(PR_ILEN)
-    ADD  A,E
-    LD   E,A
-    JR   NC,.RBREADY
-    INC  D
+    CALL PR_SVAL                     ; Load the absolute branch target.
+    LD   DE,(PR_IADR)                ; Load the instruction's logical address.
+    LD   A,(PR_ILEN)                 ; Read its validated encoded length.
+    ADD  A,E                         ; Add length to the address low byte.
+    LD   E,A                         ; Store the next-PC low byte.
+    JR   NC,.RBREADY                 ; Skip when no carry occurred.
+    INC  D                           ; Carry into the address high byte.
 .RBREADY:
-    OR   A
-    SBC  HL,DE
-    LD   A,H
-    OR   A
-    JR   Z,.RPOSITIV
-    INC  A
-    JP   NZ,PR_RRANG
-    BIT  7,L
-    JP   Z,PR_RRANG
-    JR   .RSTORE
+    OR   A                           ; Clear carry before subtraction.
+    SBC  HL,DE                       ; Subtract the next-instruction address.
+    LD   A,H                         ; Inspect the displacement high byte.
+    OR   A                           ; Zero means non-negative displacement.
+    JR   Z,.RPOSITIV                 ; Check the positive half separately.
+    INC  A                           ; $FF wraps for negative candidates.
+    JP   NZ,PR_RRANG                 ; Reject missing sign extension.
+    BIT  7,L                         ; Negative bytes need bit 7 set.
+    JP   Z,PR_RRANG                  ; Reject values below -128.
+    JR   .RSTORE                     ; Accept -128..-1.
 .RPOSITIV:
-    BIT  7,L
-    JP   NZ,PR_RRANG
+    BIT  7,L                         ; Positive bytes must be below $80.
+    JP   NZ,PR_RRANG                 ; Reject displacements above 127.
 .RSTORE:
 
 ; Replace the absolute target with the encoded displacement for EN_NAME.
 
-    CALL PR_SHVAL
-    JR   .CVNEXT
+    CALL PR_SHVAL                    ; Store the signed displacement word.
+    JR   .CVNEXT                     ; Continue checking later operands.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,IY
 ; Turn private build references into public symbol-reference descriptions. The
