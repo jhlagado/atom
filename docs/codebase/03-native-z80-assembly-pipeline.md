@@ -192,11 +192,17 @@ LOW(EXPRESSION)
 HIGH(EXPRESSION)
 ```
 
-`AtomExpressionParse` requires a concrete result. `AtomExpressionParseDeferred`
-also permits the restricted forward form used by instructions, `DB`, and `DW`.
-That deferred value contains one exact symbol and a signed-byte addend. The
-reducer accepts addition or subtraction that preserves the affine form and
-rejects operations that would require two symbols, symbol multiplication, or a
+Both expression entries can return a concrete result or the restricted forward
+form used by instructions, `DB` and `DW`. `AtomExpressionParse` publishes a
+missing symbol through the symbol core after the complete expression is valid
+and returns its symbol record. `AtomExpressionParseDeferred` leaves the symbol
+arena unchanged and returns the packed key in expression workspace. The parser
+and statement layer use that deferred-publication entry so they can finish form
+validation and capacity checks before committing the reference.
+
+The retained forward value contains one exact symbol and a signed-byte addend.
+The reducer accepts addition or subtraction that preserves the affine form and
+rejects operations that would require two symbols, symbol multiplication or a
 wider retained expression.
 
 `LOW()` and `HIGH()` may wrap one deferred affine expression. Their state is

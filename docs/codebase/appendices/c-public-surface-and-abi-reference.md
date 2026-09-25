@@ -207,8 +207,8 @@ See [`symbol-abi.md`](../../symbol-abi.md).
 
 | Entry | Contract |
 | --- | --- |
-| `AtomExpressionParse` | Parse a concrete expression from the tokenizer stream |
-| `AtomExpressionParseDeferred` | Parse a concrete result or one retained affine symbol form |
+| `AtomExpressionParse` | Parse a concrete result or publish and return one retained affine symbol form |
+| `AtomExpressionParseDeferred` | Parse the same forms without publishing a missing symbol |
 | `AtomParserParse` | Parse and atomically publish a validated ten-byte instruction record plus zero to two references |
 | `AtomParserCheckReferences` | Preflight pending capacity for the current parsed references |
 | `AtomParserQueueReferences` | Convert field offsets to logical addresses and append pending records |
