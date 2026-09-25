@@ -139,157 +139,157 @@ EN_R4CBE:
 ; every character is proved representable.
 
 EN_R40PK:
-    LD   A,B
-    OR   A
-    JR   Z,.PINVALID
-    CP   9
-    JR   NC,.PINVALID
-    PUSH HL
-    PUSH BC
+    LD   A,B                 ; Copy the character count for the bounds checks.
+    OR   A                   ; Set Z only when the name is empty.
+    JR   Z,.PINVALID         ; Reject empty names before saving any state.
+    CP   9                   ; Compare with the maximum length plus one.
+    JR   NC,.PINVALID        ; Reject names longer than eight characters.
+    PUSH HL                  ; Preserve the caller's source pointer.
+    PUSH BC                  ; Preserve the count and caller's C value.
 .PVLOOP:
-    LD   A,(HL)
-    CALL EN_R40CH
-    JR   C,.PVFAILED
-    INC  HL
-    DJNZ .PVLOOP
-    POP  BC
-    POP  HL
-    PUSH DE
-    LD   IX,EN_SCRAT
-    LD   A,B
+    LD   A,(HL)              ; Read the next name character for validation.
+    CALL EN_R40CH            ; Convert it to a valid RADIX-40 code.
+    JR   C,.PVFAILED         ; Stop if a character is invalid.
+    INC  HL                  ; Advance to the next source character.
+    DJNZ .PVLOOP             ; Validate exactly the original B characters.
+    POP  BC                  ; Restore the original length and C register.
+    POP  HL                  ; Restore the source pointer for packing.
+    PUSH DE                  ; Save the caller's destination during packing.
+    LD   IX,EN_SCRAT         ; Stage the three words in private scratch space.
+    LD   A,B                 ; Pass the full name length to the first group.
 
 ; Encode characters 0..2 and 3..5 as complete RADIX-40 words. The final call
 ; stores characters 6..7 directly as c6*40+c7 in the third word.
 
-    CALL EN_PTHRE
-    CALL EN_PTHRE
-    LD   B,A
-    LD   C,2
+    CALL EN_PTHRE            ; Pack characters zero through two.
+    CALL EN_PTHRE            ; Pack characters three through five.
+    LD   B,A                 ; Pass the remaining count to the third group.
+    LD   C,2                 ; Encode the final two RADIX-40 positions.
 ;@EXPECTOUT DE
-    CALL EN_PGROU
-    LD   (IX+0),E
-    LD   (IX+1),D
-    POP  DE
-    LD   HL,EN_SCRAT
-    LD   BC,6
-    LDIR
-    OR   A
-    RET
+    CALL EN_PGROU            ; Pack the last two characters with zero padding.
+    LD   (IX+0),E            ; Stage the final word's low byte.
+    LD   (IX+1),D            ; Stage the final word's high byte.
+    POP  DE                  ; Restore the caller's six-byte destination.
+    LD   HL,EN_SCRAT          ; Point at the complete staged name.
+    LD   BC,6                ; Copy all three packed words.
+    LDIR                     ; Publish only after the whole name is valid.
+    OR   A                   ; Clear carry to report successful packing.
+    RET                      ; Return with the destination fully written.
 .PVFAILED:
-    POP  BC
-    POP  HL
+    POP  BC                  ; Restore the saved count after a failed scan.
+    POP  HL                  ; Restore the source pointer before returning.
 .PINVALID:
-    XOR  A
-    SCF
-    RET
+    XOR  A                   ; Return a zero code for every invalid name.
+    SCF                      ; Set carry to report an invalid name.
+    RET                      ; Leave the caller's destination untouched.
 
 ;@ROUTINE IN A,HL,IX OUT A,HL,IX CLOBBERS BC,DE,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 ; Consume up to three of the remaining A characters, write one word at IX and
 ; return the remaining count in A.
 
 EN_PTHRE:
-    CP   3
-    JR   C,.PTSHORT
-    LD   B,3
-    SUB  3
-    JR   .PTREADY
+    CP   3                   ; Check for a full three-character group.
+    JR   C,.PTSHORT          ; Handle zero, one or two characters.
+    LD   B,3                 ; Consume exactly three real characters.
+    SUB  3                   ; Keep the count for the following group in A.
+    JR   .PTREADY            ; Both paths now share the group encoder.
 .PTSHORT:
-    LD   B,A
-    XOR  A
+    LD   B,A                 ; Consume every character that remains.
+    XOR  A                   ; Set the returned remaining count to zero.
 .PTREADY:
-    PUSH AF
-    LD   C,3
+    PUSH AF                  ; Preserve the remaining count across packing.
+    LD   C,3                 ; This group has three base-40 positions.
 ;@EXPECTOUT DE
-    CALL EN_PGROU
-    LD   (IX+0),E
-    LD   (IX+1),D
-    INC  IX
-    INC  IX
-    POP  AF
-    RET
+    CALL EN_PGROU            ; Return this group's packed value in DE.
+    LD   (IX+0),E            ; Store the packed word's low byte.
+    LD   (IX+1),D            ; Store the packed word's high byte.
+    INC  IX                  ; Advance to this word's high byte.
+    INC  IX                  ; Point at the next packed-word slot.
+    POP  AF                  ; Restore the number of characters still unused.
+    RET                      ; Return the remaining count for the next group.
 
 ;@ROUTINE IN BC,HL OUT DE,HL,CARRY MAYBE-OUT ZERO CLOBBERS A,SIGN,PARITY,HALFCARRY,BC,ZERO
 ; Accumulate exactly C base-40 digits. B real characters are followed by zero
 ; padding, so each group has one canonical packed representation.
 
 EN_PGROU:
-    LD   DE,0
+    LD   DE,0                 ; Start this base-40 word at zero.
 .PGLOOP:
-    LD   A,B
-    OR   A
-    JR   Z,.PGPADDIN
-    LD   A,(HL)
-    INC  HL
-    DEC  B
-    CALL EN_R40CH
-    JR   .PGAPPEND
+    LD   A,B                 ; Check whether another real character remains.
+    OR   A                   ; Set Z when the group needs padding.
+    JR   Z,.PGPADDIN         ; Supply zero for unused positions at the end.
+    LD   A,(HL)              ; Read the next source character.
+    INC  HL                  ; Advance the source pointer before conversion.
+    DEC  B                   ; Count the character consumed from this group.
+    CALL EN_R40CH            ; Convert the source byte to its RADIX-40 code.
+    JR   .PGAPPEND           ; Append the digit to the accumulated word.
 .PGPADDIN:
-    XOR  A
+    XOR  A                   ; Zero is the canonical RADIX-40 padding digit.
 .PGAPPEND:
-    CALL AT_MA40
-    DEC  C
-    JR   NZ,.PGLOOP
-    OR   A
-    RET
+    CALL AT_MA40             ; Replace DE with DE*40 plus this character code.
+    DEC  C                   ; Count down the positions in this packed word.
+    JR   NZ,.PGLOOP          ; Continue until all positions are added.
+    OR   A                   ; Clear carry after the successful accumulation.
+    RET                      ; Return the packed word in DE.
 
 ;@ROUTINE IN DE,A OUT DE CLOBBERS A,F
 ; DE = DE*40 + A. Five doublings and one add are smaller than a general multiply.
 
 AT_MA40:
-    PUSH HL
-    LD   H,D
-    LD   L,E
-    ADD  HL,HL
-    ADD  HL,HL
-    ADD  HL,DE
-    ADD  HL,HL
-    ADD  HL,HL
-    ADD  HL,HL
-    ADD  A,L
-    LD   L,A
-    JR   NC,.MA4NCARR
-    INC  H
+    PUSH HL                  ; Preserve the caller's source or table pointer.
+    LD   H,D                 ; Copy the 16-bit accumulator into HL.
+    LD   L,E                 ; HL now contains the prior RADIX-40 value.
+    ADD  HL,HL               ; Double it to obtain 2 times the value.
+    ADD  HL,HL               ; Double again to obtain 4 times the value.
+    ADD  HL,DE               ; Add the original value to obtain 5 times it.
+    ADD  HL,HL               ; Double to obtain 10 times the value.
+    ADD  HL,HL               ; Double to obtain 20 times the value.
+    ADD  HL,HL               ; Double to obtain 40 times the value.
+    ADD  A,L                 ; Add this character code into the low byte.
+    LD   L,A                 ; Retain the low byte of the new accumulator.
+    JR   NC,.MA4NCARR        ; Skip the high-byte correction without carry.
+    INC  H                   ; Propagate the low-byte addition's carry into H.
 .MA4NCARR:
-    EX   DE,HL
-    POP  HL
-    RET
+    EX   DE,HL               ; Return the updated 16-bit value in DE.
+    POP  HL                  ; Restore the source or table pointer.
+    RET                      ; Finish one multiply-and-add step.
 
 ;@ROUTINE IN A OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Map A-Z/a-z to 1..26, digits to 27..36 and underscore to 37. Codes 38 and 39
 ; remain unused; zero is reserved for padding.
 
 EN_R40CH:
-    CP   $61
-    JR   C,.R4UPPER
-    CP   $7A+1
-    JR   NC,.R4UPPER
-    SUB  $20
+    CP   $61                 ; Test whether the byte could be lowercase ASCII.
+    JR   C,.R4UPPER          ; Bytes below 'a' need no case conversion.
+    CP   $7A+1               ; Compare with the first byte after lowercase z.
+    JR   NC,.R4UPPER         ; Bytes after 'z' also keep their original value.
+    SUB  $20                 ; Convert lowercase ASCII to its uppercase form.
 .R4UPPER:
-    CP   $41
-    JR   C,.R4DIGIT
-    CP   $5A+1
-    JR   NC,.R4DIGIT
-    SUB  $41-1
-    OR   A
-    RET
+    CP   $41                 ; Test against uppercase ASCII A.
+    JR   C,.R4DIGIT          ; Values below A cannot encode as letters.
+    CP   $5A+1               ; Compare with the first byte after uppercase Z.
+    JR   NC,.R4DIGIT         ; Values beyond Z continue to the digit test.
+    SUB  $41-1               ; Map A..Z to the nonzero codes 1..26.
+    OR   A                   ; Clear carry to report a valid character code.
+    RET                      ; Return the packed letter value in A.
 .R4DIGIT:
-    CP   $30
-    JR   C,.R4UNDERS
-    CP   $39+1
-    JR   NC,.R4UNDERS
-    SUB  $30-27
-    OR   A
-    RET
+    CP   $30                 ; Test against ASCII digit zero.
+    JR   C,.R4UNDERS         ; Lower bytes cannot encode as digits.
+    CP   $39+1               ; Compare with the first byte after digit nine.
+    JR   NC,.R4UNDERS        ; Higher bytes continue to the underscore test.
+    SUB  $30-27              ; Map ASCII 0..9 to RADIX-40 codes 27..36.
+    OR   A                   ; Clear carry to report a valid character code.
+    RET                      ; Return the packed digit value in A.
 .R4UNDERS:
-    CP   $5F
-    JR   NZ,.R4BAD
-    LD   A,37
-    OR   A
-    RET
+    CP   $5F                 ; Test the one supported punctuation character.
+    JR   NZ,.R4BAD           ; Reject anything other than underscore.
+    LD   A,37                ; Map underscore to the final assigned code.
+    OR   A                   ; Clear carry to report a valid character code.
+    RET                      ; Return the underscore value in A.
 .R4BAD:
-    XOR  A
-    SCF
-    RET
+    XOR  A                   ; Set the invalid-character result to zero.
+    SCF                      ; Mark invalid input with carry set.
+    RET                      ; Return the character-classification failure.
 EN_R4CEN:
 EN_RCBEG:
 
