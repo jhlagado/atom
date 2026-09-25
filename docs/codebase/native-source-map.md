@@ -47,7 +47,8 @@ patches. The driver repeats the statement layer for each ordered source part.
 | `expr.asm` | `EX_CBEG` through `EX_RFORW` | Expression grammar, bounded stacks and restricted deferred expressions | `EX_PARSE`, `EX_PDEFR` |
 | `exprmath.asm` | `EX_LARIT` through `EX_WEND` | Concrete 24-bit arithmetic kernels and expression workspace | Arithmetic helpers called by `expr.asm` |
 | `patch.asm` | `PT_CBEG` through `PT_CEND` | Mapping a validated operand to its patch byte, width and transform | `PT_LOCAT` |
-| `parser.asm` | `PR_CBEG` through `PR_WEND` | Mnemonic and operand parsing, instruction records and deferred-reference descriptions | `PR_PUB`, `PR_PARSE`, `PR_CREFE`, `PR_QREFE` |
+| `parser.asm` | `PR_CBEG` through `PR_STVAL` | Mnemonic recognition, operand syntax and provisional instruction records | `PR_PUB`, `PR_PARSE`, `PR_POP`, `PR_PMEMO` |
+| `forms.asm` | `PR_NAALI` through `PR_WEND` | Operand normalization, form validation, deferred references, record commit and parser workspace | `PR_NAALI`, `PR_VCAND`, `PR_FREFE`, `PR_CREFE`, `PR_QREFE`, `PR_CMT` |
 | `output.asm` | `OU_CBEG` through `OU_WEND` | Logical cursor management, IMAGE emission and resolved PATCH submission | `OU_RESET`, `OU_EMITB`, `OU_EMITW`, `OU_RESER`, `OU_SORIG`, `OU_EINS`, `OU_RSLV` |
 | `stmts.asm` | `ST_CBEG` through `ST_WEND` | Labels, equates, directives and complete source statements | `DR_APART`, `ST_NEXT` |
 | `driver.asm` | `DR_CBEG` through `DR_WEND` | Build-descriptor validation, multipart assembly and final unresolved-symbol checks | `DR_ASM`, `DR_VDESC`, `DR_AFIN` |
@@ -90,8 +91,8 @@ matching a register-contract comment or by assuming a numbered source part.
 
 For a first reading, start with `driver.asm` and `stmts.asm` to see the
 outer control flow. Continue with `token.asm`, `tokdisp.asm`,
-`expr.asm`, `exprmath.asm` and
-`parser.asm`, then read `output.asm` and `symbols.asm` together to understand
+`expr.asm`, `exprmath.asm`, `parser.asm` and `forms.asm`, then read `output.asm`
+and `symbols.asm` together to understand
 forward references. Read `encoder.asm` last because its dense validation and
 opcode rules make more sense after the parsed instruction record is familiar.
 

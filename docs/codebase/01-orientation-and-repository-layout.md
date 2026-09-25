@@ -113,7 +113,7 @@ expected-result data.
 
 ## Native source layout
 
-`src/z80/atom.asm` is the core entry. Its ten logical subsystems occupy twelve
+`src/z80/atom.asm` is the core entry. Its logical subsystems occupy thirteen
 ordered source files in dependency order:
 
 ```text
@@ -125,6 +125,7 @@ expression grammar and bounded stacks
 expression arithmetic and storage
 patch locator
 operand parser
+instruction-form normalization and publication
 output
 statements and directives
 multipart driver

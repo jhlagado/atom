@@ -8,7 +8,7 @@ is never edited by hand.
 
 ## Source entry
 
-`src/z80/atom.asm` contains the ordered `%INCLUDE` header for the twelve core
+`src/z80/atom.asm` contains the ordered `%INCLUDE` header for the thirteen core
 modules:
 
 ```asm
@@ -20,14 +20,15 @@ modules:
 %INCLUDE "exprmath.asm"
 %INCLUDE "patch.asm"
 %INCLUDE "parser.asm"
+%INCLUDE "forms.asm"
 %INCLUDE "output.asm"
 %INCLUDE "stmts.asm"
 %INCLUDE "driver.asm"
 %INCLUDE "host.asm"
 ```
 
-The resolver presents the twelve modules followed by the entry file, giving
-the native driver thirteen source parts. Each module remains below Atom's
+The resolver presents the thirteen modules followed by the entry file, giving
+the native driver fourteen source parts. Each module remains below Atom's
 65,535-byte per-part limit.
 
 Native names are limited to eight significant characters. Global names use a

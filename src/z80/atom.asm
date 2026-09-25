@@ -7,7 +7,8 @@
     %INCLUDE "expr.asm"                  ; Parse expressions and manage deferred values.
     %INCLUDE "exprmath.asm"              ; Evaluate the arithmetic and logical operators.
     %INCLUDE "patch.asm"                 ; Locate encoded fields that need later patching.
-    %INCLUDE "parser.asm"                ; Classify operands and build instruction records.
+    %INCLUDE "parser.asm"                ; Parse mnemonic and operand syntax.
+    %INCLUDE "forms.asm"                 ; Normalize, validate and publish instruction records.
     %INCLUDE "output.asm"                ; Submit image bytes and resolved patches to host services.
     %INCLUDE "stmts.asm"                 ; Assemble labels, directives and instructions.
     %INCLUDE "driver.asm"                ; Validate a build request and drive every source part.

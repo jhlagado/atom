@@ -8,8 +8,8 @@ The compiler uses a caller-supplied source service plus caller-owned symbol and
 pending arenas. Its fixed non-reentrant workspace occupies 714 bytes beside the
 code and immutable tables.
 
-`src/z80/atom.asm` selects the complete configuration. Its ten logical
-subsystems occupy twelve included `.asm` files and follow the boundaries described in the
+`src/z80/atom.asm` selects the complete configuration. Its logical subsystems
+occupy thirteen included `.asm` files and follow the boundaries described in the
 [native source map](native-source-map.md). The checked core enables deferred
 expressions, statement parsing, output, symbol resolution and the multipart
 driver.
@@ -221,9 +221,9 @@ state.
 
 ## Parsed instruction record
 
-`AtomParserParse` in the parser section beginning at `PR_CBEG` in
-`src/z80/parser.asm` consumes a mnemonic and up to three operands into the
-encoder's ten-byte record:
+`AtomParserParse` in `src/z80/parser.asm` consumes a mnemonic and up to three
+operands into the encoder's ten-byte record. `src/z80/forms.asm` then
+normalises and validates that provisional record:
 
 | Offset | Field |
 | ---: | --- |
@@ -241,11 +241,11 @@ parenthesized absolute, register-indirect, port, and IX/IY displacement forms.
 An expression result is normalized to the concrete operand class required by
 the instruction family.
 
-The parser builds the result in scratch storage. It calls `AtomValidateForm`
-before committing the caller's record or inserting missing symbols. This order
-prevents a malformed instruction from changing the symbol arena. It also
-preflights all symbol records and public references needed by the complete
-instruction, including the two-reference form `LD (IX+D),N`.
+The parser builds the result in scratch storage. The form layer calls
+`AtomValidateForm` before committing the caller's record or inserting missing
+symbols. This order prevents a malformed instruction from changing the symbol
+arena. It also preflights all symbol records and public references needed by
+the complete instruction, including the two-reference form `LD (IX+D),N`.
 
 A successful parse publishes zero, one, or two nine-byte reference descriptions
 until the next parse call. Each description retains symbol pointer, signed

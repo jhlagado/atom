@@ -11,6 +11,7 @@ export const NATIVE_CORE_MODULES = Object.freeze([
   "exprmath.asm",
   "patch.asm",
   "parser.asm",
+  "forms.asm",
   "output.asm",
   "stmts.asm",
   "driver.asm",
