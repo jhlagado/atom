@@ -913,204 +913,199 @@ CP_NAME_POINTER:
 ; Rebuild and open the ordinary input FCB from one retained name.
 
 CP_OPEN_PART:
-    PUSH AF
-    CALL CP_CLEAR_INPUT_FCB
-    POP  AF
-    CALL CP_NAME_POINTER
-    LD   DE,CP_INPUT_FCB+1
-    LD   B,11
+    PUSH AF ; Preserve the source ordinal while clearing its input FCB.
+    CALL CP_CLEAR_INPUT_FCB ; Reset the file-control block for this source.
+    POP  AF ; Restore the ordinal used to find its retained name.
+    CALL CP_NAME_POINTER ; Address the source's eleven-byte name record.
+    LD   DE,CP_INPUT_FCB+1 ; Point past the drive byte to the 8.3 fields.
+    LD   B,11 ; Copy the eight-character name and three-character type.
 CP_OPEN_NAME_BYTE:
-    LD   A,(HL)
-    AND  $7F
-    LD   (DE),A
-    INC  HL
-    INC  DE
-    DJNZ CP_OPEN_NAME_BYTE
-    CALL CP_CHECK_SOURCE_CONFLICT
-    RET  C
-    LD   DE,CP_INPUT_FCB
-    LD   C,CP_OPEN_FUNCTION
-    CALL CP_BDOS
-    INC  A
-    JR   Z,CP_OPEN_FAILURE
-    LD   A,1
-    LD   (CP_SOURCE_CACHE_KEY),A
-    XOR  A
-    RET
+    LD   A,(HL) ; Read the next byte of the retained source name.
+    AND  $7F ; Clear the high-bit ordering marker if this is the first byte.
+    LD   (DE),A ; Copy the ordinary name byte into the input FCB.
+    INC  HL ; Advance within the retained name record.
+    INC  DE ; Advance within the input FCB name fields.
+    DJNZ CP_OPEN_NAME_BYTE ; Copy all eleven name and type bytes.
+    CALL CP_CHECK_SOURCE_CONFLICT ; Protect output and transaction files.
+    RET  C ; Do not open a source that aliases an output name.
+    LD   DE,CP_INPUT_FCB ; Pass the prepared FCB to CP/M.
+    LD   C,CP_OPEN_FUNCTION ; Select the CP/M open-file service.
+    CALL CP_BDOS ; Open the selected source file.
+    INC  A ; Convert BDOS's $FF failure result to zero.
+    JR   Z,CP_OPEN_FAILURE ; Report an unavailable source by name.
+    LD   A,1 ; Choose a non-aligned cache key to force the next refill.
+    LD   (CP_SOURCE_CACHE_KEY),A ; Aligned record offsets cannot equal one.
+    XOR  A ; Return zero with carry clear on a successful open.
+    RET ; Leave the opened input FCB ready for random reads.
 CP_OPEN_FAILURE:
-    LD   HL,CP_INPUT_FCB
-    CALL CP_PRINT_NAME
-    LD   DE,CP_READ_FAILED_TEXT
-    SCF
-    RET
+    LD   HL,CP_INPUT_FCB ; Address the filename that failed to open.
+    CALL CP_PRINT_NAME ; Print its drive-independent 8.3 name.
+    LD   DE,CP_READ_FAILED_TEXT ; Select the source-open error message.
+    SCF ; Mark the open operation as failed.
+    RET ; Return the message pointer with carry set.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-; Return the next raw source byte and advance HL. Carry with A=0 is EOF or an
-; unsuccessful CP/M random read; carry with A=2 means the 16-bit offset wrapped.
-; BC and DE survive for parsers.
+; Return the next raw source byte and advance HL. Carry with A=0 means EOF or
+; an unsuccessful CP/M random read. Carry with A=2 means the 16-bit offset
+; wrapped. BC and DE survive for parsers.
+; A part is limited to 65,535 bytes so the next offset cannot wrap to zero.
 
 CP_NEXT_SOURCE_BYTE:
-    PUSH BC
-    PUSH DE
-    PUSH HL
-    CALL CP_RAW_SOURCE_BYTE
-    POP  HL
-    POP  DE
-    POP  BC
-    RET  C
-    LD   (CP_NEXT_VALUE),A
-    INC  HL
-    LD   A,H
-    OR   L
-    JR   Z,CP_SOURCE_TOO_LONG
-    LD   A,(CP_NEXT_VALUE)
-    OR   A
-    RET
+    PUSH BC ; Preserve the parser's byte-sized working values.
+    PUSH DE ; Preserve the parser's filename or pointer register.
+    PUSH HL ; Keep the logical source offset across the raw read.
+    CALL CP_RAW_SOURCE_BYTE ; Read from the current CP/M record cache.
+    POP  HL ; Restore the logical offset before checking the result.
+    POP  DE ; Restore the caller's DE value.
+    POP  BC ; Restore the caller's BC value.
+    RET  C ; Return EOF or a read failure without advancing HL.
+    LD   (CP_NEXT_VALUE),A ; Save the byte while advancing the offset.
+    INC  HL ; Prepare the logical offset of the following byte.
+    LD   A,H ; Test the high byte of the advanced offset.
+    OR   L ; Zero means the 16-bit offset wrapped.
+    JR   Z,CP_SOURCE_TOO_LONG ; Reject a part that would exceed 65,535 bytes.
+    LD   A,(CP_NEXT_VALUE) ; Restore the byte read from the source.
+    OR   A ; Clear carry and set zero when the byte itself is zero.
+    RET ; Return the byte with HL advanced to its next offset.
 CP_SOURCE_TOO_LONG:
-
-; Wrapping after a successful byte would require a 65,536-byte part, outside the
-; native 16-bit logical-offset contract.
-
-    LD   A,2
-    SCF
-    RET
+    LD   A,2 ; Distinguish offset overflow from ordinary end-of-input.
+    SCF ; Report that the logical source offset wrapped.
+    RET ; Return the overflow status to the resolver.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Align the logical offset to its 128-byte CP/M record base. The cache key stores
-; that aligned byte offset; the FCB receives the same value divided by 128. A miss
-; installs the source cache as DMA, reads the record, then uses the low seven bits.
+; Align the logical offset to its 128-byte CP/M record base. The cache
+; key stores that base; the FCB receives it divided by 128. On a miss,
+; the routine installs the source cache as DMA and reads that record.
+; It then uses the low seven bits to select the requested byte.
 
 CP_RAW_SOURCE_BYTE:
-    LD   (CP_RAW_OFFSET),HL
-    LD   A,L
-    AND  $80
-    LD   E,A
-    LD   D,H
-    LD   HL,(CP_SOURCE_CACHE_KEY)
-    OR   A
-    SBC  HL,DE
-    JR   Z,CP_RAW_CACHE_READY
+    LD   (CP_RAW_OFFSET),HL ; Save the requested logical byte offset.
+    LD   A,L ; Inspect the low byte of the requested offset.
+    AND  $80 ; Keep its 128-byte record-boundary bit.
+    LD   E,A ; Form the aligned offset's low byte.
+    LD   D,H ; Form its high byte from the logical offset.
+    LD   HL,(CP_SOURCE_CACHE_KEY) ; Read the offset currently in the cache.
+    OR   A ; Clear carry before subtracting the requested base.
+    SBC  HL,DE ; Compare the cached and requested record bases.
+    JR   Z,CP_RAW_CACHE_READY ; Reuse the cache when both bases match.
 CP_RAW_CACHE_MISS:
-    LD   (CP_SOURCE_CACHE_KEY),DE
-    RLC  E
-    LD   A,D
-    ADD  A,A
-    OR   E
-    LD   (CP_INPUT_FCB+33),A
-    LD   A,D
-    RLCA
-    AND  1
-    LD   (CP_INPUT_FCB+34),A
-    LD   DE,CP_SOURCE_CACHE
-    LD   C,CP_DMA_FUNCTION
-    CALL CP_BDOS
-    LD   DE,CP_INPUT_FCB
-    LD   C,CP_RANDOM_READ_FUNCTION
-    CALL CP_BDOS
-    OR   A
-    JR   NZ,CP_RAW_READ_EOF
+    LD   (CP_SOURCE_CACHE_KEY),DE ; Remember the aligned offset being loaded.
+    RLC  E ; Move offset bit 7 into bit 0 of the record number.
+    LD   A,D ; Load the high byte for the low record-number byte.
+    ADD  A,A ; Shift its bits left one place.
+    OR   E ; Add the original offset's bit 7.
+    LD   (CP_INPUT_FCB+33),A ; Store the random record number's low byte.
+    LD   A,D ; Reload the offset's high byte.
+    RLCA ; Move offset bit 15 into bit 0.
+    AND  1 ; Keep only the record number's high bit.
+    LD   (CP_INPUT_FCB+34),A ; Store the random record number's high byte.
+    LD   DE,CP_SOURCE_CACHE ; Select the 128-byte DMA buffer.
+    LD   C,CP_DMA_FUNCTION ; Set the CP/M transfer address.
+    CALL CP_BDOS ; Direct the next read into the source cache.
+    LD   DE,CP_INPUT_FCB ; Pass the file and record number to CP/M.
+    LD   C,CP_RANDOM_READ_FUNCTION ; Select a random-record read.
+    CALL CP_BDOS ; Load the requested 128-byte source record.
+    OR   A ; Zero means the random read succeeded.
+    JR   NZ,CP_RAW_READ_EOF ; Treat a BDOS read failure as no source byte.
 CP_RAW_CACHE_READY:
-    LD   HL,(CP_RAW_OFFSET)
-    SET  7,L
-    LD   H,CP_SOURCE_CACHE/256
-    LD   A,(HL)
-    CP   $1A
-    JR   Z,CP_RAW_EOF
-    OR   A
-    RET
+    LD   HL,(CP_RAW_OFFSET) ; Restore the byte's logical offset.
+    SET  7,L ; Map its within-record offset into $80..$FF.
+    LD   H,CP_SOURCE_CACHE/256 ; Select the source cache's memory page.
+    LD   A,(HL) ; Read the byte from the cached record.
+    CP   $1A ; Test CP/M's text-file end marker.
+    JR   Z,CP_RAW_EOF ; Return end-of-input at control-Z.
+    OR   A ; Clear carry while preserving the source byte in A.
+    RET ; Return the raw byte to the caller.
 CP_RAW_READ_EOF:
 CP_RAW_EOF:
-    XOR  A
-    SCF
-    RET
+    XOR  A ; Return zero for a read failure or text-file end marker.
+    SCF ; Carry reports that no source byte is available.
+    RET ; Share one end-of-input result for both conditions.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Consume source bytes through the next CR, LF or end of file.
 
 CP_SKIP_SOURCE_LINE:
-    CALL CP_NEXT_SOURCE_BYTE
-    RET  C
-    CP   13
-    RET  Z
-    CP   10
-    JR   NZ,CP_SKIP_SOURCE_LINE
-    RET
+    CALL CP_NEXT_SOURCE_BYTE ; Read the next byte in the current line.
+    RET  C ; Stop at accepted end-of-input or report offset overflow.
+    CP   13 ; Test for a carriage return.
+    RET  Z ; Stop after consuming CR.
+    CP   10 ; Test for a line feed.
+    JR   NZ,CP_SKIP_SOURCE_LINE ; Continue until LF or another CR.
+    RET ; Stop after consuming LF.
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-; Open a part on ordinal change, then return one byte. A line-leading percent
-; is changed to a semicolon after preflight has proved it is %INCLUDE.
+; Open a part on ordinal change, then return one source byte.
+; Preflight accepts only %INCLUDE. Its leading percent becomes a semicolon,
+; so Atom reads the rest of that directive line as a comment.
 
 CP_RESOLVED_READ_BYTE:
-    LD   E,A
-    LD   A,(CP_ACTIVE_PART)
-    CP   E
-    JR   Z,CP_RESOLVED_SOURCE_READY
-    PUSH BC
-    PUSH HL
-    LD   A,E
-    LD   (CP_ACTIVE_PART),A
-    LD   D,CP_PART_ORDER/256
-    LD   A,(DE)
-    CALL CP_OPEN_PART
-    POP  HL
-    POP  BC
+    LD   E,A ; Keep the resolved source-part ordinal.
+    LD   A,(CP_ACTIVE_PART) ; Read the ordinal of the open source file.
+    CP   E ; Compare it with the requested part.
+    JR   Z,CP_RESOLVED_SOURCE_READY ; Reuse the file when ordinals match.
+    PUSH BC ; Preserve the caller's byte-sized parser state.
+    PUSH HL ; Preserve the logical byte offset across file open.
+    LD   A,E ; Restore the requested resolved ordinal.
+    LD   (CP_ACTIVE_PART),A ; Record which resolved part is now active.
+    LD   D,CP_PART_ORDER/256 ; Address the order table's fixed memory page.
+    LD   A,(DE) ; Map resolved order back to the discovered source ordinal.
+    CALL CP_OPEN_PART ; Open the source named by that original ordinal.
+    POP  HL ; Restore the byte offset in the newly opened file.
+    POP  BC ; Restore the caller's parser state.
 CP_RESOLVED_SOURCE_READY:
-    PUSH BC
-    PUSH HL
-    CALL CP_RAW_SOURCE_BYTE
-    POP  HL
-    POP  BC
-    RET  C
-    CP   '%'
-    JR   Z,CP_RESOLVED_PERCENT
-    OR   A
-    RET
+    PUSH BC ; Preserve parser state while the raw reader uses BC.
+    PUSH HL ; Preserve the source offset across cache lookup.
+    CALL CP_RAW_SOURCE_BYTE ; Read one byte from the active source file.
+    POP  HL ; Restore the offset used by the host source interface.
+    POP  BC ; Restore the caller's parser state.
+    RET  C ; Return end-of-input or a failed read unchanged.
+    CP   '%' ; Check for a possible preprocessor directive marker.
+    JR   Z,CP_RESOLVED_PERCENT ; Test whether the percent is line-leading.
+    OR   A ; Clear carry for an ordinary source byte.
+    RET ; Return the byte without changing its contents.
 CP_RESOLVED_PERCENT:
-    PUSH HL
-    CALL CP_PERCENT_IS_DIRECTIVE
-    POP  HL
-    JR   Z,CP_RESOLVED_DIRECTIVE
-    LD   A,'%'
-    OR   A
-    RET
+    PUSH HL ; Preserve the current offset during the backward scan.
+    CALL CP_PERCENT_IS_DIRECTIVE ; Check preceding bytes for line start.
+    POP  HL ; Restore the offset of the percent byte.
+    JR   Z,CP_RESOLVED_DIRECTIVE ; Mask it only at the start of a line.
+    LD   A,'%' ; Restore a percent used in ordinary source text.
+    OR   A ; Clear carry and set flags from the returned byte.
+    RET ; Return the unchanged percent character.
 CP_RESOLVED_DIRECTIVE:
-
-; Masking only the leading percent is sufficient: Atom's tokenizer treats the
-; complete remainder of the directive line as a semicolon comment.
-
-    LD   A,';'
-    OR   A
-    RET
+    LD   A,';' ; Make Atom's tokenizer ignore the rest of the directive line.
+    OR   A ; Return the comment marker with carry clear.
+    RET ; Preserve the original source offset in HL.
 
 ;@ROUTINE IN HL OUT A,ZERO CLOBBERS BC,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
 ; Decide whether a percent character begins a recognized host directive.
 
 CP_PERCENT_IS_DIRECTIVE:
-    LD   A,H
-    OR   L
-    RET  Z
-    DEC  HL
+    LD   A,H ; Test the current source offset's high byte.
+    OR   L ; Zero means the percent is the first source byte.
+    RET  Z ; Report line start when no preceding byte exists.
+    DEC  HL ; Begin scanning at the byte before the percent.
 CP_PERCENT_PREFIX:
-    PUSH HL
-    CALL CP_RAW_SOURCE_BYTE
-    POP  HL
-    CP   13
-    JR   Z,CP_PERCENT_YES
-    CP   10
-    JR   Z,CP_PERCENT_YES
-    CP   ' '
-    JR   Z,CP_PERCENT_PREVIOUS
-    CP   9
-    RET  NZ
+    PUSH HL ; Preserve the backward-scan cursor during the raw read.
+    CALL CP_RAW_SOURCE_BYTE ; Read the preceding source byte.
+    POP  HL ; Restore the offset used for the backward scan.
+    CP   13 ; Check whether the percent follows a carriage return.
+    JR   Z,CP_PERCENT_YES ; CR marks the start of a source line.
+    CP   10 ; Check whether the percent follows a line feed.
+    JR   Z,CP_PERCENT_YES ; LF also marks the start of a source line.
+    CP   ' ' ; Check for a space before the percent.
+    JR   Z,CP_PERCENT_PREVIOUS ; Skip whitespace while scanning backwards.
+    CP   9 ; Check for a horizontal tab.
+    RET  NZ ; Any other preceding byte makes this ordinary source text.
 CP_PERCENT_PREVIOUS:
-    LD   A,H
-    OR   L
-    JR   Z,CP_PERCENT_YES
-    DEC  HL
-    JR   CP_PERCENT_PREFIX
+    LD   A,H ; Test whether the preceding whitespace reaches source byte zero.
+    OR   L ; Zero means no non-whitespace byte precedes this position.
+    JR   Z,CP_PERCENT_YES ; Only spaces or tabs precede the percent.
+    DEC  HL ; Move to the byte before this whitespace character.
+    JR   CP_PERCENT_PREFIX ; Continue until line start or ordinary text.
 CP_PERCENT_YES:
-    XOR  A
-    RET
+    XOR  A ; Return A=0 and Z set to mark a line-leading percent.
+    RET ; Carry is clear for the recognized line-start result.
 CP_SOURCE_CODE_END:
 
 ; Atom sink entries supplied directly in place of the fail-closed host stubs. The
