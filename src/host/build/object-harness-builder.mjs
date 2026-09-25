@@ -35,10 +35,12 @@ function originSource(origin) {
 }
 
 function markAdapterWorkspace(adapterText) {
-  const start = adapterText.indexOf("NA_CFG: DW 0\n");
-  const end = adapterText.indexOf("NA_REND:\n", start);
-  assert.notEqual(start, -1, "native adapter workspace start changed");
-  assert.notEqual(end, -1, "native adapter workspace end changed");
+  const startMatch = /^NA_CFG:[ \t]+DW[ \t]+0(?:[ \t]*;.*)?$/m.exec(adapterText);
+  assert.notEqual(startMatch, null, "native adapter workspace start changed");
+  const start = startMatch.index;
+  const endMatch = /^NA_REND:(?:[ \t]*;.*)?$/m.exec(adapterText.slice(start));
+  assert.notEqual(endMatch, null, "native adapter workspace end changed");
+  const end = start + endMatch.index;
   return `${adapterText.slice(0, start)}NA_WBEG:\n${adapterText.slice(start, end)}NA_WEND:\n${adapterText.slice(end)}`;
 }
 
@@ -48,7 +50,8 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
   const found = new Set();
   let active;
   for (const line of sourceText.split("\n")) {
-    const start = /^([A-Z][A-Z0-9]*)_WBEG:$/.exec(line);
+    const codeLine = line.replace(/;.*$/, "").trimEnd();
+    const start = /^([A-Z][A-Z0-9]*)_WBEG:$/.exec(codeLine);
     if (active === undefined && start !== null && fixedWorkspacePrefixes.has(start[1])) {
       active = start[1];
       assert.ok(!found.has(active), `duplicate ${active} fixed workspace`);
@@ -59,7 +62,7 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
       continue;
     }
     workspace.push(line);
-    if (line === `${active}_WEND:`) active = undefined;
+    if (codeLine === `${active}_WEND:`) active = undefined;
   }
   assert.equal(active, undefined, "unterminated fixed workspace");
   assert.deepEqual(found, fixedWorkspacePrefixes, "native fixed-workspace markers changed");
