@@ -1,9 +1,17 @@
-; Atom adapter for Z80 Tool Services named-object ABI 1.
+;==============================================================================
+; Atom adapter for Z80 Tool Services named-object ABI 1
+;==============================================================================
 ;
 ; The platform launcher calls NA_INIT with IX pointing at a nine-byte
 ; configuration block, then calls AtomAssemble normally. The request, name,
 ; and transfer workspace must remain visible while the platform gateway
 ; temporarily selects another bank.
+;
+; This adapter binds both sides of Atom's platform boundary. The source side
+; maps part ordinals to named objects and serves random logical byte reads through
+; one 128-byte cache. The sink side builds one tentative flat object: IMAGE calls
+; append and zero-fill gaps, PATCH calls seek within the initialized extent, and
+; COMMIT/ABORT publish or discard the generation through the provider.
 ;
 ; Configuration:
 ;   +0 source-provider selector
@@ -29,6 +37,8 @@ NA_XFER EQU 271
 NA_XLEN EQU 128
 NA_WLEN EQU 399
 
+; Validate and retain the configuration. The common workspace may end exactly at
+; $10000 but may not wrap past it. Reset handles and invalidate the source cache.
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_INIT:
 PUSH IX
@@ -68,7 +78,9 @@ LD   A,ZT_INV
 SCF
 RET
 
-; Initialize the common request block. A is the operation.
+; Initialize the common request block. A is the operation. Clear all sixteen
+; bytes first so no field from a prior provider call leaks into the next one;
+; return HL at the request-block base for the gateway.
 ;@ROUTINE IN A OUT HL CLOBBERS A,BC,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 NA_REQ:
 LD   C,A
@@ -91,7 +103,8 @@ EX   DE,HL
 RET
 
 ; Invoke the selected platform service. The platform replaces NA_GATE or
-; routes it to its native gateway. The checked image fails closed.
+; routes it to its native gateway. Carry reports transport/provider failure;
+; the checked image's default gateway always fails closed.
 ;@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_CALL:
 CALL NA_GATE
@@ -99,7 +112,9 @@ RET  C
 OR   A
 RET
 
-; A=operation, C=selector, HL=name, B=name length. Returns DE=handle.
+; Open one named object. A=operation, C=provider selector, HL=name and B=byte
+; length. Copy the name into common workspace before the gateway can switch
+; banks. Success returns the provider's opaque handle in DE.
 ;@ROUTINE IN A,B,C,HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_OPEN:
 LD   D,A
@@ -161,7 +176,7 @@ LD   A,ZT_INV
 SCF
 RET
 
-; A=operation, C=selector, DE=handle.
+; Submit a handle-only operation. A=operation, C=selector and DE=handle.
 ;@ROUTINE IN A,C,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_HCALL:
 PUSH BC
@@ -174,7 +189,8 @@ LD   (IX+ZT_FHND+1),D
 POP  BC
 JP   NA_CALL
 
-; C=selector, DE=handle, HL=16-bit absolute object offset.
+; Seek an object to one 16-bit absolute byte offset. C=selector, DE=handle,
+; HL=offset.
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SEEK:
 PUSH BC
@@ -192,8 +208,8 @@ LD   (IX+ZT_FHND+1),D
 POP  BC
 JP   NA_CALL
 
-; A=read/write, C=selector, DE=handle, B=count. The fixed transfer buffer is
-; used. Returns HL=result count.
+; Transfer through the fixed common 128-byte buffer. A=read/write, C=selector,
+; DE=handle and B=count. Success returns the provider's result count in HL.
 ;@ROUTINE IN A,B,C,DE OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_TRANS:
 PUSH AF
@@ -224,7 +240,8 @@ LD   H,(IX+ZT_FRES+1)
 XOR  A
 RET
 
-; Close the current source object if one is open.
+; Close the current source object if one is open, then invalidate its part/cache
+; identity only after the provider accepts CLOSE.
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SCLOS:
 LD   DE,(NA_SHAND)
@@ -245,7 +262,8 @@ LD   (NA_SPART),A
 XOR  A
 RET
 
-; Open the source name associated with part A.
+; Open the source name associated with part A. Each three-byte name-table entry
+; is pointer followed by one-byte length. Only one source handle stays open.
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SOPEN:
 LD   (NA_WPART),A
@@ -280,7 +298,9 @@ LD   (NA_CLEN),A
 RET
 
 ; AtomSourceReadByte replacement. It keeps a 128-byte source cache and one
-; readable object handle. Failed reads do not advance the provider cursor.
+; readable object handle. A part change closes and reopens by name. A cache miss
+; seeks to the exact requested offset and fills from there, so the assembler may
+; reread tokens without retaining a whole source part in Z80 memory.
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 NA_SREAD:
 PUSH BC
@@ -319,6 +339,8 @@ LD   A,(HL)
 OR   A
 JR   .DONE
 .MISS:
+; Refill the cache at the requested offset. A zero-length successful read is an
+; unexpected storage failure because the caller's part descriptor proved length.
 LD   IX,(NA_CFG)
 LD   C,(IX+NA_CFSS)
 LD   DE,(NA_SHAND)
@@ -354,7 +376,9 @@ POP  IX
 POP  BC
 RET
 
-; Write B bytes already held in the transfer buffer to the open output.
+; Write B bytes already held in the transfer buffer to the open output. Require
+; an exact provider byte count and invalidate source-cache contents that shared
+; the transfer area.
 ;@ROUTINE IN B OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_WRITE:
 LD   A,B
@@ -381,7 +405,8 @@ SCF
 RET
 
 ; Fill the tentative output from its current append cursor to relative offset
-; HL. Backward IMAGE calls are rejected.
+; HL. Backward IMAGE calls are rejected. Forward gaps are written as zero blocks
+; no larger than the common 128-byte transfer buffer.
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_FILL:
 EX   DE,HL
@@ -462,7 +487,8 @@ LD   C,(IX+NA_CFSK)
 LD   DE,(NA_OHAND)
 JP   NA_SEEK
 
-; Begin a tentative flat-image object.
+; Begin a tentative flat-image object. Capture the descriptor's target base,
+; reject a nested generation, and reset append/high-water offsets after OPEN.
 HS_SCBEG:
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_BEG:
@@ -504,7 +530,9 @@ POP  DE
 POP  BC
 RET
 
-; Append one IMAGE byte.
+; Append one IMAGE byte. Address class C must be zero for this flat target.
+; Convert the logical address to a flat offset, zero-fill any forward gap, write
+; the byte and advance both cursor and high-water mark.
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_IB:
 PUSH BC
@@ -541,7 +569,9 @@ POP  IX
 POP  BC
 RET
 
-; Patch one earlier byte, then restore the append cursor.
+; Patch one earlier byte. Address class C must be zero and the address must lie
+; below the initialized high-water mark. Seek, replace one byte, then restore the
+; append cursor on success; a provider failure is left for driver-level abort.
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PB:
 PUSH BC
@@ -581,7 +611,9 @@ POP  IX
 POP  BC
 RET
 
-; Patch one earlier little-endian word, then restore the append cursor.
+; Patch one earlier little-endian word. Address class C must be zero and both
+; bytes must lie below high water. Write low byte first, then restore the append
+; cursor on success; a provider failure is left for driver-level abort.
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PW:
 PUSH IX
@@ -623,7 +655,9 @@ POP  IY
 POP  IX
 RET
 
-; Commit the highest of the final cursor and highest IMAGE extent.
+; Commit the highest of the final logical cursor and highest IMAGE extent. This
+; materializes trailing DS/ORG reservations as zeros, closes the source object,
+; then asks the provider to atomically publish the tentative output.
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
 HS_CMT:
 CALL NA_REL
@@ -653,7 +687,8 @@ RET
 .DONE:
 RET
 
-; Abort an open generation and close any source handle.
+; Abort an open generation and close any source handle. Attempt both cleanups;
+; output-abort failure takes precedence, otherwise return a source-close failure.
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_ABORT:
 PUSH BC
@@ -714,6 +749,9 @@ RET
 
 HS_SCEND:
 
+; Private adapter state. Handles are zero when closed; source cache identity is
+; (part, base, length). Output cursor/high-water are relative to NA_TBASE. The
+; remaining scratch words stage gaps, patch values, bytes and transfer counts.
 NA_CFG: DW 0
 NA_WORK: DW 0
 NA_SHAND: DW 0

@@ -1,10 +1,27 @@
-; Atom CP/M 2.2 transient adapter.
+;==============================================================================
+; Atom CP/M 2.2 transient adapter
+;==============================================================================
 ;
-; The generated COM links the native Atom core at $0110. The first sixteen
+; The generated COM places the native Atom core at $0110. The first sixteen
 ; bytes are supplied by scripts/generate-cpm22.mjs. Source bytes are read from
 ; BDOS through one random-record cache; output is patched in TPA and published
 ; through a temporary file only after Atom commits.
+;
+; The adapter owns five jobs outside the assembler core:
+;   1. parse a compact CP/M command tail and choose COM, BIN or Intel HEX;
+;   2. discover leading %INCLUDE directives and derive dependency-first parts;
+;   3. serve random source bytes from CP/M files through a 128-byte cache;
+;   4. materialize IMAGE/PATCH operations in a fixed TPA output window; and
+;   5. publish that image transactionally through temporary/backup filenames.
+;
+; Atom itself remains filesystem-blind. Its ordinary five-byte part descriptors
+; use the half-open logical range [0,length); CP_SOURCE_READ_BYTE maps the ordinal
+; through the derived order, opens the corresponding FCB and supplies the byte.
 
+; Fixed transient memory plan. Code/immutable data ends below CP_SOURCE_CACHE;
+; retained include identities and generated part descriptors occupy the gap up
+; to the symbol arena. Symbols, pending records, output image and private stack
+; then occupy disjoint high-memory intervals.
 CP_BDOS_ENTRY       EQU $0005
 CP_SYMBOL_START     EQU $5000
 CP_SYMBOL_END       EQU $8000
@@ -60,6 +77,10 @@ RET
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_ENTRY:
+; Move off the CCP stack, parse the command, resolve the source graph, clear the
+; tentative RAM image and invoke the unchanged native driver. Only a successful
+; sink commit prints the selected output name. Return 0 for success or help, 1
+; for resolution/assembly failure, and 2 for command parsing/preflight failure.
 LD   (CP_SAVED_SP),SP
 LD   SP,CP_STACK_TOP
 CALL CP_PARSE_COMMAND
@@ -113,12 +134,14 @@ CALL CP_PRINT
 CP_BUILD_FAILED:
 LD   A,1
 CP_RETURN:
+; Restore the CCP's original stack before returning its conventional status.
 LD   SP,(CP_SAVED_SP)
 RET
 
 CP_COMMAND_CODE_START:
-; Accept no arguments or two current-drive CP/M 8.3 names. The CCP
-; canonicalises the names into its two default FCBs.
+; Accept no arguments, one source name, two explicit names, or `?`. With no
+; names the checked defaults are INPUT.ASM and OUTPUT.COM. One source derives an
+; output name with COM extension. All names are current-drive CP/M 8.3 names.
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_PARSE_COMMAND:
 XOR  A
@@ -150,6 +173,8 @@ CALL CP_SKIP_SPACES
 JP   NZ,CP_BAD_USAGE
 JR   CP_COMMAND_NAMES_READY
 CP_SINGLE_NAME:
+; The CCP populated default FCB 1 from the sole argument. Copy it to default FCB
+; 2 and replace only the extension, retaining the same normalized basename.
 LD   HL,$005C
 LD   DE,$006C
 LD   BC,12
@@ -195,6 +220,9 @@ JR   CP_OUTPUT_TYPE_READY
 CP_OUTPUT_TYPE_COM:
 XOR  A
 CP_OUTPUT_TYPE_READY:
+; Preserve the normalized input and output names in adapter-owned FCB storage.
+; Input defaults to ASM when no type was supplied; output type selects 0=COM,
+; 1=BIN or 2=HEX.
 LD   (CP_OUTPUT_FORMAT),A
 LD   HL,CP_INPUT_FCB
 LD   DE,CP_OUTPUT_NAME
@@ -368,6 +396,7 @@ RET
 CP_COMMAND_CODE_END:
 
 CP_SOURCE_CODE_START:
+; Prepare a blank ordinary FCB whose name/type fields are space-filled.
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 CP_CLEAR_INPUT_FCB:
 LD   DE,CP_INPUT_FCB
@@ -437,8 +466,9 @@ INC  (HL)
 LD   A,(CP_NAME_COUNT)
 CP   (HL)
 JR   NZ,CP_DISCOVER_PART
-; Repeatedly emit a part whose dependencies have all been emitted. Failure to
-; make progress proves a cycle without recursion or an unbounded call stack.
+; Repeatedly emit a part whose dependencies have all been emitted. Bit 7 of the
+; first retained-name byte records that state; comparisons and FCB reconstruction
+; mask it away. Failure to make progress proves a cycle without recursion.
 CP_TOPO_PASS:
 XOR  A
 LD   (CP_SCAN_INDEX),A
@@ -482,7 +512,8 @@ JR   NZ,CP_TOPO_PASS
 LD   DE,CP_INCLUDE_CYCLE_TEXT
 JR   CP_RESOLVE_FAILURE
 ; Measure the already validated parts in final order and build the ordinary
-; native five-byte descriptors.
+; native five-byte descriptors. Their start is logical zero and their end is the
+; measured 16-bit byte length; source storage itself remains in CP/M files.
 CP_BUILD_DESCRIPTORS:
 XOR  A
 LD   (CP_SCAN_INDEX),A
@@ -530,6 +561,8 @@ LD   A,1
 LD   (CP_HEADER_OPEN),A
 LD   HL,0
 CP_SCAN_LINE:
+; Blank space, line endings and comment lines remain in the header. The first
+; ordinary source byte closes it permanently; a later percent directive fails.
 CALL CP_NEXT_SOURCE_BYTE
 JR   C,CP_SCAN_EOF
 CP   ' '
@@ -654,6 +687,8 @@ JR   Z,CP_INCLUDE_READY
 CP   10
 JP   NZ,CP_INCLUDE_INVALID
 CP_INCLUDE_READY:
+; Deduplicate by normalized eleven-byte CP/M identity. During discovery this may
+; append a name; during ordering it reports whether the child is already emitted.
 PUSH IX
 PUSH HL
 CALL CP_FIND_OR_ADD_NAME
@@ -778,6 +813,7 @@ CP_FIND_NAME_NEXT:
 INC  C
 JR   CP_FIND_NAME_LOOP
 CP_ADD_NAME:
+; The one-byte part ABI admits ordinals 0..254: at most 255 retained files.
 LD   A,C
 CP   255
 JR   Z,CP_NAME_CAPACITY
@@ -846,8 +882,9 @@ LD   DE,CP_READ_FAILED_TEXT
 SCF
 RET
 
-; Return the next raw source byte and advance HL. Carry with A=0 is EOF;
-; carry with A=2 is disk failure. BC and DE survive for parsers.
+; Return the next raw source byte and advance HL. Carry with A=0 is EOF or an
+; unsuccessful CP/M random read; carry with A=2 means the 16-bit offset wrapped.
+; BC and DE survive for parsers.
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 CP_NEXT_SOURCE_BYTE:
 PUSH BC
@@ -867,12 +904,17 @@ LD   A,(CP_NEXT_VALUE)
 OR   A
 RET
 CP_SOURCE_TOO_LONG:
+; Wrapping after a successful byte would require a 65,536-byte part, outside the
+; native 16-bit logical-offset contract.
 LD   A,2
 SCF
 RET
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 CP_RAW_SOURCE_BYTE:
+; Align the logical offset to its 128-byte CP/M record base. The cache key stores
+; that aligned byte offset; the FCB receives the same value divided by 128. A miss
+; installs the source cache as DMA, reads the record, then uses the low seven bits.
 LD   (CP_RAW_OFFSET),HL
 LD   A,L
 AND  $80
@@ -963,6 +1005,8 @@ LD   A,'%'
 OR   A
 RET
 CP_RESOLVED_DIRECTIVE:
+; Masking only the leading percent is sufficient: Atom's tokenizer treats the
+; complete remainder of the directive line as a semicolon comment.
 LD   A,';'
 OR   A
 RET
@@ -996,11 +1040,14 @@ XOR  A
 RET
 CP_SOURCE_CODE_END:
 
-; Nucleus-model sink entries linked directly in place of the host stubs.
+; Atom sink entries supplied directly in place of the fail-closed host stubs. The
+; fixed RAM image makes IMAGE and PATCH constant-time memory writes; filesystem
+; publication is delayed until COMMIT.
 CP_OUTPUT_CODE_START:
 HS_SCBEG:
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_BEG:
+; Begin a fresh tentative generation. No file is created until COMMIT.
 XOR  A
 LD   (CP_OUTPUT_OPEN),A
 LD   (CP_BACKED_UP),A
@@ -1009,6 +1056,8 @@ RET
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_IB:
 HS_PB:
+; IMAGE and byte PATCH share the same address translation because both write the
+; still-private TPA image. The core has already proved capacity and patch order.
 PUSH AF
 LD   DE,CP_OUTPUT_START-CP_TARGET_START
 ADD  HL,DE
@@ -1019,6 +1068,7 @@ RET
 
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PW:
+; Store one little-endian word at its translated logical address.
 EX   DE,HL
 LD   BC,CP_OUTPUT_START-CP_TARGET_START
 ADD  HL,BC
@@ -1030,6 +1080,9 @@ RET
 
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 HS_CMT:
+; Convert the final logical cursor to image length, create the temporary file and
+; serialize the selected format. COM and BIN write CP/M records from the RAM
+; image; HEX streams records through the shared final-image helper below.
 LD   DE,CP_TARGET_START
 OR   A
 SBC  HL,DE
@@ -1081,6 +1134,9 @@ CP_WRITE_MORE:
 LD   (CP_OUTPUT_REMAINING),HL
 JR   CP_WRITE_LOOP
 CP_WRITE_CLOSE:
+; Publication transaction: close temp, defensively remove the backup name that
+; preflight required to be absent, rename an existing output to backup, rename
+; temp to final, then delete the backup.
 LD   DE,CP_WORK_FCB
 LD   C,CP_CLOSE_FUNCTION
 CALL CP_BDOS
@@ -1126,6 +1182,8 @@ RET
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_ABORT:
+; Close/delete any temporary output and restore the backup if commit had already
+; moved the previous final file aside. Cleanup is idempotent for early failures.
 LD   A,(CP_OUTPUT_OPEN)
 OR   A
 JR   Z,CP_ABORT_DELETE
@@ -1295,6 +1353,8 @@ ADD  A,7
 JR   CP_PUTC
 
 CP_ADAPTER_CODE_END:
+; Descriptor and FCB workspace retained for the complete command. The 36-byte
+; rename FCB overlays the complete input FCB after all source reads are finished.
 CP_ADAPTER_WORKSPACE1_START:
 CP_DESCRIPTOR:
 DB   1
@@ -1334,6 +1394,8 @@ CP_BIN_EXTENSION: DB 'B','I','N'
 CP_HEX_EXTENSION: DB 'H','E','X'
 CP_ADAPTER_IMMUTABLE_END:
 CP_ADAPTER_WORKSPACE2_START:
+; Small execution state. CP_OUTPUT_CURSOR overlays the source-cache key because
+; all assembler source reads and patching finish before COMMIT publishes output.
 CP_SAVED_SP: DW 0
 CP_OUTPUT_CURSOR: DW 0
 CP_SOURCE_CACHE_KEY EQU CP_OUTPUT_CURSOR
