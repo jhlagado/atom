@@ -240,7 +240,7 @@ EN_CORE:
     LD   A,B                 ; Restore the PUSH/POP base after prefix lookup.
     ADD  A,$20               ; Convert C5/C1 to indexed E5/E1.
     JP   .SS1E2              ; Emit the prefix and indexed stack opcode.
-EN_LEBEG EQU $
+EN_LEBEG EQU $              ; Begin the LD-form encoder handlers.
 .LD:
 
 ; Destination-first dispatch mirrors the form validator. Each branch below
@@ -596,446 +596,446 @@ EN_LEBEG EQU $
 .SS3E4:
     LD   (EN_SCRAT+3),A      ; Store the final byte of the four-byte encoding.
     JP   EN_D4               ; Return the four-byte instruction length.
-EN_LEEND EQU $
+EN_LEEND EQU $              ; End the LD-form encoder handlers.
 .IN:
 
 ; ED input forms encode the register field in bits 3..5. Immediate-port input is
 ; the singleton DB followed by the port byte.
 
-    LD   A,(IX+EN_OP0)
-    CP   EN_PORTC
-    JR   Z,.INBARE
-    LD   A,(IX+EN_OP1)
-    CP   EN_IMM8
-    JR   Z,.IIMMEDIA
-    LD   A,(IX+EN_OP0)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$40
-    JR   .INED
+    LD   A,(IX+EN_OP0)       ; Read the destination or bare-port class.
+    CP   EN_PORTC            ; Bare IN (C) stores its port class in slot zero.
+    JR   Z,.INBARE           ; Route that form to its fixed ED suffix.
+    LD   A,(IX+EN_OP1)       ; Otherwise inspect the source-port class.
+    CP   EN_IMM8             ; An immediate port selects the DB opcode.
+    JR   Z,.IIMMEDIA         ; Emit DB followed by the port byte.
+    LD   A,(IX+EN_OP0)       ; Load the destination register class.
+    ADD  A,A                 ; Shift its register field toward bits 3..5.
+    ADD  A,A                 ; Continue the three-bit field shift.
+    ADD  A,A                 ; Finish placing the register field.
+    ADD  A,$40               ; Add the ED IN r,(C) opcode base.
+    JR   .INED               ; Add ED before this computed suffix.
 .INBARE:
-    LD   A,$70
-    JR   .INED
+    LD   A,$70               ; Select the special IN (C) suffix.
+    JR   .INED               ; Emit it behind the ED prefix.
 .IIMMEDIA:
-    LD   A,$DB
-    JP   .SAV1E2
+    LD   A,$DB               ; Select IN A,(n).
+    JP   .SAV1E2             ; Append the immediate port byte.
 .INED:
-    LD   B,A
-    JP   .SEBE2
+    LD   B,A                 ; Pass the computed ED suffix to the common tail.
+    JP   .SEBE2              ; Stage ED and suffix, then return length two.
 .OUT:
 
 ; ED output forms mirror IN; OUT (C),0 has the dedicated ED 71 encoding.
 
-    LD   A,(IX+EN_OP0)
-    CP   EN_IMM8
-    JR   Z,.OIMMEDIA
-    LD   A,(IX+EN_OP1)
-    CP   EN_ZERO
-    LD   A,$71
-    JR   Z,.INED
-    LD   A,(IX+EN_OP1)
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$41
-    JR   .INED
+    LD   A,(IX+EN_OP0)       ; Read the output-port class.
+    CP   EN_IMM8             ; Immediate port selects D3.
+    JR   Z,.OIMMEDIA         ; Route OUT (n),A to its byte-value tail.
+    LD   A,(IX+EN_OP1)       ; Read the value sent to port C.
+    CP   EN_ZERO             ; Check the special zero-output form.
+    LD   A,$71               ; Prepare the suffix for OUT (C),0.
+    JR   Z,.INED             ; Emit ED 71 when the zero class matched.
+    LD   A,(IX+EN_OP1)       ; Load the ordinary output register class.
+    ADD  A,A                 ; Shift its register number toward bits 3..5.
+    ADD  A,A                 ; Continue the three-bit field shift.
+    ADD  A,A                 ; Finish placing the register field.
+    ADD  A,$41               ; Add the ED OUT (C),r opcode base.
+    JR   .INED               ; Emit the computed suffix after ED.
 .OIMMEDIA:
-    LD   A,$D3
+    LD   A,$D3               ; Select OUT (n),A.
 .SS0V0E2:
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_VAL0)
-    JP   .SS1E2
+    LD   (EN_SCRAT+0),A      ; Stage the opcode that precedes the immediate byte.
+    LD   A,(IX+EN_VAL0)      ; Load operand zero's immediate byte.
+    JP   .SS1E2              ; Append the immediate byte and return length two.
 .BIT:
 
 ; CB bit families are operation<<6 | bit<<3 | register. Indexed memory emits
 ; DD/FD CB displacement opcode, with field 6 when no destination register exists.
 
-    LD   A,(IX+EN_MNEM)
-    SUB  AT_MBIT-1
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    LD   B,A
-    LD   A,(IX+EN_OP0)
-    AND  7
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,B
-    LD   B,A
-    LD   A,(IX+EN_OP1)
-    CALL EN_IINDE
-    JR   C,.BINDEXED
-    LD   A,(IX+EN_OP1)
-    JR   .CBPLAIN
+    LD   A,(IX+EN_MNEM)      ; Read BIT, RES or SET's ordinal.
+    SUB  AT_MBIT-1           ; Map the family to the operation field.
+    ADD  A,A                 ; Shift the operation field toward bits 6..7.
+    ADD  A,A                 ; Continue moving it into its opcode position.
+    ADD  A,A                 ; Continue the six-bit shift.
+    ADD  A,A                 ; Continue the six-bit shift.
+    ADD  A,A                 ; Continue the six-bit shift.
+    ADD  A,A                 ; Finish operation<<6.
+    LD   B,A                 ; Keep the operation field while building others.
+    LD   A,(IX+EN_OP0)       ; Read the enumerated bit-number operand.
+    AND  7                   ; Keep bit index 0..7.
+    ADD  A,A                 ; Move the bit number into bits 3..5.
+    ADD  A,A                 ; Continue the three-bit shift.
+    ADD  A,A                 ; Finish bit<<3.
+    ADD  A,B                 ; Combine operation and bit fields.
+    LD   B,A                 ; Save both fields for the register field.
+    LD   A,(IX+EN_OP1)       ; Read the register or memory target.
+    CALL EN_IINDE            ; Test whether the target is indexed memory.
+    JR   C,.BINDEXED         ; Indexed forms need prefix and displacement.
+    LD   A,(IX+EN_OP1)       ; Reload the unindexed target class.
+    JR   .CBPLAIN            ; Add its register field to the CB opcode.
 .BINDEXED:
-    LD   A,(IX+EN_OP2)
-    CP   EN_NONE
-    LD   A,6
-    JR   Z,.BIC
-    LD   A,(IX+EN_OP2)
-    AND  7
+    LD   A,(IX+EN_OP2)       ; Read the optional result-register class.
+    CP   EN_NONE             ; Check for a memory-only indexed operation.
+    LD   A,6                 ; Register field 6 encodes memory as the target.
+    JR   Z,.BIC              ; Keep field 6 when no result register is given.
+    LD   A,(IX+EN_OP2)       ; Otherwise read the destination register class.
+    AND  7                   ; Use its three-bit register number.
 .BIC:
-    ADD  A,B
-    LD   B,A
-    LD   A,(IX+EN_OP1)
-    LD   E,(IX+EN_VAL1)
-    JR   .CITAIL
+    ADD  A,B                 ; Add the target register field to prior fields.
+    LD   B,A                 ; Save the completed second opcode byte.
+    LD   A,(IX+EN_OP1)       ; Reload the indexed memory operand class.
+    LD   E,(IX+EN_VAL1)      ; Keep its displacement for the indexed byte order.
+    JR   .CITAIL             ; Emit prefix, CB, displacement, and opcode.
 .ROTATE:
 
 ; Rotate/shift bases advance in steps of eight. SLS shares SLL's hardware base,
-; so ordinals at and after the alias are folded down by one.
+; so the alias slot is removed before looking up either SLS or SRL.
 
-    LD   A,(IX+EN_MNEM)
-    SUB  AT_MRLC
-    CP   7
-    JR   C,.RBASE
-    DEC  A
+    LD   A,(IX+EN_MNEM)      ; Read the rotate/shift mnemonic ordinal.
+    SUB  AT_MRLC             ; Convert it to a zero-based family index.
+    CP   7                   ; SLS and SRL need the alias slot removed.
+    JR   C,.RBASE            ; Earlier operations use their direct index.
+    DEC  A                   ; Map SLS to SLL and SRL to hardware index seven.
 .RBASE:
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    LD   B,A
-    LD   A,(IX+EN_OP0)
-    CALL EN_IINDE
-    JR   C,.RINDEXED
-    LD   A,(IX+EN_OP0)
+    ADD  A,A                 ; Multiply the operation index by two.
+    ADD  A,A                 ; Continue the shift by two bits.
+    ADD  A,A                 ; Finish operation<<3.
+    LD   B,A                 ; Preserve the operation field for the target.
+    LD   A,(IX+EN_OP0)       ; Read the register or memory operand class.
+    CALL EN_IINDE            ; Test whether the target is indexed memory.
+    JR   C,.RINDEXED         ; Indexed forms need a four-byte layout.
+    LD   A,(IX+EN_OP0)       ; Reload an unindexed register or (HL) class.
 .CBPLAIN:
 
 ; Plain register and (HL) forms are CB followed by base | register field.
 
-    AND  7
-    ADD  A,B
-    LD   B,A
-    LD   A,$CB
-    JP   .SPBE2
+    AND  7                   ; Extract the target's three-bit register field.
+    ADD  A,B                 ; Combine the target-register and operation fields.
+    LD   B,A                 ; Keep the second CB opcode byte.
+    LD   A,$CB               ; Select the CB prefix.
+    JP   .SPBE2              ; Store CB and the operation byte.
 .RINDEXED:
 
 ; Indexed rotate/shift can optionally copy the result to a register; otherwise
 ; field 6 denotes memory-only operation.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    LD   A,6
-    JR   Z,.RIC
-    LD   A,(IX+EN_OP1)
-    AND  7
+    LD   A,(IX+EN_OP1)       ; Read the optional result-register class.
+    CP   EN_NONE             ; Check for memory-only indexed operation.
+    LD   A,6                 ; Use register field 6 for memory-only form.
+    JR   Z,.RIC              ; Keep that field when there is no copy target.
+    LD   A,(IX+EN_OP1)       ; Otherwise read the copy-target register class.
+    AND  7                   ; Extract its three-bit register number.
 .RIC:
-    ADD  A,B
-    LD   B,A
-    LD   A,(IX+EN_OP0)
-    LD   E,(IX+EN_VAL0)
+    ADD  A,B                 ; Add the destination field to the operation base.
+    LD   B,A                 ; Save the indexed CB opcode byte.
+    LD   A,(IX+EN_OP0)       ; Reload the indexed memory class for its prefix.
+    LD   E,(IX+EN_VAL0)      ; Preserve the signed displacement byte.
 .CITAIL:
 
 ; Indexed CB byte order is prefix, CB, displacement, opcode.
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,$CB
-    LD   (EN_SCRAT+1),A
-    LD   A,E
-    LD   (EN_SCRAT+2),A
-    LD   A,B
-    JP   .SS3E4
+    CALL EN_PFOP             ; Select DD for IX or FD for IY.
+    LD   (EN_SCRAT+0),A      ; Store the index prefix.
+    LD   A,$CB               ; Select the indexed-CB prefix byte.
+    LD   (EN_SCRAT+1),A      ; Store CB after DD/FD.
+    LD   A,E                 ; Load the previously saved displacement.
+    LD   (EN_SCRAT+2),A      ; Store displacement before the CB opcode.
+    LD   A,B                 ; Load the computed bit/rotate opcode byte.
+    JP   .SS3E4               ; Store it last and return a four-byte length.
 .ALU:
 
 ; The byte family ordinal is already the hardware operation field. One-operand
 ; records use register/memory/immediate equations; two-operand records are the
 ; separate 16-bit ADD/ADC/SBC forms.
 
-    LD   A,(IX+EN_MNEM)
-    SUB  AT_MADD
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    LD   B,A
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.ALU16
-    LD   A,(IX+EN_OP0)
-    CP   EN_IMM8
-    JR   Z,.AIMMEDIA
-    CALL EN_IHIND
-    JR   C,.ALUHALF
-    LD   A,(IX+EN_OP0)
-    CALL EN_IINDE
-    JR   C,.AINDEXED
-    LD   A,(IX+EN_OP0)
-    AND  7
-    ADD  A,B
-    ADD  A,$80
-    JP   .SE1
+    LD   A,(IX+EN_MNEM)      ; Read the ALU mnemonic ordinal.
+    SUB  AT_MADD             ; Convert ADD..CP to an operation field.
+    ADD  A,A                 ; Move the field toward bits 3..5.
+    ADD  A,A                 ; Continue the three-bit shift.
+    ADD  A,A                 ; Finish operation<<3.
+    LD   B,A                 ; Preserve the operation field.
+    LD   A,(IX+EN_OP1)       ; Check whether a second operand is present.
+    CP   EN_NONE             ; No second operand means the byte-ALU form.
+    JR   NZ,.ALU16            ; Otherwise encode a 16-bit arithmetic form.
+    LD   A,(IX+EN_OP0)       ; Read the byte operand class.
+    CP   EN_IMM8             ; Immediate bytes have a fixed opcode base.
+    JR   Z,.AIMMEDIA          ; Route the immediate form.
+    CALL EN_IHIND            ; Test whether the operand is an index half.
+    JR   C,.ALUHALF           ; Index halves need DD/FD before the ALU opcode.
+    LD   A,(IX+EN_OP0)       ; Reload the operand class for indexed memory.
+    CALL EN_IINDE            ; Check for (IX/IY+d).
+    JR   C,.AINDEXED          ; Indexed memory also needs prefix and displacement.
+    LD   A,(IX+EN_OP0)       ; Reload the register or (HL) class.
+    AND  7                   ; Extract the three-bit register field.
+    ADD  A,B                 ; Combine register and operation fields.
+    ADD  A,$80               ; Select the register/(HL) ALU opcode range.
+    JP   .SE1                ; Store and return the one-byte form.
 .AIMMEDIA:
 
 ; ALU A,n = C6 | operation<<3 followed by the immediate byte.
 
-    LD   A,B
-    ADD  A,$C6
-    JP   .SS0V0E2
+    LD   A,B                 ; Load operation<<3.
+    ADD  A,$C6               ; Form C6 | operation<<3 for ALU A,n.
+    JP   .SS0V0E2            ; Store opcode then immediate byte.
 .ALUHALF:
 
 ; IXH/IXL/IYH/IYL reuse H/L fields behind DD/FD.
 
-    LD   A,(IX+EN_OP0)
-    CALL EN_SPPAF
-    AND  7
-    ADD  A,B
-    ADD  A,$80
-    JP   .SS1E2
+    LD   A,(IX+EN_OP0)       ; Load IXH/IXL/IYH/IYL class for prefix choice.
+    CALL EN_SPPAF            ; Store DD/FD while preserving the class in A.
+    AND  7                   ; Reuse the H/L register field.
+    ADD  A,B                 ; Combine index-half and ALU operation fields.
+    ADD  A,$80               ; Form the ordinary register ALU opcode.
+    JP   .SS1E2              ; Append it after DD/FD and return length two.
 .AINDEXED:
 
 ; ALU A,(IX/IY+d) reuses the (HL) field 6 and inserts displacement.
 
-    CALL EN_SPPAF
-    LD   A,B
-    ADD  A,$86
-    JP   .SS1V0E3
+    CALL EN_SPPAF            ; Store DD/FD selected from the memory class.
+    LD   A,B                 ; Load operation<<3.
+    ADD  A,$86               ; Use register field 6 for indexed memory.
+    JP   .SS1V0E3            ; Append displacement and return length three.
 .ALU16:
 
 ; ADC/SBC HL,rr use ED 4A/42 | rr<<4.
 
-    LD   A,(IX+EN_MNEM)
-    CP   AT_MADD
-    JR   Z,.ADD16
-    LD   B,$42
-    CP   AT_MSBC
-    JR   Z,.AS1READY
-    LD   B,$4A
+    LD   A,(IX+EN_MNEM)      ; Read the 16-bit arithmetic mnemonic.
+    CP   AT_MADD             ; Test for ADD's distinct pair form.
+    JR   Z,.ADD16            ; Encode ADD HL/IX/IY,rr separately.
+    LD   B,$42               ; SBC HL,rr uses ED 42 plus pair field.
+    CP   AT_MSBC             ; Select SBC's base opcode.
+    JR   Z,.AS1READY          ; Keep 42 for SBC.
+    LD   B,$4A               ; ADC HL,rr uses ED 4A plus pair field.
 .AS1READY:
-    LD   A,(IX+EN_OP1)
-    AND  3
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,B
-    LD   B,A
-    JP   .SEBE2
+    LD   A,(IX+EN_OP1)       ; Read BC, DE, HL or SP source-pair class.
+    AND  3                   ; Keep its two-bit register-pair number.
+    ADD  A,A                 ; Move the pair field toward bits 4..5.
+    ADD  A,A                 ; Continue shifting the field.
+    ADD  A,A                 ; Continue shifting the field.
+    ADD  A,A                 ; Finish pair<<4.
+    ADD  A,B                 ; Combine pair field with ADC/SBC base.
+    LD   B,A                 ; Pass the ED suffix to the shared prefix tail.
+    JP   .SEBE2              ; Emit ED and the computed suffix.
 .ADD16:
 
 ; ADD HL,rr is 09 | rr<<4. IX/IY use a prefix and map a self operand to the HL
 ; field while BC, DE and SP retain their ordinary pair fields.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_IX
-    JR   Z,.A1SELF
-    CP   EN_IY
-    JR   Z,.A1SELF
-    AND  3
-    JR   .A1SREADY
+    LD   A,(IX+EN_OP1)       ; Read the source pair class.
+    CP   EN_IX               ; IX's self-pair uses the HL field.
+    JR   Z,.A1SELF           ; Map IX to pair number two.
+    CP   EN_IY               ; IY's self-pair also uses the HL field.
+    JR   Z,.A1SELF           ; Map IY to pair number two.
+    AND  3                   ; Keep BC, DE, HL or SP pair number.
+    JR   .A1SREADY           ; Build the 09 + pair<<4 opcode.
 .A1SELF:
-    LD   A,2
+    LD   A,2                 ; Select the HL pair field for IX/IY self-add.
 .A1SREADY:
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    ADD  A,$09
-    LD   B,A
-    LD   A,(IX+EN_OP0)
-    CP   EN_HL
-    LD   A,B
-    JP   Z,.SE1
-    LD   A,(IX+EN_OP0)
+    ADD  A,A                 ; Shift the source pair field toward bits 4..5.
+    ADD  A,A                 ; Continue the four-bit shift.
+    ADD  A,A                 ; Continue the four-bit shift.
+    ADD  A,A                 ; Finish pair<<4.
+    ADD  A,$09               ; Add the 16-bit ADD opcode base.
+    LD   B,A                 ; Preserve the computed opcode while checking dest.
+    LD   A,(IX+EN_OP0)       ; Read the destination pair class.
+    CP   EN_HL               ; HL needs no index prefix.
+    LD   A,B                 ; Restore the computed ADD opcode.
+    JP   Z,.SE1              ; Emit the unprefixed HL pair form.
+    LD   A,(IX+EN_OP0)       ; Reload IX/IY destination to select its prefix.
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,B
-    JR   .SS1E2
+    CALL EN_PFOP             ; Choose DD or FD from destination IX/IY.
+    LD   (EN_SCRAT+0),A      ; Store the index prefix.
+    LD   A,B                 ; Restore the computed ADD pair opcode.
+    JR   .SS1E2              ; Append it and return length two.
 .JP:
 
 ; Absolute JP is C3 nn; JP (HL) is E9 and IX/IY add their prefix.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.JCONDITI
-    LD   A,(IX+EN_OP0)
-    CP   EN_MEMHL
-    JR   Z,.JPHL
-    CP   EN_MEMIX
-    JR   Z,.JPINDEX
-    CP   EN_MEMIY
-    JR   Z,.JPINDEX
-    LD   A,$C3
-    JP   .SAV0E3
+    LD   A,(IX+EN_OP1)       ; Check whether a condition operand is present.
+    CP   EN_NONE             ; No second operand selects unconditional JP.
+    JR   NZ,.JCONDITI         ; Otherwise encode JP cc,nn.
+    LD   A,(IX+EN_OP0)       ; Read the target class for indirect JP.
+    CP   EN_MEMHL            ; JP (HL) uses E9 without a prefix.
+    JR   Z,.JPHL             ; Emit the one-byte indirect form.
+    CP   EN_MEMIX            ; JP (IX) uses the index prefix plus E9.
+    JR   Z,.JPINDEX           ; Share the indexed indirect encoding.
+    CP   EN_MEMIY            ; JP (IY) follows the same form with FD.
+    JR   Z,.JPINDEX           ; Share the indexed indirect encoding.
+    LD   A,$C3               ; Select the absolute JP opcode.
+    JP   .SAV0E3              ; Append the target word and return length three.
 .JCONDITI:
 
 ; JP cc,nn = C2 | cc<<3 followed by operand one's word.
 
-    LD   B,$C2
-    CALL EN_COPCO
-    JP   .SAV1E3
+    LD   B,$C2               ; Conditional JP base is C2.
+    CALL EN_COPCO            ; Insert condition code in bits 3..5.
+    JP   .SAV1E3              ; Append operand one's address word.
 .JPHL:
-    LD   A,$E9
-    JR   .SE1
+    LD   A,$E9               ; Select JP (HL).
+    JR   .SE1                ; Store the single opcode byte.
 .JPINDEX:
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    LD   A,$E9
-    JR   .SS1E2
+    CALL EN_PFOP             ; Select DD for IX or FD for IY.
+    LD   (EN_SCRAT+0),A      ; Store the index prefix.
+    LD   A,$E9               ; Indexed indirect JP uses the same E9 opcode.
+    JR   .SS1E2              ; Append E9 and return a two-byte length.
 .CALL:
 
 ; CALL nn is CD nn; CALL cc,nn = C4 | cc<<3.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.CCONDITI
-    LD   A,$CD
-    JP   .SAV0E3
+    LD   A,(IX+EN_OP1)       ; Check whether a condition operand is present.
+    CP   EN_NONE             ; No second operand selects unconditional CALL.
+    JR   NZ,.CCONDITI         ; Otherwise encode CALL cc,nn.
+    LD   A,$CD               ; Select the unconditional CALL opcode.
+    JP   .SAV0E3              ; Append the target word and return length three.
 .CCONDITI:
-    LD   B,$C4
-    CALL EN_COPCO
-    LD   (EN_SCRAT+0),A
-    JR   AT_CV1TS
+    LD   B,$C4               ; Conditional CALL base is C4.
+    CALL EN_COPCO            ; Insert condition code in bits 3..5.
+    LD   (EN_SCRAT+0),A      ; Stage the conditional CALL opcode.
+    JR   AT_CV1TS            ; Append operand one's target word.
 .JR:
 
 ; JR e is 18 e; JR cc,e = 20 | cc<<3 for the four accepted conditions.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.JCONDIT1
-    LD   A,$18
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_VAL0)
-    JR   .SS1E2
+    LD   A,(IX+EN_OP1)       ; Check whether a condition operand is present.
+    CP   EN_NONE             ; No condition selects unconditional JR.
+    JR   NZ,.JCONDIT1         ; Otherwise encode JR cc,e.
+    LD   A,$18               ; Select unconditional relative-jump opcode.
+    LD   (EN_SCRAT+0),A      ; Stage the opcode before the displacement.
+    LD   A,(IX+EN_VAL0)      ; Load the assembler-computed relative offset.
+    JR   .SS1E2              ; Append the offset and return length two.
 .JCONDIT1:
-    LD   B,$20
-    CALL EN_COPCO
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_VAL1)
-    JR   .SS1E2
+    LD   B,$20               ; Conditional JR base is 20.
+    CALL EN_COPCO            ; Insert the condition code in bits 3..5.
+    LD   (EN_SCRAT+0),A      ; Stage the conditional JR opcode.
+    LD   A,(IX+EN_VAL1)      ; Load operand one's computed displacement.
+    JR   .SS1E2              ; Append it and return length two.
 .DJNZ:
 
 ; DJNZ is 10 followed by the parser-computed displacement.
 
-    LD   A,$10
-    LD   (EN_SCRAT+0),A
-    LD   A,(IX+EN_VAL0)
+    LD   A,$10               ; Select DJNZ's relative-branch opcode.
+    LD   (EN_SCRAT+0),A      ; Stage the opcode.
+    LD   A,(IX+EN_VAL0)      ; Load the assembler-computed displacement.
 .SS1E2:
-    LD   (EN_SCRAT+1),A
-    JR   EN_D2
+    LD   (EN_SCRAT+1),A      ; Store the second instruction byte.
+    JR   EN_D2               ; Return successful length two.
 .EDTABLE:
 
 ; Encoder family table selected by AT_DMNEM.
 
-    DW .COPCODE,.RET,.EX
-    DW .IM,.RST,.INCDEC
-    DW .STACK,.LD,.IN
-    DW .OUT,.BIT,.ROTATE
-    DW .ALU,.JP,.CALL
-    DW .JR,.DJNZ
+    DW .COPCODE,.RET,.EX       ; Core, return, and exchange handlers.
+    DW .IM,.RST,.INCDEC        ; Interrupt mode, restart, and byte/pair inc/dec.
+    DW .STACK,.LD,.IN          ; Stack pairs, load, and port input.
+    DW .OUT,.BIT,.ROTATE       ; Port output, bit operations, and shifts.
+    DW .ALU,.JP,.CALL          ; Arithmetic and absolute control flow.
+    DW .JR,.DJNZ               ; Relative branches and decrement-and-branch.
 .SE1:
 
 ; Common successful length returns. Carry is clear and A is the encoded length.
 
-    LD   (EN_SCRAT+0),A
+    LD   (EN_SCRAT+0),A      ; Store the single-byte opcode in the commit buffer.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return successful encoding length one.
 
 EN_D1:
-    XOR  A
-    INC  A
-    RET
+    XOR  A                    ; Clear A and carry for success status.
+    INC  A                    ; Return encoded length one.
+    RET                       ; Finish with carry still clear.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return successful encoding length two.
 
 EN_D2:
-    LD   A,2
-    OR   A
-    RET
+    LD   A,2                  ; Return encoded length two.
+    OR   A                    ; Clear carry without changing the length.
+    RET                       ; Finish with carry clear.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return successful encoding length three.
 
 EN_D3:
-    LD   A,3
-    OR   A
-    RET
+    LD   A,3                  ; Return encoded length three.
+    OR   A                    ; Clear carry without changing the length.
+    RET                       ; Finish with carry clear.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return successful encoding length four.
 
 EN_D4:
-    LD   A,4
-    OR   A
-    RET
+    LD   A,4                  ; Return encoded length four.
+    OR   A                    ; Clear carry without changing the length.
+    RET                       ; Finish with carry clear.
 
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 ; Copy operand zero's word after one opcode byte.
 
 AT_CV0TS:
-    LD   L,(IX+EN_VAL0)
-    LD   H,(IX+EN_VAL0+1)
-    LD   (EN_SCRAT+1),HL
-    JR   EN_D3
+    LD   L,(IX+EN_VAL0)      ; Load operand zero's address low byte.
+    LD   H,(IX+EN_VAL0+1)    ; Load its address high byte.
+    LD   (EN_SCRAT+1),HL     ; Store the address after a one-byte opcode.
+    JR   EN_D3               ; Return the three-byte instruction length.
 
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 ; Copy operand zero's word after a prefix/opcode pair.
 
 AT_CV0T1:
-    LD   L,(IX+EN_VAL0)
-    LD   H,(IX+EN_VAL0+1)
-    LD   (EN_SCRAT+2),HL
-    JR   EN_D4
+    LD   L,(IX+EN_VAL0)      ; Load operand zero's address low byte.
+    LD   H,(IX+EN_VAL0+1)    ; Load its address high byte.
+    LD   (EN_SCRAT+2),HL     ; Store the address after a two-byte prefix/opcode.
+    JR   EN_D4               ; Return the four-byte instruction length.
 
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 ; Copy operand one's word after one opcode byte.
 
 AT_CV1TS:
-    LD   L,(IX+EN_VAL1)
-    LD   H,(IX+EN_VAL1+1)
-    LD   (EN_SCRAT+1),HL
-    JR   EN_D3
+    LD   L,(IX+EN_VAL1)      ; Load operand one's address low byte.
+    LD   H,(IX+EN_VAL1+1)    ; Load its address high byte.
+    LD   (EN_SCRAT+1),HL     ; Store the address after a one-byte opcode.
+    JR   EN_D3               ; Return the three-byte instruction length.
 
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 ; Copy operand one's word after a prefix/opcode pair.
 
 AT_CV1T1:
-    LD   L,(IX+EN_VAL1)
-    LD   H,(IX+EN_VAL1+1)
-    LD   (EN_SCRAT+2),HL
-    JR   EN_D4
+    LD   L,(IX+EN_VAL1)      ; Load operand one's address low byte.
+    LD   H,(IX+EN_VAL1+1)    ; Load its address high byte.
+    LD   (EN_SCRAT+2),HL     ; Store the address after a two-byte prefix/opcode.
+    JR   EN_D4               ; Return the four-byte instruction length.
 
 ;@ROUTINE IN A
 ; Store the prefix chosen from operand class A while preserving A for field math.
 
 EN_SPPAF:
-    PUSH AF
+    PUSH AF                  ; Preserve the operand class across prefix selection.
 ;@EXPECTOUT A
-    CALL EN_PFOP
-    LD   (EN_SCRAT+0),A
-    POP  AF
-    RET
+    CALL EN_PFOP             ; Convert the operand class to DD or FD.
+    LD   (EN_SCRAT+0),A      ; Stage the selected index prefix.
+    POP  AF                  ; Restore the class for register-field arithmetic.
+    RET                      ; Return with the original class in A.
 
 ;@ROUTINE IN A OUT A CLOBBERS F
 ; Map IX-family classes and even indexed-memory classes to DD; IY-family classes
 ; and odd indexed-memory classes to FD. Validation guarantees A is prefixable.
 
 EN_PFOP:
-    CP   EN_IXH
-    JR   C,.PORDINAR
-    CP   EN_IXL+1
-    JR   C,.PREFIXIX
-    CP   EN_IYH
-    JR   C,.PORDINAR
-    CP   EN_IYL+1
-    JR   C,.PREFIXIY
+    CP   EN_IXH              ; Index-half classes begin at IXH.
+    JR   C,.PORDINAR         ; Pair/memory classes use their low-bit family tag.
+    CP   EN_IXL+1            ; Check the end of IXH/IXL's class range.
+    JR   C,.PREFIXIX         ; IX halves always select DD.
+    CP   EN_IYH              ; Check whether this is below the IY-half range.
+    JR   C,.PORDINAR         ; Other prefixable classes use their family tag.
+    CP   EN_IYL+1            ; Check the end of IYH/IYL's class range.
+    JR   C,.PREFIXIY         ; IY halves always select FD.
 .PORDINAR:
-    AND  1
-    JR   NZ,.PREFIXIY
+    AND  1                   ; Even classes identify IX; odd classes identify IY.
+    JR   NZ,.PREFIXIY        ; Select FD for an odd IY-family class.
 .PREFIXIX:
-    LD   A,$DD
-    RET
+    LD   A,$DD               ; Return the IX prefix byte.
+    RET                      ; Finish prefix selection.
 .PREFIXIY:
-    LD   A,$FD
-    RET
+    LD   A,$FD               ; Return the IY prefix byte.
+    RET                      ; Finish prefix selection.
 EN_RECEN:
 EN_CODEE:
 EN_IBEG:
@@ -1045,155 +1045,155 @@ EN_CTBEG:
 ; the remaining entries are suffixes emitted after ED.
 
 EN_COPC1:
-    DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F
-    DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2
-    DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45
-EN_IOPCO: DB $46,$56,$5E
+    DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F ; NOP through RRA.
+    DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2 ; NEG through INI suffixes.
+    DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45             ; INIR through RETN suffixes.
+EN_IOPCO: DB $46,$56,$5E                                  ; ED suffixes for IM 0, 1, 2.
 EN_CTEND:
-EN_CNT EQU 69
+EN_CNT EQU 69                ; Number of mnemonic ordinals in the table.
 
 ; Compact mnemonic table in ordinal order. Each three-byte entry stores the
 ; first packed RADIX-40 word and the significant high byte of the second word.
 
 EN_TABLE:
-    DW  $59E8
-    DB  $00
-    DW  $1A68
-    DB  $00
-    DW  $20A8
-    DB  $00
-    DW  $773E
-    DB  $00
-    DW  $133E
-    DB  $00
-    DW  $154C
-    DB  $00
-    DW  $1929
-    DB  $00
-    DW  $2318
-    DB  $00
-    DW  $3234
-    DB  $7D
-    DW  $7263
-    DB  $06
-    DW  $7353
-    DB  $06
-    DW  $7261
-    DB  $00
-    DW  $7351
-    DB  $00
-    DW  $584F
-    DB  $00
-    DW  $7354
-    DB  $00
-    DW  $7264
-    DB  $00
-    DW  $4BA9
-    DB  $00
-    DW  $4BA9
-    DB  $70
-    DW  $4BA4
-    DB  $00
-    DW  $4BA4
-    DB  $70
-    DW  $1549
-    DB  $00
-    DW  $1549
-    DB  $70
-    DW  $1544
-    DB  $00
-    DW  $1544
-    DB  $70
-    DW  $3A79
-    DB  $00
-    DW  $3A79
-    DB  $70
-    DW  $3A74
-    DB  $00
-    DW  $3A74
-    DB  $70
-    DW  $611C
-    DB  $38
-    DW  $60E9
-    DB  $70
-    DW  $611C
-    DB  $19
-    DW  $60E4
-    DB  $70
-    DW  $715C
-    DB  $38
-    DW  $715C
-    DB  $57
-    DW  $715C
-    DB  $00
-    DW  $2300
-    DB  $00
-    DW  $3A48
-    DB  $00
-    DW  $738C
-    DB  $00
-    DW  $3A73
-    DB  $00
-    DW  $19CB
-    DB  $00
-    DW  $675B
-    DB  $32
-    DW  $6668
-    DB  $00
-    DW  $4BA0
-    DB  $00
-    DW  $3A70
-    DB  $00
-    DW  $611C
-    DB  $00
-    DW  $0DFC
-    DB  $00
-    DW  $715B
-    DB  $00
-    DW  $779C
-    DB  $00
-    DW  $7263
-    DB  $00
-    DW  $7353
-    DB  $00
-    DW  $7260
-    DB  $00
-    DW  $7350
-    DB  $00
-    DW  $78A1
-    DB  $00
-    DW  $7991
-    DB  $00
-    DW  $78AC
-    DB  $00
-    DW  $78B3
-    DB  $00
-    DW  $799C
-    DB  $00
-    DW  $06E4
-    DB  $00
-    DW  $06E3
-    DB  $00
-    DW  $7A0A
-    DB  $00
-    DW  $7713
-    DB  $00
-    DW  $0874
-    DB  $00
-    DW  $986A
-    DB  $00
-    DW  $6090
-    DB  $00
-    DW  $1540
-    DB  $00
-    DW  $4100
-    DB  $00
-    DW  $12F4
-    DB  $4B
-    DW  $4150
-    DB  $00
-    DW  $1A9E
-    DB  $A2
+    DW  $59E8                ; NOP packed mnemonic key, low two bytes.
+    DB  $00                  ; NOP packed mnemonic key, final byte.
+    DW  $1A68                ; DI packed mnemonic key, low two bytes.
+    DB  $00                  ; DI packed mnemonic key, final byte.
+    DW  $20A8                ; EI packed mnemonic key, low two bytes.
+    DB  $00                  ; EI packed mnemonic key, final byte.
+    DW  $773E                ; SCF packed mnemonic key, low two bytes.
+    DB  $00                  ; SCF packed mnemonic key, final byte.
+    DW  $133E                ; CCF packed mnemonic key, low two bytes.
+    DB  $00                  ; CCF packed mnemonic key, final byte.
+    DW  $154C                ; CPL packed mnemonic key, low two bytes.
+    DB  $00                  ; CPL packed mnemonic key, final byte.
+    DW  $1929                ; DAA packed mnemonic key, low two bytes.
+    DB  $00                  ; DAA packed mnemonic key, final byte.
+    DW  $2318                ; EXX packed mnemonic key, low two bytes.
+    DB  $00                  ; EXX packed mnemonic key, final byte.
+    DW  $3234                ; HALT packed mnemonic key, low two bytes.
+    DB  $7D                  ; HALT packed mnemonic key, final byte.
+    DW  $7263                ; RLCA packed mnemonic key, low two bytes.
+    DB  $06                  ; RLCA packed mnemonic key, final byte.
+    DW  $7353                ; RRCA packed mnemonic key, low two bytes.
+    DB  $06                  ; RRCA packed mnemonic key, final byte.
+    DW  $7261                ; RLA packed mnemonic key, low two bytes.
+    DB  $00                  ; RLA packed mnemonic key, final byte.
+    DW  $7351                ; RRA packed mnemonic key, low two bytes.
+    DB  $00                  ; RRA packed mnemonic key, final byte.
+    DW  $584F                ; NEG packed mnemonic key, low two bytes.
+    DB  $00                  ; NEG packed mnemonic key, final byte.
+    DW  $7354                ; RRD packed mnemonic key, low two bytes.
+    DB  $00                  ; RRD packed mnemonic key, final byte.
+    DW  $7264                ; RLD packed mnemonic key, low two bytes.
+    DB  $00                  ; RLD packed mnemonic key, final byte.
+    DW  $4BA9                ; LDI packed mnemonic key, low two bytes.
+    DB  $00                  ; LDI packed mnemonic key, final byte.
+    DW  $4BA9                ; LDIR packed mnemonic key, low two bytes.
+    DB  $70                  ; LDIR packed mnemonic key, final byte.
+    DW  $4BA4                ; LDD packed mnemonic key, low two bytes.
+    DB  $00                  ; LDD packed mnemonic key, final byte.
+    DW  $4BA4                ; LDDR packed mnemonic key, low two bytes.
+    DB  $70                  ; LDDR packed mnemonic key, final byte.
+    DW  $1549                ; CPI packed mnemonic key, low two bytes.
+    DB  $00                  ; CPI packed mnemonic key, final byte.
+    DW  $1549                ; CPIR packed mnemonic key, low two bytes.
+    DB  $70                  ; CPIR packed mnemonic key, final byte.
+    DW  $1544                ; CPD packed mnemonic key, low two bytes.
+    DB  $00                  ; CPD packed mnemonic key, final byte.
+    DW  $1544                ; CPDR packed mnemonic key, low two bytes.
+    DB  $70                  ; CPDR packed mnemonic key, final byte.
+    DW  $3A79                ; INI packed mnemonic key, low two bytes.
+    DB  $00                  ; INI packed mnemonic key, final byte.
+    DW  $3A79                ; INIR packed mnemonic key, low two bytes.
+    DB  $70                  ; INIR packed mnemonic key, final byte.
+    DW  $3A74                ; IND packed mnemonic key, low two bytes.
+    DB  $00                  ; IND packed mnemonic key, final byte.
+    DW  $3A74                ; INDR packed mnemonic key, low two bytes.
+    DB  $70                  ; INDR packed mnemonic key, final byte.
+    DW  $611C                ; OUTI packed mnemonic key, low two bytes.
+    DB  $38                  ; OUTI packed mnemonic key, final byte.
+    DW  $60E9                ; OTIR packed mnemonic key, low two bytes.
+    DB  $70                  ; OTIR packed mnemonic key, final byte.
+    DW  $611C                ; OUTD packed mnemonic key, low two bytes.
+    DB  $19                  ; OUTD packed mnemonic key, final byte.
+    DW  $60E4                ; OTDR packed mnemonic key, low two bytes.
+    DB  $70                  ; OTDR packed mnemonic key, final byte.
+    DW  $715C                ; RETI packed mnemonic key, low two bytes.
+    DB  $38                  ; RETI packed mnemonic key, final byte.
+    DW  $715C                ; RETN packed mnemonic key, low two bytes.
+    DB  $57                  ; RETN packed mnemonic key, final byte.
+    DW  $715C                ; RET packed mnemonic key, low two bytes.
+    DB  $00                  ; RET packed mnemonic key, final byte.
+    DW  $2300                ; EX packed mnemonic key, low two bytes.
+    DB  $00                  ; EX packed mnemonic key, final byte.
+    DW  $3A48                ; IM packed mnemonic key, low two bytes.
+    DB  $00                  ; IM packed mnemonic key, final byte.
+    DW  $738C                ; RST packed mnemonic key, low two bytes.
+    DB  $00                  ; RST packed mnemonic key, final byte.
+    DW  $3A73                ; INC packed mnemonic key, low two bytes.
+    DB  $00                  ; INC packed mnemonic key, final byte.
+    DW  $19CB                ; DEC packed mnemonic key, low two bytes.
+    DB  $00                  ; DEC packed mnemonic key, final byte.
+    DW  $675B                ; PUSH packed mnemonic key, low two bytes.
+    DB  $32                  ; PUSH packed mnemonic key, final byte.
+    DW  $6668                ; POP packed mnemonic key, low two bytes.
+    DB  $00                  ; POP packed mnemonic key, final byte.
+    DW  $4BA0                ; LD packed mnemonic key, low two bytes.
+    DB  $00                  ; LD packed mnemonic key, final byte.
+    DW  $3A70                ; IN packed mnemonic key, low two bytes.
+    DB  $00                  ; IN packed mnemonic key, final byte.
+    DW  $611C                ; OUT packed mnemonic key, low two bytes.
+    DB  $00                  ; OUT packed mnemonic key, final byte.
+    DW  $0DFC                ; BIT packed mnemonic key, low two bytes.
+    DB  $00                  ; BIT packed mnemonic key, final byte.
+    DW  $715B                ; RES packed mnemonic key, low two bytes.
+    DB  $00                  ; RES packed mnemonic key, final byte.
+    DW  $779C                ; SET packed mnemonic key, low two bytes.
+    DB  $00                  ; SET packed mnemonic key, final byte.
+    DW  $7263                ; RLC packed mnemonic key, low two bytes.
+    DB  $00                  ; RLC packed mnemonic key, final byte.
+    DW  $7353                ; RRC packed mnemonic key, low two bytes.
+    DB  $00                  ; RRC packed mnemonic key, final byte.
+    DW  $7260                ; RL packed mnemonic key, low two bytes.
+    DB  $00                  ; RL packed mnemonic key, final byte.
+    DW  $7350                ; RR packed mnemonic key, low two bytes.
+    DB  $00                  ; RR packed mnemonic key, final byte.
+    DW  $78A1                ; SLA packed mnemonic key, low two bytes.
+    DB  $00                  ; SLA packed mnemonic key, final byte.
+    DW  $7991                ; SRA packed mnemonic key, low two bytes.
+    DB  $00                  ; SRA packed mnemonic key, final byte.
+    DW  $78AC                ; SLL packed mnemonic key, low two bytes.
+    DB  $00                  ; SLL packed mnemonic key, final byte.
+    DW  $78B3                ; SLS packed mnemonic key, low two bytes.
+    DB  $00                  ; SLS packed mnemonic key, final byte.
+    DW  $799C                ; SRL packed mnemonic key, low two bytes.
+    DB  $00                  ; SRL packed mnemonic key, final byte.
+    DW  $06E4                ; ADD packed mnemonic key, low two bytes.
+    DB  $00                  ; ADD packed mnemonic key, final byte.
+    DW  $06E3                ; ADC packed mnemonic key, low two bytes.
+    DB  $00                  ; ADC packed mnemonic key, final byte.
+    DW  $7A0A                ; SUB packed mnemonic key, low two bytes.
+    DB  $00                  ; SUB packed mnemonic key, final byte.
+    DW  $7713                ; SBC packed mnemonic key, low two bytes.
+    DB  $00                  ; SBC packed mnemonic key, final byte.
+    DW  $0874                ; AND packed mnemonic key, low two bytes.
+    DB  $00                  ; AND packed mnemonic key, final byte.
+    DW  $986A                ; XOR packed mnemonic key, low two bytes.
+    DB  $00                  ; XOR packed mnemonic key, final byte.
+    DW  $6090                ; OR packed mnemonic key, low two bytes.
+    DB  $00                  ; OR packed mnemonic key, final byte.
+    DW  $1540                ; CP packed mnemonic key, low two bytes.
+    DB  $00                  ; CP packed mnemonic key, final byte.
+    DW  $4100                ; JP packed mnemonic key, low two bytes.
+    DB  $00                  ; JP packed mnemonic key, final byte.
+    DW  $12F4                ; CALL packed mnemonic key, low two bytes.
+    DB  $4B                  ; CALL packed mnemonic key, final byte.
+    DW  $4150                ; JR packed mnemonic key, low two bytes.
+    DB  $00                  ; JR packed mnemonic key, final byte.
+    DW  $1A9E                ; DJNZ packed mnemonic key, low two bytes.
+    DB  $A2                  ; DJNZ packed mnemonic key, final byte.
 EN_TEND:
 EN_IEND:
 EN_COREE:
@@ -1201,5 +1201,5 @@ EN_WBEG:
 
 ; Shared private commit area: six bytes for packed names, first four for opcodes.
 
-EN_SCRAT: DS 6
+EN_SCRAT: DS 6                ; Six-byte packer scratch, reused for four output bytes.
 EN_WEND:

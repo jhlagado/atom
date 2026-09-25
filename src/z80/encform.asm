@@ -146,7 +146,7 @@ EN_VFORM:
 .VZL2:
     JP   Z,EN_D2             ; Return two bytes when the prior test matched.
     JP   AT_INVAL            ; Reject the unmatched operand form.
-EN_LVBEG EQU $
+EN_LVBEG EQU $              ; Begin the LD-form validation handlers.
 .VLD:
 
 ; LD is the broadest family. Dispatch first by destination class, then prove the
@@ -328,245 +328,245 @@ EN_LVBEG EQU $
     JP   C,EN_D3             ; Prefix, opcode and displacement take three.
     CP   EN_IMM8             ; Otherwise check for an immediate byte source.
     JR   .VZL4               ; That form adds a fourth byte for the value.
-EN_LVEND EQU $
+EN_LVEND EQU $              ; End the LD-form validation handlers.
 .VIN:
 
 ; IN r,(C), IN (C), or IN A,(n). Bare IN (C) has one parsed operand.
 
-    LD   A,(IX+EN_OP0)
-    CP   EN_PORTC
-    JR   Z,.VIONE
-    CALL EN_IR8
-    JP   NC,AT_INVAL
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_OP1)
-    CP   EN_PORTC
-    JP   Z,EN_D2
-    CP   EN_IMM8
-    JP   NZ,AT_INVAL
-    LD   A,(IX+EN_OP0)
-    CP   EN_A
-    JP   .VNL2
+    LD   A,(IX+EN_OP0)       ; Read the port marker or destination register.
+    CP   EN_PORTC            ; Bare IN (C) stores the port class in slot zero.
+    JR   Z,.VIONE            ; Route that one-operand form separately.
+    CALL EN_IR8              ; Otherwise slot zero must be an eight-bit register.
+    JP   NC,AT_INVAL         ; Reject a non-register destination.
+    CALL AT_RTOPE            ; Require the third operand slot to be empty.
+    RET  C                   ; Propagate excess-operand failure.
+    LD   A,(IX+EN_OP1)       ; Read the source port class.
+    CP   EN_PORTC            ; Check for the ED form using port C.
+    JP   Z,EN_D2             ; IN r,(C) always occupies two bytes.
+    CP   EN_IMM8             ; The other accepted port form is immediate.
+    JP   NZ,AT_INVAL         ; Reject every other source-port class.
+    LD   A,(IX+EN_OP0)       ; Reload the destination for the immediate form.
+    CP   EN_A                ; IN A,(n) is the only immediate-port input.
+    JP   .VNL2               ; Return two bytes only when the test matched.
 .VIONE:
-    CALL AT_ROOP
-    RET  C
-    JP   EN_D2
+    CALL AT_ROOP             ; Require one operand and reject any extra operands.
+    RET  C                   ; Propagate the one-operand count failure.
+    JP   EN_D2               ; These plain one-operand forms occupy two bytes.
 .VOUT:
 
 ; OUT (C),r, OUT (C),0, or OUT (n),A.
 
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CP   EN_PORTC
-    JR   Z,.VOC
-    CP   EN_IMM8
-    JP   NZ,AT_INVAL
-    LD   A,(IX+EN_OP1)
-    CP   EN_A
-    JP   .VNL2
+    CALL AT_RTOPE            ; Reject an unexpected third operand.
+    RET  C                   ; Stop when the arity check fails.
+    LD   A,(IX+EN_OP0)       ; Read the output-port class.
+    CP   EN_PORTC            ; Select the C-register port forms.
+    JR   Z,.VOC              ; Validate the output byte separately.
+    CP   EN_IMM8             ; Immediate ports use the other OUT form.
+    JP   NZ,AT_INVAL         ; Reject every other port class.
+    LD   A,(IX+EN_OP1)       ; Read the value supplied to the immediate port.
+    CP   EN_A                ; OUT (n),A is the only immediate-port form.
+    JP   .VNL2               ; Return two bytes only when the test matched.
 .VOC:
-    LD   A,(IX+EN_OP1)
-    CP   EN_ZERO
-    JP   Z,EN_D2
-    CALL EN_IR8
+    LD   A,(IX+EN_OP1)       ; Read the byte value sent to port C.
+    CP   EN_ZERO             ; Check the special OUT (C),0 encoding.
+    JP   Z,EN_D2             ; The special zero form is two bytes.
+    CALL EN_IR8              ; Otherwise require an ordinary byte register.
 .VCL2:
-    JP   C,EN_D2
-    JP   AT_INVAL
+    JP   C,EN_D2             ; Accepted register or pair forms use two bytes.
+    JP   AT_INVAL            ; Reject a class outside the accepted set.
 .VBIT:
 
 ; BIT/RES/SET use an enumerated bit class followed by register, (HL), or indexed
 ; memory. Indexed RES/SET may carry a third destination register; BIT may not.
 
-    LD   A,(IX+EN_OP0)
-    CALL EN_IBIND
-    JP   NC,AT_INVAL
-    LD   A,(IX+EN_OP1)
-    CALL EN_IR8
-    JR   C,.VBPLAIN
-    CP   EN_MEMHL
-    JR   Z,.VBPLAIN
-    CALL EN_IINDE
-    JP   NC,AT_INVAL
-    LD   A,(IX+EN_MNEM)
-    CP   AT_MBIT
-    JR   Z,.VBINDST
-    LD   A,(IX+EN_OP2)
-    JR   .VOR8L4
+    LD   A,(IX+EN_OP0)       ; Read the enumerated bit-number class.
+    CALL EN_IBIND            ; Carry accepts only BIT0 through BIT7.
+    JP   NC,AT_INVAL         ; Reject a non-bit operand.
+    LD   A,(IX+EN_OP1)       ; Read the register or memory target class.
+    CALL EN_IR8              ; Test for an ordinary byte register.
+    JR   C,.VBPLAIN          ; Register targets use the plain CB form.
+    CP   EN_MEMHL            ; Check the unprefixed (HL) target.
+    JR   Z,.VBPLAIN          ; (HL) also uses the plain CB form.
+    CALL EN_IINDE            ; Test for indexed memory with displacement.
+    JP   NC,AT_INVAL         ; Reject targets outside these three forms.
+    LD   A,(IX+EN_MNEM)      ; Distinguish BIT from RES and SET.
+    CP   AT_MBIT             ; BIT cannot copy its result to another register.
+    JR   Z,.VBINDST          ; Validate BIT's two-operand indexed form.
+    LD   A,(IX+EN_OP2)       ; Read the optional RES/SET result register.
+    JR   .VOR8L4             ; Accept no register or a byte register, length 4.
 .VBINDST:
-    CALL AT_RTOPE
-    RET  C
-    JP   EN_D4
+    CALL AT_RTOPE            ; Require BIT's third operand slot to be empty.
+    RET  C                   ; Propagate the arity failure.
+    JP   EN_D4               ; Indexed CB operations occupy four bytes.
 .VBPLAIN:
-    CALL AT_RTOPE
-    RET  C
-    JP   EN_D2
+    CALL AT_RTOPE            ; Plain register and (HL) forms take two operands.
+    RET  C                   ; Reject a supplied third operand.
+    JP   EN_D2               ; CB prefix and operation byte make two bytes.
 .VROTATE:
 
 ; Rotate/shift takes an ordinary register, (HL), or indexed memory. Indexed forms
 ; may optionally copy the result to an ordinary register.
 
-    LD   A,(IX+EN_OP0)
-    CALL EN_IR8
-    JR   C,.VRPLAIN
-    CP   EN_MEMHL
-    JR   Z,.VRPLAIN
-    CALL EN_IINDE
-    JP   NC,AT_INVAL
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_OP1)
+    LD   A,(IX+EN_OP0)       ; Read the register or memory target class.
+    CALL EN_IR8              ; Test for an ordinary byte register.
+    JR   C,.VRPLAIN          ; Register targets use the plain CB form.
+    CP   EN_MEMHL            ; Check the unprefixed (HL) memory form.
+    JR   Z,.VRPLAIN          ; (HL) uses the same two-byte CB form.
+    CALL EN_IINDE            ; Otherwise require indexed memory.
+    JP   NC,AT_INVAL         ; Reject all other target classes.
+    CALL AT_RTOPE            ; Indexed forms allow at most two operands.
+    RET  C                   ; Propagate the arity failure.
+    LD   A,(IX+EN_OP1)       ; Read the optional result-register class.
 .VOR8L4:
-    CP   EN_NONE
-    JP   Z,EN_D4
-    CALL EN_IR8
-    JP   C,EN_D4
-    JP   AT_INVAL
+    CP   EN_NONE             ; The sentinel means no result-register copy.
+    JP   Z,EN_D4             ; Indexed operation still takes four bytes.
+    CALL EN_IR8              ; Otherwise require a byte-register destination.
+    JP   C,EN_D4             ; A valid copy form also takes four bytes.
+    JP   AT_INVAL            ; Reject an invalid optional destination.
 .VRPLAIN:
-    JP   .VIONE
+    JP   .VIONE              ; Reuse the one-target arity and length check.
 .VALU:
 
 ; One-operand ALU forms cover byte register/memory/immediate operands. The parser
 ; has already removed an explicit A alias. Two-operand records are the 16-bit
 ; ADD/ADC/SBC families and retain their explicit destination.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.VA16
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CALL EN_IR8
-    JP   C,EN_D1
-    CP   EN_MEMHL
-    JP   Z,EN_D1
-    CP   EN_IMM8
-    JP   Z,EN_D2
-    CALL EN_IHIND
-    JP   C,EN_D2
-    LD   A,(IX+EN_OP0)
-    CALL EN_IINDE
-    JP   .VCL3
+    LD   A,(IX+EN_OP1)       ; An empty second slot selects one-operand ALU.
+    CP   EN_NONE             ; Check whether the parsed A alias was omitted.
+    JR   NZ,.VA16            ; Two slots select the 16-bit arithmetic forms.
+    CALL AT_ROOP             ; Require only operand zero for the byte form.
+    RET  C                   ; Reject an unexpected second or third operand.
+    LD   A,(IX+EN_OP0)       ; Read the byte register or memory class.
+    CALL EN_IR8              ; Carry accepts an ordinary byte register.
+    JP   C,EN_D1             ; Register ALU forms use one opcode byte.
+    CP   EN_MEMHL            ; Check the unprefixed (HL) memory operand.
+    JP   Z,EN_D1             ; Its ALU opcode also occupies one byte.
+    CP   EN_IMM8             ; Check for an immediate byte operand.
+    JP   Z,EN_D2             ; Immediate ALU forms add one data byte.
+    CALL EN_IHIND            ; Test for IXH, IXL, IYH or IYL.
+    JP   C,EN_D2             ; Index halves add a DD/FD prefix.
+    LD   A,(IX+EN_OP0)       ; Reload the class for the indexed-memory test.
+    CALL EN_IINDE            ; Test for (IX/IY+d).
+    JP   .VCL3               ; Return length three if valid, else reject.
 .VA16:
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_MNEM)
-    CP   AT_MADD
-    JR   Z,.VA161
-    CP   AT_MADC
-    JR   Z,.VAS16
-    CP   AT_MSBC
-    JP   NZ,AT_INVAL
+    CALL AT_RTOPE            ; Permit two operands but reject a third.
+    RET  C                   ; Propagate the operand-count failure.
+    LD   A,(IX+EN_MNEM)      ; Select the 16-bit arithmetic mnemonic.
+    CP   AT_MADD             ; ADD has HL, IX and IY destination forms.
+    JR   Z,.VA161            ; Route it to the destination-specific checks.
+    CP   AT_MADC             ; ADC is restricted to HL,rr.
+    JR   Z,.VAS16            ; Share its destination check with SBC.
+    CP   AT_MSBC             ; The remaining accepted family is SBC.
+    JP   NZ,AT_INVAL         ; Reject any other two-operand ALU mnemonic.
 .VAS16:
-    LD   A,(IX+EN_OP0)
-    CP   EN_HL
-    JP   NZ,AT_INVAL
-    LD   A,(IX+EN_OP1)
-    CALL EN_IR16
-    JP   .VCL2
+    LD   A,(IX+EN_OP0)       ; Read the destination of ADC/SBC HL,rr.
+    CP   EN_HL               ; These ED forms require HL as destination.
+    JP   NZ,AT_INVAL         ; Reject IX, IY or any other destination.
+    LD   A,(IX+EN_OP1)       ; Read the source pair class.
+    CALL EN_IR16             ; Carry accepts BC, DE, HL or SP.
+    JP   .VCL2               ; Valid ED pair forms are two bytes.
 .VA161:
-    LD   A,(IX+EN_OP0)
-    CP   EN_HL
-    JR   Z,.VAHL
-    CP   EN_IX
-    JR   Z,.VAINDEX
-    CP   EN_IY
-    JP   NZ,AT_INVAL
+    LD   A,(IX+EN_OP0)       ; Read ADD's 16-bit destination class.
+    CP   EN_HL               ; HL accepts the ordinary pair encodings.
+    JR   Z,.VAHL             ; Validate BC, DE, HL or SP as its source.
+    CP   EN_IX               ; IX accepts BC, DE, SP or IX.
+    JR   Z,.VAINDEX          ; Check those source classes together.
+    CP   EN_IY               ; IY follows the same indexed-pair rules.
+    JP   NZ,AT_INVAL         ; Reject all other ADD pair destinations.
 .VAINDEX:
-    LD   B,A
-    LD   A,(IX+EN_OP1)
-    CP   EN_BC
-    JP   Z,EN_D2
-    CP   EN_DE
-    JP   Z,EN_D2
-    CP   EN_SP
-    JP   Z,EN_D2
-    CP   B
-    JP   .VZL2
+    LD   B,A                 ; Preserve IX or IY while testing the source.
+    LD   A,(IX+EN_OP1)       ; Read the source pair class.
+    CP   EN_BC               ; BC is valid with either index destination.
+    JP   Z,EN_D2             ; Indexed ADD emits prefix and opcode.
+    CP   EN_DE               ; DE is also valid with IX or IY.
+    JP   Z,EN_D2             ; Its indexed form has the same length.
+    CP   EN_SP               ; SP is the final shared pair source.
+    JP   Z,EN_D2             ; It also produces a two-byte instruction.
+    CP   B                   ; The matching IX,IX or IY,IY form is valid.
+    JP   .VZL2               ; Return two bytes on a match, else reject.
 .VAHL:
-    LD   A,(IX+EN_OP1)
-    CALL EN_IR16
-    JP   C,EN_D1
-    JP   AT_INVAL
+    LD   A,(IX+EN_OP1)       ; Read the source pair for ADD HL,rr.
+    CALL EN_IR16             ; Carry accepts BC, DE, HL or SP.
+    JP   C,EN_D1             ; The unprefixed ADD form is one byte.
+    JP   AT_INVAL            ; Reject non-pair sources.
 .VJP:
 
 ; JP accepts an absolute word, (HL), (IX), (IY), or condition plus absolute word.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.VJCONDIT
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CP   EN_IMM16
-    JP   Z,EN_D3
-    CP   EN_MEMHL
-    JP   Z,EN_D1
-    CP   EN_MEMIX
-    JP   Z,EN_D2
-    CP   EN_MEMIY
-    JP   .VZL2
+    LD   A,(IX+EN_OP1)       ; An empty second slot selects unconditional JP.
+    CP   EN_NONE             ; Distinguish it from JP cc,nn.
+    JR   NZ,.VJCONDIT        ; Route the conditional form to its own checks.
+    CALL AT_ROOP             ; Require one operand at most.
+    RET  C                   ; Propagate the arity failure.
+    LD   A,(IX+EN_OP0)       ; Read the absolute or indirect target class.
+    CP   EN_IMM16             ; Check for JP nn.
+    JP   Z,EN_D3              ; Opcode plus address occupies three bytes.
+    CP   EN_MEMHL             ; Check for JP (HL).
+    JP   Z,EN_D1              ; The HL form is a single opcode.
+    CP   EN_MEMIX             ; Check for JP (IX).
+    JP   Z,EN_D2              ; Indexed indirect adds one prefix.
+    CP   EN_MEMIY             ; Check for JP (IY).
+    JP   .VZL2                ; Return two bytes only for that final match.
 .VJCONDIT:
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CALL EN_ICOND
-    JR   NC,AT_INVAL
-    LD   A,(IX+EN_OP1)
+    CALL AT_RTOPE            ; Allow condition and target, not a third operand.
+    RET  C                   ; Propagate the arity failure.
+    LD   A,(IX+EN_OP0)       ; Read the condition class.
+    CALL EN_ICOND            ; Carry accepts one of the eight JP conditions.
+    JR   NC,AT_INVAL         ; Reject an invalid condition before target check.
+    LD   A,(IX+EN_OP1)       ; Read the conditional target class.
 .VAL3:
-    CP   EN_IMM16
-    JP   Z,EN_D3
-    JR   AT_INVAL
+    CP   EN_IMM16            ; Conditional JP/CALL requires an absolute word.
+    JP   Z,EN_D3             ; Opcode plus target address takes three bytes.
+    JR   AT_INVAL            ; Reject any other conditional target class.
 .VCALL:
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.VCCONDIT
-    CALL AT_ROOP
-    RET  C
-    LD   A,(IX+EN_OP0)
-    JR   .VAL3
+    LD   A,(IX+EN_OP1)       ; An empty second slot selects unconditional CALL.
+    CP   EN_NONE             ; Distinguish it from CALL cc,nn.
+    JR   NZ,.VCCONDIT        ; Route a supplied condition to shared checks.
+    CALL AT_ROOP             ; Require one target and no trailing operands.
+    RET  C                   ; Propagate the arity failure.
+    LD   A,(IX+EN_OP0)       ; Load the unconditional target class.
+    JR   .VAL3               ; Reuse the absolute-word length check.
 .VCCONDIT:
-    JR   .VJCONDIT
+    JR   .VJCONDIT           ; CALL shares JP's condition and target rules.
 .VJR:
 
 ; JR has an unconditional relative form and only the four hardware-supported
 ; conditions NZ, Z, NC and C.
 
-    LD   A,(IX+EN_OP1)
-    CP   EN_NONE
-    JR   NZ,.VJCONDI1
-    CALL AT_ROOP
-    RET  C
-    JR   .VROP
+    LD   A,(IX+EN_OP1)       ; An empty second slot selects unconditional JR.
+    CP   EN_NONE             ; Distinguish it from JR cc,e.
+    JR   NZ,.VJCONDI1        ; Route a condition and target to shared checks.
+    CALL AT_ROOP             ; Require one relative target at most.
+    RET  C                   ; Propagate the arity failure.
+    JR   .VROP               ; Check its relative-operand class.
 .VJCONDI1:
-    CALL AT_RTOPE
-    RET  C
-    LD   A,(IX+EN_OP0)
-    CALL EN_IRCON
-    JR   NC,AT_INVAL
-    LD   A,(IX+EN_OP1)
-    CP   EN_REL8
-    JP   Z,EN_D2
-    JR   AT_INVAL
+    CALL AT_RTOPE            ; Allow condition and target, but no third slot.
+    RET  C                   ; Propagate the arity failure.
+    LD   A,(IX+EN_OP0)       ; Read the condition class.
+    CALL EN_IRCON            ; Carry accepts NZ, Z, NC or C for JR.
+    JR   NC,AT_INVAL         ; Reject conditions unsupported by JR.
+    LD   A,(IX+EN_OP1)       ; Read the relative target class.
+    CP   EN_REL8             ; JR cc requires a relative displacement.
+    JP   Z,EN_D2             ; Opcode and displacement occupy two bytes.
+    JR   AT_INVAL            ; Reject every other target class.
 .VDJNZ:
-    CALL AT_ROOP
-    RET  C
+    CALL AT_ROOP             ; DJNZ accepts one relative target only.
+    RET  C                   ; Propagate any extra-operand failure.
 .VROP:
-    LD   A,(IX+EN_OP0)
-    CP   EN_REL8
-    JP   Z,EN_D2
-    JR   AT_INVAL
+    LD   A,(IX+EN_OP0)       ; Read the unconditional relative target class.
+    CP   EN_REL8             ; Require the parser's relative-byte class.
+    JP   Z,EN_D2             ; JR e and DJNZ e each take two bytes.
+    JR   AT_INVAL            ; Reject non-relative operands.
 .VDTABLE:
 
 ; Validator family table selected by AT_DMNEM.
 
-    DW .VCORE,.VRET,.VEX
-    DW .VIM,.VRST,.VIDEC
-    DW .VSTACK,.VLD,.VIN
-    DW .VOUT,.VBIT,.VROTATE
-    DW .VALU,.VJP,.VCALL
-    DW .VJR,.VDJNZ
+    DW .VCORE,.VRET,.VEX        ; Core, RET and EX validator entries.
+    DW .VIM,.VRST,.VIDEC        ; IM, RST and INC/DEC validator entries.
+    DW .VSTACK,.VLD,.VIN        ; Stack, LD and IN validator entries.
+    DW .VOUT,.VBIT,.VROTATE     ; OUT, bit and rotate/shift entries.
+    DW .VALU,.VJP,.VCALL        ; ALU, JP and CALL validator entries.
+    DW .VJR,.VDJNZ              ; Relative-branch validator entries.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; All invalid forms return A=0 with carry set and publish no output.
