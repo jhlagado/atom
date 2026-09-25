@@ -4,6 +4,8 @@ import { join } from "node:path";
 
 export const NATIVE_CORE_MODULES = Object.freeze([
   "encoder.asm",
+  "encform.asm",
+  "encode.asm",
   "symbols.asm",
   "token.asm",
   "tokdisp.asm",

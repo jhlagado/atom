@@ -155,7 +155,9 @@ src/host/translation/   source migration tools
 
 | Module | Responsibility | Principal entries |
 | --- | --- | --- |
-| `encoder.asm` | RADIX-40 names, mnemonic lookup, form validation and opcode encoding | `EN_R40PK`, `EN_RECOG`, `EN_LEN`, `EN_VFORM`, `EN_NAME` |
+| `encoder.asm` | RADIX-40 packing, mnemonic recognition and family dispatch | `EN_R40PK`, `EN_RECOG`, `AT_DMNEM` |
+| `encform.asm` | Operand validation and exact instruction-length selection | `EN_LEN`, `EN_VFORM` |
+| `encode.asm` | Validated opcode and prefix emission | `EN_NAME`, `EN_CORE` |
 | `symbols.asm` | Global and private symbols plus pending-reference records | `SY_RESET`, `SY_FIND`, `SY_DECL`, `SY_REF`, `SY_ADD`, `SY_PEEK`, `SY_TAKE` |
 | `token.asm` | Source access, classifiers and lexeme scanners | `TK_RESET`, `TK_SREAD`, `TK_SNAME`, `TK_SBASE`, `TK_SSTRI` |
 | `tokdisp.asm` | Token dispatch, character literals and token publication | `TK_NEXT`, `TK_SCHAR`, `TK_LLEXE` |
@@ -280,8 +282,8 @@ counts and package contents. Tests consume them directly.
 Start with `driver.asm` and `stmts.asm` for the build and statement loops. Read
 `token.asm`, `tokdisp.asm`, `expr.asm`, `exprmath.asm`, `parser.asm` and
 `forms.asm` for the language path. Continue through `refs.asm`, `output.asm`
-and `symbols.asm` to trace forward references. Leave `encoder.asm` until the
-instruction record is familiar.
+and `symbols.asm` to trace forward references. Then follow `encoder.asm`,
+`encform.asm` and `encode.asm` from name recognition through byte emission.
 
 For the host, begin at `assemble-atom-project.mjs`. Follow source work into
 `resolve-atom-project.mjs` and `src/host/atom/`, execution into
