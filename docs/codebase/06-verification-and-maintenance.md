@@ -51,7 +51,7 @@ generations before comparing the checked image. It does not run static
 register-contract analysis.
 
 The checked expression, parser/patch, output, statement, and driver lanes execute
-`native/atom.asm` directly. They supply guarded source, record, output, key,
+`src/z80/atom.asm` directly. They supply guarded source, record, output, key,
 symbol, pending, and logical sink regions and audit all 65,536 addresses after
 every invocation. The output and driver harnesses intercept the production
 service entries and return through the native stack; they carry no proof-only

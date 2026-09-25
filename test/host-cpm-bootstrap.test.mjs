@@ -37,7 +37,7 @@ test("the CP/M build uses installed tool services without a sibling source check
   const isolated = join(temporary, "atom");
   try {
     await mkdir(isolated);
-    for (const path of ["package.json", "scripts", "src", "native", "assets", "proofs"]) {
+    for (const path of ["package.json", "scripts", "src", "assets", "proofs"]) {
       await cp(join(root, path), join(isolated, path), { recursive: true });
     }
     // Reuse installed dependencies only. The source checkout has no siblings.

@@ -21,10 +21,10 @@ const SELF_HOST_BUDGETS = Object.freeze({
 
 test("checked Atom source rebuilds the pinned core and then rebuilds itself byte-identically", async () => {
   const proof = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
-  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+  const ledger = JSON.parse(await fs.readFile("src/z80/atom-symbols.json", "utf8"));
   const source = Object.freeze({ mapping: ledger.symbols, statistics: ledger.statistics });
   const project = await resolveAtomProject({
-    root: path.resolve("native"),
+    root: path.resolve("src/z80"),
     entry: "atom.asm",
   });
   assert.deepEqual(project.parts.map(({ logicalIdentity }) => logicalIdentity), [

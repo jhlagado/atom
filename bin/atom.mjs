@@ -134,7 +134,7 @@ async function loadBuild(options) {
       throw new Error("self-host does not accept project, target, or definition options");
     }
     return {
-      root: fileURLToPath(new URL("../native", import.meta.url)),
+      root: fileURLToPath(new URL("../src/z80", import.meta.url)),
       entry: "atom.asm",
       target: Object.freeze({ name: "self-host", start: 0, capacity: 0x4000, entryAddress: 0 }),
       definitions: Object.create(null),

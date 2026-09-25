@@ -8,7 +8,7 @@ The compiler uses a caller-supplied source service plus caller-owned symbol and
 pending arenas. Its fixed non-reentrant workspace occupies 714 bytes beside the
 code and immutable tables.
 
-`native/atom.asm` selects the complete configuration. Its ten included `.asm`
+`src/z80/atom.asm` selects the complete configuration. Its ten included `.asm`
 parts follow the subsystem boundaries described in the
 [native source map](native-source-map.md). The checked core enables deferred
 expressions, statement parsing, output, symbol resolution and the multipart
@@ -68,7 +68,7 @@ global reference in one part may be defined in a later part.
 
 ## Tokenizer
 
-The tokenizer begins at `TK_CBEG` in `native/tokenizer.asm`.
+The tokenizer begins at `TK_CBEG` in `src/z80/tokenizer.asm`.
 `AtomTokenizerReset` records the part ordinal, base, length, and zero-based
 logical offset. `AtomTokenizerNext` calls `AtomSourceReadByte`, skips horizontal
 whitespace and comments, then dispatches by the returned byte. The desktop runner
@@ -110,13 +110,13 @@ and its complete declared memory write set.
 ## RADIX-40 and symbols
 
 `AtomRadix40Pack` lives in the encoder section beginning at `EN_CODEB` in
-`native/encoder.asm` because mnemonic recognition and symbol storage share the
+`src/z80/encoder.asm` because mnemonic recognition and symbol storage share the
 arithmetic. It accepts one through eight ASCII
 letters, digits, or underscores, folds letters to uppercase, and writes three
 packed words. Failure leaves the destination unchanged.
 
 `AtomPackSymbol` in the symbol section beginning at `SY_CBEG` in
-`native/symbols.asm` adds symbol syntax and flags. A private name begins with
+`src/z80/symbols.asm` adds symbol syntax and flags. A private name begins with
 `.`, but the period is not stored in the RADIX-40 payload. One eight-byte symbol
 record contains six packed-name bytes plus a two-byte value.
 Unused high bits in the final packed-name byte record private, defined, and
@@ -177,7 +177,7 @@ drained it.
 
 ## Expression evaluator
 
-The expression section begins at `EX_CBEG` in `native/expression.asm`. It
+The expression section begins at `EX_CBEG` in `src/z80/expression.asm`. It
 implements precedence parsing with a value stack and an operator stack. Each
 stack has 16 entries. Values use signed 24-bit
 intermediates plus metadata for concrete or deferred state. Operators carry
@@ -220,7 +220,7 @@ state.
 ## Parsed instruction record
 
 `AtomParserParse` in the parser section beginning at `PR_CBEG` in
-`native/parser.asm` consumes a mnemonic and up to three operands into the
+`src/z80/parser.asm` consumes a mnemonic and up to three operands into the
 encoder's ten-byte record:
 
 | Offset | Field |
@@ -254,7 +254,7 @@ after every instruction byte has been accepted.
 
 ## Patch-field locator
 
-The patch section beginning at `PT_CBEG` in `native/patch.asm` is a small
+The patch section beginning at `PT_CBEG` in `src/z80/patch.asm` is a small
 bridge between the validated operand record and the output layer.
 `AtomPatchLocate` maps one operand index to a byte offset and patch kind:
 
@@ -273,7 +273,7 @@ depends only on a form that validation has already accepted.
 
 ## Instruction validation and encoding
 
-The encoder section beginning at `EN_CODEB` in `native/encoder.asm` combines
+The encoder section beginning at `EN_CODEB` in `src/z80/encoder.asm` combines
 four related facilities:
 
 1. RADIX-40 packing;
@@ -314,7 +314,7 @@ distribution, and canonical hash.
 ## Statements and directives
 
 `AtomAssemblePart` in the statement section beginning at `ST_CBEG` in
-`native/statements.asm` consumes tokens until part EOF. At each statement it
+`src/z80/statements.asm` consumes tokens until part EOF. At each statement it
 records a diagnostic position, recognizes the first name, and distinguishes
 these source shapes:
 
@@ -355,7 +355,7 @@ byte column.
 
 ## Output state and patches
 
-The output section beginning at `OU_CBEG` in `native/output.asm` owns the
+The output section beginning at `OU_CBEG` in `src/z80/output.asm` owns the
 logical target cursor and remaining capacity. The current profile always uses
 bank zero.
 

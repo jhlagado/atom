@@ -30,7 +30,7 @@ function pair(high, low) {
 
 export async function createHarness() {
   const core = await loadNativeAtomCore();
-  assert.equal(core.source, "native/atom.asm");
+  assert.equal(core.source, "src/z80/atom.asm");
   const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
   const program = parseIntelHex(core.hexText);
   const runtime = createZ80Runtime(program, symbols.AtomEncode);

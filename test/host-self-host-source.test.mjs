@@ -16,9 +16,9 @@ const KEY_NAMES = Object.freeze({
 });
 
 test("native source census matches the checked content and root include parts", async () => {
-  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
-  const parts = await Promise.all(NATIVE_CORE_MODULES.map((name) => fs.readFile(`native/${name}`, "utf8")));
-  const root = await fs.readFile("native/atom.asm", "utf8");
+  const ledger = JSON.parse(await fs.readFile("src/z80/atom-symbols.json", "utf8"));
+  const parts = await Promise.all(NATIVE_CORE_MODULES.map((name) => fs.readFile(`src/z80/${name}`, "utf8")));
+  const root = await fs.readFile("src/z80/atom.asm", "utf8");
   const bytes = parts.reduce((sum, text) => sum + Buffer.byteLength(text), 0);
   // The historical census calls all nonblank source records statements,
   // including labels and register-contract annotations.
@@ -28,7 +28,7 @@ test("native source census matches the checked content and root include parts", 
 });
 
 test("the authoritative native symbol ledger is exact, scoped, and readable", async () => {
-  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+  const ledger = JSON.parse(await fs.readFile("src/z80/atom-symbols.json", "utf8"));
   assert.equal(ledger.format, "atom-native-symbol-ledger");
   assert.equal(ledger.version, 2);
   assert.equal(ledger.symbols.length, 1317);
@@ -64,7 +64,7 @@ test("the authoritative native symbol ledger is exact, scoped, and readable", as
 });
 
 test("reviewed private-name collisions remain distinct within one scope", async () => {
-  const ledger = JSON.parse(await fs.readFile("native/atom-symbols.json", "utf8"));
+  const ledger = JSON.parse(await fs.readFile("src/z80/atom-symbols.json", "utf8"));
   const byOriginal = new Map(ledger.symbols.map((symbol) => [symbol.original, symbol]));
   for (const [scope, firstOriginal, firstShort, secondOriginal, secondShort] of [
     ["ATOMVALIDATEFORM", "_AtomValidateAlu16", ".VA16", "_AtomValidateAdd16", ".VA161"],

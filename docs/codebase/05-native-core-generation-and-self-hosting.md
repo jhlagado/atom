@@ -12,7 +12,7 @@ ABI symbols must also agree. No second assembler runs in this build path.
 
 ## Native source and link entry
 
-The native implementation is maintained under `native/`. Its entry is
+The native implementation is maintained under `src/z80/`. Its entry is
 `atom.asm`, whose `%INCLUDE` header orders ten source parts. Each part contains
 one native module. The final module contains six fail-closed host sink entries.
 
@@ -23,9 +23,9 @@ generation does not perform static register-contract analysis.
 
 ## Building the pinned core
 
-`scripts/generate-native-core.mjs` resolves `native/atom.asm`, runs the checked
+`scripts/generate-native-core.mjs` resolves `src/z80/atom.asm`, runs the checked
 core over the ordered parts, and recovers the long host ABI names through
-`native/atom-symbols.json`. The newly emitted core then assembles the same
+`src/z80/atom-symbols.json`. The newly emitted core then assembles the same
 prepared parts again.
 
 Generation fails unless both ATOM generations produce the same initialized
@@ -94,7 +94,7 @@ The host resolver orders those dependencies before `atom.asm`, so the checked
 self-host project presented to the native driver has eleven parts. The empty
 entry still has its own identity and descriptor.
 
-`native/atom-symbols.json` records the complete original-to-short migration and
+`src/z80/atom-symbols.json` records the complete original-to-short migration and
 the fixed names required by the host runner. It lets core generation recover
 long ABI names from the declarations emitted by native Atom. Global names use
 a two-letter module prefix and a semantic stem, such as `PR_PARSE` and
@@ -108,12 +108,12 @@ npm run build:native-core
 npm run verify:native-source
 ```
 
-Changes belong in `native/*.asm`. No bootstrap source generator or second native
+Changes belong in `src/z80/*.asm`. No bootstrap source generator or second native
 implementation remains in the repository.
 
 ## First Atom generation
 
-The self-host proof resolves `native/atom.asm` through the ordinary host
+The self-host proof resolves `src/z80/atom.asm` through the ordinary host
 project preparation and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 

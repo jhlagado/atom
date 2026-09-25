@@ -15,7 +15,7 @@ import {
 } from "../src/host/index.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const nativeRoot = path.join(repositoryRoot, "native");
+const nativeRoot = path.join(repositoryRoot, "src", "z80");
 const ledgerPath = path.join(nativeRoot, "atom-symbols.json");
 const outputPath = path.join(repositoryRoot, "assets", "native-core.json");
 
@@ -68,7 +68,7 @@ async function readLedger() {
     ledger?.version !== 2 ||
     !Array.isArray(ledger.symbols)
   ) {
-    throw new Error("native/atom-symbols.json is not an Atom native symbol ledger version 2");
+    throw new Error("src/z80/atom-symbols.json is not an Atom native symbol ledger version 2");
   }
   return ledger;
 }
@@ -107,7 +107,7 @@ async function buildArtifact() {
   return {
     format: "atom-native-core",
     version: 1,
-    source: "native/atom.asm",
+    source: "src/z80/atom.asm",
     hexSha256: createHash("sha256").update(hexText, "utf8").digest("hex"),
     artifactSha256,
     hexText,

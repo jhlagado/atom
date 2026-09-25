@@ -2,7 +2,7 @@
 
 ## Result
 
-**Measured: pass.** The checked Atom-syntax source under `native/` assembles
+**Measured: pass.** The checked Atom-syntax source under `src/z80/` assembles
 to the same 12,396-byte resident image as the AZM build. That Atom-produced
 image then runs as the assembler and produces the same bytes again. A separate
 translation of the checked source into AZM syntax also produces the same

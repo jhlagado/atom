@@ -93,14 +93,15 @@ The top-level repository is deliberately direct:
 
 ```text
 atom/
-  assets/              PINNED GENERATED NATIVE CORE
+  assets/              PINNED GENERATED RUNTIME IMAGES
   bin/                 INSTALLED COMMAND-LINE ENTRY
   docs/                PRODUCT, ABI, PHASE, AND ENGINEERING DOCUMENTATION
   examples/            SHIPPED SOURCE PROJECTS
   proofs/              FROZEN CENSUSES, MEMORY MAPS, AND MEASUREMENTS
   scripts/             NATIVE-CORE AND RELEASE CHECKS
-  native/              AUTHORITATIVE ATOM-SYNTAX NATIVE CORE AND SYMBOL LEDGER
-  src/                 HOST IMPLEMENTATION AND GENERATED-TABLE INPUTS
+  src/                 PRODUCT SOURCE
+    host/              NODE HOST, PUBLIC API, ARTIFACTS, AND EXECUTION HARNESS
+    z80/               AUTHORITATIVE Z80 CORE, ADAPTERS, AND SYMBOL LEDGER
   test/                NATIVE, HOST, DIFFERENTIAL, PACKAGE, AND SELF-HOST PROOFS
   package.json         PACKAGE EXPORT, COMMAND, DEPENDENCIES, AND TEST LANES
 ```
@@ -112,7 +113,7 @@ ATOM output with the checked images and independently captured reference data.
 
 ## Native source layout
 
-`native/atom.asm` is the core entry. Its ten ordered parts correspond to the
+`src/z80/atom.asm` is the core entry. Its ten ordered parts correspond to the
 native modules in dependency order:
 
 ```text
@@ -190,7 +191,7 @@ parsing, rendering, and publication.
 
 ## Generated and hand-edited files
 
-The implementation under `native/` is hand-edited. Generated descriptions and
+The implementation under `src/z80/` is hand-edited. Generated descriptions and
 the pinned image have explicit rebuild checks:
 
 | Generated file | Generator | Drift check |
@@ -198,7 +199,7 @@ the pinned image have explicit rebuild checks:
 | `assets/native-core.json` | `scripts/generate-native-core.mjs` using two executable ATOM generations | `npm run verify:native-source` |
 | `assets/atom-object-harness.bin` | `scripts/generate-native-object-harness.mjs` using the shared ABI constants and strict contracts | `npm run verify:native-object` |
 
-Native changes belong in `native/*.asm`, followed by
+Native changes belong in `src/z80/*.asm`, followed by
 `npm run build:native-core`. Editing `assets/native-core.json` directly only
 creates drift that the release gate rejects.
 
@@ -209,18 +210,18 @@ The best entry point depends on the change:
 - For source dependency or conditional behaviour, begin in
   `src/host/application/resolve-atom-project.mjs`, then follow the Atom source profile into
   the shared `source-preparation` resolver.
-- For a lexical problem, use `native/atom-symbols.json` to map
-  `AtomTokenizerNext` to `TK_NEXT`, locate it under `native/`, and read
+- For a lexical problem, use `src/z80/atom-symbols.json` to map
+  `AtomTokenizerNext` to `TK_NEXT`, locate it under `src/z80/`, and read
   `test/tokenizer.test.mjs` beside it.
 - For expressions or forward arithmetic, begin at `AtomExpressionParseDeferred`
   and the pending-reference rules in `docs/symbolic-parser-abi.md`.
 - For an instruction form, begin with the operand record in `src/abi.mjs`, then
   follow `AtomParserParse`, `AtomValidateForm`, and `AtomEncode`.
-- For labels or capacity, locate the `SY_` entries under `native/` and read the
+- For labels or capacity, locate the `SY_` entries under `src/z80/` and read the
   relevant arena boundary tests.
 - For a directive, begin at the `ST_` implementation of `AtomAssemblePart`.
 - For forward patches or output lifecycle, begin at the `OU_` and `DR_`
-  implementations under `native/` and `createMemoryAtomSink()`.
+  implementations under `src/z80/` and `createMemoryAtomSink()`.
 - For an artifact issue, begin in `src/host/artifacts/` and the corresponding
   `host-artifacts` or publication tests.
 - For the installed command, begin in `bin/atom.mjs` and trace its calls through

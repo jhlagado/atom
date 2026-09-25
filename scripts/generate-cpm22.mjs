@@ -15,7 +15,7 @@ import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const nativeRoot = join(repositoryRoot, "native");
+const nativeRoot = join(repositoryRoot, "src", "z80");
 const outputPath = join(repositoryRoot, "assets", "atom-cpm22.com");
 const reportPath = join(repositoryRoot, "proofs", "cpm22-census.json");
 const finalImageModulePath = fileURLToPath(import.meta.resolve(

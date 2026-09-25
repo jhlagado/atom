@@ -18,7 +18,7 @@ const pair = (high, low) => ((high << 8) | low) & 0xffff;
 
 async function createCheckedCoreHarness() {
   const core = await loadNativeAtomCore();
-  assert.equal(core.source, "native/atom.asm");
+  assert.equal(core.source, "src/z80/atom.asm");
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), core.symbols.AtomEncode);
   const memory = runtime.hardware.memory;
   const pristine = memory.slice();

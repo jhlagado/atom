@@ -73,9 +73,9 @@ test("the packed desktop CLI installs offline and assembles without AZM or an At
   await fs.access(path.join(installedAtom, "docs", "azm-to-atom.md"));
   await fs.access(path.join(installedAtom, "docs", "codebase", "index.md"));
   await fs.access(path.join(installedAtom, "examples", "hello", "main.asm"));
-  await fs.access(path.join(installedAtom, "native", "atom.asm"));
-  await fs.access(path.join(installedAtom, "native", "encoder.asm"));
-  await fs.access(path.join(installedAtom, "native", "driver.asm"));
+  await fs.access(path.join(installedAtom, "src", "z80", "atom.asm"));
+  await fs.access(path.join(installedAtom, "src", "z80", "encoder.asm"));
+  await fs.access(path.join(installedAtom, "src", "z80", "driver.asm"));
 
   await fs.writeFile(path.join(projectDirectory, "legacy.asm"), [
     ".org 0x4000",

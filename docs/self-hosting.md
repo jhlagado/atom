@@ -1,6 +1,6 @@
 # Self-hosting Atom
 
-Atom’s native source uses ordinary `.asm` filenames. The checked source under `native/`
+Atom’s native source uses ordinary `.asm` filenames. The checked source under `src/z80/`
 is the input to native-core generation, the self-host proof, the command line’s
 `atom self-host`, and the npm package. The repository retains no second native
 implementation. Native-core generation executes the checked ATOM seed, then
@@ -59,7 +59,7 @@ silently truncates one definition onto another.
 
 ## The symbol ledger
 
-`native/atom-symbols.json` records every migration:
+`src/z80/atom-symbols.json` records every migration:
 
 ```json
 {
@@ -107,7 +107,7 @@ whole-program static register analysis.
 
 The current checkpoint establishes the complete authority path:
 
-- `native/atom.asm` and its five ordered source parts are hand-edited source;
+- `src/z80/atom.asm` and its five ordered source parts are hand-edited source;
 - `npm run build:native-core` uses the checked pinned core to assemble those
   parts and writes the resulting image to `assets/native-core.json`;
 - the first emitted core executes the same source to produce a second generation;
@@ -116,7 +116,7 @@ The current checkpoint establishes the complete authority path:
 - the encoder differential calls the checked `.asm` core directly across all
   3,445 claimed forms and the complete invalid-record corpus.
 
-A native implementation change belongs in `native/*.asm`. No command
+A native implementation change belongs in `src/z80/*.asm`. No command
 regenerates those files from another source language.
 
 Every subsystem proof now executes the checked core. Encoder, symbols,

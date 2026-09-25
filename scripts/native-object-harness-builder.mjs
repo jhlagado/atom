@@ -19,7 +19,7 @@ import {
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "..");
-const nativeRoot = join(repositoryRoot, "native");
+const nativeRoot = join(repositoryRoot, "src", "z80");
 const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
 const unavailableGateway = [
   "; Fail-closed transport replaced by a concrete platform binding.",

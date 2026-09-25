@@ -50,7 +50,7 @@ const PROOF_SYMBOLS = Object.freeze({
 
 export async function createStatementsHarness() {
   const core = await loadNativeAtomCore();
-  assert.equal(core.source, "native/atom.asm");
+  assert.equal(core.source, "src/z80/atom.asm");
   const symbols = Object.freeze({ ...core.symbols, ...PROOF_SYMBOLS });
   const runtime = createZ80Runtime(parseIntelHex(core.hexText), symbols.AtomTokenizerReset);
   const memory = runtime.hardware.memory;
