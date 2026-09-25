@@ -1294,99 +1294,99 @@ CP_ABORT_DONE:
 ; PATCH application until Atom calls this routine.
 
 CP_WRITE_HEX:
-    CALL ZTS_CPM_HEX_BEGIN
-    LD   HL,CP_TARGET_START
-    LD   (CP_HEX_ADDRESS),HL
-    CALL ZTS_CPM_HEX_SEGMENT
-    JP   ZTS_CPM_HEX_END
+    CALL ZTS_CPM_HEX_BEGIN ; Reset the helper's buffer and status flags.
+    LD   HL,CP_TARGET_START ; Set the first logical address written to HEX.
+    LD   (CP_HEX_ADDRESS),HL ; Save the address used in record headers.
+    CALL ZTS_CPM_HEX_SEGMENT ; Render the image as checksummed HEX records.
+    JP   ZTS_CPM_HEX_END ; Write EOF, pad the final record and return status.
 
 ;@ROUTINE IN C,DE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
 ; Route final-image writer requests through the index-preserving BDOS wrapper.
 
 ZTS_CPM_FINAL_BDOS:
-    JP   CP_BDOS
-ZTS_CPM_FINAL_FCB EQU CP_WORK_FCB
-ZTS_CPM_FINAL_DMA EQU CP_SOURCE_CACHE
-ZTS_CPM_FINAL_SOURCE_CURSOR EQU CP_OUTPUT_CURSOR
-ZTS_CPM_FINAL_REMAINING EQU CP_OUTPUT_REMAINING
-ZTS_CPM_FINAL_ADDRESS EQU CP_HEX_ADDRESS
-ZTS_CPM_FINAL_DMA_CURSOR EQU CP_HEX_CURSOR
-ZTS_CPM_FINAL_DMA_COUNT EQU CP_HEX_COUNT
-ZTS_CPM_FINAL_ERROR EQU CP_HEX_ERROR
-ZTS_CPM_FINAL_SUM EQU CP_HEX_SUM
-ZTS_CPM_FINAL_SIZE EQU CP_HEX_SIZE
-ZTS_CPM_FINAL_DATA_LEFT EQU CP_HEX_DATA_LEFT
+    JP   CP_BDOS ; Forward requests through the index-preserving BDOS wrapper.
+ZTS_CPM_FINAL_FCB EQU CP_WORK_FCB ; FCB used for writing HEX records.
+ZTS_CPM_FINAL_DMA EQU CP_SOURCE_CACHE ; 128-byte buffer shared with input.
+ZTS_CPM_FINAL_SOURCE_CURSOR EQU CP_OUTPUT_CURSOR ; Current byte in the image.
+ZTS_CPM_FINAL_REMAINING EQU CP_OUTPUT_REMAINING ; Image bytes left to render.
+ZTS_CPM_FINAL_ADDRESS EQU CP_HEX_ADDRESS ; Address in the next HEX record.
+ZTS_CPM_FINAL_DMA_CURSOR EQU CP_HEX_CURSOR ; Next byte in the HEX buffer.
+ZTS_CPM_FINAL_DMA_COUNT EQU CP_HEX_COUNT ; Bytes queued for transfer.
+ZTS_CPM_FINAL_ERROR EQU CP_HEX_ERROR ; Sticky record-write error status.
+ZTS_CPM_FINAL_SUM EQU CP_HEX_SUM ; Checksum accumulator for one HEX record.
+ZTS_CPM_FINAL_SIZE EQU CP_HEX_SIZE ; Payload length of the current HEX record.
+ZTS_CPM_FINAL_DATA_LEFT EQU CP_HEX_DATA_LEFT ; Payload bytes still to render.
 ;@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@
 
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Rebuild the single ordinary output FCB before each new BDOS operation phase.
 
 CP_COPY_OUTPUT_FCB:
-    LD   HL,CP_OUTPUT_NAME
-    LD   DE,CP_WORK_FCB
-    LD   BC,12
-    LDIR
+    LD   HL,CP_OUTPUT_NAME ; Read the normalized drive-plus-name record.
+    LD   DE,CP_WORK_FCB ; Select the reusable working FCB as destination.
+    LD   BC,12 ; Count the drive byte and eleven name/type bytes.
+    LDIR ; Copy the requested output name into the working FCB.
 
 ;@ROUTINE IN DE OUT A,B,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Zero the unused tail of the current CP/M file-control block.
 
 CP_CLEAR_FCB_TAIL:
-    XOR  A
-    LD   B,24
+    XOR  A ; Select zero as the byte written to the FCB tail.
+    LD   B,24 ; Clear the 24 bytes after the drive and filename fields.
 
 ;@ROUTINE IN A,B,DE OUT B,DE
 ; Fill B bytes at DE with A while advancing the destination pointer.
 
 CP_CLEAR_WORK_FCB:
-    LD   (DE),A
-    INC  DE
-    DJNZ CP_CLEAR_WORK_FCB
-    RET
+    LD   (DE),A ; Write the fill byte at the current FCB address.
+    INC  DE ; Advance to the next byte in the control block.
+    DJNZ CP_CLEAR_WORK_FCB ; Repeat until B bytes have been written.
+    RET ; Return with DE advanced past the cleared region.
 
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Derive the transaction's temporary filename from the requested output name.
 
 CP_SET_TEMP_FCB:
-    CALL CP_COPY_OUTPUT_FCB
-    LD   HL,$2424
-    LD   (CP_WORK_FCB+9),HL
-    LD   A,'$'
-    LD   (CP_WORK_FCB+11),A
-    RET
+    CALL CP_COPY_OUTPUT_FCB ; Start from the caller's requested output name.
+    LD   HL,$2424 ; Form two '$' bytes for the first extension positions.
+    LD   (CP_WORK_FCB+9),HL ; Mark the first two extension characters.
+    LD   A,'$' ; Select '$' for the extension's final character.
+    LD   (CP_WORK_FCB+11),A ; Complete the temporary type '$$$'.
+    RET ; Return the temporary filename in the working FCB.
 
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Derive the transaction's backup filename from the requested output name.
 
 CP_SET_BACKUP_FCB:
-    CALL CP_COPY_OUTPUT_FCB
-    LD   HL,$4142
-    LD   (CP_WORK_FCB+9),HL
-    LD   A,'K'
-    LD   (CP_WORK_FCB+11),A
-    RET
+    CALL CP_COPY_OUTPUT_FCB ; Start from the caller's requested output name.
+    LD   HL,$4142 ; Form 'B' and 'A' in little-endian memory order.
+    LD   (CP_WORK_FCB+9),HL ; Set the first two backup extension characters.
+    LD   A,'K' ; Select the extension's final character.
+    LD   (CP_WORK_FCB+11),A ; Complete the backup type 'BAK'.
+    RET ; Return the backup filename in the working FCB.
 
 ;@ROUTINE IN DE,HL CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Construct a CP/M rename FCB in the input FCB's dead storage. HL addresses
 ; the old 12-byte name and DE the new 12-byte name.
 
 CP_BUILD_RENAME:
-    PUSH HL
-    PUSH DE
-    LD   DE,CP_RENAME_FCB
-    XOR  A
-    LD   B,36
-    CALL CP_CLEAR_WORK_FCB
-    POP  DE
-    POP  HL
-    PUSH DE
-    LD   DE,CP_RENAME_FCB
-    LD   BC,12
-    LDIR
-    POP  HL
-    LD   DE,CP_RENAME_FCB+16
-    LD   BC,12
-    LDIR
-    RET
+    PUSH HL ; Preserve the old drive-plus-name source pointer.
+    PUSH DE ; Preserve the new drive-plus-name destination pointer.
+    LD   DE,CP_RENAME_FCB ; Select the start of the 36-byte rename FCB.
+    XOR  A ; Use zero to clear unused FCB fields.
+    LD   B,36 ; Count every byte in the rename FCB.
+    CALL CP_CLEAR_WORK_FCB ; Clear it before copying either filename.
+    POP  DE ; Restore the pointer to the new filename.
+    POP  HL ; Restore the pointer to the old filename.
+    PUSH DE ; Save the new filename while DE becomes the copy destination.
+    LD   DE,CP_RENAME_FCB ; Place the old name at the start of the FCB.
+    LD   BC,12 ; Copy its drive, basename and extension fields.
+    LDIR ; Fill the rename FCB's old-name field.
+    POP  HL ; Move the new-name pointer into the source register pair.
+    LD   DE,CP_RENAME_FCB+16 ; Select the new-name field in the FCB.
+    LD   BC,12 ; Copy its drive, basename and extension fields.
+    LDIR ; Fill the rename FCB's new-name field.
+    RET ; Return the completed rename FCB in workspace.
 
 CP_OUTPUT_CODE_END:
 
@@ -1394,72 +1394,72 @@ CP_OUTPUT_CODE_END:
 ; Print a dollar-terminated string through CP/M BDOS function 9.
 
 CP_PRINT:
-    LD   C,CP_PRINT_FUNCTION
-    JP   CP_BDOS
+    LD   C,CP_PRINT_FUNCTION ; Select CP/M dollar-terminated string output.
+    JP   CP_BDOS ; Print the string addressed by DE.
 
 ;@ROUTINE IN HL OUT A CLOBBERS B,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print the non-space characters of one drive-plus-8.3 filename record.
 
 CP_PRINT_NAME:
-    INC  HL
-    LD   B,8
+    INC  HL ; Skip the drive byte and point at the basename.
+    LD   B,8 ; Count the eight basename characters.
 CP_PRINT_NAME_BYTE:
-    LD   A,(HL)
-    INC  HL
-    CP   ' '
-    CALL NZ,CP_PUTC
-    DJNZ CP_PRINT_NAME_BYTE
-    LD   A,(HL)
-    CP   ' '
-    RET  Z
-    LD   A,'.'
-    CALL CP_PUTC
-    LD   B,3
+    LD   A,(HL) ; Read the next basename character.
+    INC  HL ; Advance to the next FCB name byte.
+    CP   ' ' ; FCB padding marks an unused character position.
+    CALL NZ,CP_PUTC ; Print this character only when it is not padding.
+    DJNZ CP_PRINT_NAME_BYTE ; Check the remaining basename positions.
+    LD   A,(HL) ; Inspect the first character of the extension.
+    CP   ' ' ; A blank extension has no visible suffix.
+    RET  Z ; Return without printing a dot for an empty type.
+    LD   A,'.' ; Select the filename separator.
+    CALL CP_PUTC ; Print the dot before the extension.
+    LD   B,3 ; Count the three extension characters.
 CP_PRINT_TYPE_BYTE:
-    LD   A,(HL)
-    INC  HL
-    CP   ' '
-    CALL NZ,CP_PUTC
-    DJNZ CP_PRINT_TYPE_BYTE
-    RET
+    LD   A,(HL) ; Read the next extension character.
+    INC  HL ; Advance to the following FCB byte.
+    CP   ' ' ; Skip blank extension positions.
+    CALL NZ,CP_PUTC ; Print a nonblank extension character.
+    DJNZ CP_PRINT_TYPE_BYTE ; Check the remaining extension positions.
+    RET ; Finish printing the normalized filename.
 
 ;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print one character while preserving the caller's working registers.
 
 CP_PUTC:
-    PUSH BC
-    PUSH DE
-    PUSH HL
-    LD   E,A
-    LD   C,2
-    CALL CP_BDOS
-    POP  HL
-    POP  DE
-    POP  BC
-    RET
+    PUSH BC ; Preserve the caller's BC pair across the console call.
+    PUSH DE ; Preserve the caller's DE pair.
+    PUSH HL ; Preserve the caller's HL pair.
+    LD   E,A ; Pass the requested character in E.
+    LD   C,2 ; Select CP/M console-output function 2.
+    CALL CP_BDOS ; Write the character to the console.
+    POP  HL ; Restore the caller's HL pair.
+    POP  DE ; Restore the caller's DE pair.
+    POP  BC ; Restore the caller's BC pair.
+    RET ; Return after the console output attempt.
 
 ;@ROUTINE IN A OUT A CLOBBERS BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print A as two uppercase hexadecimal digits.
 
 CP_PRINT_HEX:
-    PUSH AF
-    RRCA
-    RRCA
-    RRCA
-    RRCA
-    CALL CP_PRINT_NIBBLE
-    POP  AF
+    PUSH AF ; Preserve the original byte for its low digit.
+    RRCA ; Begin rotating the high nibble toward bits 0..3.
+    RRCA ; Continue moving the high nibble toward bits 0..3.
+    RRCA ; Rotate one more position within the byte.
+    RRCA ; Place the original bits 4..7 in the low nibble.
+    CALL CP_PRINT_NIBBLE ; Print the high hexadecimal digit.
+    POP  AF ; Restore the original byte before printing its low digit.
 
 ;@ROUTINE IN A OUT A CLOBBERS BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print the low nibble of A as one uppercase hexadecimal digit.
 
 CP_PRINT_NIBBLE:
-    AND  $0F
-    ADD  A,'0'
-    CP   '9'+1
-    JR   C,CP_PUTC
-    ADD  A,7
-    JR   CP_PUTC
+    AND  $0F ; Keep only the nibble selected by the caller.
+    ADD  A,'0' ; Convert values zero through nine to digit characters.
+    CP   '9'+1 ; Separate decimal digits from hexadecimal letters.
+    JR   C,CP_PUTC ; Send a decimal digit directly to the console.
+    ADD  A,7 ; Convert the values ten through fifteen to A through F.
+    JR   CP_PUTC ; Send the resulting uppercase hexadecimal character.
 
 CP_ADAPTER_CODE_END:
 
