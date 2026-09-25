@@ -9,8 +9,7 @@ This convention applies to assembly. JavaScript, TypeScript and other high-level
 languages remain lightly commented, with comments for interfaces, constraints
 and reasoning the code cannot express.
 
-This is the policy for new and revised assembly commentary. Existing source
-files have not been brought into conformance as part of adopting this policy.
+This policy applies to every hand-maintained assembly module.
 
 ## Make module headers easy to scan
 
@@ -69,6 +68,37 @@ the instructions they explain.
 ```
 
 ## Explain the routine, then the instructions
+
+Give the commentary room around the code. Leave a blank line before every
+routine contract. Follow the contract immediately with a plain-language summary
+of what the routine does. Leave one blank line after that header, put the entry
+label at column one, and begin its indented body on the following line. Do not
+strand the summary between the label and the first instruction. Separate later
+full-line explanatory blocks from the instruction groups above and below them.
+Keep the instructions that carry out one described step together without blank
+lines between them.
+
+```asm
+;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+; Return carry set when A is one of the eight bit-number operand classes.
+
+EN_IBIND:
+    CP   EN_BIT0                 ; Compare with the first accepted class.
+    JR   C,AT_PNO                ; Reject a value below the range.
+    CP   EN_BIT7+1               ; Compare with the exclusive upper bound.
+    RET                          ; Carry set reports that A is below the upper bound.
+```
+
+Annotations such as `;@EXPECTOUT` remain attached to the instruction they
+describe. Boundary markers used by builders also remain attached to their
+defined source range. Blank lines count towards a source part's 65,535-byte
+limit. Split an oversized part at a real subsystem boundary rather than
+compressing the explanation back into a wall of text.
+
+Put labels and named `EQU` definitions at column one. Indent instructions,
+unlabelled data declarations and assembler or preprocessor directives by four
+spaces. Keep full-line comments and contract annotations at column one. This
+makes the control-flow landmarks visible without relying on syntax colouring.
 
 Start each module with its purpose and public calling convention: inputs,
 results, errors, preserved registers, scratch state, stack use and allocation or

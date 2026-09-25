@@ -37,742 +37,754 @@ NA_XFER EQU 271
 NA_XLEN EQU 128
 NA_WLEN EQU 399
 
+;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Validate and retain the configuration. The common workspace may end exactly at
 ; $10000 but may not wrap past it. Reset handles and invalidate the source cache.
 
-;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_INIT:
-PUSH IX
-POP  HL
-LD   (NA_CFG),HL
-LD   E,(IX+NA_CFWK)
-LD   D,(IX+NA_CFWK+1)
-LD   A,D
-OR   E
-JR   Z,NA_INV
-LD   (NA_WORK),DE
-LD   H,D
-LD   L,E
-LD   BC,NA_WLEN
-ADD  HL,BC
-JR   NC,.WORKOK
-LD   A,H
-OR   L
-JR   NZ,NA_INV
+    PUSH IX
+    POP  HL
+    LD   (NA_CFG),HL
+    LD   E,(IX+NA_CFWK)
+    LD   D,(IX+NA_CFWK+1)
+    LD   A,D
+    OR   E
+    JR   Z,NA_INV
+    LD   (NA_WORK),DE
+    LD   H,D
+    LD   L,E
+    LD   BC,NA_WLEN
+    ADD  HL,BC
+    JR   NC,.WORKOK
+    LD   A,H
+    OR   L
+    JR   NZ,NA_INV
 .WORKOK:
-LD   A,(IX+NA_CFOL)
-OR   A
-JR   Z,NA_INV
-XOR  A
-LD   (NA_SHAND),A
-LD   (NA_SHAND+1),A
-LD   (NA_OHAND),A
-LD   (NA_OHAND+1),A
-LD   (NA_CLEN),A
-LD   A,$FF
-LD   (NA_SPART),A
-XOR  A
-RET
+    LD   A,(IX+NA_CFOL)
+    OR   A
+    JR   Z,NA_INV
+    XOR  A
+    LD   (NA_SHAND),A
+    LD   (NA_SHAND+1),A
+    LD   (NA_OHAND),A
+    LD   (NA_OHAND+1),A
+    LD   (NA_CLEN),A
+    LD   A,$FF
+    LD   (NA_SPART),A
+    XOR  A
+    RET
 
 NA_INV:
-LD   A,ZT_INV
-SCF
-RET
+    LD   A,ZT_INV
+    SCF
+    RET
 
+;@ROUTINE IN A OUT HL CLOBBERS A,BC,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Initialize the common request block. A is the operation. Clear all sixteen
 ; bytes first so no field from a prior provider call leaks into the next one;
 ; return HL at the request-block base for the gateway.
 
-;@ROUTINE IN A OUT HL CLOBBERS A,BC,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 NA_REQ:
-LD   C,A
-LD   HL,(NA_WORK)
-LD   D,H
-LD   E,L
-XOR  A
-LD   B,ZT_RQLEN
+    LD   C,A
+    LD   HL,(NA_WORK)
+    LD   D,H
+    LD   E,L
+    XOR  A
+    LD   B,ZT_RQLEN
 .CLEAR:
-LD   (HL),A
-INC  HL
-DJNZ .CLEAR
-LD   HL,(NA_WORK)
-LD   (HL),ZT_RQLEN
-INC  HL
-LD   (HL),ZT_ABI
-INC  HL
-LD   (HL),C
-EX   DE,HL
-RET
+    LD   (HL),A
+    INC  HL
+    DJNZ .CLEAR
+    LD   HL,(NA_WORK)
+    LD   (HL),ZT_RQLEN
+    INC  HL
+    LD   (HL),ZT_ABI
+    INC  HL
+    LD   (HL),C
+    EX   DE,HL
+    RET
 
+;@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Invoke the selected platform service. The platform replaces NA_GATE or
 ; routes it to its native gateway. Carry reports transport/provider failure;
 ; the checked image's default gateway always fails closed.
 
-;@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 NA_CALL:
-CALL NA_GATE
-RET  C
-OR   A
-RET
+    CALL NA_GATE
+    RET  C
+    OR   A
+    RET
 
+;@ROUTINE IN A,B,C,HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Open one named object. A=operation, C=provider selector, HL=name and B=byte
 ; length. Copy the name into common workspace before the gateway can switch
 ; banks. Success returns the provider's opaque handle in DE.
 
-;@ROUTINE IN A,B,C,HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_OPEN:
-LD   D,A
-LD   A,B
-OR   A
-JR   Z,.INVALID
-PUSH DE
-PUSH HL
-LD   E,B
-LD   D,0
-ADD  HL,DE
-JR   NC,.RANGEOK
-LD   A,H
-OR   L
-JR   NZ,.RNGFAIL
+    LD   D,A
+    LD   A,B
+    OR   A
+    JR   Z,.INVALID
+    PUSH DE
+    PUSH HL
+    LD   E,B
+    LD   D,0
+    ADD  HL,DE
+    JR   NC,.RANGEOK
+    LD   A,H
+    OR   L
+    JR   NZ,.RNGFAIL
 .RANGEOK:
-POP  HL
-POP  DE
-PUSH BC
-PUSH DE
-LD   DE,(NA_WORK)
-PUSH DE
-LD   A,E
-ADD  A,NA_NAME
-LD   E,A
-JR   NC,.NAMEOK
-INC  D
+    POP  HL
+    POP  DE
+    PUSH BC
+    PUSH DE
+    LD   DE,(NA_WORK)
+    PUSH DE
+    LD   A,E
+    ADD  A,NA_NAME
+    LD   E,A
+    JR   NC,.NAMEOK
+    INC  D
 .NAMEOK:
-LD   C,B
-LD   B,0
-LDIR
-POP  IX
-POP  DE
-POP  BC
-LD   A,D
-PUSH BC
-CALL NA_REQ
-LD   DE,(NA_WORK)
-LD   A,E
-ADD  A,NA_NAME
-LD   (IX+ZT_FPTR),A
-LD   A,D
-ADC  A,0
-LD   (IX+ZT_FPTR+1),A
-POP  BC
-LD   (IX+ZT_FLEN),B
-LD   (IX+ZT_FLEN+1),0
-CALL NA_CALL
-RET  C
-LD   E,(IX+ZT_FHND)
-LD   D,(IX+ZT_FHND+1)
-XOR  A
-RET
+    LD   C,B
+    LD   B,0
+    LDIR
+    POP  IX
+    POP  DE
+    POP  BC
+    LD   A,D
+    PUSH BC
+    CALL NA_REQ
+    LD   DE,(NA_WORK)
+    LD   A,E
+    ADD  A,NA_NAME
+    LD   (IX+ZT_FPTR),A
+    LD   A,D
+    ADC  A,0
+    LD   (IX+ZT_FPTR+1),A
+    POP  BC
+    LD   (IX+ZT_FLEN),B
+    LD   (IX+ZT_FLEN+1),0
+    CALL NA_CALL
+    RET  C
+    LD   E,(IX+ZT_FHND)
+    LD   D,(IX+ZT_FHND+1)
+    XOR  A
+    RET
 .RNGFAIL:
-POP  HL
-POP  DE
+    POP  HL
+    POP  DE
 .INVALID:
-LD   A,ZT_INV
-SCF
-RET
-
-; Submit a handle-only operation. A=operation, C=selector and DE=handle.
+    LD   A,ZT_INV
+    SCF
+    RET
 
 ;@ROUTINE IN A,C,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-NA_HCALL:
-PUSH BC
-PUSH DE
-CALL NA_REQ
-POP  DE
-LD   IX,(NA_WORK)
-LD   (IX+ZT_FHND),E
-LD   (IX+ZT_FHND+1),D
-POP  BC
-JP   NA_CALL
+; Submit a handle-only operation. A=operation, C=selector and DE=handle.
 
+NA_HCALL:
+    PUSH BC
+    PUSH DE
+    CALL NA_REQ
+    POP  DE
+    LD   IX,(NA_WORK)
+    LD   (IX+ZT_FHND),E
+    LD   (IX+ZT_FHND+1),D
+    POP  BC
+    JP   NA_CALL
+
+;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Seek an object to one 16-bit absolute byte offset. C=selector, DE=handle,
 ; HL=offset.
 
-;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SEEK:
-PUSH BC
-PUSH DE
-PUSH HL
-LD   A,ZT_SEEK
-CALL NA_REQ
-POP  DE
-LD   IX,(NA_WORK)
-LD   (IX+ZT_FOFF),E
-LD   (IX+ZT_FOFF+1),D
-POP  DE
-LD   (IX+ZT_FHND),E
-LD   (IX+ZT_FHND+1),D
-POP  BC
-JP   NA_CALL
+    PUSH BC
+    PUSH DE
+    PUSH HL
+    LD   A,ZT_SEEK
+    CALL NA_REQ
+    POP  DE
+    LD   IX,(NA_WORK)
+    LD   (IX+ZT_FOFF),E
+    LD   (IX+ZT_FOFF+1),D
+    POP  DE
+    LD   (IX+ZT_FHND),E
+    LD   (IX+ZT_FHND+1),D
+    POP  BC
+    JP   NA_CALL
 
+;@ROUTINE IN A,B,C,DE OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Transfer through the fixed common 128-byte buffer. A=read/write, C=selector,
 ; DE=handle and B=count. Success returns the provider's result count in HL.
 
-;@ROUTINE IN A,B,C,DE OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_TRANS:
-PUSH AF
-LD   A,B
-LD   (NA_COUNT),A
-POP  AF
-PUSH BC
-PUSH DE
-CALL NA_REQ
-LD   IX,(NA_WORK)
-POP  DE
-LD   (IX+ZT_FHND),E
-LD   (IX+ZT_FHND+1),D
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-LD   (IX+ZT_FPTR),L
-LD   (IX+ZT_FPTR+1),H
-LD   A,(NA_COUNT)
-LD   (IX+ZT_FLEN),A
-LD   (IX+ZT_FLEN+1),0
-POP  BC
-LD   HL,(NA_WORK)
-CALL NA_CALL
-RET  C
-LD   L,(IX+ZT_FRES)
-LD   H,(IX+ZT_FRES+1)
-XOR  A
-RET
+    PUSH AF
+    LD   A,B
+    LD   (NA_COUNT),A
+    POP  AF
+    PUSH BC
+    PUSH DE
+    CALL NA_REQ
+    LD   IX,(NA_WORK)
+    POP  DE
+    LD   (IX+ZT_FHND),E
+    LD   (IX+ZT_FHND+1),D
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    LD   (IX+ZT_FPTR),L
+    LD   (IX+ZT_FPTR+1),H
+    LD   A,(NA_COUNT)
+    LD   (IX+ZT_FLEN),A
+    LD   (IX+ZT_FLEN+1),0
+    POP  BC
+    LD   HL,(NA_WORK)
+    CALL NA_CALL
+    RET  C
+    LD   L,(IX+ZT_FRES)
+    LD   H,(IX+ZT_FRES+1)
+    XOR  A
+    RET
 
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Close the current source object if one is open, then invalidate its part/cache
 ; identity only after the provider accepts CLOSE.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SCLOS:
-LD   DE,(NA_SHAND)
-LD   A,D
-OR   E
-RET  Z
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSS)
-LD   A,ZT_CLOSE
-CALL NA_HCALL
-RET  C
-XOR  A
-LD   (NA_SHAND),A
-LD   (NA_SHAND+1),A
-LD   (NA_CLEN),A
-LD   A,$FF
-LD   (NA_SPART),A
-XOR  A
-RET
+    LD   DE,(NA_SHAND)
+    LD   A,D
+    OR   E
+    RET  Z
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSS)
+    LD   A,ZT_CLOSE
+    CALL NA_HCALL
+    RET  C
+    XOR  A
+    LD   (NA_SHAND),A
+    LD   (NA_SHAND+1),A
+    LD   (NA_CLEN),A
+    LD   A,$FF
+    LD   (NA_SPART),A
+    XOR  A
+    RET
 
+;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Open the source name associated with part A. Each three-byte name-table entry
 ; is pointer followed by one-byte length. Only one source handle stays open.
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_SOPEN:
-LD   (NA_WPART),A
-CALL NA_SCLOS
-RET  C
-LD   A,(NA_WPART)
-LD   L,A
-LD   H,0
-LD   D,H
-LD   E,L
-ADD  HL,HL
-ADD  HL,DE
-LD   IX,(NA_CFG)
-LD   E,(IX+NA_CFPT)
-LD   D,(IX+NA_CFPT+1)
-ADD  HL,DE
-LD   E,(HL)
-INC  HL
-LD   D,(HL)
-INC  HL
-LD   B,(HL)
-EX   DE,HL
-LD   C,(IX+NA_CFSS)
-LD   A,ZT_OPEN
-CALL NA_OPEN
-RET  C
-LD   (NA_SHAND),DE
-LD   A,(NA_WPART)
-LD   (NA_SPART),A
-XOR  A
-LD   (NA_CLEN),A
-RET
+    LD   (NA_WPART),A
+    CALL NA_SCLOS
+    RET  C
+    LD   A,(NA_WPART)
+    LD   L,A
+    LD   H,0
+    LD   D,H
+    LD   E,L
+    ADD  HL,HL
+    ADD  HL,DE
+    LD   IX,(NA_CFG)
+    LD   E,(IX+NA_CFPT)
+    LD   D,(IX+NA_CFPT+1)
+    ADD  HL,DE
+    LD   E,(HL)
+    INC  HL
+    LD   D,(HL)
+    INC  HL
+    LD   B,(HL)
+    EX   DE,HL
+    LD   C,(IX+NA_CFSS)
+    LD   A,ZT_OPEN
+    CALL NA_OPEN
+    RET  C
+    LD   (NA_SHAND),DE
+    LD   A,(NA_WPART)
+    LD   (NA_SPART),A
+    XOR  A
+    LD   (NA_CLEN),A
+    RET
 
+;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; AtomSourceReadByte replacement. It keeps a 128-byte source cache and one
 ; readable object handle. A part change closes and reopens by name. A cache miss
 ; seeks to the exact requested offset and fills from there, so the assembler may
 ; reread tokens without retaining a whole source part in Z80 memory.
 
-;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 NA_SREAD:
-PUSH BC
-PUSH IX
-PUSH IY
-LD   (NA_WPART),A
-LD   (NA_WOFF),HL
-LD   B,A
-LD   A,(NA_SPART)
-CP   B
-JR   Z,.HAVE
-LD   A,B
-CALL NA_SOPEN
-JR   C,.DONE
+    PUSH BC
+    PUSH IX
+    PUSH IY
+    LD   (NA_WPART),A
+    LD   (NA_WOFF),HL
+    LD   B,A
+    LD   A,(NA_SPART)
+    CP   B
+    JR   Z,.HAVE
+    LD   A,B
+    CALL NA_SOPEN
+    JR   C,.DONE
 .HAVE:
-LD   HL,(NA_WOFF)
-LD   DE,(NA_CBASE)
-OR   A
-SBC  HL,DE
-JR   C,.MISS
-LD   A,H
-OR   A
-JR   NZ,.MISS
-LD   A,(NA_CLEN)
-CP   L
-JR   Z,.MISS
-JR   C,.MISS
-LD   A,L
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-LD   E,A
-LD   D,0
-ADD  HL,DE
-LD   A,(HL)
-OR   A
-JR   .DONE
+    LD   HL,(NA_WOFF)
+    LD   DE,(NA_CBASE)
+    OR   A
+    SBC  HL,DE
+    JR   C,.MISS
+    LD   A,H
+    OR   A
+    JR   NZ,.MISS
+    LD   A,(NA_CLEN)
+    CP   L
+    JR   Z,.MISS
+    JR   C,.MISS
+    LD   A,L
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    LD   E,A
+    LD   D,0
+    ADD  HL,DE
+    LD   A,(HL)
+    OR   A
+    JR   .DONE
 .MISS:
+
 ; Refill the cache at the requested offset. A zero-length successful read is an
 ; unexpected storage failure because the caller's part descriptor proved length.
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSS)
-LD   DE,(NA_SHAND)
-LD   HL,(NA_WOFF)
-CALL NA_SEEK
-JR   C,.DONE
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSS)
-LD   DE,(NA_SHAND)
-LD   B,NA_XLEN
-LD   A,ZT_READ
-CALL NA_TRANS
-JR   C,.DONE
-LD   A,H
-OR   L
-JR   Z,.SHORT
-LD   A,L
-LD   (NA_CLEN),A
-LD   HL,(NA_WOFF)
-LD   (NA_CBASE),HL
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-LD   A,(HL)
-OR   A
-JR   .DONE
-.SHORT:
-LD   A,ZT_STORE
-SCF
-.DONE:
-POP  IY
-POP  IX
-POP  BC
-RET
 
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSS)
+    LD   DE,(NA_SHAND)
+    LD   HL,(NA_WOFF)
+    CALL NA_SEEK
+    JR   C,.DONE
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSS)
+    LD   DE,(NA_SHAND)
+    LD   B,NA_XLEN
+    LD   A,ZT_READ
+    CALL NA_TRANS
+    JR   C,.DONE
+    LD   A,H
+    OR   L
+    JR   Z,.SHORT
+    LD   A,L
+    LD   (NA_CLEN),A
+    LD   HL,(NA_WOFF)
+    LD   (NA_CBASE),HL
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    LD   A,(HL)
+    OR   A
+    JR   .DONE
+.SHORT:
+    LD   A,ZT_STORE
+    SCF
+.DONE:
+    POP  IY
+    POP  IX
+    POP  BC
+    RET
+
+;@ROUTINE IN B OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Write B bytes already held in the transfer buffer to the open output. Require
 ; an exact provider byte count and invalidate source-cache contents that shared
 ; the transfer area.
 
-;@ROUTINE IN B OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_WRITE:
-LD   A,B
-LD   (NA_COUNT),A
-XOR  A
-LD   (NA_CLEN),A
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSK)
-LD   DE,(NA_OHAND)
-LD   A,ZT_WRITE
-CALL NA_TRANS
-RET  C
-LD   A,H
-OR   A
-JR   NZ,.BAD
-LD   A,(NA_COUNT)
-CP   L
-JR   NZ,.BAD
-XOR  A
-RET
+    LD   A,B
+    LD   (NA_COUNT),A
+    XOR  A
+    LD   (NA_CLEN),A
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSK)
+    LD   DE,(NA_OHAND)
+    LD   A,ZT_WRITE
+    CALL NA_TRANS
+    RET  C
+    LD   A,H
+    OR   A
+    JR   NZ,.BAD
+    LD   A,(NA_COUNT)
+    CP   L
+    JR   NZ,.BAD
+    XOR  A
+    RET
 .BAD:
-LD   A,ZT_STORE
-SCF
-RET
+    LD   A,ZT_STORE
+    SCF
+    RET
 
+;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Fill the tentative output from its current append cursor to relative offset
 ; HL. Backward IMAGE calls are rejected. Forward gaps are written as zero blocks
 ; no larger than the common 128-byte transfer buffer.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 NA_FILL:
-EX   DE,HL
-LD   HL,(NA_OCURS)
-OR   A
-SBC  HL,DE
-JR   C,.FORWARD
-JR   Z,.DONE
-LD   A,ZT_INV
-SCF
-RET
+    EX   DE,HL
+    LD   HL,(NA_OCURS)
+    OR   A
+    SBC  HL,DE
+    JR   C,.FORWARD
+    JR   Z,.DONE
+    LD   A,ZT_INV
+    SCF
+    RET
 .FORWARD:
-EX   DE,HL
-LD   DE,(NA_OCURS)
-OR   A
-SBC  HL,DE
-; HL now holds the positive gap.
-LD   (NA_GAP),HL
-.LOOP:
-LD   HL,(NA_GAP)
-LD   A,H
-OR   L
-JR   Z,.DONE
-LD   B,NA_XLEN
-LD   A,H
-OR   A
-JR   NZ,.COUNT
-LD   A,L
-CP   NA_XLEN
-JR   NC,.COUNT
-LD   B,A
-.COUNT:
-LD   A,B
-LD   (NA_COUNT),A
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-XOR  A
-.ZERO:
-LD   (HL),A
-INC  HL
-DJNZ .ZERO
-LD   A,(NA_COUNT)
-LD   B,A
-CALL NA_WRITE
-RET  C
-LD   A,(NA_COUNT)
-LD   E,A
-LD   D,0
-LD   HL,(NA_OCURS)
-ADD  HL,DE
-LD   (NA_OCURS),HL
-LD   HL,(NA_GAP)
-OR   A
-SBC  HL,DE
-LD   (NA_GAP),HL
-JR   .LOOP
-.DONE:
-XOR  A
-RET
+    EX   DE,HL
+    LD   DE,(NA_OCURS)
+    OR   A
+    SBC  HL,DE
 
-; Convert absolute target address HL to the flat output-relative offset.
+; HL now holds the positive gap.
+
+    LD   (NA_GAP),HL
+.LOOP:
+    LD   HL,(NA_GAP)
+    LD   A,H
+    OR   L
+    JR   Z,.DONE
+    LD   B,NA_XLEN
+    LD   A,H
+    OR   A
+    JR   NZ,.COUNT
+    LD   A,L
+    CP   NA_XLEN
+    JR   NC,.COUNT
+    LD   B,A
+.COUNT:
+    LD   A,B
+    LD   (NA_COUNT),A
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    XOR  A
+.ZERO:
+    LD   (HL),A
+    INC  HL
+    DJNZ .ZERO
+    LD   A,(NA_COUNT)
+    LD   B,A
+    CALL NA_WRITE
+    RET  C
+    LD   A,(NA_COUNT)
+    LD   E,A
+    LD   D,0
+    LD   HL,(NA_OCURS)
+    ADD  HL,DE
+    LD   (NA_OCURS),HL
+    LD   HL,(NA_GAP)
+    OR   A
+    SBC  HL,DE
+    LD   (NA_GAP),HL
+    JR   .LOOP
+.DONE:
+    XOR  A
+    RET
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY
-NA_REL:
-LD   DE,(NA_TBASE)
-OR   A
-SBC  HL,DE
-RET  NC
-LD   A,ZT_INV
-SCF
-RET
+; Convert absolute target address HL to the flat output-relative offset.
 
-; Seek the output object to relative offset HL.
+NA_REL:
+    LD   DE,(NA_TBASE)
+    OR   A
+    SBC  HL,DE
+    RET  NC
+    LD   A,ZT_INV
+    SCF
+    RET
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+; Seek the output object to relative offset HL.
+
 NA_OSEEK:
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSK)
-LD   DE,(NA_OHAND)
-JP   NA_SEEK
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSK)
+    LD   DE,(NA_OHAND)
+    JP   NA_SEEK
 
 ; Begin a tentative flat-image object. Capture the descriptor's target base,
 ; reject a nested generation, and reset append/high-water offsets after OPEN.
+
 HS_SCBEG:
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-HS_BEG:
-PUSH BC
-PUSH DE
-PUSH HL
-PUSH IX
-PUSH IY
-LD   A,(NA_OHAND)
-LD   B,A
-LD   A,(NA_OHAND+1)
-OR   B
-JR   NZ,.STATE
-LD   L,(IX+11)
-LD   H,(IX+12)
-LD   (NA_TBASE),HL
-LD   IX,(NA_CFG)
-LD   L,(IX+NA_CFON)
-LD   H,(IX+NA_CFON+1)
-LD   B,(IX+NA_CFOL)
-LD   C,(IX+NA_CFSK)
-LD   A,ZT_BEGIN
-CALL NA_OPEN
-JR   C,.DONE
-LD   (NA_OHAND),DE
-LD   HL,0
-LD   (NA_OCURS),HL
-LD   (NA_OHIGH),HL
-XOR  A
-JR   .DONE
-.STATE:
-LD   A,ZT_INV
-SCF
-.DONE:
-POP  IY
-POP  IX
-POP  HL
-POP  DE
-POP  BC
-RET
+; Begin a tentative output object and reset its append and high-water offsets.
 
+HS_BEG:
+    PUSH BC
+    PUSH DE
+    PUSH HL
+    PUSH IX
+    PUSH IY
+    LD   A,(NA_OHAND)
+    LD   B,A
+    LD   A,(NA_OHAND+1)
+    OR   B
+    JR   NZ,.STATE
+    LD   L,(IX+11)
+    LD   H,(IX+12)
+    LD   (NA_TBASE),HL
+    LD   IX,(NA_CFG)
+    LD   L,(IX+NA_CFON)
+    LD   H,(IX+NA_CFON+1)
+    LD   B,(IX+NA_CFOL)
+    LD   C,(IX+NA_CFSK)
+    LD   A,ZT_BEGIN
+    CALL NA_OPEN
+    JR   C,.DONE
+    LD   (NA_OHAND),DE
+    LD   HL,0
+    LD   (NA_OCURS),HL
+    LD   (NA_OHIGH),HL
+    XOR  A
+    JR   .DONE
+.STATE:
+    LD   A,ZT_INV
+    SCF
+.DONE:
+    POP  IY
+    POP  IX
+    POP  HL
+    POP  DE
+    POP  BC
+    RET
+
+;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Append one IMAGE byte. Address class C must be zero for this flat target.
 ; Convert the logical address to a flat offset, zero-fill any forward gap, write
 ; the byte and advance both cursor and high-water mark.
 
-;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_IB:
-PUSH BC
-PUSH IX
-PUSH IY
-LD   (NA_BYTE),A
-LD   A,C
-OR   A
-JR   NZ,.BAD
-CALL NA_REL
-JR   C,.DONE
-CALL NA_FILL
-JR   C,.DONE
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-LD   A,(NA_BYTE)
-LD   (HL),A
-LD   B,1
-CALL NA_WRITE
-JR   C,.DONE
-LD   HL,(NA_OCURS)
-INC  HL
-LD   (NA_OCURS),HL
-LD   (NA_OHIGH),HL
-XOR  A
-JR   .DONE
+    PUSH BC
+    PUSH IX
+    PUSH IY
+    LD   (NA_BYTE),A
+    LD   A,C
+    OR   A
+    JR   NZ,.BAD
+    CALL NA_REL
+    JR   C,.DONE
+    CALL NA_FILL
+    JR   C,.DONE
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    LD   A,(NA_BYTE)
+    LD   (HL),A
+    LD   B,1
+    CALL NA_WRITE
+    JR   C,.DONE
+    LD   HL,(NA_OCURS)
+    INC  HL
+    LD   (NA_OCURS),HL
+    LD   (NA_OHIGH),HL
+    XOR  A
+    JR   .DONE
 .BAD:
-LD   A,ZT_INV
-SCF
+    LD   A,ZT_INV
+    SCF
 .DONE:
-POP  IY
-POP  IX
-POP  BC
-RET
+    POP  IY
+    POP  IX
+    POP  BC
+    RET
 
+;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Patch one earlier byte. Address class C must be zero and the address must lie
 ; below the initialized high-water mark. Seek, replace one byte, then restore the
 ; append cursor on success; a provider failure is left for driver-level abort.
 
-;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PB:
-PUSH BC
-PUSH IX
-PUSH IY
-LD   (NA_BYTE),A
-LD   A,C
-OR   A
-JR   NZ,.BAD
-CALL NA_REL
-JR   C,.DONE
-LD   DE,(NA_OHIGH)
-PUSH HL
-OR   A
-SBC  HL,DE
-POP  HL
-JR   NC,.BAD
-CALL NA_OSEEK
-JR   C,.DONE
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-LD   A,(NA_BYTE)
-LD   (HL),A
-LD   B,1
-CALL NA_WRITE
-JR   C,.DONE
-LD   HL,(NA_OCURS)
-CALL NA_OSEEK
-JR   .DONE
+    PUSH BC
+    PUSH IX
+    PUSH IY
+    LD   (NA_BYTE),A
+    LD   A,C
+    OR   A
+    JR   NZ,.BAD
+    CALL NA_REL
+    JR   C,.DONE
+    LD   DE,(NA_OHIGH)
+    PUSH HL
+    OR   A
+    SBC  HL,DE
+    POP  HL
+    JR   NC,.BAD
+    CALL NA_OSEEK
+    JR   C,.DONE
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    LD   A,(NA_BYTE)
+    LD   (HL),A
+    LD   B,1
+    CALL NA_WRITE
+    JR   C,.DONE
+    LD   HL,(NA_OCURS)
+    CALL NA_OSEEK
+    JR   .DONE
 .BAD:
-LD   A,ZT_INV
-SCF
+    LD   A,ZT_INV
+    SCF
 .DONE:
-POP  IY
-POP  IX
-POP  BC
-RET
+    POP  IY
+    POP  IX
+    POP  BC
+    RET
 
+;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Patch one earlier little-endian word. Address class C must be zero and both
 ; bytes must lie below high water. Write low byte first, then restore the append
 ; cursor on success; a provider failure is left for driver-level abort.
 
-;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 HS_PW:
-PUSH IX
-PUSH IY
-LD   (NA_WORD),HL
-LD   A,C
-OR   A
-JR   NZ,.BAD
-EX   DE,HL
-CALL NA_REL
-JR   C,.DONE
-PUSH HL
-INC  HL
-LD   DE,(NA_OHIGH)
-OR   A
-SBC  HL,DE
-POP  HL
-JR   NC,.BAD
-CALL NA_OSEEK
-JR   C,.DONE
-LD   HL,(NA_WORK)
-LD   DE,NA_XFER
-ADD  HL,DE
-LD   DE,(NA_WORD)
-LD   (HL),E
-INC  HL
-LD   (HL),D
-LD   B,2
-CALL NA_WRITE
-JR   C,.DONE
-LD   HL,(NA_OCURS)
-CALL NA_OSEEK
-JR   .DONE
+    PUSH IX
+    PUSH IY
+    LD   (NA_WORD),HL
+    LD   A,C
+    OR   A
+    JR   NZ,.BAD
+    EX   DE,HL
+    CALL NA_REL
+    JR   C,.DONE
+    PUSH HL
+    INC  HL
+    LD   DE,(NA_OHIGH)
+    OR   A
+    SBC  HL,DE
+    POP  HL
+    JR   NC,.BAD
+    CALL NA_OSEEK
+    JR   C,.DONE
+    LD   HL,(NA_WORK)
+    LD   DE,NA_XFER
+    ADD  HL,DE
+    LD   DE,(NA_WORD)
+    LD   (HL),E
+    INC  HL
+    LD   (HL),D
+    LD   B,2
+    CALL NA_WRITE
+    JR   C,.DONE
+    LD   HL,(NA_OCURS)
+    CALL NA_OSEEK
+    JR   .DONE
 .BAD:
-LD   A,ZT_INV
-SCF
+    LD   A,ZT_INV
+    SCF
 .DONE:
-POP  IY
-POP  IX
-RET
+    POP  IY
+    POP  IX
+    RET
 
+;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
 ; Commit the highest of the final logical cursor and highest IMAGE extent. This
 ; materializes trailing DS/ORG reservations as zeros, closes the source object,
 ; then asks the provider to atomically publish the tentative output.
 
-;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
 HS_CMT:
-CALL NA_REL
-JR   C,.DONE
-LD   DE,(NA_OHIGH)
-PUSH HL
-OR   A
-SBC  HL,DE
-POP  HL
-JR   NC,.LIMIT
-EX   DE,HL
+    CALL NA_REL
+    JR   C,.DONE
+    LD   DE,(NA_OHIGH)
+    PUSH HL
+    OR   A
+    SBC  HL,DE
+    POP  HL
+    JR   NC,.LIMIT
+    EX   DE,HL
 .LIMIT:
-CALL NA_FILL
-JR   C,.DONE
-CALL NA_SCLOS
-JR   C,.DONE
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSK)
-LD   DE,(NA_OHAND)
-LD   A,ZT_COM
-CALL NA_HCALL
-JR   C,.DONE
-XOR  A
-LD   (NA_OHAND),A
-LD   (NA_OHAND+1),A
-RET
+    CALL NA_FILL
+    JR   C,.DONE
+    CALL NA_SCLOS
+    JR   C,.DONE
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSK)
+    LD   DE,(NA_OHAND)
+    LD   A,ZT_COM
+    CALL NA_HCALL
+    JR   C,.DONE
+    XOR  A
+    LD   (NA_OHAND),A
+    LD   (NA_OHAND+1),A
+    RET
 .DONE:
-RET
+    RET
 
+;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Abort an open generation and close any source handle. Attempt both cleanups;
 ; output-abort failure takes precedence, otherwise return a source-close failure.
 
-;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 HS_ABORT:
-PUSH BC
-PUSH DE
-PUSH HL
-PUSH IX
-PUSH IY
-CALL NA_SCLOS
-LD   B,0
-JR   NC,.SOURCEOK
-LD   B,A
+    PUSH BC
+    PUSH DE
+    PUSH HL
+    PUSH IX
+    PUSH IY
+    CALL NA_SCLOS
+    LD   B,0
+    JR   NC,.SOURCEOK
+    LD   B,A
 .SOURCEOK:
-LD   DE,(NA_OHAND)
-LD   A,D
-OR   E
-JR   Z,.RESULT
-LD   IX,(NA_CFG)
-LD   C,(IX+NA_CFSK)
-LD   A,ZT_ABORT
-PUSH BC
-CALL NA_HCALL
-POP  BC
-JR   C,.ABFAIL
-XOR  A
-LD   (NA_OHAND),A
-LD   (NA_OHAND+1),A
-JR   .RESULT
+    LD   DE,(NA_OHAND)
+    LD   A,D
+    OR   E
+    JR   Z,.RESULT
+    LD   IX,(NA_CFG)
+    LD   C,(IX+NA_CFSK)
+    LD   A,ZT_ABORT
+    PUSH BC
+    CALL NA_HCALL
+    POP  BC
+    JR   C,.ABFAIL
+    XOR  A
+    LD   (NA_OHAND),A
+    LD   (NA_OHAND+1),A
+    JR   .RESULT
 .ABFAIL:
-LD   (NA_BYTE),A
-XOR  A
-LD   (NA_OHAND),A
-LD   (NA_OHAND+1),A
-LD   A,(NA_BYTE)
-SCF
-JR   .DONE
+    LD   (NA_BYTE),A
+    XOR  A
+    LD   (NA_OHAND),A
+    LD   (NA_OHAND+1),A
+    LD   A,(NA_BYTE)
+    SCF
+    JR   .DONE
 .RESULT:
-LD   A,B
-OR   A
-JR   Z,.OK
-SCF
-JR   .DONE
+    LD   A,B
+    OR   A
+    JR   Z,.OK
+    SCF
+    JR   .DONE
 .OK:
-XOR  A
+    XOR  A
 .DONE:
-POP  IY
-POP  IX
-POP  HL
-POP  DE
-POP  BC
-RET
+    POP  IY
+    POP  IX
+    POP  HL
+    POP  DE
+    POP  BC
+    RET
 
 ; Fail-closed transport replaced by a concrete platform binding.
 
+;@@ATOM_OBJECT_GATEWAY_BEGIN@@
 ;@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Fail closed until a platform replaces this named-object transport gateway.
+
 NA_GATE:
-LD   A,ZT_UNAV
-SCF
-RET
+    LD   A,ZT_UNAV
+    SCF
+    RET
+;@@ATOM_OBJECT_GATEWAY_END@@
 
 HS_SCEND:
 
 ; Private adapter state. Handles are zero when closed; source cache identity is
 ; (part, base, length). Output cursor/high-water are relative to NA_TBASE. The
 ; remaining scratch words stage gaps, patch values, bytes and transfer counts.
+
 NA_CFG: DW 0
 NA_WORK: DW 0
 NA_SHAND: DW 0

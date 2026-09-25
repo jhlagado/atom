@@ -21,13 +21,8 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
 const nativeRoot = join(repositoryRoot, "src", "z80");
 const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
-const unavailableGateway = [
-  ";@ROUTINE IN C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY",
-  "NA_GATE:",
-  "LD   A,ZT_UNAV",
-  "SCF",
-  "RET",
-].join("\n");
+const gatewayBegin = ";@@ATOM_OBJECT_GATEWAY_BEGIN@@";
+const gatewayEnd = ";@@ATOM_OBJECT_GATEWAY_END@@";
 
 function originSource(origin) {
   assert.ok(Number.isInteger(origin) && origin >= 0 && origin <= 0xffff, "invalid native harness origin");
@@ -106,8 +101,14 @@ async function linkedSource({
     readFile(fileURLToPath(import.meta.resolve("@jhlagado/z80-tool-services/native/z80-tool-services-v1.asmi")), "utf8"),
     readFile(join(nativeRoot, "named-object-adapter.asm"), "utf8"),
   ]);
-  assert.ok(adapterText.includes(unavailableGateway), "native adapter gateway seam changed");
-  let adapter = adapterText.replace(unavailableGateway, gatewaySource ?? unavailableGateway);
+  assert.equal(adapterText.split(gatewayBegin).length, 2, "native adapter must contain one gateway start marker");
+  assert.equal(adapterText.split(gatewayEnd).length, 2, "native adapter must contain one gateway end marker");
+  const gatewayStart = adapterText.indexOf(gatewayBegin) + gatewayBegin.length;
+  const gatewayFinish = adapterText.indexOf(gatewayEnd, gatewayStart);
+  assert.ok(gatewayFinish >= gatewayStart, "native adapter gateway markers are out of order");
+  const checkedGateway = adapterText.slice(gatewayStart, gatewayFinish);
+  const replacementGateway = gatewaySource === undefined ? checkedGateway : `\n${gatewaySource}\n`;
+  let adapter = `${adapterText.slice(0, gatewayStart)}${replacementGateway}${adapterText.slice(gatewayFinish)}`;
   if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
   let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${core}\n${sharedAbi}\n${adapter}${postludeSource === undefined ? "" : `\n${postludeSource}`}\nNP_END:\n`;
   if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin, imageOrigin);

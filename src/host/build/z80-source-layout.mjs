@@ -31,8 +31,14 @@ export async function readNativeCoreModules(nativeRoot) {
 export function setNativeCoreOrigin(modules, originLine) {
   const result = new Map(modules);
   const encoder = result.get("encoder.asm");
-  assert.equal(encoder.match(/^ORG 0$/gm)?.length, 1, "native encoder must contain one default origin");
-  result.set("encoder.asm", encoder.replace(/^ORG 0$/m, originLine));
+  const defaultOrigins = [...encoder.matchAll(/^[ \t]*ORG[ \t]+0[ \t]*$/gm)];
+  assert.equal(defaultOrigins.length, 1, "native encoder must contain one default origin");
+  const indent = defaultOrigins[0][0].match(/^[ \t]*/)[0];
+  const replacement = originLine
+    .split("\n")
+    .map((line) => `${indent}${line.trimStart()}`)
+    .join("\n");
+  result.set("encoder.asm", encoder.replace(/^[ \t]*ORG[ \t]+0[ \t]*$/m, replacement));
   return result;
 }
 

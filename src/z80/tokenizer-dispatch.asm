@@ -8,368 +8,446 @@
 ;  owns character-literal decoding, immutable lookup tables and fixed workspace.
 
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IY
-TK_NEXT:                       ; Enter publication of the next source token.
+; Enter publication of the next source token.
+
+TK_NEXT:
 .NEXTLOOP:                     ; Skip separators until a token or EOF is ready.
+
 ; Begin a tentative token at the current offset, then classify its first byte.
-CALL TK_BEG                    ; Capture this possible token's start and clear fields.
-CALL TK_SPEEK                  ; Inspect the first unconsumed source byte.
-JP   C,.ATEOF                  ; Emit synthetic EOL or repeatable EOF at part end.
-CP   $20                       ; Is the byte an ASCII space?
-JR   Z,.SKIPB                  ; Consume it as an invisible separator.
-CP   $09                       ; Is the byte a horizontal tab?
-JR   Z,.SKIPB                  ; Consume it as an invisible separator.
-CP   $0A                       ; Is the byte a one-byte LF line ending?
-JP   Z,.LF                     ; Consume it through line-finalization logic.
-CP   $0D                       ; Does the byte begin a CRLF pair?
-JP   Z,.CRLF                   ; Require and consume both bytes.
-CP   $3B                       ; Is the byte a semicolon comment marker?
-JR   Z,.COMMENT                ; Discard through the physical line end.
+
+    CALL TK_BEG                    ; Capture this possible token's start and clear fields.
+    CALL TK_SPEEK                  ; Inspect the first unconsumed source byte.
+    JP   C,.ATEOF                  ; Emit synthetic EOL or repeatable EOF at part end.
+    CP   $20                       ; Is the byte an ASCII space?
+    JR   Z,.SKIPB                  ; Consume it as an invisible separator.
+    CP   $09                       ; Is the byte a horizontal tab?
+    JR   Z,.SKIPB                  ; Consume it as an invisible separator.
+    CP   $0A                       ; Is the byte a one-byte LF line ending?
+    JP   Z,.LF                     ; Consume it through line-finalization logic.
+    CP   $0D                       ; Does the byte begin a CRLF pair?
+    JP   Z,.CRLF                   ; Require and consume both bytes.
+    CP   $3B                       ; Is the byte a semicolon comment marker?
+    JR   Z,.COMMENT                ; Discard through the physical line end.
+
 ; Period always begins a private name; the name scanner diagnoses a bare period.
-CP   $2E                       ; Does a period introduce a private symbol name?
-JP   Z,TK_SNAME                ; Let the name scanner validate its payload.
-CP   $22                       ; Does a double quote open a string literal?
-JP   Z,TK_SSTRI                ; Scan and validate the complete raw string.
-CP   $27                       ; Is this apostrophe punctuation or a character opener?
-JP   Z,.APOSTROP               ; Resolve the ambiguity from its source context.
-CP   $24                       ; Is this '$' current-address or hex prefix syntax?
-JR   Z,.DOLLAR                 ; Use lookahead to choose the interpretation.
-CP   $25                       ; Is this '%' remainder or binary prefix syntax?
-JR   Z,.PERCENT                ; Use lookahead and line state to classify it.
-CP   $3C                       ; Could this begin the `<<` operator?
-JP   Z,.LSHIFT                 ; Require a second matching byte.
-CP   $3E                       ; Could this begin the `>>` operator?
-JP   Z,.RSHIFT                 ; Require a second matching byte.
-CP   $30                       ; Compare with the first decimal digit.
-JR   C,.TRYNAME                ; Bytes below digits may still begin a name.
-CP   $39+1                     ; Is this byte in ASCII 0..9?
-JP   C,TK_SDLED                ; Scan the complete digit-led candidate.
+
+    CP   $2E                       ; Does a period introduce a private symbol name?
+    JP   Z,TK_SNAME                ; Let the name scanner validate its payload.
+    CP   $22                       ; Does a double quote open a string literal?
+    JP   Z,TK_SSTRI                ; Scan and validate the complete raw string.
+    CP   $27                       ; Is this apostrophe punctuation or a character opener?
+    JP   Z,.APOSTROP               ; Resolve the ambiguity from its source context.
+    CP   $24                       ; Is this '$' current-address or hex prefix syntax?
+    JR   Z,.DOLLAR                 ; Use lookahead to choose the interpretation.
+    CP   $25                       ; Is this '%' remainder or binary prefix syntax?
+    JR   Z,.PERCENT                ; Use lookahead and line state to classify it.
+    CP   $3C                       ; Could this begin the `<<` operator?
+    JP   Z,.LSHIFT                 ; Require a second matching byte.
+    CP   $3E                       ; Could this begin the `>>` operator?
+    JP   Z,.RSHIFT                 ; Require a second matching byte.
+    CP   $30                       ; Compare with the first decimal digit.
+    JR   C,.TRYNAME                ; Bytes below digits may still begin a name.
+    CP   $39+1                     ; Is this byte in ASCII 0..9?
+    JP   C,TK_SDLED                ; Scan the complete digit-led candidate.
 .TRYNAME:                      ; Try the remaining byte as a global name start.
+
 ; Remaining ASCII name-start bytes enter the name scanner.
-CALL TK_INBEG                  ; Accept ASCII letters or underscore.
-JP   C,TK_SNAME                ; Scan the complete name when accepted.
+
+    CALL TK_INBEG                  ; Accept ASCII letters or underscore.
+    JP   C,TK_SNAME                ; Scan the complete name when accepted.
+
 ; Single-byte punctuation is a compact (character, token-kind) table. Shifts,
 ; character context, '$' and '%' were separated above because they need lookahead.
-LD   HL,TK_PTABL               ; Point at the first character/kind table pair.
-LD   B,TK_PCNT                 ; Load the number of single-byte punctuation forms.
+
+    LD   HL,TK_PTABL               ; Point at the first character/kind table pair.
+    LD   B,TK_PCNT                 ; Load the number of single-byte punctuation forms.
 .PLOOP:                        ; Search one punctuation pair per iteration.
-CP   (HL)                      ; Compare the source byte with the table character.
-INC  HL                        ; Advance to the corresponding token kind.
-JR   Z,.PUNCTUAT               ; Publish the matching punctuation form.
-INC  HL                        ; Skip the unmatched kind byte.
-DJNZ .PLOOP                   ; Continue through the complete table.
-JR   TK_IB                    ; No lexical class accepts this source byte.
+    CP   (HL)                      ; Compare the source byte with the table character.
+    INC  HL                        ; Advance to the corresponding token kind.
+    JR   Z,.PUNCTUAT               ; Publish the matching punctuation form.
+    INC  HL                        ; Skip the unmatched kind byte.
+    DJNZ .PLOOP                   ; Continue through the complete table.
+    JR   TK_IB                    ; No lexical class accepts this source byte.
 .PUNCTUAT:                     ; Consume one matched punctuation byte.
-LD   C,(HL)                    ; Save its token kind in C.
-CALL TK_STAKE                  ; Consume and buffer the source character.
-LD   A,1                       ; Set the raw lexeme length to one.
-JR   .FPUNCTUA                ; Publish the table-selected token kind.
+    LD   C,(HL)                    ; Save its token kind in C.
+    CALL TK_STAKE                  ; Consume and buffer the source character.
+    LD   A,1                       ; Set the raw lexeme length to one.
+    JR   .FPUNCTUA                ; Publish the table-selected token kind.
 .SKIPB:                        ; Consume one invisible horizontal separator.
+
 ; Spaces and tabs separate tokens but never appear in a token record.
-CALL TK_STAKE                  ; Advance past the space or tab.
-JR   .NEXTLOOP                ; Begin a fresh tentative token at the next byte.
+
+    CALL TK_STAKE                  ; Advance past the space or tab.
+    JR   .NEXTLOOP                ; Begin a fresh tentative token at the next byte.
 .COMMENT:                      ; Consume but do not publish a source comment.
-CALL TK_SCOMM                  ; Stop before CR/LF or at EOF.
-JR   .NEXTLOOP                ; Let line-ending or EOF logic run next.
+    CALL TK_SCOMM                  ; Stop before CR/LF or at EOF.
+    JR   .NEXTLOOP                ; Let line-ending or EOF logic run next.
 .DOLLAR:                       ; Classify '$' using one-byte lookahead.
+
 ; Consume '$' and inspect the next byte. A valid hexadecimal digit selects a
 ; prefixed number; otherwise a standalone '$' denotes the current location.
-CALL TK_STAKE                  ; Consume and buffer the dollar sign.
-CALL TK_SPEEK                  ; Inspect the following byte without consuming it.
-JR   C,.CLOCATIO               ; A final standalone dollar denotes current address.
-LD   B,A                       ; Preserve the following raw byte.
-CALL TK_HDIGI                  ; Test whether it begins a hex value.
-JR   C,.DNUMBER                ; Accumulate a prefixed hexadecimal literal.
+
+    CALL TK_STAKE                  ; Consume and buffer the dollar sign.
+    CALL TK_SPEEK                  ; Inspect the following byte without consuming it.
+    JR   C,.CLOCATIO               ; A final standalone dollar denotes current address.
+    LD   B,A                       ; Preserve the following raw byte.
+    CALL TK_HDIGI                  ; Test whether it begins a hex value.
+    JR   C,.DNUMBER                ; Accumulate a prefixed hexadecimal literal.
+
 ; A following name-continuation byte makes the entire numeric-looking form
 ; invalid, preventing '$G' from becoming current-location followed by a name.
-LD   A,B                       ; Restore the following raw byte.
-CALL TK_INB                    ; Could it continue a digit-led candidate?
-JP   C,TK_INUMB                ; Reject the whole malformed numeric-looking form.
+
+    LD   A,B                       ; Restore the following raw byte.
+    CALL TK_INB                    ; Could it continue a digit-led candidate?
+    JP   C,TK_INUMB                ; Reject the whole malformed numeric-looking form.
 .CLOCATIO:                     ; Publish standalone current-address punctuation.
-LD   A,1                       ; Its raw lexeme is the one consumed dollar sign.
-LD   (TK_SLEN),A               ; Save the public lexeme length.
-LD   A,TK_CUR                  ; Select the current-location token kind.
-JP   TK_FIN                    ; Mark the line non-empty and publish the record.
+    LD   A,1                       ; Its raw lexeme is the one consumed dollar sign.
+    LD   (TK_SLEN),A               ; Save the public lexeme length.
+    LD   A,TK_CUR                  ; Select the current-location token kind.
+    JP   TK_FIN                    ; Mark the line non-empty and publish the record.
 .DNUMBER:                      ; Scan a dollar-prefixed hexadecimal literal.
+
 ; Raw length already includes '$'; bit 2 in C selects hexadecimal accumulation.
-LD   B,1                       ; Count the already consumed prefix.
-LD   C,4                       ; Select hexadecimal accumulation with bit 2.
-JP   TK_SBASE                  ; Decode remaining digits and publish the token.
+
+    LD   B,1                       ; Count the already consumed prefix.
+    LD   C,4                       ; Select hexadecimal accumulation with bit 2.
+    JP   TK_SBASE                  ; Decode remaining digits and publish the token.
 .PERCENT:                      ; Classify '%' using one-byte lookahead.
+
 ; Percent begins binary only when followed by 0 or 1. Otherwise it is the
 ; remainder operator, subject to the leaked-host-directive guard below.
-CALL TK_STAKE                  ; Consume and buffer the percent sign.
-CALL TK_SPEEK                  ; Inspect the following byte.
-JR   C,.PTOK                   ; At EOF it is the standalone remainder operator.
-CP   $30                       ; Does ASCII zero begin a binary literal?
-JR   Z,.PNUMBER                ; Decode the prefixed binary value.
-CP   $31                       ; Does ASCII one begin a binary literal?
-JR   Z,.PNUMBER                ; Decode the prefixed binary value.
-CALL TK_ILETT                  ; Could this be a leaked `%DIRECTIVE` name?
-JR   NC,.PTOK                  ; Non-letter lookahead leaves '%' as punctuation.
+
+    CALL TK_STAKE                  ; Consume and buffer the percent sign.
+    CALL TK_SPEEK                  ; Inspect the following byte.
+    JR   C,.PTOK                   ; At EOF it is the standalone remainder operator.
+    CP   $30                       ; Does ASCII zero begin a binary literal?
+    JR   Z,.PNUMBER                ; Decode the prefixed binary value.
+    CP   $31                       ; Does ASCII one begin a binary literal?
+    JR   Z,.PNUMBER                ; Decode the prefixed binary value.
+    CALL TK_ILETT                  ; Could this be a leaked `%DIRECTIVE` name?
+    JR   NC,.PTOK                  ; Non-letter lookahead leaves '%' as punctuation.
+
 ; Before the first token on a line, "%" plus a letter can only be an unmasked
 ; host directive. Reject it explicitly rather than assembling it as an expression.
-LD   A,(TK_LHTOK)              ; Inspect whether this line already emitted a token.
-OR   A                         ; Only line-start `%name` is reserved for the host.
-JR   NZ,.PTOK                  ; Elsewhere publish the remainder operator.
-LD   A,TK_SUDIR                ; Select unprocessed-host-directive status.
-JP   TK_FAIL                   ; Rewind to the percent sign and report it.
+
+    LD   A,(TK_LHTOK)              ; Inspect whether this line already emitted a token.
+    OR   A                         ; Only line-start `%name` is reserved for the host.
+    JR   NZ,.PTOK                  ; Elsewhere publish the remainder operator.
+    LD   A,TK_SUDIR                ; Select unprocessed-host-directive status.
+    JP   TK_FAIL                   ; Rewind to the percent sign and report it.
 .PTOK:                         ; Publish standalone remainder punctuation.
-LD   A,1                       ; Its raw lexeme length is one.
-LD   (TK_SLEN),A               ; Save that length for the public record.
-LD   A,TK_PERCE                ; Select the remainder token kind.
-JP   TK_FIN                    ; Mark the line non-empty and publish.
+    LD   A,1                       ; Its raw lexeme length is one.
+    LD   (TK_SLEN),A               ; Save that length for the public record.
+    LD   A,TK_PERCE                ; Select the remainder token kind.
+    JP   TK_FIN                    ; Mark the line non-empty and publish.
 .PNUMBER:                      ; Scan a percent-prefixed binary literal.
+
 ; Raw length already includes '%'; C=1 selects binary accumulation.
-LD   B,1                       ; Count the already consumed prefix.
-LD   C,1                       ; Select binary accumulation.
-JP   TK_SBASE                  ; Decode remaining digits and publish.
+
+    LD   B,1                       ; Count the already consumed prefix.
+    LD   C,1                       ; Select binary accumulation.
+    JP   TK_SBASE                  ; Decode remaining digits and publish.
 .LSHIFT:                       ; Prepare a left-shift token.
-LD   C,TK_LSHIF                ; Save the published left-shift kind.
-JR   .SHIFT                   ; Validate the doubled punctuation.
+    LD   C,TK_LSHIF                ; Save the published left-shift kind.
+    JR   .SHIFT                   ; Validate the doubled punctuation.
 .RSHIFT:                       ; Prepare a right-shift token.
-LD   C,TK_RSHIF                ; Save the published right-shift kind.
+    LD   C,TK_RSHIF                ; Save the published right-shift kind.
 .SHIFT:                        ; Require and consume two equal shift bytes.
+
 ; A shift operator is valid only as a doubled matching character, << or >>.
-LD   B,A                       ; Preserve the opening '<' or '>' byte.
-CALL TK_STAKE                  ; Consume and buffer the first character.
-CALL TK_SPEEK                  ; Inspect the required second character.
-JP   C,TK_IB                   ; Diagnose a shift truncated by EOF.
-CP   B                         ; Does it match the opening character?
-JP   NZ,TK_IB                  ; Reject a single or mixed angle bracket.
-CALL TK_STAKE                  ; Consume and buffer the second character.
-LD   A,2                       ; Set the raw shift lexeme length.
+
+    LD   B,A                       ; Preserve the opening '<' or '>' byte.
+    CALL TK_STAKE                  ; Consume and buffer the first character.
+    CALL TK_SPEEK                  ; Inspect the required second character.
+    JP   C,TK_IB                   ; Diagnose a shift truncated by EOF.
+    CP   B                         ; Does it match the opening character?
+    JP   NZ,TK_IB                  ; Reject a single or mixed angle bracket.
+    CALL TK_STAKE                  ; Consume and buffer the second character.
+    LD   A,2                       ; Set the raw shift lexeme length.
 .FPUNCTUA:                     ; Publish punctuation kind C with length A.
-LD   (TK_SLEN),A               ; Save the raw punctuation length.
-LD   A,C                       ; Restore the selected token kind.
-JP   TK_FIN                    ; Mark the line non-empty and publish it.
+    LD   (TK_SLEN),A               ; Save the raw punctuation length.
+    LD   A,C                       ; Restore the selected token kind.
+    JP   TK_FIN                    ; Mark the line non-empty and publish it.
 .LF:                           ; Consume a one-byte LF line ending.
+
 ; LF is one-byte line ending. CR must be followed by LF and is otherwise invalid.
-CALL TK_STAKE                  ; Consume and buffer the LF byte.
-LD   A,1                       ; Record its one-byte raw length.
-LD   (TK_SLEN),A               ; Save that length for a possible EOL token.
-JR   .FINLINE                 ; Apply blank-line suppression.
+
+    CALL TK_STAKE                  ; Consume and buffer the LF byte.
+    LD   A,1                       ; Record its one-byte raw length.
+    LD   (TK_SLEN),A               ; Save that length for a possible EOL token.
+    JR   .FINLINE                 ; Apply blank-line suppression.
 .CRLF:                         ; Consume and validate a two-byte CRLF ending.
-CALL TK_STAKE                  ; Consume and buffer the CR byte.
-CALL TK_SPEEK                  ; Inspect the mandatory following byte.
-JP   C,TK_IB                   ; A terminal bare CR is invalid input.
-CP   $0A                       ; Require LF immediately after CR.
-JP   NZ,TK_IB                  ; Reject any other following byte.
-CALL TK_STAKE                  ; Consume and buffer the LF byte.
-LD   A,2                       ; Record the two-byte raw line ending.
-LD   (TK_SLEN),A               ; Save that length for a possible EOL token.
+    CALL TK_STAKE                  ; Consume and buffer the CR byte.
+    CALL TK_SPEEK                  ; Inspect the mandatory following byte.
+    JP   C,TK_IB                   ; A terminal bare CR is invalid input.
+    CP   $0A                       ; Require LF immediately after CR.
+    JP   NZ,TK_IB                  ; Reject any other following byte.
+    CALL TK_STAKE                  ; Consume and buffer the LF byte.
+    LD   A,2                       ; Record the two-byte raw line ending.
+    LD   (TK_SLEN),A               ; Save that length for a possible EOL token.
 .FINLINE:                      ; Decide whether this physical ending is observable.
+
 ; A physical line ending clears synthetic-EOL state. If no token appeared on the
 ; line, suppress EOL and continue scanning the next physical line.
-XOR  A                         ; Clear the synthetic-EOL pending state.
-LD   (TK_EPEND),A              ; A physical ending supersedes any synthetic ending.
-LD   A,(TK_LHTOK)              ; Did this physical line contain a token?
-OR   A                         ; Zero denotes a blank or comment-only line.
-JP   Z,.NEXTLOOP               ; Suppress EOL and scan the following line.
-XOR  A                         ; Construct the next-line token-free state.
-LD   (TK_LHTOK),A              ; Publish that state before returning EOL.
-LD   A,TK_EOL                  ; Select the end-of-line token kind.
-JP   TK_CMT                    ; Publish it without marking the new line non-empty.
+
+    XOR  A                         ; Clear the synthetic-EOL pending state.
+    LD   (TK_EPEND),A              ; A physical ending supersedes any synthetic ending.
+    LD   A,(TK_LHTOK)              ; Did this physical line contain a token?
+    OR   A                         ; Zero denotes a blank or comment-only line.
+    JP   Z,.NEXTLOOP               ; Suppress EOL and scan the following line.
+    XOR  A                         ; Construct the next-line token-free state.
+    LD   (TK_LHTOK),A              ; Publish that state before returning EOL.
+    LD   A,TK_EOL                  ; Select the end-of-line token kind.
+    JP   TK_CMT                    ; Publish it without marking the new line non-empty.
 .ATEOF:                        ; Handle the current source-part endpoint.
+
 ; EOF after a non-empty unterminated final line first publishes one synthetic
 ; EOL. TK_EPEND ensures the following and all later calls return EOF instead.
-LD   A,(TK_EPEND)              ; Has a synthetic EOL already been emitted here?
-OR   A                         ; Nonzero makes EOF repeatable immediately.
-JR   NZ,.EMITEOF               ; Publish EOF on this and all later calls.
-LD   A,(TK_LHTOK)              ; Did the unterminated final line contain a token?
-OR   A                         ; Zero needs no synthetic line boundary.
-JR   Z,.EMITEOF                ; Publish EOF for an empty final line.
-XOR  A                         ; Construct cleared line state.
-LD   (TK_LHTOK),A              ; Mark the final line as closed.
-INC  A                         ; Construct the synthetic-EOL-published flag.
-LD   (TK_EPEND),A              ; Ensure the next call emits EOF instead.
-XOR  A                         ; A synthetic EOL has no raw lexeme bytes.
-LD   (TK_SLEN),A               ; Publish a zero raw length.
-LD   A,TK_EOL                  ; Select the synthetic EOL token kind.
-JP   TK_CMT                    ; Publish it at the current end offset.
+
+    LD   A,(TK_EPEND)              ; Has a synthetic EOL already been emitted here?
+    OR   A                         ; Nonzero makes EOF repeatable immediately.
+    JR   NZ,.EMITEOF               ; Publish EOF on this and all later calls.
+    LD   A,(TK_LHTOK)              ; Did the unterminated final line contain a token?
+    OR   A                         ; Zero needs no synthetic line boundary.
+    JR   Z,.EMITEOF                ; Publish EOF for an empty final line.
+    XOR  A                         ; Construct cleared line state.
+    LD   (TK_LHTOK),A              ; Mark the final line as closed.
+    INC  A                         ; Construct the synthetic-EOL-published flag.
+    LD   (TK_EPEND),A              ; Ensure the next call emits EOF instead.
+    XOR  A                         ; A synthetic EOL has no raw lexeme bytes.
+    LD   (TK_SLEN),A               ; Publish a zero raw length.
+    LD   A,TK_EOL                  ; Select the synthetic EOL token kind.
+    JP   TK_CMT                    ; Publish it at the current end offset.
 .EMITEOF:                      ; Publish repeatable end-of-part.
+
 ; EOF has kind and length zero; TK_CMT fills in current part and offset.
-XOR  A                         ; Kind zero and raw length zero both denote EOF.
-LD   (TK_SLEN),A               ; Publish an empty lexeme.
-JP   TK_CMT                    ; Fill part/offset fields and return stable EOF.
+
+    XOR  A                         ; Kind zero and raw length zero both denote EOF.
+    LD   (TK_SLEN),A               ; Publish an empty lexeme.
+    JP   TK_CMT                    ; Fill part/offset fields and return stable EOF.
 .APOSTROP:                     ; Distinguish punctuation from a character literal.
+
 ; Apostrophe is ambiguous with a character literal. At the beginning of a source
 ; part or after a non-name byte, it opens a character. Directly after a name
 ; byte it remains punctuation, preserving forms such as AF'.
-LD   HL,(TK_SOFF1)             ; Load the apostrophe's source-relative offset.
-LD   A,H                       ; Test whether it is the first source byte.
-OR   L                         ; Zero means no preceding byte exists.
-JR   Z,TK_SCHAR                ; Treat a leading apostrophe as a character opener.
-LD   A,(TK_PREV)               ; Load the previously consumed source byte.
-CALL TK_INB                    ; Could it end a name such as AF?
-JR   NC,TK_SCHAR               ; Otherwise treat the apostrophe as a character opener.
+
+    LD   HL,(TK_SOFF1)             ; Load the apostrophe's source-relative offset.
+    LD   A,H                       ; Test whether it is the first source byte.
+    OR   L                         ; Zero means no preceding byte exists.
+    JR   Z,TK_SCHAR                ; Treat a leading apostrophe as a character opener.
+    LD   A,(TK_PREV)               ; Load the previously consumed source byte.
+    CALL TK_INB                    ; Could it end a name such as AF?
+    JR   NC,TK_SCHAR               ; Otherwise treat the apostrophe as a character opener.
+
 ; Emit the punctuation form as a one-byte token.
-CALL TK_STAKE                  ; Consume and buffer the punctuation apostrophe.
-LD   A,1                       ; Its raw lexeme length is one.
-LD   (TK_SLEN),A               ; Save the length for record publication.
-LD   A,TK_APOST                ; Select the apostrophe token kind.
-JP   TK_FIN                    ; Mark the line non-empty and publish.
+
+    CALL TK_STAKE                  ; Consume and buffer the punctuation apostrophe.
+    LD   A,1                       ; Its raw lexeme length is one.
+    LD   (TK_SLEN),A               ; Save the length for record publication.
+    LD   A,TK_APOST                ; Select the apostrophe token kind.
+    JP   TK_FIN                    ; Mark the line non-empty and publish.
 
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
-TK_SCHAR:                      ; Enter character-literal scanning and decoding.
 ; B begins at one for the opening quote. Consume the quote and first payload byte.
 ; EOF or a line ending in this initial position is an unterminated character;
 ; line endings reached later inside an escape are invalid escapes instead.
-LD   B,1                       ; Count the opening apostrophe in advance.
-CALL TK_STAKE                  ; Consume and buffer that opening apostrophe.
-CALL TK_STAKE                  ; Consume the first payload or closing byte.
-JP   C,TK_UCHAR                ; Diagnose EOF before a complete character.
-INC  B                         ; Count the consumed payload byte.
-CALL TK_ILEND                  ; Is the payload byte CR or LF?
-JP   Z,TK_UCHAR                ; Diagnose a character cut off by a line ending.
+
+TK_SCHAR:
+    LD   B,1                       ; Count the opening apostrophe in advance.
+    CALL TK_STAKE                  ; Consume and buffer that opening apostrophe.
+    CALL TK_STAKE                  ; Consume the first payload or closing byte.
+    JP   C,TK_UCHAR                ; Diagnose EOF before a complete character.
+    INC  B                         ; Count the consumed payload byte.
+    CALL TK_ILEND                  ; Is the payload byte CR or LF?
+    JP   Z,TK_UCHAR                ; Diagnose a character cut off by a line ending.
+
 ; An immediate closing quote is an empty character literal. Backslash enters the
 ; shared escape language; an ordinary payload must be printable ASCII.
-CP   $27                       ; Did the byte immediately close an empty literal?
-JP   Z,TK_ICHAR                ; Reject a character with no decoded byte.
-CP   $5C                       ; Does backslash introduce an escape?
-JR   Z,.SCESCAPE               ; Decode the escape language.
-CP   $20                       ; Compare ordinary payload with printable ASCII.
-JP   C,TK_IB                   ; Reject raw control bytes.
-CP   $7F                       ; Compare with DEL.
-JP   NC,TK_IB                  ; Reject DEL and bytes above printable ASCII.
-LD   (TK_SVAL),A               ; Store the ordinary decoded character byte.
-JR   .SCCLOSE                 ; Require one closing apostrophe next.
+
+    CP   $27                       ; Did the byte immediately close an empty literal?
+    JP   Z,TK_ICHAR                ; Reject a character with no decoded byte.
+    CP   $5C                       ; Does backslash introduce an escape?
+    JR   Z,.SCESCAPE               ; Decode the escape language.
+    CP   $20                       ; Compare ordinary payload with printable ASCII.
+    JP   C,TK_IB                   ; Reject raw control bytes.
+    CP   $7F                       ; Compare with DEL.
+    JP   NC,TK_IB                  ; Reject DEL and bytes above printable ASCII.
+    LD   (TK_SVAL),A               ; Store the ordinary decoded character byte.
+    JR   .SCCLOSE                 ; Require one closing apostrophe next.
 .SCESCAPE:                     ; Decode one escaped character payload.
+
 ; Count and decode the byte after backslash. The table form produces one value;
 ; \x consumes two additional hexadecimal digits.
-CALL TK_STAKE                  ; Consume and buffer the escape selector.
-JP   C,TK_UCHAR                ; Diagnose EOF before the selector.
-INC  B                         ; Count the selector in the raw lexeme.
-CP   $78                       ; Does lowercase x select a hex escape?
-JR   Z,.SCHEX                  ; Decode exactly two hexadecimal digits.
-CALL TK_DESCA                  ; Decode a standard one-character escape.
-JP   C,TK_IESCA                ; Reject a selector absent from the fixed table.
-LD   (TK_SVAL),A               ; Store the decoded character byte.
-JR   .SCCLOSE                 ; Require the closing apostrophe.
+
+    CALL TK_STAKE                  ; Consume and buffer the escape selector.
+    JP   C,TK_UCHAR                ; Diagnose EOF before the selector.
+    INC  B                         ; Count the selector in the raw lexeme.
+    CP   $78                       ; Does lowercase x select a hex escape?
+    JR   Z,.SCHEX                  ; Decode exactly two hexadecimal digits.
+    CALL TK_DESCA                  ; Decode a standard one-character escape.
+    JP   C,TK_IESCA                ; Reject a selector absent from the fixed table.
+    LD   (TK_SVAL),A               ; Store the decoded character byte.
+    JR   .SCCLOSE                 ; Require the closing apostrophe.
 .SCHEX:                        ; Decode a two-digit hexadecimal escape.
+
 ; Decode high nibble first and retain it in TK_SVAL while reading the low nibble.
-CALL TK_STAKE                  ; Consume and buffer the high hexadecimal digit.
-JP   C,TK_UCHAR                ; Diagnose EOF before that digit.
-INC  B                         ; Count the high digit in the raw lexeme.
-CALL TK_HDIGI                  ; Decode it to a nibble.
-JP   NC,TK_IESCA               ; Reject a non-hexadecimal digit.
-ADD  A,A                       ; Shift the nibble left one place.
-ADD  A,A                       ; Shift it left two places.
-ADD  A,A                       ; Shift it left three places.
-ADD  A,A                       ; Place it in bits 4..7.
-LD   (TK_SVAL),A               ; Retain the high nibble while reading the low.
-CALL TK_STAKE                  ; Consume and buffer the low hexadecimal digit.
-JP   C,TK_UCHAR                ; Diagnose EOF before that digit.
-INC  B                         ; Count the low digit in the raw lexeme.
-CALL TK_HDIGI                  ; Decode it to a low nibble.
-JP   NC,TK_IESCA               ; Reject a non-hexadecimal digit.
-LD   HL,TK_SVAL                ; Point at the retained high nibble.
-OR   (HL)                      ; Combine it with the decoded low nibble.
-LD   (TK_SVAL),A               ; Store the complete decoded character byte.
+
+    CALL TK_STAKE                  ; Consume and buffer the high hexadecimal digit.
+    JP   C,TK_UCHAR                ; Diagnose EOF before that digit.
+    INC  B                         ; Count the high digit in the raw lexeme.
+    CALL TK_HDIGI                  ; Decode it to a nibble.
+    JP   NC,TK_IESCA               ; Reject a non-hexadecimal digit.
+    ADD  A,A                       ; Shift the nibble left one place.
+    ADD  A,A                       ; Shift it left two places.
+    ADD  A,A                       ; Shift it left three places.
+    ADD  A,A                       ; Place it in bits 4..7.
+    LD   (TK_SVAL),A               ; Retain the high nibble while reading the low.
+    CALL TK_STAKE                  ; Consume and buffer the low hexadecimal digit.
+    JP   C,TK_UCHAR                ; Diagnose EOF before that digit.
+    INC  B                         ; Count the low digit in the raw lexeme.
+    CALL TK_HDIGI                  ; Decode it to a low nibble.
+    JP   NC,TK_IESCA               ; Reject a non-hexadecimal digit.
+    LD   HL,TK_SVAL                ; Point at the retained high nibble.
+    OR   (HL)                      ; Combine it with the decoded low nibble.
+    LD   (TK_SVAL),A               ; Store the complete decoded character byte.
 .SCCLOSE:                      ; Require the literal's closing apostrophe.
+
 ; Exactly one decoded byte is now present. The next raw byte must be the closing
 ; apostrophe and becomes part of the published raw lexeme length.
-CALL TK_STAKE                  ; Consume and buffer the required closing byte.
-JP   C,TK_UCHAR                ; Diagnose EOF before the close.
-INC  B                         ; Include it in the raw lexeme length.
-CALL TK_ILEND                  ; Is the supposed close a physical line ending?
-JP   Z,TK_UCHAR                ; Report an unterminated character in that case.
-CP   $27                       ; Require an apostrophe immediately after one value.
-JP   NZ,TK_ICHAR               ; Reject extra payload or the wrong delimiter.
-JP   TK_FNLEN                  ; Publish a numeric token with decoded byte value.
+
+    CALL TK_STAKE                  ; Consume and buffer the required closing byte.
+    JP   C,TK_UCHAR                ; Diagnose EOF before the close.
+    INC  B                         ; Include it in the raw lexeme length.
+    CALL TK_ILEND                  ; Is the supposed close a physical line ending?
+    JP   Z,TK_UCHAR                ; Report an unterminated character in that case.
+    CP   $27                       ; Require an apostrophe immediately after one value.
+    JP   NZ,TK_ICHAR               ; Reject extra payload or the wrong delimiter.
+    JP   TK_FNLEN                  ; Publish a numeric token with decoded byte value.
 TK_RCEND:                      ; Mark the tokenizer rule-code measurement boundary.
 
 ;@ROUTINE OUT A,B,HL
-TK_LLEXE:                      ; Enter borrowed current-lexeme lookup.
 ; Return the current token's buffered lexeme pointer and raw byte length. This is
 ; intentionally a borrowed view whose lifetime ends at the next TK_NEXT call.
-LD   HL,(TK_REC+TK_LOFF)       ; Return the published lexeme-buffer pointer.
-LD   A,(TK_REC+TK_LOFF1)       ; Load its raw byte length.
-LD   B,A                       ; Mirror the length into B for recognizer callers.
-RET                            ; Return without changing tokenizer state.
+
+TK_LLEXE:
+    LD   HL,(TK_REC+TK_LOFF)       ; Return the published lexeme-buffer pointer.
+    LD   A,(TK_REC+TK_LOFF1)       ; Load its raw byte length.
+    LD   B,A                       ; Mirror the length into B for recognizer callers.
+    RET                            ; Return without changing tokenizer state.
 TK_IBEG:                       ; Begin immutable tokenizer lookup tables.
 TK_PTABL:                      ; Begin character/kind punctuation pairs.
+
 ; Single-byte punctuation table: raw ASCII byte followed by token kind.
-DB $2C,TK_COMMA                ; Map comma to its token kind.
-DB $3A,TK_COLON                ; Map colon to its token kind.
-DB $28,TK_LPARE                ; Map left parenthesis to its token kind.
-DB $29,TK_RPARE                ; Map right parenthesis to its token kind.
-DB $2B,TK_PLUS                 ; Map plus to its token kind.
-DB $2D,TK_MINUS                ; Map minus to its token kind.
-DB $2A,TK_STAR                 ; Map asterisk to multiplication.
-DB $2F,TK_SLASH                ; Map slash to division.
-DB $26,TK_AMPER                ; Map ampersand to bitwise AND.
-DB $5E,TK_CARET                ; Map caret to bitwise XOR.
-DB $7C,TK_PIPE                 ; Map vertical bar to bitwise OR.
-DB $7E,TK_TILDE                ; Map tilde to bitwise complement.
-DB $27,TK_APOST                ; Retain apostrophe kind; dispatch resolves its context first.
+
+    DB $2C,TK_COMMA                ; Map comma to its token kind.
+    DB $3A,TK_COLON                ; Map colon to its token kind.
+    DB $28,TK_LPARE                ; Map left parenthesis to its token kind.
+    DB $29,TK_RPARE                ; Map right parenthesis to its token kind.
+    DB $2B,TK_PLUS                 ; Map plus to its token kind.
+    DB $2D,TK_MINUS                ; Map minus to its token kind.
+    DB $2A,TK_STAR                 ; Map asterisk to multiplication.
+    DB $2F,TK_SLASH                ; Map slash to division.
+    DB $26,TK_AMPER                ; Map ampersand to bitwise AND.
+    DB $5E,TK_CARET                ; Map caret to bitwise XOR.
+    DB $7C,TK_PIPE                 ; Map vertical bar to bitwise OR.
+    DB $7E,TK_TILDE                ; Map tilde to bitwise complement.
+    DB $27,TK_APOST                ; Retain apostrophe kind; dispatch resolves its context first.
 TK_PEND:                       ; Mark the end of punctuation pairs.
 TK_PCNT EQU (TK_PEND-TK_PTABL)/2 ; Derive the number of two-byte table entries.
 TK_ETABL:                      ; Begin source-byte/decoded-byte escape pairs.
+
 ; Escape table pairs source byte with decoded value: 0, n, r, t, quotes and
 ; backslash.
-DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C ; Decode 0, n, r, t, quotes and backslash.
+
+    DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C ; Decode 0, n, r, t, quotes and backslash.
 TK_ECNT EQU 7                  ; Number of fixed escape pairs.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_DESCA:                      ; Enter fixed escape-selector decoding.
 ; Search the seven fixed escape pairs. Matching CP leaves carry clear; not found
 ; returns carry set without inventing a decoded byte.
-LD   HL,TK_ETABL               ; Point at the first source/decoded pair.
-LD   C,TK_ECNT                 ; Load the number of pairs to search.
+
+TK_DESCA:
+    LD   HL,TK_ETABL               ; Point at the first source/decoded pair.
+    LD   C,TK_ECNT                 ; Load the number of pairs to search.
 .DELOOP:                       ; Compare one escape selector per iteration.
-CP   (HL)                      ; Does A match this source selector?
-JR   Z,.DEFOUND                ; Return its decoded value when equal.
-INC  HL                        ; Skip the unmatched source byte.
-INC  HL                        ; Skip its decoded value.
-DEC  C                         ; Account for the rejected pair.
-JR   NZ,.DELOOP                ; Continue through all seven entries.
-SCF                            ; Report an unsupported selector.
-RET                            ; Leave no invented decoded byte.
+    CP   (HL)                      ; Does A match this source selector?
+    JR   Z,.DEFOUND                ; Return its decoded value when equal.
+    INC  HL                        ; Skip the unmatched source byte.
+    INC  HL                        ; Skip its decoded value.
+    DEC  C                         ; Account for the rejected pair.
+    JR   NZ,.DELOOP                ; Continue through all seven entries.
+    SCF                            ; Report an unsupported selector.
+    RET                            ; Leave no invented decoded byte.
 .DEFOUND:                      ; Load a matched escape's decoded value.
-INC  HL                        ; Advance from source selector to decoded byte.
-LD   A,(HL)                    ; Return that decoded byte in A.
-RET                            ; Matching CP already left carry clear.
+    INC  HL                        ; Advance from source selector to decoded byte.
+    LD   A,(HL)                    ; Return that decoded byte in A.
+    RET                            ; Matching CP already left carry clear.
 
 ;@ROUTINE IN A OUT A,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
-TK_ILEND:                      ; Enter CR/LF classification.
 ; Zero is set for either accepted physical line-ending byte.
-CP   $0A                       ; Is A an LF byte?
-RET  Z                         ; Return zero immediately when it is.
-CP   $0D                       ; Otherwise test CR and return its comparison flags.
-RET                            ; Zero means either accepted line-ending byte.
+
+TK_ILEND:
+    CP   $0A                       ; Is A an LF byte?
+    RET  Z                         ; Return zero immediately when it is.
+    CP   $0D                       ; Otherwise test CR and return its comparison flags.
+    RET                            ; Zero means either accepted line-ending byte.
 TK_IEND:                       ; Mark the end of tokenizer immutable tables.
 TK_CEND:                       ; Mark the end of executable tokenizer code.
 TK_WBEG:                       ; Begin fixed tokenizer workspace.
+
 ; Absolute base used only by the checked memory-backed source provider.
+
 TK_SRCBA: DW 0                 ; Absolute base of the checked memory source.
+
 ; Relative offset of the next unread source byte and validated part length.
+
 TK_SCURS: DW 0                 ; Relative offset of the next physical read.
 TK_SEND: DW 0                  ; Validated source-part byte length.
+
 ; Logical byte offset used for token starts and diagnostics.
+
 TK_SOSTA: DW 0                 ; Logical source offset of the next token start.
+
 ; Current source-part ordinal supplied to every source-service call.
+
 TK_SPART: DB 0                 ; Current eight-bit source-part ordinal.
+
 ; Nonzero after at least one token on the current physical line.
+
 TK_LHTOK: DB 0                 ; Nonzero after a token on the physical line.
+
 ; Nonzero after synthesizing the final EOL, preventing a second synthetic token.
+
 TK_EPEND: DB 0                 ; Nonzero after the final synthetic EOL.
+
 ; Pointer to the fixed token buffer and current raw byte count.
+
 TK_SPTR: DW 0                  ; Pointer to the fixed lexeme buffer.
 TK_BCNT: DB 0                  ; Tentative raw byte count, allowed to wrap.
+
 ; Most recently consumed raw byte, used to disambiguate apostrophe.
+
 TK_PREV: DB 0                  ; Most recently consumed source byte.
+
 ; Tentative token's starting logical offset, raw length and decoded value.
+
 TK_SOFF1: DW 0                 ; Tentative token's logical starting offset.
 TK_SLEN: DB 0                  ; Accepted raw lexeme length or failure status.
 TK_SVAL: DW 0                  ; Decoded numeric value or failure part/offset bytes.
+
 ; Numeric prefix/suffix scanners use this byte as digit-seen or remaining count.
+
 TK_DSEEN: DB 0                 ; Digit-present flag or remaining-digit counter.
+
 ; On failure the temporary length/value/count cells become status, part and
 ; offset storage. The public token record remains untouched.
+
 TK_ESTAT EQU TK_SLEN           ; Overlay lexical status on tentative length.
 TK_EPART EQU TK_SVAL           ; Overlay failure part on value low byte.
 TK_EOFF EQU TK_SVAL+1          ; Overlay failure offset on value high byte onward.
+
 ; Published token record, followed by its 256-byte transient lexeme buffer.
+
 TK_REC: DS TK_RECB             ; Stable nine-byte public token record.
 TK_TBUF: DS 256                ; Transient raw lexeme buffer.
 TK_WEND:                       ; End fixed tokenizer workspace.

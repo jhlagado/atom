@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import test from "node:test";
 
-import { NATIVE_CORE_MODULES } from "../src/host/build/z80-source-layout.mjs";
+import {
+  NATIVE_CORE_MODULES,
+  setNativeCoreOrigin,
+} from "../src/host/build/z80-source-layout.mjs";
 
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",
@@ -13,6 +16,42 @@ const KEY_NAMES = Object.freeze({
   AtomRadix40Pack: "EN_R40PK",
   AtomSymbolFind: "SY_FIND",
   AtomTokenizerReset: "TK_RESET",
+});
+
+test("native origin replacement accepts and preserves source indentation", () => {
+  const original = "    ORG 0\n    NOP\n";
+  const modules = new Map([["encoder.asm", original]]);
+  const result = setNativeCoreOrigin(modules, "ORG $0100\nJP ENTRY\nDS 13");
+
+  assert.equal(modules.get("encoder.asm"), original);
+  assert.equal(result.get("encoder.asm"), "    ORG $0100\n    JP ENTRY\n    DS 13\n    NOP\n");
+});
+
+test("maintained Z80 source follows the readable layout convention", async () => {
+  const names = (await fs.readdir("src/z80")).filter((name) => name.endsWith(".asm"));
+  for (const name of names) {
+    const lines = (await fs.readFile(`src/z80/${name}`, "utf8")).split("\n");
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      assert.doesNotMatch(line, /\t/, `${name}:${index + 1} contains a tab`);
+      if (line === "" || line.startsWith(";")) continue;
+      if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*:(?:\s|$)/.test(line)) continue;
+      if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*\s+EQU\s/.test(line)) continue;
+      assert.match(line, /^ {4}\S/, `${name}:${index + 1} must indent non-label assembly by four spaces`);
+      assert.doesNotMatch(line, /^ {5}/, `${name}:${index + 1} uses more than four leading spaces`);
+    }
+
+    for (let index = 0; index < lines.length; index += 1) {
+      if (!lines[index].startsWith(";@ROUTINE")) continue;
+      let cursor = index + 1;
+      assert.match(lines[cursor] ?? "", /^; /, `${name}:${index + 1} needs a routine summary`);
+      while ((lines[cursor] ?? "").startsWith("; ")) cursor += 1;
+      assert.equal(lines[cursor], "", `${name}:${index + 1} needs one blank line before its entry label`);
+      cursor += 1;
+      assert.match(lines[cursor] ?? "", /^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*:$/, `${name}:${index + 1} needs a standalone entry label`);
+      assert.notEqual(lines[cursor + 1], "", `${name}:${cursor + 1} separates its label from its body`);
+    }
+  }
 });
 
 test("native source census matches the checked content and root include parts", async () => {

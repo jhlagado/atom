@@ -2,11 +2,11 @@
   "format": "atom-native-symbol-ledger",
   "version": 2,
   "statistics": {
-    "statements": 8647,
-    "sourceBytes": 401773,
+    "statements": 8677,
+    "sourceBytes": 428007,
     "sourceParts": 12,
     "checkedParts": 13,
-    "checkedBytes": 402861,
+    "checkedBytes": 429144,
     "globalSymbols": 876,
     "privateSymbols": 441
   },
