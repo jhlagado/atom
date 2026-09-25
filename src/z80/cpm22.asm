@@ -680,234 +680,234 @@ CP_APPEND_DESCRIPTOR:
     RET ; The caller advances order and measures another file.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Parse INCLUDE, one quoted current-drive 8.3 filename, and the rest of its
-; directive line. Discovery records the child; ordering checks its emitted bit.
+; Parse INCLUDE, one quoted current-drive 8.3 name and the rest of its line.
+; Discovery records the child. Ordering checks whether it was emitted.
 
 CP_PARSE_INCLUDE:
-    LD   DE,CP_INCLUDE_WORD
-    LD   B,7
+    LD   DE,CP_INCLUDE_WORD ; Point at the uppercase directive name.
+    LD   B,7 ; Match all seven letters in INCLUDE.
 CP_INCLUDE_WORD_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE
-    JP   C,CP_INCLUDE_INVALID
-    CP   'a'
-    JR   C,CP_INCLUDE_WORD_CASED
-    CP   'z'+1
-    JR   NC,CP_INCLUDE_WORD_CASED
-    AND  $DF
+    CALL CP_NEXT_SOURCE_BYTE ; Read the next directive-name byte.
+    JP   C,CP_INCLUDE_INVALID ; A truncated name is not a directive.
+    CP   'a' ; Test whether ASCII lowercase folding applies.
+    JR   C,CP_INCLUDE_WORD_CASED ; Leave uppercase and punctuation unchanged.
+    CP   'z'+1 ; Compare with the first byte above lowercase letters.
+    JR   NC,CP_INCLUDE_WORD_CASED ; Leave bytes beyond 'z' unchanged.
+    AND  $DF ; Convert this ASCII lowercase letter to uppercase.
 CP_INCLUDE_WORD_CASED:
-    EX   DE,HL
-    CP   (HL)
-    INC  HL
-    EX   DE,HL
-    JP   NZ,CP_INCLUDE_INVALID
-    DJNZ CP_INCLUDE_WORD_BYTE
-    CALL CP_NEXT_SOURCE_BYTE
-    JP   C,CP_INCLUDE_INVALID
-    CP   ' '
-    JR   Z,CP_INCLUDE_SPACE
-    CP   9
-    JP   NZ,CP_INCLUDE_INVALID
+    EX   DE,HL ; Compare through DE without losing the source cursor.
+    CP   (HL) ; Match the current byte against INCLUDE.
+    INC  HL ; Advance to the next byte of the directive name.
+    EX   DE,HL ; Restore HL as the source cursor.
+    JP   NZ,CP_INCLUDE_INVALID ; Reject any mismatched directive byte.
+    DJNZ CP_INCLUDE_WORD_BYTE ; Check the remaining keyword bytes.
+    CALL CP_NEXT_SOURCE_BYTE ; Read the delimiter after INCLUDE.
+    JP   C,CP_INCLUDE_INVALID ; The keyword must have a following delimiter.
+    CP   ' ' ; Accept an ordinary space before the filename.
+    JR   Z,CP_INCLUDE_SPACE ; Skip additional horizontal whitespace.
+    CP   9 ; Also accept a horizontal tab as delimiter.
+    JP   NZ,CP_INCLUDE_INVALID ; Require whitespace before the quote.
 CP_INCLUDE_SPACE:
-    CALL CP_NEXT_SOURCE_BYTE
-    JP   C,CP_INCLUDE_INVALID
-    CP   ' '
-    JR   Z,CP_INCLUDE_SPACE
-    CP   9
-    JR   Z,CP_INCLUDE_SPACE
-    CP   '"'
-    JP   NZ,CP_INCLUDE_INVALID
-    CALL CP_CLEAR_INCLUDE_FCB
-    PUSH IX
-    CALL CP_PARSE_INCLUDE_NAME
-    POP  IX
-    RET  C
+    CALL CP_NEXT_SOURCE_BYTE ; Read past the current whitespace byte.
+    JP   C,CP_INCLUDE_INVALID ; A filename must follow the delimiter.
+    CP   ' ' ; Check for another space before the filename.
+    JR   Z,CP_INCLUDE_SPACE ; Continue across repeated spaces.
+    CP   9 ; Check for a repeated tab.
+    JR   Z,CP_INCLUDE_SPACE ; Continue across repeated tabs.
+    CP   '"' ; The filename must begin with a double quote.
+    JP   NZ,CP_INCLUDE_INVALID ; Reject unquoted include names.
+    CALL CP_CLEAR_INCLUDE_FCB ; Prepare a blank current-drive filename.
+    PUSH IX ; Preserve the caller's index while parsing the FCB name.
+    CALL CP_PARSE_INCLUDE_NAME ; Store the quoted 8.3 name in the FCB.
+    POP  IX ; Restore the caller's index after filename parsing.
+    RET  C ; Propagate an invalid or incomplete filename.
 CP_INCLUDE_TRAILING:
-    CALL CP_NEXT_SOURCE_BYTE
-    JR   C,CP_INCLUDE_TRAILING_EOF
-    CP   ' '
-    JR   Z,CP_INCLUDE_TRAILING
-    CP   9
-    JR   Z,CP_INCLUDE_TRAILING
-    CP   ';'
-    JR   Z,CP_INCLUDE_SKIP_COMMENT
-    CP   13
-    JR   Z,CP_INCLUDE_READY
-    CP   10
-    JP   NZ,CP_INCLUDE_INVALID
+    CALL CP_NEXT_SOURCE_BYTE ; Read the next byte after the closing quote.
+    JR   C,CP_INCLUDE_TRAILING_EOF ; Branch on EOF or offset overflow.
+    CP   ' ' ; Permit spaces after the filename.
+    JR   Z,CP_INCLUDE_TRAILING ; Skip trailing spaces.
+    CP   9 ; Permit tabs after the filename.
+    JR   Z,CP_INCLUDE_TRAILING ; Skip trailing tabs.
+    CP   ';' ; A semicolon starts a trailing comment.
+    JR   Z,CP_INCLUDE_SKIP_COMMENT ; Validate the rest of the comment line.
+    CP   13 ; Accept a CR line ending.
+    JR   Z,CP_INCLUDE_READY ; The include name is complete.
+    CP   10 ; Also accept an LF line ending.
+    JP   NZ,CP_INCLUDE_INVALID ; Reject any other trailing byte.
 CP_INCLUDE_READY:
 
-; Deduplicate by normalized eleven-byte CP/M identity. During discovery this may
-; append a name; during ordering it reports whether the child is already emitted.
+; Deduplicate the eleven-byte CP/M name. Discovery adds missing names.
+; Ordering reports whether each child has already been emitted.
 
-    PUSH IX
-    PUSH HL
-    CALL CP_FIND_OR_ADD_NAME
-    POP  HL
-    POP  IX
-    RET  C
-    PUSH HL
-    CALL CP_VISIT_INCLUDED_CHILD
-    POP  HL
-    RET
+    PUSH IX ; Preserve the source reader's index across name lookup.
+    PUSH HL ; Preserve the source cursor after the include line.
+    CALL CP_FIND_OR_ADD_NAME ; Reuse a known child or append its name.
+    POP  HL ; Restore the source cursor for the next scan step.
+    POP  IX ; Restore the caller's index register.
+    RET  C ; Return a name-capacity failure to the resolver.
+    PUSH HL ; Preserve the source cursor across dependency-state lookup.
+    CALL CP_VISIT_INCLUDED_CHILD ; Return the pending-child status.
+    POP  HL ; Restore the cursor without changing the result flags.
+    RET ; Return the child's pending status to the scan loop.
 CP_INCLUDE_SKIP_COMMENT:
-    CALL CP_SKIP_SOURCE_LINE
-    JR   C,CP_INCLUDE_TRAILING_EOF
-    JR   CP_INCLUDE_READY
+    CALL CP_SKIP_SOURCE_LINE ; Consume the trailing comment through line end.
+    JR   C,CP_INCLUDE_TRAILING_EOF ; Check the carried end status.
+    JR   CP_INCLUDE_READY ; The include line has no more source text.
 CP_INCLUDE_TRAILING_EOF:
-    OR   A
-    JP   NZ,CP_INCLUDE_INVALID
-    JR   CP_INCLUDE_READY
+    OR   A ; Zero accepts end-of-input. NZ signals offset overflow.
+    JP   NZ,CP_INCLUDE_INVALID ; Reject an offset that wrapped.
+    JR   CP_INCLUDE_READY ; Accept the include at end of input.
 CP_INCLUDE_INVALID:
-    LD   DE,CP_INVALID_INCLUDE_TEXT
-    SCF
-    RET
+    LD   DE,CP_INVALID_INCLUDE_TEXT ; Select the malformed-include message.
+    SCF ; Mark the include directive as invalid.
+    RET ; Return the message pointer and failure flag.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one quoted include filename into the working CP/M FCB.
 
 CP_PARSE_INCLUDE_NAME:
-    LD   IX,CP_WORK_FCB+1
-    LD   D,8
-    LD   C,0
+    LD   IX,CP_WORK_FCB+1 ; Begin writing the eight-byte base field.
+    LD   D,8 ; Set the base-name capacity.
+    LD   C,0 ; Count characters in the current name field.
 CP_INCLUDE_NAME_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE
-    JP   C,CP_INCLUDE_NAME_BAD
-    CP   '"'
-    JR   Z,CP_INCLUDE_NAME_DONE
-    CP   '.'
-    JR   NZ,CP_INCLUDE_NAME_DATA
-    LD   A,D
-    CP   8
-    JP   NZ,CP_INCLUDE_NAME_BAD
-    LD   A,C
-    OR   A
-    JP   Z,CP_INCLUDE_NAME_BAD
-    LD   IX,CP_WORK_FCB+9
-    LD   D,3
-    LD   C,0
-    JR   CP_INCLUDE_NAME_BYTE
+    CALL CP_NEXT_SOURCE_BYTE ; Read the next quoted filename byte.
+    JP   C,CP_INCLUDE_NAME_BAD ; Require a complete closing quote.
+    CP   '"' ; Check for the end of the filename.
+    JR   Z,CP_INCLUDE_NAME_DONE ; Validate that the final field is nonempty.
+    CP   '.' ; Check for the single base/extension separator.
+    JR   NZ,CP_INCLUDE_NAME_DATA ; Other bytes belong to the current field.
+    LD   A,D ; Read the active field's maximum width.
+    CP   8 ; A dot is legal only while parsing the base field.
+    JP   NZ,CP_INCLUDE_NAME_BAD ; Reject repeated separators.
+    LD   A,C ; Read the number of base-name characters.
+    OR   A ; Set Z when the base field is empty.
+    JP   Z,CP_INCLUDE_NAME_BAD ; Require at least one base character.
+    LD   IX,CP_WORK_FCB+9 ; Continue writing at the three-byte type field.
+    LD   D,3 ; Set the extension capacity.
+    LD   C,0 ; Start the extension character count.
+    JR   CP_INCLUDE_NAME_BYTE ; Read the first extension character.
 CP_INCLUDE_NAME_DATA:
-    CP   'a'
-    JR   C,CP_INCLUDE_NAME_CASED
-    CP   'z'+1
-    JR   NC,CP_INCLUDE_NAME_CASED
-    AND  $DF
+    CP   'a' ; Test for an ASCII lowercase filename letter.
+    JR   C,CP_INCLUDE_NAME_CASED ; Keep non-lowercase bytes unchanged.
+    CP   'z'+1 ; Compare with the exclusive lowercase upper bound.
+    JR   NC,CP_INCLUDE_NAME_CASED ; Keep bytes above 'z' unchanged.
+    AND  $DF ; Fold lowercase ASCII to uppercase for CP/M lookup.
 CP_INCLUDE_NAME_CASED:
-    CALL CP_FILENAME_CHAR
-    JP   C,CP_INCLUDE_NAME_BAD
-    INC  C
-    LD   B,A
-    LD   A,D
-    CP   C
-    JP   C,CP_INCLUDE_NAME_BAD
-    LD   A,B
-    LD   (IX+0),A
-    INC  IX
-    JR   CP_INCLUDE_NAME_BYTE
+    CALL CP_FILENAME_CHAR ; Reject characters outside the CP/M name set.
+    JP   C,CP_INCLUDE_NAME_BAD ; Carry marks a forbidden filename character.
+    INC  C ; Include the validated byte in this field's length.
+    LD   B,A ; Save the normalised byte while checking field capacity.
+    LD   A,D ; Load the active base or extension limit.
+    CP   C ; Compare the limit with the updated character count.
+    JP   C,CP_INCLUDE_NAME_BAD ; Reject a field wider than 8.3 allows.
+    LD   A,B ; Restore the normalized filename byte.
+    LD   (IX+0),A ; Store it in the current FCB name field.
+    INC  IX ; Advance to the next character slot.
+    JR   CP_INCLUDE_NAME_BYTE ; Continue through the closing quote.
 CP_INCLUDE_NAME_DONE:
-    LD   A,C
-    OR   A
-    RET  NZ
+    LD   A,C ; Read the character count of the final field.
+    OR   A ; Set Z only when that field is empty.
+    RET  NZ ; Accept a nonempty base or extension field.
 CP_INCLUDE_NAME_BAD:
-    LD   DE,CP_INVALID_INCLUDE_TEXT
-    SCF
-    RET
+    LD   DE,CP_INVALID_INCLUDE_TEXT ; Select the malformed-include message.
+    SCF ; Mark the filename as invalid.
+    RET ; Return failure to the directive parser.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Visit a discovered include child when dependency scanning is active.
 
 CP_VISIT_INCLUDED_CHILD:
-    LD   E,A
-    LD   A,(CP_SCAN_MODE)
-    OR   A
-    RET  Z
-    LD   A,E
-    CALL CP_NAME_POINTER
-    BIT  7,(HL)
-    LD   A,0
-    RET  NZ
-    INC  A
-    RET
+    LD   E,A ; Keep the child ordinal across the mode check.
+    LD   A,(CP_SCAN_MODE) ; Read whether this is discovery or ordering.
+    OR   A ; Discovery mode is zero.
+    RET  Z ; Discovery needs no pending-child result.
+    LD   A,E ; Restore the child's retained-name ordinal.
+    CALL CP_NAME_POINTER ; Address its eleven-byte name record.
+    BIT  7,(HL) ; Test the emitted marker in the first name byte.
+    LD   A,0 ; Use zero when the child has already been emitted.
+    RET  NZ ; A set marker means no dependency remains pending.
+    INC  A ; An unset marker means the child still needs emission.
+    RET ; Return one for a pending child.
 
 ;@ROUTINE OUT A CLOBBERS B,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Reset the working include FCB to a blank 8.3 filename.
 
 CP_CLEAR_INCLUDE_FCB:
-    LD   DE,CP_WORK_FCB
-    XOR  A
-    LD   (DE),A
-    INC  DE
-    LD   B,11
-    LD   A,' '
-    CALL CP_CLEAR_WORK_FCB
-    JP   CP_CLEAR_FCB_TAIL
+    LD   DE,CP_WORK_FCB ; Address the temporary working FCB.
+    XOR  A ; Select the current drive.
+    LD   (DE),A ; Clear the explicit drive byte.
+    INC  DE ; Advance to the eleven-byte 8.3 name.
+    LD   B,11 ; Clear all eight base and three extension bytes.
+    LD   A,' ' ; CP/M represents unused name bytes with spaces.
+    CALL CP_CLEAR_WORK_FCB ; Fill the name and extension fields.
+    JP   CP_CLEAR_FCB_TAIL ; Clear the remaining FCB control bytes.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Find an exact retained name, or append it if capacity remains.
 
 CP_FIND_OR_ADD_NAME:
-    LD   C,0
+    LD   C,0 ; Start with retained-name ordinal zero.
 CP_FIND_NAME_LOOP:
-    LD   A,(CP_NAME_COUNT)
-    CP   C
-    JR   Z,CP_ADD_NAME
-    LD   A,C
-    CALL CP_NAME_POINTER
-    LD   IX,CP_WORK_FCB+1
-    LD   B,11
+    LD   A,(CP_NAME_COUNT) ; Read the number of names already retained.
+    CP   C ; Compare the count with the current candidate ordinal.
+    JR   Z,CP_ADD_NAME ; Append when no existing slot remains to inspect.
+    LD   A,C ; Select this retained name's ordinal.
+    CALL CP_NAME_POINTER ; Address its eleven-byte name record.
+    LD   IX,CP_WORK_FCB+1 ; Address the normalized candidate filename.
+    LD   B,11 ; Compare the complete base and extension fields.
 CP_FIND_NAME_BYTE:
-    LD   A,(HL)
-    AND  $7F
-    CP   (IX+0)
-    JR   NZ,CP_FIND_NAME_NEXT
-    INC  HL
-    INC  IX
-    DJNZ CP_FIND_NAME_BYTE
-    LD   A,C
-    OR   A
-    RET
+    LD   A,(HL) ; Read one byte from the retained name.
+    AND  $7F ; Ignore its high-bit emitted marker during comparison.
+    CP   (IX+0) ; Compare with the corresponding candidate byte.
+    JR   NZ,CP_FIND_NAME_NEXT ; Try the next ordinal on any mismatch.
+    INC  HL ; Advance the retained-name cursor.
+    INC  IX ; Advance the candidate-name cursor.
+    DJNZ CP_FIND_NAME_BYTE ; Compare the remaining name bytes.
+    LD   A,C ; Return the ordinal whose full name matched.
+    OR   A ; Clear carry and set zero for ordinal zero.
+    RET ; Report the existing name without adding another entry.
 CP_FIND_NAME_NEXT:
-    INC  C
-    JR   CP_FIND_NAME_LOOP
+    INC  C ; Advance to the next retained-name ordinal.
+    JR   CP_FIND_NAME_LOOP ; Continue until a name matches or the table ends.
 CP_ADD_NAME:
 
 ; The one-byte part ABI admits ordinals 0..254: at most 255 retained files.
 
-    LD   A,C
-    CP   255
-    JR   Z,CP_NAME_CAPACITY
-    PUSH AF
-    CALL CP_NAME_POINTER
-    EX   DE,HL
-    LD   HL,CP_WORK_FCB+1
-    LD   BC,11
-    LDIR
-    LD   HL,CP_NAME_COUNT
-    INC  (HL)
-    POP  AF
-    OR   A
-    RET
+    LD   A,C ; The next ordinal is the current number of names.
+    CP   255 ; The byte-sized table has no ordinal 255 entry.
+    JR   Z,CP_NAME_CAPACITY ; Reject a 256th distinct source file.
+    PUSH AF ; Preserve the new zero-based ordinal across the copy.
+    CALL CP_NAME_POINTER ; Address the next eleven-byte table slot.
+    EX   DE,HL ; Put the slot destination in DE for LDIR.
+    LD   HL,CP_WORK_FCB+1 ; Point to the normalized 8.3 name bytes.
+    LD   BC,11 ; Copy the base and extension, excluding the drive byte.
+    LDIR ; Store the new name in its ordinal slot.
+    LD   HL,CP_NAME_COUNT ; Address the count published to the resolver.
+    INC  (HL) ; Publish the slot only after all eleven bytes are copied.
+    POP  AF ; Return the allocated ordinal.
+    OR   A ; Clear carry to mark successful insertion.
+    RET ; Return the new retained-name identity.
 CP_NAME_CAPACITY:
-    LD   DE,CP_SOURCE_CAPACITY_TEXT
-    SCF
-    RET
+    LD   DE,CP_SOURCE_CAPACITY_TEXT ; Select the part-capacity diagnostic.
+    SCF ; Mark the resolver's name table as full.
+    RET ; Return without changing the retained-name count.
 
 ;@ROUTINE IN A OUT A,HL CLOBBERS DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert a source ordinal to its retained name-table entry address.
 
 CP_NAME_POINTER:
-    LD   L,A
-    LD   H,0
-    LD   D,H
-    LD   E,L
-    ADD  HL,HL
-    ADD  HL,HL
-    ADD  HL,DE
-    ADD  HL,HL
-    ADD  HL,DE
-    LD   DE,CP_PART_NAMES
-    ADD  HL,DE
-    RET
+    LD   L,A ; Place the ordinal in the low byte of HL.
+    LD   H,0 ; Extend the ordinal to a 16-bit value.
+    LD   D,H ; Clear the high byte of the temporary DE value.
+    LD   E,L ; Copy the ordinal into DE for multiplication by eleven.
+    ADD  HL,HL ; Compute twice the ordinal.
+    ADD  HL,HL ; Compute four times the ordinal.
+    ADD  HL,DE ; Combine to make five times the ordinal.
+    ADD  HL,HL ; Compute ten times the ordinal.
+    ADD  HL,DE ; Complete eleven times the ordinal.
+    LD   DE,CP_PART_NAMES ; Load the base of the retained-name table.
+    ADD  HL,DE ; Convert the byte offset to the slot address.
+    RET ; Return the address of this eleven-byte name record.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Rebuild and open the ordinary input FCB from one retained name.
