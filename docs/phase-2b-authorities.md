@@ -2,11 +2,11 @@
 
 ## Frozen repositories
 
-- Atom: `/Users/johnhardy/projects/atom`, branch `main`, clean starting HEAD
+- Atom: repository root (`.`), branch `main`, clean starting HEAD
   `869d1790fc1f93528d8c0c87b15086a96cdf14e0`, equal to `origin/main` when
   Phase 2b began.
 - AZM, Debug80 runtime, and Nucleus reference tree:
-  `/Users/johnhardy/projects/debug80`, branch `main`, reviewed HEAD
+  sibling checkout `../debug80`, branch `main`, reviewed HEAD
   `b4046badd29b1dd1bc146029728bacaa5e5fe603`. That checkout was one commit
   ahead of `origin/main` at `3f2adb669bb9e7888305c623f8c843054c3dd111` and contained the unrelated
   untracked `.worktrees/` directory. Phase 2b did not modify, commit, or push

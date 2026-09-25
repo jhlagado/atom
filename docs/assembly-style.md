@@ -12,6 +12,62 @@ and reasoning the code cannot express.
 This is the policy for new and revised assembly commentary. Existing source
 files have not been brought into conformance as part of adopting this policy.
 
+## Make module headers easy to scan
+
+Frame each module title with a 78-column rule above and below it. Follow it
+with a short purpose statement, then leave a blank comment line before the
+public contracts.
+
+Give each public entry its own ASCII contract box. Group entries only when
+their inputs and outputs share the same calling convention. Put the entry name
+and action first, leave an empty row inside the box, then list inputs, results,
+errors and side effects on separate lines. List error codes vertically.
+Separate boxes with a blank comment line. Do not draw a box around every prose
+section.
+
+Use uppercase section labels with a short underline. Put a blank comment line
+between sections. List return codes and token kinds vertically; align context
+layouts and other tables. Keep each prose line to one fact, wrap at a natural
+break, and stay within 78 columns. Avoid compressing unrelated guarantees into
+semicolon-separated prose.
+
+Keep the full ABI, error rules, register effects, memory ownership, stack use
+and reentrancy contract in the header. Put instruction explanations beside
+the instructions they explain.
+
+```asm
+;==============================================================================
+;  Native pull lexer
+;==============================================================================
+
+;  PURPOSE
+;  -------
+;  Return one token at a time from a callback-backed byte source.
+
+;  PUBLIC ENTRY POINTS
+;  -------------------
+
+;+---------------------------------------------------------------------------+
+;| LINIT - Start a new byte stream.                                          |
+;|                                                                           |
+;| Entry: HL -> byte-source callback.                                        |
+;| Effect: Reset state without reading from the source.                      |
+;+---------------------------------------------------------------------------+
+
+;  TOKEN KINDS
+;  -----------
+
+;  0  EOF
+;  1  open parenthesis
+;  2  close parenthesis
+;  3  quote
+;  4  dot
+;  5  symbol
+;  6  numeric text
+;  7  scalar
+;  8  string
+```
+
 ## Explain the routine, then the instructions
 
 Start each module with its purpose and public calling convention: inputs,

@@ -2,11 +2,11 @@
 
 ## Frozen repositories
 
-- `atom`: `/Users/johnhardy/projects/atom`, branch `main`. The repository was
+- `atom`: repository root (`.`), branch `main`. The repository was
   created in Phase 1; proof hardening began from clean HEAD
   `3a2410e9b1662551736e3a8e354acfc8ff4eda91` (pre-rename HEAD
   `1e92fb27a9fd7052f130645843c30c33a57dda4c`).
-- AZM and Nucleus reference tree: `/Users/johnhardy/projects/debug80`, branch
+- AZM and Nucleus reference tree: sibling checkout `../debug80`, branch
   `main`, current reviewed HEAD `b4046badd29b1dd1bc146029728bacaa5e5fe603`.
   Phase 1 began at `f0c6643c145bdcfddf11255116ad39ec9836bc9f`.
   The reviewed AZM tree is `7889245c380334768f62805e73c13e979aa9f8c8`;

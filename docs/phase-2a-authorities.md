@@ -2,10 +2,10 @@
 
 ## Frozen repositories
 
-- `atom`: `/Users/johnhardy/projects/atom`, branch `main`. Phase 2a began from
+- `atom`: repository root (`.`), branch `main`. Phase 2a began from
   clean HEAD `48143d852ea3b96d8d174f3ad6bd0cb5cc08893a`.
 - AZM, Debug80 runtime, and Nucleus reference tree:
-  `/Users/johnhardy/projects/debug80`, branch `main`, reviewed HEAD
+  sibling checkout `../debug80`, branch `main`, reviewed HEAD
   `b4046badd29b1dd1bc146029728bacaa5e5fe603`. The reviewed AZM tree is
   `7889245c380334768f62805e73c13e979aa9f8c8`; the runtime tree is
   `a921abc89dcbd88211dd008e705b69d646cfb9bb`.
