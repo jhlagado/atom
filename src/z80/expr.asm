@@ -200,8 +200,8 @@ EX_QUEUE:
 ; HIGH operation. The next non-space source byte must then be '('.
 
 EX_CFUNC:
-; Length selects the only possible name and the unary marker returned in C.
-; Length selects the only possible name and the unary marker returned in C.
+; Length narrows candidates to LOW or four-character HIG* names.
+; C holds the marker until a match returns it in A.
 
     LD   A,(TK_REC+TK_LOFF1)   ; Read the candidate name's byte length.
     CP   3                     ; Could it be LOW?
@@ -929,8 +929,6 @@ EX_RTABL:                   ; Dispatch concrete binary ordinals to arithmetic ke
 ; constant+symbol and symbol-constant only.
 
 EX_RFORW:
-; A transform value of EX_FLO or EX_FHI means LOW/HIGH has already consumed the
-; symbol form. Any binary operator outside that function is unsupported.
 ; A transform value of EX_FLO or EX_FHI means LOW/HIGH has already consumed the
 ; symbol form. Any binary operator outside that function is unsupported.
 
