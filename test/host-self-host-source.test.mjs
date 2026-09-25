@@ -30,6 +30,7 @@ test("native origin replacement accepts and preserves source indentation", () =>
 test("maintained Z80 source follows the readable layout convention", async () => {
   const names = (await fs.readdir("src/z80")).filter((name) => name.endsWith(".asm"));
   for (const name of names) {
+    assert.match(name, /^[a-z0-9]{1,8}\.asm$/, `${name} is not an 8.3-compatible source name`);
     const lines = (await fs.readFile(`src/z80/${name}`, "utf8")).split("\n");
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];

@@ -99,7 +99,7 @@ async function linkedSource({
 
   const [sharedAbi, adapterText] = await Promise.all([
     readFile(fileURLToPath(import.meta.resolve("@jhlagado/z80-tool-services/native/z80-tool-services-v1.asmi")), "utf8"),
-    readFile(join(nativeRoot, "named-object-adapter.asm"), "utf8"),
+    readFile(join(nativeRoot, "nobj.asm"), "utf8"),
   ]);
   assert.equal(adapterText.split(gatewayBegin).length, 2, "native adapter must contain one gateway start marker");
   assert.equal(adapterText.split(gatewayEnd).length, 2, "native adapter must contain one gateway end marker");

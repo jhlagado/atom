@@ -121,10 +121,10 @@ The modules below are exported by
 
 | File | Role |
 | --- | --- |
-| `encoder.asm` through `host-services.asm` | Authoritative native modules in assembly order |
-| `atom.asm` | `%INCLUDE` entry that orders the ten modules through the normal host resolver |
+| `encoder.asm` through `host.asm` | Authoritative native modules in assembly order |
+| `atom.asm` | `%INCLUDE` entry that orders the twelve modules through the normal host resolver |
 | `atom-symbols.json` | Original-to-short symbol mapping and source-generation statistics |
-| `named-object-adapter.asm` | Z80 adapter from Atom source and sink callbacks to the shared named-object request |
+| `nobj.asm` | Z80 adapter from Atom source and sink callbacks to the shared named-object request |
 
 The `.asm` files are the sole editing authority for the native assembler.
 

@@ -5,16 +5,16 @@ import { join } from "node:path";
 export const NATIVE_CORE_MODULES = Object.freeze([
   "encoder.asm",
   "symbols.asm",
-  "tokenizer.asm",
-  "tokenizer-dispatch.asm",
-  "expression.asm",
-  "expression-arithmetic.asm",
+  "token.asm",
+  "tokdisp.asm",
+  "expr.asm",
+  "exprmath.asm",
   "patch.asm",
   "parser.asm",
   "output.asm",
-  "statements.asm",
+  "stmts.asm",
   "driver.asm",
-  "host-services.asm",
+  "host.asm",
 ]);
 
 const sourceReadBegin = ";@@ATOM_SOURCE_READ_BEGIN@@";
@@ -45,20 +45,20 @@ export function setNativeCoreOrigin(modules, originLine) {
 export function replaceNativeSourceRead(modules, target) {
   assert.match(target, /^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*$/, "invalid source-read target label");
   const result = new Map(modules);
-  const tokenizer = result.get("tokenizer.asm");
+  const tokenizer = result.get("token.asm");
   assert.equal(tokenizer.split(sourceReadBegin).length, 2, "native tokenizer must contain one source-read start marker");
   assert.equal(tokenizer.split(sourceReadEnd).length, 2, "native tokenizer must contain one source-read end marker");
   const start = tokenizer.indexOf(sourceReadBegin) + sourceReadBegin.length;
   const end = tokenizer.indexOf(sourceReadEnd, start);
   assert.ok(end >= start, "native tokenizer source-read markers are out of order");
   const replacement = `\n${sourceReadContract}\nTK_SREAD:\nJP ${target}\n`;
-  result.set("tokenizer.asm", `${tokenizer.slice(0, start)}${replacement}${tokenizer.slice(end)}`);
+  result.set("token.asm", `${tokenizer.slice(0, start)}${replacement}${tokenizer.slice(end)}`);
   return result;
 }
 
 export function joinNativeCoreModules(modules, { includeHostServices = true } = {}) {
   return NATIVE_CORE_MODULES
-    .filter((name) => includeHostServices || name !== "host-services.asm")
+    .filter((name) => includeHostServices || name !== "host.asm")
     .map((name) => {
       assert.ok(modules.has(name), `native source omitted ${name}`);
       return modules.get(name);

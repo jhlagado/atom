@@ -2,7 +2,7 @@
 ;  Token dispatch, character literals and tokenizer storage
 ;==============================================================================
 ;
-;  Continue the streaming tokenizer after tokenizer.asm's source access and
+;  Continue the streaming tokenizer after token.asm's source access and
 ;  lexeme scanners. TK_NEXT classifies the next source byte, delegates compound
 ;  forms to those scanners and publishes one stable token record. This part also
 ;  owns character-literal decoding, immutable lookup tables and fixed workspace.

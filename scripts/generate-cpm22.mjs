@@ -27,7 +27,7 @@ async function linkedSource() {
   modules = setNativeCoreOrigin(modules, "ORG $0100\nJP CP_ENTRY\nDS 13");
   modules = replaceNativeSourceRead(modules, "CP_SOURCE_READ_BYTE");
   const core = joinNativeCoreModules(modules, { includeHostServices: false });
-  const adapter = await readFile(join(nativeRoot, "cpm22-adapter.asm"), "utf8");
+  const adapter = await readFile(join(nativeRoot, "cpm22.asm"), "utf8");
   const marker = ";@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@";
   assert.equal(adapter.split(marker).length, 2, "CP/M adapter must contain one final-image module marker");
   const linkedAdapter = adapter.replace(marker, await readFile(finalImageModulePath, "utf8"));

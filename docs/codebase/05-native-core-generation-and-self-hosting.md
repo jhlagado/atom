@@ -80,16 +80,16 @@ limit. The thirteenth file is the entry and dependency header:
 ```asm
 %INCLUDE "encoder.asm"
 %INCLUDE "symbols.asm"
-%INCLUDE "tokenizer.asm"
-%INCLUDE "tokenizer-dispatch.asm"
-%INCLUDE "expression.asm"
-%INCLUDE "expression-arithmetic.asm"
+%INCLUDE "token.asm"
+%INCLUDE "tokdisp.asm"
+%INCLUDE "expr.asm"
+%INCLUDE "exprmath.asm"
 %INCLUDE "patch.asm"
 %INCLUDE "parser.asm"
 %INCLUDE "output.asm"
-%INCLUDE "statements.asm"
+%INCLUDE "stmts.asm"
 %INCLUDE "driver.asm"
-%INCLUDE "host-services.asm"
+%INCLUDE "host.asm"
 ```
 
 The host resolver orders those dependencies before `atom.asm`, so the checked
@@ -183,7 +183,7 @@ The checked measurement records:
 | Flattened native statements | 8,677 |
 | Native content parts | 12 |
 | Checked resolver parts, including entry | 13 |
-| Checked source bytes | 429,144 |
+| Checked source bytes | 429,128 |
 | Ledger global symbols | 876 |
 | Ledger private symbols | 441 |
 | Initialized resident bytes | 11,793 |
@@ -192,8 +192,8 @@ The checked measurement records:
 | Declared symbols | 1,316 |
 | Linked resident extent | 12,400 bytes |
 
-The first generation currently executes 120,765,073 instructions and
-1,288,854,476 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 120,764,193 instructions and
+1,288,845,228 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

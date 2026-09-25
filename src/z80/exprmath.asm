@@ -2,10 +2,10 @@
 ;  Expression arithmetic and workspace
 ;==============================================================================
 ;
-;  Concrete 24-bit arithmetic kernels used by expression.asm, followed by the
+;  Concrete 24-bit arithmetic kernels used by expr.asm, followed by the
 ;  evaluator's fixed working state and bounded stacks. This is a separate source
 ;  part so the educational commentary remains within Atom's 16-bit per-part
-;  source-offset range; it is assembled immediately after expression.asm.
+;  source-offset range; it is assembled immediately after expr.asm.
 ;
 ;@ROUTINE OUT A,BC,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Load the low bytes and sign bytes used by the 24-bit add/subtract paths. A is

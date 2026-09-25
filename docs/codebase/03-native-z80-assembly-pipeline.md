@@ -68,8 +68,8 @@ global reference in one part may be defined in a later part.
 
 ## Tokenizer
 
-The tokenizer begins at `TK_CBEG` in `src/z80/tokenizer.asm` and continues in
-`src/z80/tokenizer-dispatch.asm`.
+The tokenizer begins at `TK_CBEG` in `src/z80/token.asm` and continues in
+`src/z80/tokdisp.asm`.
 `AtomTokenizerReset` records the part ordinal, base, length, and zero-based
 logical offset. `AtomTokenizerNext` calls `AtomSourceReadByte`, skips horizontal
 whitespace and comments, then dispatches by the returned byte. The desktop runner
@@ -178,8 +178,8 @@ drained it.
 
 ## Expression evaluator
 
-The expression section begins at `EX_CBEG` in `src/z80/expression.asm`; its
-concrete arithmetic kernels continue in `src/z80/expression-arithmetic.asm`. It
+The expression section begins at `EX_CBEG` in `src/z80/expr.asm`; its
+concrete arithmetic kernels continue in `src/z80/exprmath.asm`. It
 implements precedence parsing with a value stack and an operator stack. Each
 stack has 16 entries. Values use signed 24-bit
 intermediates plus metadata for concrete or deferred state. Operators carry
@@ -316,7 +316,7 @@ distribution, and canonical hash.
 ## Statements and directives
 
 `AtomAssemblePart` in the statement section beginning at `ST_CBEG` in
-`src/z80/statements.asm` consumes tokens until part EOF. At each statement it
+`src/z80/stmts.asm` consumes tokens until part EOF. At each statement it
 records a diagnostic position, recognizes the first name, and distinguishes
 these source shapes:
 
