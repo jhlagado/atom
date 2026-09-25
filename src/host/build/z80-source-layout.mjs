@@ -6,6 +6,7 @@ export const NATIVE_CORE_MODULES = Object.freeze([
   "encoder.asm",
   "symbols.asm",
   "tokenizer.asm",
+  "tokenizer-dispatch.asm",
   "expression.asm",
   "expression-arithmetic.asm",
   "patch.asm",

@@ -42,7 +42,8 @@ patches. The driver repeats the statement layer for each ordered source part.
 | --- | --- | --- | --- |
 | `encoder.asm` | `EN_COREB` through `EN_WEND` | RADIX-40 packing, mnemonic recognition, form validation and Z80 instruction encoding | `EN_R40PK`, `EN_RECOG`, `EN_LEN`, `EN_VFORM`, `EN_NAME` |
 | `symbols.asm` | `SY_CBEG` through `SY_WEND` | Global and private symbol records, scope transitions and pending-reference records | `SY_RESET`, `SY_FIND`, `SY_DECL`, `SY_REF`, `SY_DGLAB`, `SY_ADD`, `SY_PEEK`, `SY_TAKE` |
-| `tokenizer.asm` | `TK_CBEG` through `TK_WEND` | Source-byte access and token publication | `TK_RESET`, `TK_SPEEK`, `TK_SREAD`, `TK_STAKE`, `TK_NEXT` |
+| `tokenizer.asm` | `TK_CBEG` through the complete `TK_SCOMM` routine | Source-byte access, lexical classifiers and complete lexeme scanners | `TK_RESET`, `TK_SPEEK`, `TK_SREAD`, `TK_STAKE`, `TK_SNAME`, `TK_SDLED`, `TK_SBASE`, `TK_SSTRI` |
+| `tokenizer-dispatch.asm` | `TK_NEXT` through `TK_WEND` | Top-level token dispatch, character literals, lookup tables and published token storage | `TK_NEXT`, `TK_SCHAR`, `TK_LLEXE`, `TK_DESCA`, `TK_ILEND` |
 | `expression.asm` | `EX_CBEG` through `EX_RFORW` | Expression grammar, bounded stacks and restricted deferred expressions | `EX_PARSE`, `EX_PDEFR` |
 | `expression-arithmetic.asm` | `EX_LARIT` through `EX_WEND` | Concrete 24-bit arithmetic kernels and expression workspace | Arithmetic helpers called by `expression.asm` |
 | `patch.asm` | `PT_CBEG` through `PT_CEND` | Mapping a validated operand to its patch byte, width and transform | `PT_LOCAT` |
@@ -88,8 +89,8 @@ matching a register-contract comment or by assuming a numbered source part.
 ## Reading order
 
 For a first reading, start with `driver.asm` and `statements.asm` to see the
-outer control flow. Continue with `tokenizer.asm`, `expression.asm`,
-`expression-arithmetic.asm` and
+outer control flow. Continue with `tokenizer.asm`, `tokenizer-dispatch.asm`,
+`expression.asm`, `expression-arithmetic.asm` and
 `parser.asm`, then read `output.asm` and `symbols.asm` together to understand
 forward references. Read `encoder.asm` last because its dense validation and
 opcode rules make more sense after the parsed instruction record is familiar.

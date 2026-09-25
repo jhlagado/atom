@@ -13,7 +13,7 @@ ABI symbols must also agree. No second assembler runs in this build path.
 ## Native source and link entry
 
 The native implementation is maintained under `src/z80/`. Its entry is
-`atom.asm`, whose `%INCLUDE` header orders ten source parts. Each part contains
+`atom.asm`, whose `%INCLUDE` header orders twelve source parts. Each part contains
 one native module. The final module contains six fail-closed host sink entries.
 
 The source uses Atom's bare directives and eight-character symbols. Comments
@@ -74,13 +74,14 @@ RAM before entering the assembler.
 
 ## Native source ledger
 
-The ten content parts remain below the 65,535-byte per-part logical-offset
-limit. The eleventh file is the entry and dependency header:
+The twelve content parts remain below the 65,535-byte per-part logical-offset
+limit. The thirteenth file is the entry and dependency header:
 
 ```asm
 %INCLUDE "encoder.asm"
 %INCLUDE "symbols.asm"
 %INCLUDE "tokenizer.asm"
+%INCLUDE "tokenizer-dispatch.asm"
 %INCLUDE "expression.asm"
 %INCLUDE "expression-arithmetic.asm"
 %INCLUDE "patch.asm"
@@ -92,7 +93,7 @@ limit. The eleventh file is the entry and dependency header:
 ```
 
 The host resolver orders those dependencies before `atom.asm`, so the checked
-self-host project presented to the native driver has eleven parts. The empty
+self-host project presented to the native driver has thirteen parts. The empty
 entry still has its own identity and descriptor.
 
 `src/z80/atom-symbols.json` records the complete original-to-short migration and
@@ -118,7 +119,7 @@ The self-host proof resolves `src/z80/atom.asm` through the ordinary host
 project preparation and calls `assembleResolvedAtomProject()` with origin zero and
 a 16 KiB target.
 
-The pinned Atom-built native core assembles all eleven parts. The resulting
+The pinned Atom-built native core assembles all thirteen parts. The resulting
 generation contains IMAGE and PATCH operations, symbol declarations, layout
 events, execution measurements, and a complete 12,400-byte materialized image.
 
@@ -179,10 +180,10 @@ The checked measurement records:
 
 | Observation | Measured value |
 | --- | ---: |
-| Flattened native statements | 8,626 |
-| Native content parts | 10 |
-| Checked resolver parts, including entry | 11 |
-| Checked source bytes | 197,540 |
+| Flattened native statements | 8,647 |
+| Native content parts | 12 |
+| Checked resolver parts, including entry | 13 |
+| Checked source bytes | 402,861 |
 | Ledger global symbols | 876 |
 | Ledger private symbols | 441 |
 | Initialized resident bytes | 11,793 |
@@ -191,8 +192,8 @@ The checked measurement records:
 | Declared symbols | 1,316 |
 | Linked resident extent | 12,400 bytes |
 
-The first generation currently executes 107,231,552 instructions and
-1,143,081,050 T-states. Those values are measurements pinned by the self-host
+The first generation currently executes 119,145,949 instructions and
+1,270,953,540 T-states. Those values are measurements pinned by the self-host
 proof, not generic performance limits.
 
 ## Authority of each comparison

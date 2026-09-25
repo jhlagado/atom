@@ -57,1025 +57,661 @@
 ;  TK_SREAD receives A = part ordinal and HL = logical byte offset. The checked
 ;  core's implementation below reads the reset range directly. Platform builds
 ;  replace only the explicitly marked body with a jump to their provider.
+;  Every offset below the validated part length must return successfully. This
+;  seam has no read-error channel: TK_SPEEK reserves carry for end of part.
 
-TK_CBEG:
+TK_CBEG:                       ; Begin executable tokenizer code and constants.
 ; Published token kinds. Punctuation values are also used by expression parsing.
-TK_EOF EQU 0
-TK_EOL EQU 1
-TK_NAME EQU 2
-TK_DIR EQU 3
-TK_NUMBE EQU 4
-TK_STRIN EQU 5
-TK_COMMA EQU 6
-TK_COLON EQU 7
-TK_LPARE EQU 8
-TK_RPARE EQU 9
-TK_PLUS EQU 10
-TK_MINUS EQU 11
-TK_STAR EQU 12
-TK_SLASH EQU 13
-TK_PERCE EQU 14
-TK_AMPER EQU 15
-TK_CARET EQU 16
-TK_PIPE EQU 17
-TK_TILDE EQU 18
-TK_APOST EQU 19
-TK_LSHIF EQU 20
-TK_RSHIF EQU 21
-TK_CUR EQU 22
+TK_EOF EQU 0                   ; Repeatable end-of-source-part token.
+TK_EOL EQU 1                   ; End of a non-empty source line, physical or synthetic.
+TK_NAME EQU 2                  ; Name or private-name lexeme.
+TK_DIR EQU 3                   ; Reserved directive kind retained for statement diagnostics.
+TK_NUMBE EQU 4                 ; Decoded sixteen-bit numeric literal.
+TK_STRIN EQU 5                 ; Raw quoted string lexeme.
+TK_COMMA EQU 6                 ; Comma punctuation.
+TK_COLON EQU 7                 ; Colon punctuation.
+TK_LPARE EQU 8                 ; Left parenthesis punctuation.
+TK_RPARE EQU 9                 ; Right parenthesis punctuation.
+TK_PLUS EQU 10                 ; Addition or unary-plus operator.
+TK_MINUS EQU 11                ; Subtraction or unary-minus operator.
+TK_STAR EQU 12                 ; Multiplication operator.
+TK_SLASH EQU 13                ; Division operator.
+TK_PERCE EQU 14                ; Remainder operator when not a binary literal.
+TK_AMPER EQU 15                ; Bitwise AND operator.
+TK_CARET EQU 16                ; Bitwise XOR operator.
+TK_PIPE EQU 17                 ; Bitwise OR operator.
+TK_TILDE EQU 18                ; Bitwise complement operator.
+TK_APOST EQU 19                ; Standalone apostrophe punctuation.
+TK_LSHIF EQU 20                ; Two-character left-shift operator.
+TK_RSHIF EQU 21                ; Two-character right-shift operator.
+TK_CUR EQU 22                  ; Current logical output address marker.
 ; Lexical failure statuses returned with carry set.
-TK_SIB EQU 1
-TK_SNTLO EQU 2
-TK_SINUM EQU 3
-TK_SNOVE EQU 4
-TK_SUSTR EQU 5
-TK_SIESC EQU 6
-TK_SSTLO EQU 7
-TK_SBSRA EQU 8
-TK_SUDIR EQU 9
-TK_SUCHA EQU 10
-TK_SICHA EQU 11
+TK_SIB EQU 1                   ; Invalid input byte.
+TK_SNTLO EQU 2                 ; Name exceeds its accepted source length.
+TK_SINUM EQU 3                 ; Malformed numeric literal.
+TK_SNOVE EQU 4                 ; Numeric value exceeds sixteen bits.
+TK_SUSTR EQU 5                 ; Unterminated string literal.
+TK_SIESC EQU 6                 ; Unsupported string or character escape.
+TK_SSTLO EQU 7                 ; String lexeme exceeds its byte limit.
+TK_SBSRA EQU 8                 ; Reversed source range supplied to reset.
+TK_SUDIR EQU 9                 ; Host preprocessor directive reached native Atom.
+TK_SUCHA EQU 10                ; Unterminated character literal.
+TK_SICHA EQU 11                ; Invalid character literal contents.
 ; Nine-byte token-record field offsets and total size.
-TK_KOFF EQU 0
-TK_POFF EQU 1
-TK_SOFF EQU 2
-TK_LOFF EQU 4
-TK_LOFF1 EQU 6
-TK_VOFF EQU 7
-TK_RECB EQU 9
+TK_KOFF EQU 0                  ; Token-kind byte offset.
+TK_POFF EQU 1                  ; Source-part ordinal byte offset.
+TK_SOFF EQU 2                  ; Source-relative token offset word.
+TK_LOFF EQU 4                  ; Lexeme-buffer pointer word.
+TK_LOFF1 EQU 6                 ; Raw lexeme-length byte.
+TK_VOFF EQU 7                  ; Decoded numeric-value word.
+TK_RECB EQU 9                  ; Total published token-record size.
 
 ;@ROUTINE IN A,HL,DE OUT A,IX,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-TK_RESET:
+TK_RESET:                      ; Enter source-part range initialization.
 ; Preserve all proposed state until end - begin proves the half-open range does
 ; not wrap. HL becomes the part length when subtraction succeeds.
-PUSH AF
-PUSH HL
-PUSH DE
-EX   DE,HL
-OR   A
-SBC  HL,DE
-JR   C,.RBSRANGE
+PUSH AF                        ; Preserve the proposed source-part ordinal.
+PUSH HL                        ; Preserve the proposed range start.
+PUSH DE                        ; Preserve the proposed exclusive range end.
+EX   DE,HL                     ; Put end in HL and start in DE.
+OR   A                         ; Clear carry before unsigned range subtraction.
+SBC  HL,DE                    ; Calculate the proposed part length.
+JR   C,.RBSRANGE               ; Reject an end below the start atomically.
 ; Commit the validated length, then recover end, begin and ordinal from stack.
-LD   (TK_SEND),HL
-POP  DE
-POP  HL
-POP  AF
-LD   (TK_SPART),A
-LD   (TK_SRCBA),HL
+LD   (TK_SEND),HL              ; Publish the validated source length.
+POP  DE                        ; Restore the caller's end value for its contract.
+POP  HL                        ; Restore and retain the absolute memory base.
+POP  AF                        ; Restore the source-part ordinal.
+LD   (TK_SPART),A              ; Publish the part used in tokens and service reads.
+LD   (TK_SRCBA),HL             ; Publish the memory-backed fallback base.
 ; Both physical read position and logical diagnostic offset begin at zero.
-XOR  A
-LD   (TK_SCURS),A
-LD   (TK_SCURS+1),A
-LD   (TK_SOSTA),A
-LD   (TK_SOSTA+1),A
+XOR  A                         ; Construct the cleared offset and state value.
+LD   (TK_SCURS),A              ; Clear the physical read cursor low byte.
+LD   (TK_SCURS+1),A            ; Clear its high byte.
+LD   (TK_SOSTA),A              ; Clear the logical diagnostic offset low byte.
+LD   (TK_SOSTA+1),A            ; Clear its high byte.
 ; No token has appeared on the line, no synthetic EOL is pending and no error
 ; or previous record kind survives into the new part.
-LD   (TK_LHTOK),A
-LD   (TK_EPEND),A
-LD   (TK_ESTAT),A
-LD   (TK_REC+TK_KOFF),A
-LD   IX,TK_REC
-RET
-.RBSRANGE:
+LD   (TK_LHTOK),A              ; Mark the new physical line as token-free.
+LD   (TK_EPEND),A              ; Clear the synthetic-EOL pending flag.
+LD   (TK_ESTAT),A              ; Clear the previous lexical error status.
+LD   (TK_REC+TK_KOFF),A        ; Seed the public record with repeatable EOF.
+LD   IX,TK_REC                 ; Return the stable token-record address.
+RET                            ; Report reset success with carry clear.
+.RBSRANGE:                     ; Unwind a reversed proposed interval.
 ; Restore the caller's proposed values without publishing any of them.
-POP  DE
-POP  HL
-POP  AF
-.BSRANGE:
-LD   A,TK_SBSRA
-SCF
-RET
+POP  DE                        ; Restore the proposed exclusive end.
+POP  HL                        ; Restore the proposed start.
+POP  AF                        ; Restore the proposed part ordinal.
+.BSRANGE:                      ; Return the public bad-source-range status.
+LD   A,TK_SBSRA                ; Select the reversed-range diagnostic.
+SCF                            ; Mark reset as failed.
+RET                            ; Leave all published tokenizer state unchanged.
 
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-TK_SPEEK:
+TK_SPEEK:                      ; Enter non-consuming source-byte lookup.
 ; Compare the current relative cursor with the validated part length. Equality
 ; is EOF; a greater cursor is impossible while tokenizer invariants hold.
-LD   HL,(TK_SCURS)
-LD   DE,(TK_SEND)
-OR   A
-SBC  HL,DE
-JR   Z,.SPEOF
-ADD  HL,DE
-.SRCPEEKB:
+LD   HL,(TK_SCURS)             ; Load the relative physical read cursor.
+LD   DE,(TK_SEND)              ; Load the validated part length.
+OR   A                         ; Clear carry before cursor-minus-length.
+SBC  HL,DE                    ; Set zero exactly at end of part.
+JR   Z,.SPEOF                  ; Report EOF without calling the source service.
+ADD  HL,DE                    ; Restore the relative cursor value in HL.
+.SRCPEEKB:                     ; Invoke the configured source-byte provider.
 ; The service receives the part ordinal and logical offset. PEEK never advances
 ; either cursor or copies the returned byte into the token buffer.
-LD   A,(TK_SPART)
-CALL TK_SREAD
-OR   A
-RET
-.SPEOF:
-SCF
-RET
+LD   A,(TK_SPART)              ; Supply the current source-part ordinal.
+CALL TK_SREAD                  ; Read the byte at A:HL without consuming it.
+OR   A                         ; Normalize carry clear while preserving the byte.
+RET                            ; Return the source byte in A.
+.SPEOF:                        ; Report end of the current half-open interval.
+SCF                            ; Distinguish EOF from a real byte.
+RET                            ; Leave both source cursors unchanged.
 ;@@ATOM_SOURCE_READ_BEGIN@@
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-TK_SREAD:
+TK_SREAD:                      ; Enter the replaceable source-read implementation.
 ; Memory-backed fallback: translate the logical offset to an absolute address.
-LD   DE,(TK_SRCBA)
-ADD  HL,DE
-LD   A,(HL)
-OR   A
-RET
+LD   DE,(TK_SRCBA)             ; Load the checked-core memory range base.
+ADD  HL,DE                    ; Translate the logical offset to a memory address.
+LD   A,(HL)                    ; Fetch the requested immutable source byte.
+OR   A                         ; Return it with carry clear and zero classified.
+RET                            ; Preserve no provider state in the tokenizer.
 ;@@ATOM_SOURCE_READ_END@@
 
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-TK_STAKE:
+TK_STAKE:                      ; Enter consuming source-byte transfer.
 ; Preserve BC because callers often use it as a length, radix or loop counter.
-PUSH BC
-CALL TK_SPEEK
-JR   C,.STEOF
+PUSH BC                        ; Preserve caller length, radix or loop state.
+CALL TK_SPEEK                  ; Read the current byte without advancing.
+JR   C,.STEOF                  ; Report EOF without changing cursors or buffer.
 ; Save the byte while both cursors advance. TK_SCURS selects the next source
 ; byte; TK_SOSTA is the logical offset reported for the next token.
-LD   D,A
-LD   HL,(TK_SCURS)
-INC  HL
-LD   (TK_SCURS),HL
-LD   HL,(TK_SOSTA)
-INC  HL
-LD   (TK_SOSTA),HL
+LD   D,A                       ; Preserve the consumed byte during cursor updates.
+LD   HL,(TK_SCURS)             ; Load the physical read cursor.
+INC  HL                        ; Advance to the next source byte.
+LD   (TK_SCURS),HL             ; Publish the new physical cursor.
+LD   HL,(TK_SOSTA)             ; Load the logical diagnostic offset.
+INC  HL                        ; Advance its one-byte source position.
+LD   (TK_SOSTA),HL             ; Publish the next token-start offset.
 ; Append the byte at TK_TBUF + current count. TK_STAKE itself permits the count
 ; to wrap: bounded token scanners reject the 256th byte immediately afterwards,
 ; while comment scanning deliberately discards buffered bytes and needs no length.
-LD   A,(TK_BCNT)
-LD   C,A
-LD   B,0
-LD   HL,TK_TBUF
-ADD  HL,BC
-LD   A,D
-LD   (HL),A
+LD   A,(TK_BCNT)               ; Load the tentative token's raw byte count.
+LD   C,A                       ; Move it into the low offset byte.
+LD   B,0                       ; Zero-extend the buffer index.
+LD   HL,TK_TBUF                ; Point at the start of the token buffer.
+ADD  HL,BC                    ; Select the next tentative byte slot.
+LD   A,D                       ; Restore the consumed source byte.
+LD   (HL),A                    ; Append it to the tentative lexeme.
 ; TK_PREV supports the apostrophe ambiguity after a name such as AF'.
-LD   (TK_PREV),A
-LD   A,(TK_BCNT)
-INC  A
-LD   (TK_BCNT),A
-LD   A,D
-POP  BC
+LD   (TK_PREV),A               ; Retain it for quote/apostrophe disambiguation.
+LD   A,(TK_BCNT)               ; Reload the raw byte count.
+INC  A                         ; Include the newly appended byte, possibly wrapping.
+LD   (TK_BCNT),A               ; Publish the new tentative count.
+LD   A,D                       ; Return the consumed byte to the caller.
+POP  BC                        ; Restore caller loop/radix state.
 ; Return the consumed byte and normalise carry clear through OR.
-OR   A
-RET
-.STEOF:
-POP  BC
-SCF
-RET
+OR   A                         ; Normalize carry clear and classify zero.
+RET                            ; Return after both cursors and buffer agree.
+.STEOF:                        ; Unwind a consume attempted at EOF.
+POP  BC                        ; Restore caller state.
+SCF                            ; Report that no byte was consumed.
+RET                            ; Leave all tokenizer cursors unchanged.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
-TK_BEG:
+TK_BEG:                        ; Enter tentative-token initialization.
 ; Start a tentative token. Until TK_CMT runs, the public record still describes
 ; the preceding successful token.
-LD   HL,TK_TBUF
-LD   (TK_SPTR),HL
-LD   HL,(TK_SOSTA)
-LD   (TK_SOFF1),HL
+LD   HL,TK_TBUF                ; Point tentative lexeme storage at its fixed buffer.
+LD   (TK_SPTR),HL              ; Save the pointer for later record publication.
+LD   HL,(TK_SOSTA)             ; Capture the current logical source offset.
+LD   (TK_SOFF1),HL             ; Preserve it as this token's diagnostic start.
 ; Clear raw byte count, tentative length and decoded numeric value.
-XOR  A
-LD   (TK_BCNT),A
-LD   (TK_SLEN),A
-LD   (TK_SVAL),A
-LD   (TK_SVAL+1),A
-RET
+XOR  A                         ; Construct cleared tentative token fields.
+LD   (TK_BCNT),A               ; Clear the number of consumed raw bytes.
+LD   (TK_SLEN),A               ; Clear the publishable lexeme length.
+LD   (TK_SVAL),A               ; Clear the decoded value low byte.
+LD   (TK_SVAL+1),A             ; Clear its high byte.
+RET                            ; Leave the previous public record untouched.
 
 ;@ROUTINE IN A OUT A,IX,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
-TK_CMT:
+TK_CMT:                        ; Enter atomic token-record publication.
 ; Publish all record fields only after the scanner has accepted the token.
-LD   (TK_REC+TK_KOFF),A
-LD   A,(TK_SPART)
-LD   (TK_REC+TK_POFF),A
-LD   HL,(TK_SOFF1)
-LD   (TK_REC+TK_SOFF),HL
-LD   HL,(TK_SPTR)
-LD   (TK_REC+TK_LOFF),HL
-LD   A,(TK_SLEN)
-LD   (TK_REC+TK_LOFF1),A
-LD   HL,(TK_SVAL)
-LD   (TK_REC+TK_VOFF),HL
+LD   (TK_REC+TK_KOFF),A        ; Publish the accepted token kind.
+LD   A,(TK_SPART)              ; Load the current source-part ordinal.
+LD   (TK_REC+TK_POFF),A        ; Publish the token's part identity.
+LD   HL,(TK_SOFF1)             ; Load the saved tentative token offset.
+LD   (TK_REC+TK_SOFF),HL       ; Publish its source-relative position.
+LD   HL,(TK_SPTR)              ; Load the tentative lexeme-buffer pointer.
+LD   (TK_REC+TK_LOFF),HL       ; Publish the lexeme location.
+LD   A,(TK_SLEN)               ; Load the accepted raw lexeme length.
+LD   (TK_REC+TK_LOFF1),A       ; Publish its one-byte length.
+LD   HL,(TK_SVAL)              ; Load the decoded numeric value or zero.
+LD   (TK_REC+TK_VOFF),HL       ; Publish the token value word.
 ; Return a stable record pointer and mirror its kind into A. OR also clears carry.
-LD   IX,TK_REC
-LD   A,(TK_REC+TK_KOFF)
-OR   A
-RET
+LD   IX,TK_REC                 ; Return the stable public record address.
+LD   A,(TK_REC+TK_KOFF)        ; Mirror its published kind into A.
+OR   A                         ; Clear carry and classify EOF kind zero.
+RET                            ; Return the complete token atomically.
 
 ;@ROUTINE IN A OUT A,IX,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_FIN:
+TK_FIN:                        ; Enter ordinary non-EOL token finalization.
 ; A completed non-EOL token marks this physical line as non-empty.
-PUSH AF
-LD   A,1
-LD   (TK_LHTOK),A
-POP  AF
-JR   TK_CMT
+PUSH AF                        ; Preserve the accepted token kind.
+LD   A,1                       ; Construct the line-has-token state.
+LD   (TK_LHTOK),A              ; Ensure the following line ending emits EOL.
+POP  AF                        ; Restore the accepted token kind.
+JR   TK_CMT                   ; Publish the complete token record.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,SIGN,PARITY,ZERO
-TK_FAIL:
+TK_FAIL:                       ; Enter atomic lexical-failure publication.
 ; Retain the lexical status, then rewind both cursors to the token's first byte.
 ; This makes failure atomic with respect to source consumption and leaves the
 ; previously published token record untouched.
-LD   (TK_ESTAT),A
-LD   HL,(TK_SOFF1)
-LD   (TK_SCURS),HL
-LD   (TK_SOSTA),HL
-LD   A,(TK_SPART)
-LD   (TK_EPART),A
-LD   HL,(TK_SOFF1)
-LD   (TK_EOFF),HL
+LD   (TK_ESTAT),A              ; Publish the detailed lexical status.
+LD   HL,(TK_SOFF1)             ; Reload the tentative token's first offset.
+LD   (TK_SCURS),HL             ; Rewind physical reads to that byte.
+LD   (TK_SOSTA),HL             ; Rewind logical diagnostics to the same byte.
+LD   A,(TK_SPART)              ; Load the current part ordinal.
+LD   (TK_EPART),A              ; Publish the error's source-part identity.
+LD   HL,(TK_SOFF1)             ; Reload the stable error offset.
+LD   (TK_EOFF),HL              ; Publish its low and high bytes.
 ; Reload the saved status after using A for the part ordinal.
-LD   A,(TK_ESTAT)
-SCF
-RET
+LD   A,(TK_ESTAT)              ; Return the original lexical status in A.
+SCF                            ; Mark tokenization as failed.
+RET                            ; Preserve the previous public token record.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-TK_ILETT:
+TK_ILETT:                      ; Enter ASCII-letter classification.
 ; ASCII case-folding by bit 5 maps A-Z and a-z into the same 0..25 interval.
 ; Carry from CP 26 is the routine's "is letter" result; A itself is restored.
-PUSH BC
-LD   C,A
-OR   $20
-SUB  $61
-CP   26
-LD   A,C
-POP  BC
-RET
+PUSH BC                        ; Preserve caller BC while using C as scratch.
+LD   C,A                       ; Save the original byte for return.
+OR   $20                       ; Fold uppercase ASCII into the lowercase range.
+SUB  $61                       ; Map lowercase A..Z to 0..25.
+CP   26                        ; Carry denotes an index inside that interval.
+LD   A,C                       ; Restore the caller's original byte.
+POP  BC                        ; Restore caller BC without changing flags.
+RET                            ; Return the letter result in carry.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-TK_INBEG:
+TK_INBEG:                      ; Enter name-start classification.
 ; A name may begin with an ASCII letter or underscore.
-CALL TK_ILETT
-RET  C
-CP   $5F
-JR   Z,TK_CYES
-OR   A
-RET
+CALL TK_ILETT                  ; Accept either case of an ASCII letter.
+RET  C                         ; Return accepted with the original byte in A.
+CP   $5F                       ; Otherwise test underscore.
+JR   Z,TK_CYES                ; Return the shared carry-set result when equal.
+OR   A                         ; Clear carry for every other byte.
+RET                            ; Return not-a-name-start.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-TK_INB:
+TK_INB:                        ; Enter name-continuation classification.
 ; Continuation additionally permits decimal digits.
-CALL TK_INBEG
-RET  C
-CP   $30
-JR   C,TK_CNO
-CP   $39+1
-RET  C
-TK_CNO:
-OR   A
-RET
-TK_CYES:
-SCF
-RET
+CALL TK_INBEG                  ; First accept letters and underscore.
+RET  C                         ; Preserve the accepted result.
+CP   $30                       ; Compare remaining bytes with ASCII zero.
+JR   C,TK_CNO                 ; Bytes below zero are not continuations.
+CP   $39+1                     ; Carry now denotes decimal digits 0..9.
+RET  C                         ; Return accepted for a digit.
+TK_CNO:                        ; Return a false classifier result.
+OR   A                         ; Clear carry while preserving A.
+RET                            ; Report rejection.
+TK_CYES:                       ; Return a true classifier result.
+SCF                            ; Set carry while preserving A.
+RET                            ; Report acceptance.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-TK_HDIGI:
+TK_HDIGI:                      ; Enter hexadecimal-digit decoding.
 ; Convert one ASCII hexadecimal digit to 0..15. Carry set means valid.
-CP   $30
-JR   C,.HEXNO
-CP   $39+1
-JR   C,.HDECIMAL
-OR   $20
-SUB  $61
-CP   6
-JR   NC,.HEXNO
-ADD  A,10
-SCF
-RET
-.HDECIMAL:
-SUB  $30
-SCF
-RET
-.HEXNO:
-OR   A
-RET
+CP   $30                       ; Reject bytes below ASCII zero.
+JR   C,.HEXNO                  ; Return carry clear for that range.
+CP   $39+1                     ; Is the byte an ASCII decimal digit?
+JR   C,.HDECIMAL               ; Decode it through the decimal path.
+OR   $20                       ; Fold uppercase A..F to lowercase.
+SUB  $61                       ; Map A..F to candidate values 0..5.
+CP   6                         ; Accept only that six-value interval.
+JR   NC,.HEXNO                 ; Reject G and every later byte.
+ADD  A,10                     ; Convert the letter index to 10..15.
+SCF                            ; Mark the decoded hexadecimal digit as valid.
+RET                            ; Return its nibble value in A.
+.HDECIMAL:                     ; Decode an ASCII decimal digit.
+SUB  $30                       ; Convert character 0..9 to numeric 0..9.
+SCF                            ; Mark the decoded digit as valid.
+RET                            ; Return its nibble value in A.
+.HEXNO:                        ; Return invalid-hexadecimal classification.
+OR   A                         ; Clear carry while leaving a diagnostic value in A.
+RET                            ; Report rejection.
 
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_SNAME:
+TK_SNAME:                      ; Enter global/private name scanning.
 ; Global names allow eight raw bytes. A private name allows nine because its
 ; leading period is scope syntax rather than part of the eight-character name.
-LD   C,8
-CALL TK_SPEEK
-CP   $2E
-JR   NZ,.SNGLBL
-LD   C,9
-CALL TK_STAKE
+LD   C,8                       ; Set the raw limit for an eight-character global.
+CALL TK_SPEEK                  ; Inspect the first tentative source byte.
+CP   $2E                       ; Does a leading period select private scope?
+JR   NZ,.SNGLBL                ; Use global rules when no period is present.
+LD   C,9                       ; Permit period plus eight private payload bytes.
+CALL TK_STAKE                  ; Consume and buffer the private marker.
 ; A period by itself is not a name; the next byte must satisfy name-begin rules.
-CALL TK_SPEEK
-JP   C,TK_IB
-CALL TK_INBEG
-JP   NC,TK_IB
-LD   B,1
-JR   .SNLOOP
-.SNGLBL:
-LD   B,0
-.SNLOOP:
+CALL TK_SPEEK                  ; Inspect the first private payload byte.
+JP   C,TK_IB                   ; Diagnose a period at end of part.
+CALL TK_INBEG                  ; Require a legal first name character.
+JP   NC,TK_IB                  ; Diagnose a bare or malformed private prefix.
+LD   B,1                       ; Count the already consumed period.
+JR   .SNLOOP                  ; Enter the common continuation scan.
+.SNGLBL:                       ; Begin an ordinary global-name scan.
+LD   B,0                       ; No raw source byte has been consumed yet.
+.SNLOOP:                       ; Accept one legal name byte per iteration.
 ; B is the accepted raw length. Stop before the first non-name byte so the next
 ; tokenizer call can classify it independently.
-CALL TK_SPEEK
-JR   C,.SNDONE
-CALL TK_INB
-JR   NC,.SNDONE
-INC  B
+CALL TK_SPEEK                  ; Inspect the next source byte without consuming it.
+JR   C,.SNDONE                 ; Finish a name that reaches end of part.
+CALL TK_INB                    ; Classify a legal name continuation.
+JR   NC,.SNDONE                ; Leave the first delimiter for the next token.
+INC  B                         ; Include this accepted raw byte in the length.
 ; C is the maximum raw length for the selected global/private form. Comparing
 ; after increment detects the ninth significant byte before consuming it.
-LD   A,C
-CP   B
-JR   C,TK_NTLON
-CALL TK_STAKE
-JR   .SNLOOP
-.SNDONE:
+LD   A,C                       ; Load the selected maximum raw length.
+CP   B                         ; Carry means the new byte exceeds that limit.
+JR   C,TK_NTLON                ; Fail before consuming the overlong byte.
+CALL TK_STAKE                  ; Append the accepted name byte and advance.
+JR   .SNLOOP                  ; Continue until delimiter or EOF.
+.SNDONE:                       ; Publish the complete accepted name lexeme.
 ; Names carry their original bytes and no decoded value.
-LD   A,B
-LD   (TK_SLEN),A
-LD   A,TK_NAME
-JP   TK_FIN
-TK_NTLON:
-LD   A,TK_SNTLO
-JP   TK_FAIL
+LD   A,B                       ; Move the raw lexeme length into A.
+LD   (TK_SLEN),A               ; Save it for token-record publication.
+LD   A,TK_NAME                 ; Select the name token kind.
+JP   TK_FIN                    ; Mark the line non-empty and publish atomically.
+TK_NTLON:                      ; Return an overlong-name lexical failure.
+LD   A,TK_SNTLO                ; Select the name-too-long status.
+JP   TK_FAIL                   ; Rewind to the token start and preserve prior record.
 
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_SDLED:
+TK_SDLED:                      ; Enter digit-led literal/name scanning.
 ; Scan the entire digit-led name-continuation sequence first. This lets Intel
 ; suffix forms such as 0FFFFH remain one token and makes malformed forms fail as
 ; a unit instead of splitting into a decimal token followed by a name.
-LD   B,0
-.SDLLOOK:
-CALL TK_SPEEK
-JR   C,.SDLSELEC
-CALL TK_INB
-JR   NC,.SDLSELEC
-CALL TK_STAKE
-INC  B
+LD   B,0                       ; Start the raw candidate length at zero.
+.SDLLOOK:                      ; Consume the complete name-character run.
+CALL TK_SPEEK                  ; Inspect the next byte without advancing.
+JR   C,.SDLSELEC               ; End-of-part terminates the candidate.
+CALL TK_INB                    ; Accept letters, digits and underscore in the run.
+JR   NC,.SDLSELEC              ; Leave the first delimiter unconsumed.
+CALL TK_STAKE                  ; Append the accepted source byte.
+INC  B                         ; Increase the raw candidate length.
 ; A wrapped count means 256 bytes were consumed. The buffer has 256 slots, but
 ; the token record has only an eight-bit length, so that lexeme cannot publish.
-JP   Z,TK_INUMB
-JR   .SDLLOOK
-.SDLSELEC:
+JP   Z,TK_INUMB                ; Diagnose a wrapped 256-byte candidate.
+JR   .SDLLOOK                 ; Continue scanning the candidate.
+.SDLSELEC:                     ; Choose decimal or Intel-suffix interpretation.
 ; Save the tentative raw length, then inspect the final byte for H or B without
-; regard to case. TK_CMT is the only routine that publishes record fields.
-LD   A,B
-LD   (TK_SLEN),A
-PUSH BC
-LD   HL,TK_TBUF
-LD   C,B
-LD   B,0
-ADD  HL,BC
-DEC  HL
-LD   A,(HL)
-POP  BC
-AND  $DF
+; regard to case. Successful scanned tokens publish their record fields through
+; TK_CMT.
+LD   A,B                       ; Preserve the complete raw candidate length.
+LD   (TK_SLEN),A               ; Save it for any successful token publication.
+PUSH BC                        ; Preserve the raw length while calculating an index.
+LD   HL,TK_TBUF                ; Point at the first candidate byte.
+LD   C,B                       ; Move the byte count into the low offset register.
+LD   B,0                       ; Zero-extend it for address arithmetic.
+ADD  HL,BC                    ; Point one byte beyond the candidate.
+DEC  HL                        ; Select the candidate's final source byte.
+LD   A,(HL)                    ; Load the possible Intel suffix.
+POP  BC                        ; Restore the raw length in B.
+AND  $DF                       ; Fold a lowercase suffix to uppercase ASCII.
 ; C selects decimal (0), binary (1) or hexadecimal (4). Bit 2 is also a cheap
 ; hexadecimal discriminator used by the prefix scanner below.
-LD   C,0
-CP   $48
-JR   Z,.SDLHEX
-CP   $42
-JR   NZ,.SDLPREPA
-INC  C
-JR   .SDLSUFFI
-.SDLHEX:
-LD   C,4
-.SDLSUFFI:
+LD   C,0                       ; Default to unsuffixed decimal conversion.
+CP   $48                       ; Does the final byte contain H?
+JR   Z,.SDLHEX                 ; Select hexadecimal suffix conversion.
+CP   $42                       ; Does the final byte contain B?
+JR   NZ,.SDLPREPA              ; Otherwise convert the whole run as decimal.
+INC  C                         ; Select binary using discriminator value one.
+JR   .SDLSUFFI                ; Exclude the recognized suffix from conversion.
+.SDLHEX:                       ; Select hexadecimal suffix conversion.
+LD   C,4                       ; Bit 2 marks the hexadecimal conversion path.
+.SDLSUFFI:                     ; Remove the suffix from the digit count.
 ; Exclude the suffix itself from the number of digits to convert.
-DEC  B
-.SDLPREPA:
+DEC  B                         ; Count only the digits preceding H or B.
+.SDLPREPA:                     ; Initialize the selected conversion loop.
 ; Every form requires at least one digit before an optional suffix.
-LD   A,B
-OR   A
-JP   Z,TK_INUMB
-LD   (TK_DSEEN),A
-LD   IX,(TK_SPTR)
-LD   HL,0
-LD   A,C
-OR   A
-JR   Z,.SDLDECIM
-CP   1
-JR   Z,.SDLBINAR
-.SDLHLOOP:
+LD   A,B                       ; Inspect the number of digits to convert.
+OR   A                         ; A suffix by itself is not a number.
+JP   Z,TK_INUMB                ; Reject it as one complete malformed literal.
+LD   (TK_DSEEN),A              ; Store the remaining-digit loop count.
+LD   IX,(TK_SPTR)              ; Start conversion at the first buffered byte.
+LD   HL,0                      ; Initialize the sixteen-bit accumulator.
+LD   A,C                       ; Load the base discriminator.
+OR   A                         ; Zero selects ordinary decimal.
+JR   Z,.SDLDECIM               ; Enter the decimal conversion loop.
+CP   1                         ; One selects Intel binary suffix.
+JR   Z,.SDLBINAR               ; Enter the binary conversion loop.
+.SDLHLOOP:                     ; Convert one Intel hexadecimal digit.
 ; Hexadecimal accumulation is value = value*16 + digit. Any high nibble already
 ; set before the shift proves the result would exceed 16 bits.
-LD   A,(IX+0)
-CALL TK_HDIGI
-JP   NC,TK_INUMB
-LD   E,A
-LD   A,H
-AND  $F0
-JP   NZ,TK_NOVER
-ADD  HL,HL
-ADD  HL,HL
-ADD  HL,HL
-ADD  HL,HL
-LD   A,L
-OR   E
-LD   L,A
-INC  IX
+LD   A,(IX+0)                  ; Load the next raw digit byte.
+CALL TK_HDIGI                  ; Decode 0..9 or A..F to a nibble.
+JP   NC,TK_INUMB               ; Reject any non-hexadecimal byte in the run.
+LD   E,A                       ; Preserve the decoded low nibble.
+LD   A,H                       ; Inspect the accumulator's high byte.
+AND  $F0                       ; Any occupied high nibble would shift past bit 15.
+JP   NZ,TK_NOVER               ; Report exact sixteen-bit overflow.
+ADD  HL,HL                    ; Multiply the accumulator by two.
+ADD  HL,HL                    ; Multiply it by four.
+ADD  HL,HL                    ; Multiply it by eight.
+ADD  HL,HL                    ; Multiply it by sixteen.
+LD   A,L                       ; Load the cleared low nibble.
+OR   E                         ; Merge the decoded digit into bits 0..3.
+LD   L,A                       ; Publish the new accumulator low byte.
+INC  IX                        ; Advance to the next buffered digit.
 ; TK_DSEEN counts unconverted digits for all three suffix/decimal loops.
-LD   A,(TK_DSEEN)
-DEC  A
-LD   (TK_DSEEN),A
-JR   NZ,.SDLHLOOP
-JR   .SDLFIN
-.SDLBINAR:
+LD   A,(TK_DSEEN)              ; Load the remaining hexadecimal digit count.
+DEC  A                         ; Account for the digit just converted.
+LD   (TK_DSEEN),A              ; Publish the reduced count.
+JR   NZ,.SDLHLOOP              ; Continue until the suffix boundary.
+JR   .SDLFIN                  ; Publish the completed numeric value.
+.SDLBINAR:                     ; Convert one Intel binary digit.
 ; Binary accepts only ASCII 0 or 1. Carry from the doubling detects bit 16.
-LD   A,(IX+0)
-SUB  $30
-JP   C,TK_INUMB
-CP   2
-JP   NC,TK_INUMB
-LD   E,A
-ADD  HL,HL
-JP   C,TK_NOVER
-LD   A,L
-OR   E
-LD   L,A
-INC  IX
-LD   A,(TK_DSEEN)
-DEC  A
-LD   (TK_DSEEN),A
-JR   NZ,.SDLBINAR
-JR   .SDLFIN
-.SDLDECIM:
+LD   A,(IX+0)                  ; Load the next raw digit byte.
+SUB  $30                       ; Map ASCII zero and one to numeric values.
+JP   C,TK_INUMB                ; Reject bytes below ASCII zero.
+CP   2                         ; Accept only values zero or one.
+JP   NC,TK_INUMB               ; Reject all other bytes in the candidate.
+LD   E,A                       ; Preserve the decoded bit.
+ADD  HL,HL                    ; Shift the accumulator left by one.
+JP   C,TK_NOVER                ; Carry reports an overflowing seventeenth bit.
+LD   A,L                       ; Load the low accumulator byte.
+OR   E                         ; Merge the decoded bit into bit zero.
+LD   L,A                       ; Publish the new accumulator value.
+INC  IX                        ; Advance to the next buffered digit.
+LD   A,(TK_DSEEN)              ; Load the remaining binary digit count.
+DEC  A                         ; Account for the digit just converted.
+LD   (TK_DSEEN),A              ; Publish the reduced count.
+JR   NZ,.SDLBINAR              ; Continue until the suffix boundary.
+JR   .SDLFIN                  ; Publish the completed numeric value.
+.SDLDECIM:                     ; Convert one unsuffixed decimal digit.
 ; Reject a non-decimal byte anywhere before the optional suffix.
-LD   A,(IX+0)
-SUB  $30
-JP   C,TK_INUMB
-CP   10
-JP   NC,TK_INUMB
-LD   C,A
+LD   A,(IX+0)                  ; Load the next raw candidate byte.
+SUB  $30                       ; Convert ASCII zero..nine to 0..9.
+JP   C,TK_INUMB                ; Reject bytes below ASCII zero.
+CP   10                        ; Is the converted byte a decimal digit?
+JP   NC,TK_INUMB               ; Reject letters or underscore in the run.
+LD   C,A                       ; Preserve the decoded decimal digit.
 ; Before multiplying by ten, compare the accumulator with 6553. At equality the
 ; final digit may be at most five, the exact 65,535 boundary.
-LD   A,H
-CP   $19
-JR   C,.SDLDACCU
-JP   NZ,TK_NOVER
-LD   A,L
-CP   $99
-JR   C,.SDLDACCU
-JP   NZ,TK_NOVER
-LD   A,C
-CP   6
-JP   NC,TK_NOVER
-.SDLDACCU:
+LD   A,H                       ; Compare the accumulator with 1999H (6553).
+CP   $19                       ; A smaller high byte is always safe to multiply.
+JR   C,.SDLDACCU               ; Skip the remaining boundary checks.
+JP   NZ,TK_NOVER               ; A larger high byte must overflow on multiplication.
+LD   A,L                       ; High bytes are equal; compare the low byte.
+CP   $99                       ; 99H is the low byte of decimal 6553.
+JR   C,.SDLDACCU               ; A smaller accumulator remains safe.
+JP   NZ,TK_NOVER               ; A larger accumulator must overflow.
+LD   A,C                       ; At exactly 6553, inspect the final digit.
+CP   6                         ; Only digits zero through five remain within 65535.
+JP   NC,TK_NOVER               ; Reject six through nine as overflow.
+.SDLDACCU:                     ; Accumulate one proved decimal digit.
 ; Compute value*10 + digit as two doublings, a third doubling, then add the saved
 ; value*2 and the zero-extended digit.
-LD   D,0
-LD   E,C
-ADD  HL,HL
-LD   B,H
-LD   C,L
-ADD  HL,HL
-ADD  HL,HL
-ADD  HL,BC
-ADD  HL,DE
-INC  IX
-LD   A,(TK_DSEEN)
-DEC  A
-LD   (TK_DSEEN),A
-JR   NZ,.SDLDECIM
-.SDLFIN:
+LD   D,0                       ; Zero-extend the decoded digit into DE.
+LD   E,C                       ; Retain that digit while C becomes arithmetic scratch.
+ADD  HL,HL                    ; Form value times two.
+LD   B,H                       ; Save the high byte of value times two.
+LD   C,L                       ; Save its low byte.
+ADD  HL,HL                    ; Form value times four.
+ADD  HL,HL                    ; Form value times eight.
+ADD  HL,BC                    ; Add value times two to obtain value times ten.
+ADD  HL,DE                    ; Add the decoded decimal digit.
+INC  IX                        ; Advance to the next buffered candidate byte.
+LD   A,(TK_DSEEN)              ; Load the remaining decimal digit count.
+DEC  A                         ; Account for the digit just converted.
+LD   (TK_DSEEN),A              ; Publish the reduced count.
+JR   NZ,.SDLDECIM              ; Continue through the complete raw run.
+.SDLFIN:                       ; Publish a successfully decoded numeric value.
 ; A successful numeric token publishes its decoded 16-bit value.
-LD   (TK_SVAL),HL
-TK_FNUMB:
-LD   A,TK_NUMBE
-JP   TK_FIN
+LD   (TK_SVAL),HL              ; Save the decoded sixteen-bit value.
+TK_FNUMB:                      ; Publish a numeric token from prepared fields.
+LD   A,TK_NUMBE                ; Select the numeric token kind.
+JP   TK_FIN                    ; Mark the line non-empty and commit the record.
 
 ;@ROUTINE IN BC OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_SBASE:
+TK_SBASE:                      ; Enter prefix hexadecimal/binary scanning.
 ; Scan a prefix form. Entry B already counts '$' or '%'; C is 4 for hex and 1
 ; for binary. HL accumulates the decoded value and TK_DSEEN records whether at
 ; least one digit followed the prefix.
-LD   HL,0
-XOR  A
-LD   (TK_DSEEN),A
-.SBLOOP:
+LD   HL,0                      ; Initialize the sixteen-bit accumulator.
+XOR  A                         ; Construct the no-digit-seen state.
+LD   (TK_DSEEN),A              ; Clear the prefix digit-presence flag.
+.SBLOOP:                       ; Inspect and accumulate one digit per iteration.
 ; Preserve the accumulator across PEEK, which uses HL for the source cursor.
-PUSH HL
-CALL TK_SPEEK
-POP  HL
-JR   C,.SBEOF
-LD   D,A
+PUSH HL                        ; Preserve the accumulator across source lookup.
+CALL TK_SPEEK                  ; Inspect the next source byte.
+POP  HL                        ; Restore the accumulator without changing flags.
+JR   C,.SBEOF                  ; Finish or reject a prefix at end of part.
+LD   D,A                       ; Preserve the raw byte for delimiter validation.
 ; Bit 2 distinguishes hexadecimal from binary without another base constant.
-BIT  2,C
-JR   Z,.SBDIGIT
-CALL TK_HDIGI
-JR   NC,.SBDONE
-JR   .SBDIGIT1
-.SBDIGIT:
-SUB  $30
-JR   C,.SBDONE
-CP   2
-JR   NC,.SBDONE
-.SBDIGIT1:
-LD   E,A
+BIT  2,C                       ; Is this the hexadecimal prefix path?
+JR   Z,.SBDIGIT                ; Decode an Atom binary digit when clear.
+CALL TK_HDIGI                  ; Decode a hexadecimal nibble.
+JR   NC,.SBDONE                ; A non-digit terminates the prefix candidate.
+JR   .SBDIGIT1                ; Accumulate the valid nibble.
+.SBDIGIT:                      ; Decode an Atom binary digit.
+SUB  $30                       ; Map ASCII zero and one to 0 and 1.
+JR   C,.SBDONE                 ; A byte below zero terminates the candidate.
+CP   2                         ; Accept only the two binary digit values.
+JR   NC,.SBDONE                ; Any other byte terminates the candidate.
+.SBDIGIT1:                     ; Accumulate one normalized digit from A.
+LD   E,A                       ; Preserve the digit while shifting the accumulator.
 ; Hex shifts four places after proving its high nibble clear; binary shifts once
 ; and uses carry as the 17th-bit overflow indication.
-BIT  2,C
-JR   Z,.SBSHIFT
-LD   A,H
-AND  $F0
-JR   NZ,TK_NOVER
-ADD  HL,HL
-ADD  HL,HL
-ADD  HL,HL
-ADD  HL,HL
-JR   .SBMERGE
-.SBSHIFT:
-ADD  HL,HL
-JR   C,TK_NOVER
-.SBMERGE:
+BIT  2,C                       ; Select hexadecimal or binary shift width.
+JR   Z,.SBSHIFT                ; Binary requires one left shift.
+LD   A,H                       ; Inspect the accumulator's high byte.
+AND  $F0                       ; A set high nibble would overflow on four shifts.
+JR   NZ,TK_NOVER               ; Report a value above sixteen bits.
+ADD  HL,HL                    ; Multiply hexadecimal accumulation by two.
+ADD  HL,HL                    ; Multiply it by four.
+ADD  HL,HL                    ; Multiply it by eight.
+ADD  HL,HL                    ; Multiply it by sixteen.
+JR   .SBMERGE                 ; Merge the decoded hexadecimal nibble.
+.SBSHIFT:                      ; Shift binary accumulation by one bit.
+ADD  HL,HL                    ; Make room for the new low bit.
+JR   C,TK_NOVER                ; Carry reports an overflowing seventeenth bit.
+.SBMERGE:                      ; Merge the normalized digit into the low bits.
 ; E is a normalised digit, so OR is equivalent to addition into cleared low bits.
-LD   A,L
-OR   E
-LD   L,A
-PUSH HL
-CALL TK_STAKE
-POP  HL
-INC  B
+LD   A,L                       ; Load the accumulator's cleared low bits.
+OR   E                         ; Merge the normalized digit.
+LD   L,A                       ; Publish the updated accumulator.
+PUSH HL                        ; Preserve it across source consumption.
+CALL TK_STAKE                  ; Append and advance past the accepted digit.
+POP  HL                        ; Restore the accumulator.
+INC  B                         ; Increase the raw prefix-token length.
 ; Reject byte 256 because its wrapped count cannot be represented in the token
 ; record, even though that byte itself occupied the buffer's final slot.
-JR   Z,TK_INUMB
-LD   A,1
-LD   (TK_DSEEN),A
-JR   .SBLOOP
-.SBDONE:
+JR   Z,TK_INUMB                ; Reject a wrapped 256-byte raw token.
+LD   A,1                       ; Construct the digit-seen state.
+LD   (TK_DSEEN),A              ; Remember that the prefix has at least one digit.
+JR   .SBLOOP                  ; Continue until delimiter or EOF.
+.SBDONE:                       ; Validate the first non-digit after a prefix value.
 ; A prefix requires at least one accepted digit. If the following byte could be
 ; part of a name, reject the complete token rather than silently splitting it.
-LD   A,(TK_DSEEN)
-OR   A
-JR   Z,TK_INUMB
-LD   A,D
-CALL TK_INB
-JR   C,TK_INUMB
-JR   .SBFIN
-.SBEOF:
-LD   A,(TK_DSEEN)
-OR   A
-JR   Z,TK_INUMB
-.SBFIN:
-LD   (TK_SVAL),HL
-TK_FNLEN:
+LD   A,(TK_DSEEN)              ; Has the prefix accepted any digit?
+OR   A                         ; Zero means bare '$' or '%'.
+JR   Z,TK_INUMB                ; Reject the bare prefix.
+LD   A,D                       ; Restore the first non-digit byte.
+CALL TK_INB                    ; Could it continue a digit-led name?
+JR   C,TK_INUMB                ; Reject rather than split an ambiguous run.
+JR   .SBFIN                   ; Publish the complete prefix value.
+.SBEOF:                        ; Validate a prefix candidate at end of part.
+LD   A,(TK_DSEEN)              ; Inspect whether any digit was accepted.
+OR   A                         ; A bare prefix remains invalid at EOF.
+JR   Z,TK_INUMB                ; Diagnose it as malformed numeric input.
+.SBFIN:                        ; Save a complete prefix numeric value.
+LD   (TK_SVAL),HL              ; Retain the decoded sixteen-bit accumulator.
+TK_FNLEN:                      ; Publish a numeric token with raw length from B.
 ; Character literals share this finish path after placing their decoded byte in
 ; TK_SVAL; B supplies the raw lexeme length in both cases.
-LD   A,B
-LD   (TK_SLEN),A
-JR   TK_FNUMB
-TK_INUMB:
+LD   A,B                       ; Move the raw lexeme length into A.
+LD   (TK_SLEN),A               ; Save it in the tentative token fields.
+JR   TK_FNUMB                 ; Publish the numeric token.
+TK_INUMB:                      ; Return malformed-numeric status.
 ; Invalid syntax and overflow are distinct diagnostics.
-LD   A,TK_SINUM
-JP   TK_FAIL
-TK_NOVER:
-LD   A,TK_SNOVE
-JP   TK_FAIL
+LD   A,TK_SINUM                ; Select invalid numeric syntax.
+JP   TK_FAIL                   ; Rewind and preserve the previous public record.
+TK_NOVER:                      ; Return numeric-overflow status.
+LD   A,TK_SNOVE                ; Select the sixteen-bit overflow diagnostic.
+JP   TK_FAIL                   ; Rewind and preserve the previous public record.
 
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC
-TK_SSTRI:
+TK_SSTRI:                      ; Enter quoted-string scanning and validation.
 ; B counts the complete raw token, including quotes and escape bytes. Consume the
 ; opening quote, then validate each byte without decoding the stored lexeme.
-LD   B,0
-CALL TK_STAK1
-JP   C,TK_FAIL
-.SSLOOP:
-CALL TK_STAK1
-JP   C,TK_FAIL
-CALL TK_ILEND
-JR   Z,TK_USTRI
+LD   B,0                       ; Start the complete raw token length at zero.
+CALL TK_STAK1                  ; Consume and count the opening quote.
+JP   C,TK_FAIL                 ; Publish any EOF or length failure atomically.
+.SSLOOP:                       ; Validate one raw string byte per iteration.
+CALL TK_STAK1                  ; Consume and count the next source byte.
+JP   C,TK_FAIL                 ; Translate EOF or length overflow to failure.
+CALL TK_ILEND                  ; Is this byte CR or LF?
+JR   Z,TK_USTRI                ; A physical line ending cannot terminate a string.
 ; Raw control bytes and DEL are never valid inside a quoted string.
-CP   $20
-JR   C,TK_IB
-CP   $7F
-JR   NC,TK_IB
-CP   $22
-JR   Z,.SSDONE
+CP   $20                       ; Compare with the first printable ASCII byte.
+JR   C,TK_IB                   ; Reject other raw control bytes.
+CP   $7F                       ; Compare with DEL.
+JR   NC,TK_IB                  ; Reject DEL and all bytes above printable ASCII.
+CP   $22                       ; Is this the closing double quote?
+JR   Z,.SSDONE                 ; Finish after its already counted raw byte.
 ; Ordinary printable bytes need no further work. Backslash introduces either a
 ; table escape or the special two-digit hexadecimal escape.
-CP   $5C
-JR   NZ,.SSLOOP
-CALL TK_STAK1
-JP   C,TK_FAIL
-CP   $78
-JR   Z,.SHESCAPE
-CALL TK_DESCA
-JR   C,TK_IESCA
-JR   .SSLOOP
-.SHESCAPE:
+CP   $5C                       ; Is this an escape-introducing backslash?
+JR   NZ,.SSLOOP                ; Continue for an ordinary printable byte.
+CALL TK_STAK1                  ; Consume and count the escape selector.
+JP   C,TK_FAIL                 ; Diagnose an escape cut off by EOF or length.
+CP   $78                       ; Does lowercase x introduce a hex escape?
+JR   Z,.SHESCAPE               ; Validate exactly two hexadecimal digits.
+CALL TK_DESCA                  ; Validate a standard one-character escape.
+JR   C,TK_IESCA                ; Diagnose an unsupported selector.
+JR   .SSLOOP                  ; Continue after the complete escape.
+.SHESCAPE:                     ; Validate the two digits following backslash-x.
 ; Both hexadecimal digits must be present and valid; their decoded value is left
 ; to the later statement emitter because string tokens retain raw source bytes.
-CALL TK_STAK1
-JP   C,TK_FAIL
-CALL TK_HDIGI
-JR   NC,TK_IESCA
-CALL TK_STAK1
-JP   C,TK_FAIL
-CALL TK_HDIGI
-JR   NC,TK_IESCA
-JR   .SSLOOP
-.SSDONE:
+CALL TK_STAK1                  ; Consume and count the high hexadecimal digit.
+JP   C,TK_FAIL                 ; Diagnose a truncated escape or full buffer.
+CALL TK_HDIGI                  ; Require a hexadecimal value 0..15.
+JR   NC,TK_IESCA               ; Reject an invalid first digit.
+CALL TK_STAK1                  ; Consume and count the low hexadecimal digit.
+JP   C,TK_FAIL                 ; Diagnose a truncated escape or full buffer.
+CALL TK_HDIGI                  ; Require another hexadecimal value 0..15.
+JR   NC,TK_IESCA               ; Reject an invalid second digit.
+JR   .SSLOOP                  ; Resume raw string scanning.
+.SSDONE:                       ; Publish the complete raw quoted lexeme.
 ; The closing quote has already been consumed and counted.
-LD   A,B
-LD   (TK_SLEN),A
-LD   A,TK_STRIN
-JP   TK_FIN
+LD   A,B                       ; Move the complete raw length into A.
+LD   (TK_SLEN),A               ; Save it for public token-record publication.
+LD   A,TK_STRIN                ; Select the string token kind.
+JP   TK_FIN                    ; Mark the line non-empty and publish atomically.
 
 ;@ROUTINE IN B OUT A,B,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_STAK1:
+TK_STAK1:                      ; Enter bounded string-byte consumption.
 ; Consume one string byte and increment its raw length. A zero result after INC
 ; means 256 bytes were attempted and the fixed token buffer is full.
-CALL TK_STAKE
-JR   C,.STEOF
-INC  B
-RET  NZ
-LD   A,TK_SSTLO
-SCF
-RET
-.STEOF:
+CALL TK_STAKE                  ; Consume and buffer one raw string byte.
+JR   C,.STEOF                  ; Convert source EOF to unterminated-string status.
+INC  B                         ; Increase the complete raw string length.
+RET  NZ                        ; Return the consumed byte while length remains valid.
+LD   A,TK_SSTLO                ; A wrapped count denotes a 256-byte raw token.
+SCF                            ; Mark the string as too long.
+RET                            ; Let the caller route status through TK_FAIL.
+.STEOF:                        ; Return EOF while inside a string token.
 ; EOF while a string scanner expects another byte is an unterminated string.
-LD   A,TK_SUSTR
-SCF
-RET
-TK_IESCA:
-LD   A,TK_SIESC
-JP   TK_FAIL
-TK_USTRI:
-LD   A,TK_SUSTR
-JP   TK_FAIL
-TK_UCHAR:
-LD   A,TK_SUCHA
-JP   TK_FAIL
-TK_ICHAR:
-LD   A,TK_SICHA
-JP   TK_FAIL
-TK_IB:
-LD   A,TK_SIB
-JP   TK_FAIL
+LD   A,TK_SUSTR                ; Select unterminated-string status.
+SCF                            ; Mark bounded consumption as failed.
+RET                            ; Return for atomic failure publication.
+TK_IESCA:                      ; Publish invalid-escape status.
+LD   A,TK_SIESC                ; Select the unsupported-escape diagnostic.
+JP   TK_FAIL                   ; Rewind to the token start.
+TK_USTRI:                      ; Publish unterminated-string status.
+LD   A,TK_SUSTR                ; Select the missing-closing-quote diagnostic.
+JP   TK_FAIL                   ; Rewind to the opening quote.
+TK_UCHAR:                      ; Publish unterminated-character status.
+LD   A,TK_SUCHA                ; Select the missing character quote diagnostic.
+JP   TK_FAIL                   ; Rewind to the opening apostrophe.
+TK_ICHAR:                      ; Publish invalid-character status.
+LD   A,TK_SICHA                ; Select malformed character contents.
+JP   TK_FAIL                   ; Rewind to the opening apostrophe.
+TK_IB:                         ; Publish invalid-input-byte status.
+LD   A,TK_SIB                  ; Select the general invalid-byte diagnostic.
+JP   TK_FAIL                   ; Rewind and preserve the previous token record.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,A
-TK_SCOMM:
-.SCLOOP:
+TK_SCOMM:                      ; Enter semicolon-comment consumption.
+.SCLOOP:                       ; Discard one non-line-ending byte per iteration.
 ; Discard comment bytes but leave CR/LF unconsumed. The ordinary line-ending path
 ; emits EOL only when TK_LHTOK records an earlier token on this physical line.
-CALL TK_SPEEK
-RET  C
-CALL TK_ILEND
-RET  Z
-CALL TK_STAKE
-JR   .SCLOOP
-
-;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IY
-TK_NEXT:
-.NEXTLOOP:
-; Begin a tentative token at the current offset, then classify its first byte.
-CALL TK_BEG
-CALL TK_SPEEK
-JP   C,.ATEOF
-CP   $20
-JR   Z,.SKIPB
-CP   $09
-JR   Z,.SKIPB
-CP   $0A
-JP   Z,.LF
-CP   $0D
-JP   Z,.CRLF
-CP   $3B
-JR   Z,.COMMENT
-; Period always begins a private name; the name scanner diagnoses a bare period.
-CP   $2E
-JP   Z,TK_SNAME
-CP   $22
-JP   Z,TK_SSTRI
-CP   $27
-JP   Z,.APOSTROP
-CP   $24
-JR   Z,.DOLLAR
-CP   $25
-JR   Z,.PERCENT
-CP   $3C
-JP   Z,.LSHIFT
-CP   $3E
-JP   Z,.RSHIFT
-CP   $30
-JR   C,.TRYNAME
-CP   $39+1
-JP   C,TK_SDLED
-.TRYNAME:
-; Remaining ASCII name-start bytes enter the name scanner.
-CALL TK_INBEG
-JP   C,TK_SNAME
-; Single-byte punctuation is a compact (character, token-kind) table. Shifts,
-; quotes, '$' and '%' were separated above because they require lookahead.
-LD   HL,TK_PTABL
-LD   B,TK_PCNT
-.PLOOP:
-CP   (HL)
-INC  HL
-JR   Z,.PUNCTUAT
-INC  HL
-DJNZ .PLOOP
-JR   TK_IB
-.PUNCTUAT:
-LD   C,(HL)
-CALL TK_STAKE
-LD   A,1
-JR   .FPUNCTUA
-.SKIPB:
-; Spaces and tabs separate tokens but never appear in a token record.
-CALL TK_STAKE
-JR   .NEXTLOOP
-.COMMENT:
-CALL TK_SCOMM
-JR   .NEXTLOOP
-.DOLLAR:
-; Consume '$' and inspect the next byte. A valid hexadecimal digit selects a
-; prefixed number; otherwise a standalone '$' denotes the current location.
-CALL TK_STAKE
-CALL TK_SPEEK
-JR   C,.CLOCATIO
-LD   B,A
-CALL TK_HDIGI
-JR   C,.DNUMBER
-; A following name-continuation byte makes the entire numeric-looking form
-; invalid, preventing '$G' from becoming current-location followed by a name.
-LD   A,B
-CALL TK_INB
-JP   C,TK_INUMB
-.CLOCATIO:
-LD   A,1
-LD   (TK_SLEN),A
-LD   A,TK_CUR
-JP   TK_FIN
-.DNUMBER:
-; Raw length already includes '$'; bit 2 in C selects hexadecimal accumulation.
-LD   B,1
-LD   C,4
-JP   TK_SBASE
-.PERCENT:
-; Percent begins binary only when followed by 0 or 1. Otherwise it is the
-; remainder operator, subject to the leaked-host-directive guard below.
-CALL TK_STAKE
-CALL TK_SPEEK
-JR   C,.PTOK
-CP   $30
-JR   Z,.PNUMBER
-CP   $31
-JR   Z,.PNUMBER
-CALL TK_ILETT
-JR   NC,.PTOK
-; Before the first token on a line, "%" plus a letter can only be an unmasked
-; host directive. Reject it explicitly rather than assembling it as an expression.
-LD   A,(TK_LHTOK)
-OR   A
-JR   NZ,.PTOK
-LD   A,TK_SUDIR
-JP   TK_FAIL
-.PTOK:
-LD   A,1
-LD   (TK_SLEN),A
-LD   A,TK_PERCE
-JP   TK_FIN
-.PNUMBER:
-; Raw length already includes '%'; C=1 selects binary accumulation.
-LD   B,1
-LD   C,1
-JP   TK_SBASE
-.LSHIFT:
-LD   C,TK_LSHIF
-JR   .SHIFT
-.RSHIFT:
-LD   C,TK_RSHIF
-.SHIFT:
-; A shift operator is valid only as a doubled matching character, << or >>.
-LD   B,A
-CALL TK_STAKE
-CALL TK_SPEEK
-JP   C,TK_IB
-CP   B
-JP   NZ,TK_IB
-CALL TK_STAKE
-LD   A,2
-.FPUNCTUA:
-LD   (TK_SLEN),A
-LD   A,C
-JP   TK_FIN
-.LF:
-; LF is one-byte line ending. CR must be followed by LF and is otherwise invalid.
-CALL TK_STAKE
-LD   A,1
-LD   (TK_SLEN),A
-JR   .FINLINE
-.CRLF:
-CALL TK_STAKE
-CALL TK_SPEEK
-JP   C,TK_IB
-CP   $0A
-JP   NZ,TK_IB
-CALL TK_STAKE
-LD   A,2
-LD   (TK_SLEN),A
-.FINLINE:
-; A physical line ending clears synthetic-EOL state. If no token appeared on the
-; line, suppress EOL and continue scanning the next physical line.
-XOR  A
-LD   (TK_EPEND),A
-LD   A,(TK_LHTOK)
-OR   A
-JP   Z,.NEXTLOOP
-XOR  A
-LD   (TK_LHTOK),A
-LD   A,TK_EOL
-JP   TK_CMT
-.ATEOF:
-; EOF after a non-empty unterminated final line first publishes one synthetic
-; EOL. TK_EPEND ensures the following and all later calls return EOF instead.
-LD   A,(TK_EPEND)
-OR   A
-JR   NZ,.EMITEOF
-LD   A,(TK_LHTOK)
-OR   A
-JR   Z,.EMITEOF
-XOR  A
-LD   (TK_LHTOK),A
-INC  A
-LD   (TK_EPEND),A
-XOR  A
-LD   (TK_SLEN),A
-LD   A,TK_EOL
-JP   TK_CMT
-.EMITEOF:
-; EOF has kind and length zero; TK_CMT fills in current part and offset.
-XOR  A
-LD   (TK_SLEN),A
-JP   TK_CMT
-.APOSTROP:
-; Apostrophe is ambiguous with a character literal. At the beginning of a source
-; part or after a non-name byte, it opens a character. Directly after a name
-; byte it remains punctuation, preserving forms such as AF'.
-LD   HL,(TK_SOFF1)
-LD   A,H
-OR   L
-JR   Z,TK_SCHAR
-LD   A,(TK_PREV)
-CALL TK_INB
-JR   NC,TK_SCHAR
-; Emit the punctuation form as a one-byte token.
-CALL TK_STAKE
-LD   A,1
-LD   (TK_SLEN),A
-LD   A,TK_APOST
-JP   TK_FIN
-
-;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
-TK_SCHAR:
-; B begins at one for the opening quote. Consume the quote and first payload byte.
-; EOF or a line ending in this initial position is an unterminated character;
-; line endings reached later inside an escape are invalid escapes instead.
-LD   B,1
-CALL TK_STAKE
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_ILEND
-JP   Z,TK_UCHAR
-; An immediate closing quote is an empty character literal. Backslash enters the
-; shared escape language; an ordinary payload must be printable ASCII.
-CP   $27
-JP   Z,TK_ICHAR
-CP   $5C
-JR   Z,.SCESCAPE
-CP   $20
-JP   C,TK_IB
-CP   $7F
-JP   NC,TK_IB
-LD   (TK_SVAL),A
-JR   .SCCLOSE
-.SCESCAPE:
-; Count and decode the byte after backslash. The table form produces one value;
-; \x consumes two additional hexadecimal digits.
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CP   $78
-JR   Z,.SCHEX
-CALL TK_DESCA
-JP   C,TK_IESCA
-LD   (TK_SVAL),A
-JR   .SCCLOSE
-.SCHEX:
-; Decode high nibble first and retain it in TK_SVAL while reading the low nibble.
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_HDIGI
-JP   NC,TK_IESCA
-ADD  A,A
-ADD  A,A
-ADD  A,A
-ADD  A,A
-LD   (TK_SVAL),A
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_HDIGI
-JP   NC,TK_IESCA
-LD   HL,TK_SVAL
-OR   (HL)
-LD   (TK_SVAL),A
-.SCCLOSE:
-; Exactly one decoded byte is now present. The next raw byte must be the closing
-; apostrophe and becomes part of the published raw lexeme length.
-CALL TK_STAKE
-JP   C,TK_UCHAR
-INC  B
-CALL TK_ILEND
-JP   Z,TK_UCHAR
-CP   $27
-JP   NZ,TK_ICHAR
-JP   TK_FNLEN
-TK_RCEND:
-
-;@ROUTINE OUT A,B,HL
-TK_LLEXE:
-; Return the current token's buffered lexeme pointer and raw byte length. This is
-; intentionally a borrowed view whose lifetime ends at the next TK_NEXT call.
-LD   HL,(TK_REC+TK_LOFF)
-LD   A,(TK_REC+TK_LOFF1)
-LD   B,A
-RET
-TK_IBEG:
-TK_PTABL:
-; Single-byte punctuation table: raw ASCII byte followed by token kind.
-DB $2C,TK_COMMA
-DB $3A,TK_COLON
-DB $28,TK_LPARE
-DB $29,TK_RPARE
-DB $2B,TK_PLUS
-DB $2D,TK_MINUS
-DB $2A,TK_STAR
-DB $2F,TK_SLASH
-DB $26,TK_AMPER
-DB $5E,TK_CARET
-DB $7C,TK_PIPE
-DB $7E,TK_TILDE
-DB $27,TK_APOST
-TK_PEND:
-TK_PCNT EQU (TK_PEND-TK_PTABL)/2
-TK_ETABL:
-; Escape table pairs source byte with decoded value: 0, n, r, t, quotes and
-; backslash.
-DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C
-TK_ECNT EQU 7
-
-;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY
-TK_DESCA:
-; Search the seven fixed escape pairs. Matching CP leaves carry clear; not found
-; returns carry set without inventing a decoded byte.
-LD   HL,TK_ETABL
-LD   C,TK_ECNT
-.DELOOP:
-CP   (HL)
-JR   Z,.DEFOUND
-INC  HL
-INC  HL
-DEC  C
-JR   NZ,.DELOOP
-SCF
-RET
-.DEFOUND:
-INC  HL
-LD   A,(HL)
-RET
-
-;@ROUTINE IN A OUT A,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
-TK_ILEND:
-; Zero is set for either accepted physical line-ending byte.
-CP   $0A
-RET  Z
-CP   $0D
-RET
-TK_IEND:
-TK_CEND:
-TK_WBEG:
-; Absolute base used only by the checked memory-backed source provider.
-TK_SRCBA: DW 0
-; Relative offset of the next unread source byte and validated part length.
-TK_SCURS: DW 0
-TK_SEND: DW 0
-; Logical byte offset used for token starts and diagnostics.
-TK_SOSTA: DW 0
-; Current source-part ordinal supplied to every source-service call.
-TK_SPART: DB 0
-; Nonzero after at least one token on the current physical line.
-TK_LHTOK: DB 0
-; Nonzero after synthesizing the final EOL, preventing a second synthetic token.
-TK_EPEND: DB 0
-; Pointer to the fixed token buffer and current raw byte count.
-TK_SPTR: DW 0
-TK_BCNT: DB 0
-; Most recently consumed raw byte, used to disambiguate apostrophe.
-TK_PREV: DB 0
-; Tentative token's starting logical offset, raw length and decoded value.
-TK_SOFF1: DW 0
-TK_SLEN: DB 0
-TK_SVAL: DW 0
-; Numeric prefix/suffix scanners use this byte as digit-seen or remaining count.
-TK_DSEEN: DB 0
-; On failure the temporary length/value/count cells become status, part and
-; offset storage. The public token record remains untouched.
-TK_ESTAT EQU TK_SLEN
-TK_EPART EQU TK_SVAL
-TK_EOFF EQU TK_SVAL+1
-; Published token record, followed by its 256-byte transient lexeme buffer.
-TK_REC: DS TK_RECB
-TK_TBUF: DS 256
-TK_WEND:
+CALL TK_SPEEK                  ; Inspect the next comment byte without consuming it.
+RET  C                         ; End the comment cleanly at source-part EOF.
+CALL TK_ILEND                  ; Is the byte CR or LF?
+RET  Z                         ; Leave line endings for the main token loop.
+CALL TK_STAKE                  ; Consume and discard the ordinary comment byte.
+JR   .SCLOOP                  ; Continue to the line boundary or EOF.

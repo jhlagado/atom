@@ -107,7 +107,7 @@ whole-program static register analysis.
 
 The current checkpoint establishes the complete authority path:
 
-- `src/z80/atom.asm` and its five ordered source parts are hand-edited source;
+- `src/z80/atom.asm` and its twelve ordered source parts are hand-edited source;
 - `npm run build:native-core` uses the checked pinned core to assemble those
   parts and writes the resulting image to `assets/native-core.json`;
 - the first emitted core executes the same source to produce a second generation;

@@ -1,7 +1,8 @@
 ; ATOM NATIVE SOURCE ENTRY POINT.
 %INCLUDE "encoder.asm"               ; Recognize mnemonics, validate forms and emit opcodes.
 %INCLUDE "symbols.asm"               ; Store symbols and track unresolved references.
-%INCLUDE "tokenizer.asm"             ; Convert source bytes into lexical tokens.
+%INCLUDE "tokenizer.asm"             ; Read source bytes and scan complete lexemes.
+%INCLUDE "tokenizer-dispatch.asm"    ; Classify lexemes and publish token records.
 %INCLUDE "expression.asm"            ; Parse expressions and manage deferred values.
 %INCLUDE "expression-arithmetic.asm" ; Evaluate the arithmetic and logical operators.
 %INCLUDE "patch.asm"                 ; Locate encoded fields that need later patching.

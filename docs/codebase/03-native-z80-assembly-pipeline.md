@@ -8,8 +8,8 @@ The compiler uses a caller-supplied source service plus caller-owned symbol and
 pending arenas. Its fixed non-reentrant workspace occupies 714 bytes beside the
 code and immutable tables.
 
-`src/z80/atom.asm` selects the complete configuration. Its ten included `.asm`
-parts follow the subsystem boundaries described in the
+`src/z80/atom.asm` selects the complete configuration. Its ten logical
+subsystems occupy twelve included `.asm` files and follow the boundaries described in the
 [native source map](native-source-map.md). The checked core enables deferred
 expressions, statement parsing, output, symbol resolution and the multipart
 driver.
@@ -68,7 +68,8 @@ global reference in one part may be defined in a later part.
 
 ## Tokenizer
 
-The tokenizer begins at `TK_CBEG` in `src/z80/tokenizer.asm`.
+The tokenizer begins at `TK_CBEG` in `src/z80/tokenizer.asm` and continues in
+`src/z80/tokenizer-dispatch.asm`.
 `AtomTokenizerReset` records the part ordinal, base, length, and zero-based
 logical offset. `AtomTokenizerNext` calls `AtomSourceReadByte`, skips horizontal
 whitespace and comments, then dispatches by the returned byte. The desktop runner

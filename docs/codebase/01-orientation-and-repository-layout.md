@@ -113,14 +113,16 @@ ATOM output with the checked images and independently captured reference data.
 
 ## Native source layout
 
-`src/z80/atom.asm` is the core entry. Its ten ordered parts correspond to the
-native modules in dependency order:
+`src/z80/atom.asm` is the core entry. Its ten logical subsystems occupy twelve
+ordered source files in dependency order:
 
 ```text
 encoder
 symbols and pending references
-tokenizer
-expression evaluator
+tokenizer scanners
+tokenizer dispatch and storage
+expression grammar and bounded stacks
+expression arithmetic and storage
 patch locator
 operand parser
 output
