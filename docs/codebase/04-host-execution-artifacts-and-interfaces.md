@@ -78,9 +78,8 @@ prepared ordered project. It is used by self-host tests and can be used by an
 operating adapter that constructs the same part shape without Node filesystem
 preparation.
 
-The package currently exposes these functions directly rather than through a
-versioned `createAtomAssembler()` facade. Consumers should use the package root
-exports and avoid importing private files below `src/host/`.
+The package exposes these functions directly. Consumers should use the package
+root exports and avoid importing private files below `src/host/`.
 
 ## AZM source conversion
 
@@ -116,15 +115,14 @@ runtime dependency.
 
 | Region | Address | Bytes |
 | --- | --- | ---: |
-| Linked core, workspace, and sink stubs | `$0000..$306C` | 12,396 |
-| Free space below descriptor boundary | `$306C..$4000` | 3,988 |
+| Linked core, workspace, and sink stubs | `$0000..$3070` | 12,400 |
+| Free space below descriptor boundary | `$3070..$4000` | 3,984 |
 | Build descriptor | `$4000..$400F` | 15 |
 | Free descriptor gap | `$400F..$4100` | 241 |
-| Symbol arena | `$4100..$7500` | 13,312 |
-| Pending arena | `$7500..$8800` | 4,864 |
-| Free arena gap | `$8800..$9000` | 2,048 |
-| Maximum part descriptors | `$9000..$94FB` | 1,275 |
-| Host-free memory below proof stack | `$94FB..$FE00` | 26,885 |
+| Symbol arena | `$4100..$A000` | 24,320 |
+| Pending arena | `$A000..$C000` | 8,192 |
+| Maximum part descriptors | `$C000..$C4FB` | 1,275 |
+| Host-free memory below proof stack | `$C4FB..$FE00` | 14,597 |
 | Proof stack | `$FE00..$FF00` | 256 |
 | Reserved top page | `$FF00..$10000` | 256 |
 
@@ -223,7 +221,7 @@ the logical range, applies IMAGE records, then applies PATCH records.
 
 ## `INCBIN` bridge
 
-The source-preparation phase retains one binary snapshot keyed by source part
+The source-preparation stage retains one binary snapshot keyed by source part
 and line. When the native core submits an IMAGE byte from the lowered `DS` line,
 the runner substitutes the next byte from that snapshot. Native output
 capacity, label positions, and IMAGE count still come from the Z80 core.
@@ -407,7 +405,5 @@ await publishAtomOutputFiles([
 That call publishes exactly the two selected paths. BIN, listing, NOBJ, and COM
 bytes remain available in memory when the caller needs them.
 
-The current package root exports both high-level and advanced functions. A
-future stable host facade can wrap these calls in a versioned assembler object
-and tagged result union without changing the native core or the logical output
-boundary described here.
+The package root exports both the high-level build functions and the lower-level
+execution and artifact functions described in this chapter.

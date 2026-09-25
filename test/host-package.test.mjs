@@ -83,8 +83,8 @@ test("the packed desktop CLI installs offline and assembles without AZM or an At
     length: installedHarness.length,
     sha256: createHash("sha256").update(installedHarness).digest("hex"),
   });
-  await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
-  await fs.access(path.join(installedAtom, "docs", "phase-11-report.md"));
+  await fs.access(path.join(installedAtom, "docs", "index.md"));
+  await fs.access(path.join(installedAtom, "docs", "release-checklist.md"));
   await fs.access(path.join(installedAtom, "docs", "language-reference.md"));
   await fs.access(path.join(installedAtom, "docs", "azm-to-atom.md"));
   await fs.access(path.join(installedAtom, "docs", "codebase", "index.md"));

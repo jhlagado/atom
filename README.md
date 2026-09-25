@@ -39,8 +39,7 @@ in `.COM`, `.BIN` or `.HEX`.
 ## Documentation
 
 - [Atom books and reference](https://debug80.com/atom/)
-- [Command-line guide](docs/command-line.md)
-- [Language reference](docs/language-reference.md)
-- [Building and contributing](docs/codebase/index.md)
+- [Repository documentation](docs/index.md)
+- [Engineering manual](docs/codebase/index.md)
 
 Atom is licensed under [GPL-3.0-only](LICENSE).

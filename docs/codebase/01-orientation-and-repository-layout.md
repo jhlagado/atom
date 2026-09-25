@@ -89,13 +89,13 @@ from that generation and the retained original source.
 
 ## Repository shape
 
-The top-level repository is deliberately direct:
+The top-level repository is arranged by responsibility:
 
 ```text
 atom/
   assets/              PINNED GENERATED RUNTIME IMAGES
   bin/                 INSTALLED COMMAND-LINE ENTRY
-  docs/                PRODUCT, ABI, PHASE, AND ENGINEERING DOCUMENTATION
+  docs/                USER AND ENGINEERING DOCUMENTATION
   examples/            SHIPPED SOURCE PROJECTS
   proofs/              FROZEN CENSUSES, MEMORY MAPS, AND MEASUREMENTS
   scripts/             NATIVE-CORE AND RELEASE CHECKS
@@ -107,9 +107,9 @@ atom/
 ```
 
 The package uses JavaScript ESM and requires Node 20 or later. Debug80 Runtime
-and Z80 Tool Services are pinned standalone dependencies, bundled in the
-published package. AZM is not a dependency. Development verification compares
-ATOM output with the checked images and independently captured reference data.
+and Z80 Tool Services are pinned dependencies and bundled in the published
+package. Verification compares Atom output with checked images and fixed
+expected-result data.
 
 ## Native source layout
 
@@ -184,8 +184,8 @@ The host implementation is divided by responsibility:
    public assembly entry.
 7. `src/host/artifacts/` materializes and publishes NOBJ, binary, HEX, listing,
    and D8 output.
-8. `src/host/self-host/` and `src/host/translation/` support the independent
-   self-host and AZM comparison paths.
+8. `src/host/self-host/` and `src/host/translation/` support self-hosting and
+   source conversion.
 
 `src/host/application/assemble-atom-project.mjs` composes preparation and
 execution into the main programmatic entry. `bin/atom.mjs` adds argument
@@ -216,7 +216,7 @@ The best entry point depends on the change:
   `AtomTokenizerNext` to `TK_NEXT`, locate it under `src/z80/`, and read
   `test/tokenizer.test.mjs` beside it.
 - For expressions or forward arithmetic, begin at `AtomExpressionParseDeferred`
-  and the pending-reference rules in `docs/symbolic-parser-abi.md`.
+  and follow the pending-reference flow in Chapter 3.
 - For an instruction form, begin with the operand record in `src/host/abi.mjs`, then
   follow `AtomParserParse`, `AtomValidateForm`, and `AtomEncode`.
 - For labels or capacity, locate the `SY_` entries under `src/z80/` and read the

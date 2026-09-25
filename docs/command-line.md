@@ -128,7 +128,7 @@ atom self-host
 
 The default output is `build/atom.bin` in the current directory. Another
 positive output path can be supplied after `self-host`. Project, target, and
-definition options are disabled for this fixed proof build.
+definition options are disabled for this fixed source build.
 
 ## Options
 

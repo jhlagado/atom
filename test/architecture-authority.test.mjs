@@ -7,21 +7,22 @@ const document = (name) =>
 
 test("Atom owns its portable architecture boundary", () => {
   const architecture = document("architecture.md");
-  const services = document("tool-services.md");
 
   assert.match(architecture, /This document defines Atom's ownership/);
   assert.match(architecture, /native Z80 assembler inside a host-managed build/);
   assert.match(architecture, /AtomSourceReadByte/);
   assert.match(architecture, /Debug80 Runtime/);
-  assert.match(services, /Assembled programs receive none of Atom's/);
-  assert.match(services, /Node path handling,[\s\S]*remain outside the Z80 core/);
+  assert.match(architecture, /Filesystem access,[\s\S]*Streaming tokenization/);
 });
 
 test("source preparation has no serialized ordering format", () => {
-  const preparation = document("host-source-preparation.md");
+  const preparation = fs.readFileSync(
+    new URL("../docs/codebase/02-host-source-preparation.md", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(preparation, /no\s+intermediate file is written or read/);
-  assert.match(preparation, /accepts 1 through 255 parts/);
+  assert.match(preparation, /preparation does not write an\s+intermediate file/);
+  assert.match(preparation, /at most 255\s+parts/);
   assert.match(preparation, /deterministic depth-first postorder/);
 });
 
@@ -30,13 +31,16 @@ test("public Atom reference docs avoid historical proof vocabulary", () => {
 
   assert.doesNotMatch(publicReference, /\bAZM\b|oracle|spelling/i);
   assert.match(publicReference, /literal forms/);
-  assert.match(publicReference, /proof suite/);
+  assert.match(publicReference, /complete Z80 instruction set/);
 });
 
 test("desktop integration uses the standalone package boundary", () => {
-  const integration = document("desktop-host-integration.md");
+  const integration = fs.readFileSync(
+    new URL("../docs/codebase/04-host-execution-artifacts-and-interfaces.md", import.meta.url),
+    "utf8",
+  );
 
-  assert.match(integration, /`assembleAtomProject` is the complete Node-to-Z80 assembly entry/);
-  assert.match(integration, /Debug80 uses the same package API/);
+  assert.match(integration, /`assembleAtomProject\(\)` is the complete filesystem-to-generation entry/);
+  assert.match(integration, /A tool such as Debug80 can import `atom-z80`/);
   assert.doesNotMatch(integration, /packages\/atom|node_modules\/atom-z80/);
 });

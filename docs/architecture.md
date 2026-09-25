@@ -135,7 +135,7 @@ boundary and exact diagnostic ordinal and offset.
 
 The native profile has no path hierarchy, bank field, project JSON, conditional
 engine, or host codec. The output limit remains 18,304 bytes under the target
-map. The [Native Atom on CP/M 2.2 report](cpm22.md) contains the measured map,
+map. The [Native Atom on CP/M 2.2 guide](cpm22.md) contains the measured map,
 resolver rules, and output contract.
 
 ## Self-hosting
@@ -144,9 +144,9 @@ The authoritative Atom source is checked under `src/z80/`. Collision-checked
 semantic names are recorded in `src/z80/atom-symbols.json`. The proof runs two
 complete native builds: the checked image assembles the source, then the
 resulting Atom image assembles it again. All initialized addresses and all
-12,396 resident bytes must agree.
+12,400 resident bytes must agree.
 
 `npm run build:native-core` starts from `src/z80/atom.asm`. Every subsystem proof
 calls the checked core, and the repository contains no second native
-implementation. [The self-hosting design](self-hosting.md) records the authority
-and equivalence checks.
+implementation. [The self-hosting chapter](codebase/05-native-core-generation-and-self-hosting.md)
+explains the equivalence checks.

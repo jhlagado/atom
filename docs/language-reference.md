@@ -88,10 +88,9 @@ whose range calculation cannot be retained in the compact pending record.
 
 ## Instructions
 
-Atom accepts the complete Z80 instruction-form census used by its proof suite, including
-CB, ED, DD, and FD encodings, IX/IY displacement forms, index-half registers,
-and the undocumented `SLL` operation with the `SLS` alias. The native proof
-checks all 3,445 claimed logical forms and rejects 526 invalid forms.
+Atom accepts the complete Z80 instruction set, including CB, ED, DD and FD
+encodings, IX/IY displacement forms, index-half registers and the undocumented
+`SLL` operation with the `SLS` alias.
 
 Branch width is explicit. Atom never promotes `JR` to `JP`; a relative target
 outside -128 through 127 is an error. Enumerated operands are also checked:
@@ -120,8 +119,7 @@ valid, `LD IXH,H` is not, and the H in `LD H,(IX+1)` is the real H register.
 
 ## Assembler directives
 
-Assembler directives are bare reserved words. Dotted aliases are deliberately
-not accepted.
+Assembler directives are bare reserved words. Dotted aliases are not accepted.
 
 ```asm
 BASE EQU $4000
@@ -197,7 +195,7 @@ for a binary literal when followed by `0` or `1`, and as remainder otherwise.
 The native CP/M profile implements leading `%INCLUDE` only. It does not parse
 `%DEFINE`, conditional directives, or `INCBIN`.
 
-## Deliberate boundaries
+## Not supported
 
 Atom does not currently implement macros, op expansion, automatic branch
 promotion, dotted directives, typed layout, modules or imports with

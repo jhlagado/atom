@@ -270,8 +270,8 @@ bridge between the validated operand record and the output layer.
 | Low byte | Write bits 0 through 7 |
 | High byte | Write bits 8 through 15 |
 
-The locator remains separate from the measured Phase 1 encoder account. It
-depends only on a form that validation has already accepted.
+The locator remains separate from the encoder. It depends only on a form that
+validation has already accepted.
 
 ## Instruction validation and encoding
 

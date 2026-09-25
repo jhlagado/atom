@@ -8,19 +8,16 @@ const executable = fileURLToPath(new URL("../bin/atom.mjs", import.meta.url));
 
 const activeDocuments = [
   "README.md",
+  "docs/index.md",
   "docs/architecture.md",
+  "docs/assembly-style.md",
+  "docs/atom-object-format.md",
+  "docs/azm-to-atom.md",
   "docs/command-line.md",
   "docs/cpm22.md",
-  "docs/desktop-host-integration.md",
-  "docs/host-source-preparation.md",
   "docs/language-reference.md",
   "docs/limits.md",
-  "docs/native-driver-abi.md",
-  "docs/output-abi.md",
   "docs/release-checklist.md",
-  "docs/tec-1-deployment.md",
-  "docs/tokenizer-abi.md",
-  "docs/tool-services.md",
 ];
 
 function run(arguments_) {
@@ -53,10 +50,8 @@ test("desktop CLI help and package documentation describe the same contract", as
   const documents = await readDocuments([
     "README.md",
     "docs/command-line.md",
-    "docs/codebase/appendices/c-public-surface-and-abi-reference.md",
   ]);
   const commandGuide = documents.get("docs/command-line.md");
-  const apiAppendix = documents.get("docs/codebase/appendices/c-public-surface-and-abi-reference.md");
 
   for (const fragment of [
     "atom [options] <input.asm> [output...]",
@@ -69,14 +64,12 @@ test("desktop CLI help and package documentation describe the same contract", as
 
   for (const option of ["--project", "--output", "--target", "-DNAME", "--help", "--version"]) {
     assert.ok(commandGuide.includes(option), `command-line.md omits ${option}`);
-    assert.ok(apiAppendix.includes(option), `the public-surface appendix omits ${option}`);
   }
 
   const suffixLine = help.stdout.match(/^Output suffixes: (.+)$/m);
   assert.ok(suffixLine, "CLI help has no output-suffix contract");
   for (const suffix of suffixLine[1].split(/\s+/)) {
     assert.ok(commandGuide.includes(suffix), `command-line.md omits ${suffix}`);
-    assert.ok(apiAppendix.includes(suffix), `the public-surface appendix omits ${suffix}`);
   }
 
   assert.match(documents.get("README.md"), /With no explicit output, Atom\s+writes `build\/main\.bin`/);
@@ -105,5 +98,5 @@ test("active documentation uses platform terms rather than machine-specific desk
     assert.doesNotMatch(source, /\bspell(?:ing|ings|ed)\b/i, `${filename} uses imprecise format terminology`);
   }
   await assert.rejects(fs.access("docs/mac-host-integration.md"));
-  await fs.access("docs/desktop-host-integration.md");
+  await fs.access("docs/architecture.md");
 });

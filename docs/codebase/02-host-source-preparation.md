@@ -231,7 +231,7 @@ canonical source identities to bank ordinals. It rejects invalid banks,
 conflicting aliases, paths outside the resolved graph, and missing assignments
 when there is no default.
 
-Native Atom currently forces every part to bank zero. The general join retains
+Native Atom forces every part to bank zero. The general join retains
 the field so a later operating adapter can support wider placement. Placement
 is carried directly on each prepared part; preparation does not write an
 intermediate file.

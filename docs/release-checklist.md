@@ -1,75 +1,52 @@
 # Release checklist
 
-`npm run release:check` is the maintainer gate. It checks the pinned proof
-dependencies, runs the complete native and host suite, verifies the checked
-self-host source and native core, and repeats the desktop and
-self-host measurements. `npm publish` invokes the same gate through
-`prepublishOnly`.
+Run the complete local gate from a clean checkout:
 
-The release gate must establish:
+```sh
+npm run release:check
+npm run verify:package-census
+```
 
-- every supported instruction and invalid-form discriminator still matches the
-  frozen instruction census and reviewed expected bytes;
-- all 64 KiB proof maps, stack/canary checks, and write boundaries pass;
-- the shipped example produces its exact 19-byte image and artifact metadata;
-- the CP/M image and output-path candidates match their checked censuses;
-- native CP/M direct and `%INCLUDE` builds preserve their exact capacity,
-  rollback, BDOS, diagnostic, dependency-order, and stack proofs;
-- an npm archive installs offline without AZM and runs from an unrelated
-  directory;
-- Atom assembles its complete checked source with the pinned core;
-- that first-generation core assembles the same source identically;
-- both ATOM generations have identical initialized address sets, resident
-  bytes and recovered ABI symbols; and
-- the pinned native core matches the authoritative `.asm` source.
+The gate rebuilds the native core, native object harness and CP/M program. It
+runs the native and host test suites, installs the packed npm archive offline
+and proves two generations of self-hosting. It must finish without changing a
+checked asset or proof record.
 
-Normal builds, tests and measurements use ATOM. Historical comparison outputs
-are retained as reviewed fixture data under `test/fixtures/historical-assembly.json`;
-AZM is no longer a package or verification dependency. A new reference request
-must have independently reviewed expected bytes or rejection behavior. Tests
-must not generate their expected answers with ATOM. The source converters remain
-available, but do not execute AZM.
+Before publishing:
 
-The misleading `verify:strict-contracts` and `annotate:contracts` aliases are
-removed; static register analysis is not claimed by the replacement self-host
-checks. Successful local verification alone does not establish publication or
-completion of the separate output-range and Nucleus reconciliation work.
+1. Confirm `main` is current with its remote.
+2. Confirm the working tree is clean.
+3. Check that `package.json` has the intended version.
+4. Check that the repository and package both use `GPL-3.0-only`.
+5. Inspect the packed file list and package census.
+6. Tag the exact release commit as `v<version>`.
 
-Before publishing, also perform the repository checks that deliberately require
-network or release authority:
+Useful checks:
 
 ```sh
 git fetch origin
 git status --short --branch
 gh repo view jhlagado/atom --json visibility,licenseInfo
+npm pack --dry-run
+```
+
+If the packaged file set changed deliberately, update its checked census only
+after the files are final:
+
+```sh
+npm run update:package-census
 npm run verify:package-census
 ```
 
-The repository must be clean, the checkpoint commit must be pushed, visibility
-must be `PUBLIC`, and both repository and package metadata must say
-`GPL-3.0-only`. The package census records Atom-owned archive entries only and
-is recorded after all packaged files are frozen. Bundled dependencies retain
-their separate offline-install proof because npm may select different optional
-files on different host platforms. Compressed archive size is observational
-because gzip output can vary with the npm toolchain.
-
-Release evidence belongs in the current phase report and
-`proofs/phase-11.json`. Every number must be labelled Measured, Projected, or
-Hypothesis. A green test count alone is insufficient; record native size,
-fixed workspace, linked extent, self-host equivalence, package census, and the
-exact dependency commits.
-
 ## GitHub release
 
-A tag named `v<package-version>` starts `.github/workflows/release.yml`. The
-workflow repeats the complete release gate and package census before it creates
-a public release containing:
+Pushing a version tag starts `.github/workflows/release.yml`. The workflow
+repeats the release gate and publishes:
 
-- `ATOM.COM`, copied byte for byte from the checked CP/M asset;
-- `ATOM.manifest.json`, recording its size, digest, addresses, source commit and
-  build provenance; and
-- `SHA256SUMS`, covering the executable and manifest.
+- `ATOM.COM`
+- `ATOM.manifest.json`
+- `SHA256SUMS`
 
-The preparation script rejects a tag that differs from `package.json`, an
-incomplete commit identity or an executable that differs from its checked CP/M
-census. Do not upload a locally rebuilt substitute to an existing release.
+The manifest records the source commit, executable size, addresses and digest.
+The preparation script rejects a tag that disagrees with `package.json` or a
+CP/M executable that differs from the checked census.

@@ -113,8 +113,8 @@ The current checked image has this TPA layout:
 
 | Range | Bytes | Use |
 | --- | ---: | --- |
-| `$0100..$3BB4` | 15,029 | native core, CP/M provider, and resident state |
-| `$3BB5..$3E7F` | 715 | free resident-partition margin |
+| `$0100..$3BB8` | 15,033 | native core, CP/M provider, and resident state |
+| `$3BB9..$3E7F` | 711 | free resident-partition margin |
 | `$3E80..$3EFF` | 128 | source random-record cache |
 | `$3F00..$3FFF` | 256 | dependency-first part order |
 | `$4000..$4AF4` | 2,805 | 255 retained CP/M 8.3 names |
@@ -137,9 +137,32 @@ or disk-capacity limit before that derived maximum. On Debug80's standard CP/M
 2.2 disk, the integration suite proves a 41-part build; the memory census proves
 the complete 255-entry tables and their boundaries.
 
-The output capacity is 18,304 bytes. The representative proof uses 32 bytes of
+The output capacity is 18,304 bytes. The representative test uses 32 bytes of
 the reserved stack. These are target-profile limits, not limits of the Node
 command.
+
+## Diagnostics
+
+The CP/M program reports a native status, source-part ordinal and byte offset:
+
+```text
+Atom error 02 00 033C
+```
+
+All three fields are hexadecimal. Here, `02` means that Atom rejected a source
+statement, `00` identifies the first source part and `033C` is the zero-based
+byte offset within that file.
+
+| Status | Meaning |
+| ---: | --- |
+| `01` | Invalid build configuration |
+| `02` | Source statement rejected |
+| `03` | Undefined symbol at end of assembly |
+| `04` | Output service failure |
+| `05` | Internal invariant failure |
+
+The Node command converts the same part and offset into a filename, line and
+column. The compact CP/M program does not yet perform that conversion.
 
 ## Verification
 

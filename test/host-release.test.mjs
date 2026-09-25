@@ -13,25 +13,21 @@ const codebaseDocuments = [
   "docs/codebase/04-host-execution-artifacts-and-interfaces.md",
   "docs/codebase/05-native-core-generation-and-self-hosting.md",
   "docs/codebase/06-verification-and-maintenance.md",
-  "docs/codebase/appendices/index.md",
-  "docs/codebase/appendices/a-directory-and-file-reference.md",
-  "docs/codebase/appendices/b-build-flow-reference.md",
-  "docs/codebase/appendices/c-public-surface-and-abi-reference.md",
+  "docs/codebase/native-source-map.md",
 ];
 
 const productDocuments = [
   "README.md",
+  "docs/index.md",
   "docs/command-line.md",
   "docs/cpm22.md",
   "docs/language-reference.md",
   "docs/architecture.md",
-  "docs/desktop-host-integration.md",
-  "docs/host-source-preparation.md",
+  "docs/assembly-style.md",
+  "docs/atom-object-format.md",
+  "docs/azm-to-atom.md",
   "docs/limits.md",
-  "docs/tec-1-deployment.md",
-  "docs/tool-services.md",
   "docs/release-checklist.md",
-  "docs/phase-11-report.md",
   ...codebaseDocuments,
   "examples/hello/README.md",
 ];
@@ -87,8 +83,6 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(license, /GNU GENERAL PUBLIC LICENSE/);
 
   const native = await loadNativeAtomCore();
-  // Phase 11 is a dated checkpoint. The executable self-host proof maintains
-  // the current account without rewriting historical qualification claims.
   const selfHost = JSON.parse(await fs.readFile("proofs/phase-6.json", "utf8"));
   assert.equal(selfHost.native.codeAndTables, native.codeBytes);
   assert.equal(selfHost.native.linkedResidentExtent, native.residentExtentBytes);

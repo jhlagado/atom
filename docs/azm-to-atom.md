@@ -93,7 +93,7 @@ The converter reports an error for semantics Atom cannot preserve:
 - string-valued equates, typed `.DS`, and AZM output-range directives;
 - multi-byte single-quoted strings and escapes outside Atom's byte-string
   escape set;
-- symbols that Atom cannot spell or store; and
+- symbol formats or lengths that Atom cannot represent; and
 - any statement head that is neither an Atom instruction nor a supported
   directive.
 
@@ -118,7 +118,5 @@ with category `translation`, a stable error code, and a `diagnostic` containing
 `logicalIdentity`, `line`, and `column`. It performs no filesystem work and
 does not require AZM at runtime.
 
-The development proof assembles a representative source with AZM, converts and
-assembles it with Atom, and compares the exact initialized address set and
-every emitted byte. The installed-package proof also runs the converter from
-an offline installation where AZM is absent.
+Automated tests cover the direct mappings, every rejected language boundary and
+the installed command's no-partial-output rule.

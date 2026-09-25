@@ -55,12 +55,12 @@ the rest of the build. Private records consume space only in the current global
 scope and are evicted at the next global label. A pending reference consumes
 Measured 7 bytes until its symbol is defined and its patch has been submitted.
 
-The desktop proof map provides:
+The desktop runner provides:
 
 | Arena | Classification | Bytes | Complete records |
 | --- | --- | ---: | ---: |
-| Symbols | Measured | 13,312 | 1,664 simultaneous symbols |
-| Pending references | Measured | 4,864 | 694 simultaneous references |
+| Symbols | Measured | 24,320 | 3,040 simultaneous symbols |
+| Pending references | Measured | 8,192 | 1,170 simultaneous references |
 
 The useful source-size limit depends on symbol density and on the peak, not the
 total, number of private and unresolved records. For any target map:
@@ -102,27 +102,12 @@ The desktop runner's default execution budgets are 200,000,000 Z80 instructions
 and 2,000,000,000 T-states. Atom's measured self-build uses 120,764,193
 instructions and 1,288,845,228 T-states.
 
-`assembleResolvedAtomProject()` uses the default desktop runner arena layout unless
-the caller supplies `nativeMemoryLayout`. That option is for desktop harnesses
-and migration proof tools that need a different split of the emulated 64 KiB
-address space. It does not change the Atom source language, the Z80 core, or
-the default capacities reported above.
+`assembleResolvedAtomProject()` uses the default desktop runner arena layout
+unless the caller supplies `nativeMemoryLayout`. Native targets choose arena
+sizes that fit their own RAM map; the desktop capacities are not hardware
+requirements.
 
-## A realistic 24 KiB TEC workspace
-
-The current desktop capacities are not a TEC memory map. Fixed workspace, symbols,
-pending records, the maximum descriptor set, and a 256-byte stack total
-Measured 20,436 bytes at those capacities, leaving 4,140 bytes in a 24 KiB RAM
-budget for the operating adapter and its state. Source bytes are outside that
-account because the tokenizer reads them through `AtomSourceReadByte`.
-
-A practical TEC deployment must choose arena sizes from measured program
-density and implement the source service over its storage hardware. The linked
-fallback still supports an ordinary memory interval for small standalone
-harnesses. The deployed capacity is therefore a target configuration, not a
-claim inherited from the desktop runner.
-
-## CP/M 2.2 vertical-slice capacities
+## CP/M 2.2 capacities
 
 The native CP/M transient resolves leading `%INCLUDE` directives and produces
 one flat output profile:
@@ -155,5 +140,5 @@ each part retains the exact 65,535-byte boundary. CP/M text EOF is `$1A`. The
 adapter preflights every part and reads it through one random-record cache. The
 practical combined-source limit also depends on mounted disk capacity. The
 output starts at `$0100`, so the 18,304-byte capacity ends at `$487F`. The
-[CP/M report](cpm22.md) records resolver rules, rollback, and the execution
+[CP/M guide](cpm22.md) records resolver rules, rollback, and the execution
 account.

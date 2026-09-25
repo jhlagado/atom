@@ -1,359 +1,128 @@
 # Chapter 6 — Verification and maintenance
 
-[← Native core generation and self-hosting](05-native-core-generation-and-self-hosting.md) | [Appendices →](appendices/index.md)
+[← Native core generation and self-hosting](05-native-core-generation-and-self-hosting.md) | [Manual](index.md)
 
-Atom's verification is organized around the same boundaries as the
-implementation. Native modules run through direct Z80 entry harnesses. Host
-modules run through Node tests. Wider lanes compose preparation, native
-execution, logical output, artifacts, publication, package installation, and
-self-hosting.
+Atom tests each native subsystem at its public entries, then tests the complete
+build from source files to published artifacts. A native test checks more than
+the returned status: it also checks the return address, stack, preserved
+registers, memory guards, immutable ranges and the complete set of written
+addresses.
 
-Exact bytes are only one part of the proof. The native harnesses also check
-return PC, SP, register contracts, guards, immutable regions, complete memory
-write sets, failure atomicity, and instruction or cycle budgets.
+## Test lanes
 
-## Test organization
-
-The test directory is flat, but filenames group it into clear lanes:
-
-| Files | Boundary |
+| Tests | Boundary |
 | --- | --- |
-| `encoder.test.mjs`, `cases.mjs`, `support.mjs` | Complete instruction differential, recognition, RADIX-40, validation, and encoding |
-| `symbols.test.mjs`, `symbol-support.mjs` | Symbol packing, global/private arenas, scope eviction, and pending records |
-| `tokenizer.test.mjs`, `tokenizer-support.mjs` | Lexical surface, token commits, positions, line handling, and native memory writes |
-| `expression.test.mjs`, `expression-support.mjs` | Concrete and deferred expression semantics, stack limits, and arithmetic boundaries |
-| `parser.test.mjs`, `parser-support.mjs` | Operand classification, parsed records, deferred fields, and atomic reference publication |
-| `output.test.mjs`, `output-support.mjs` | IMAGE/PATCH order, target capacity, patch values, and sink failure paths |
-| `statements.test.mjs`, `statements-support.mjs` | Labels, equates, directives, data, strings, and statement diagnostics |
-| `integration.test.mjs`, `integration-support.mjs` | Cross-module native assembly programs |
-| `driver.test.mjs`, `driver-support.mjs` | Multipart descriptor validation, lifecycle, final undefined checks, and abort rules |
-| `host-atom-*.test.mjs` | Atom preprocessing, literals, masking, translation, and host syntax |
-| `host-resolver.test.mjs` and related project-preparation tests | Source identity, graph, placement, provenance, confinement, and capacities |
-| `host-native-atom-runner.test.mjs` | Prepared project through Debug80 and the native sink boundary |
-| `host-artifacts.test.mjs` | NOBJ, BIN, HEX, listing, and D8 rendering |
-| `host-example.test.mjs` | Shipped example through the complete CLI |
-| `host-package.test.mjs` | Packed offline install, runtime dependency, CLI, failure, `INCBIN`, and installed self-host |
-| `host-self-host.test.mjs` | Pinned image, second ATOM generation, initialized addresses and recovered ABI symbols |
-| `host-core-bootstrap.test.mjs` | Native-core verification with AZM imports forbidden |
-| `host-cpm-bootstrap.test.mjs` | CP/M image and census equality, output-candidate sizes, and an isolated-directory build with AZM imports forbidden |
-| `host-cpm-source.test.mjs` | Private CP/M link-name preparation, forward aliases, local scopes, failure cases and source-part boundaries |
-| `host-release.test.mjs` | Documentation, examples, licensing, package policy, and measured native account |
+| `encoder`, `symbols`, `tokenizer`, `expression`, `parser` | Native language machinery |
+| `output`, `statements`, `integration`, `driver` | Native output and whole-build lifecycle |
+| `host-atom-*`, `host-resolver`, `host-incbin` | Source preparation and host syntax |
+| `host-native-atom-runner` | Prepared source through the Z80 core |
+| `host-artifacts` | NOBJ, BIN, HEX, listing and D8 rendering |
+| `cpm22`, `host-cpm-*` | Native CP/M command, files and publication |
+| `native-object-harness`, `named-object-services` | Portable Z80 service adapter |
+| `host-package`, `host-release` | Installed package and release policy |
+| `host-self-host` | Two executable Atom generations |
 
-The closest test should identify the broken layer. A wider test should prove
-that the public build still observes the intended result.
-
-## Native proof harnesses
-
-Native proof harnesses load `assets/native-core.json` and supply
-guarded input and output records, source buffers, arenas, adapter state, stack,
-and sentinel return addresses. Native-core verification executes two ATOM
-generations before comparing the checked image. It does not run static
-register-contract analysis.
-
-The checked expression, parser/patch, output, statement, and driver lanes execute
-`src/z80/atom.asm` directly. They supply guarded source, record, output, key,
-symbol, pending, and logical sink regions and audit all 65,536 addresses after
-every invocation. The output and driver harnesses intercept the production
-service entries and return through the native stack; they carry no proof-only
-Z80 adapter.
-
-The support modules restore pristine memory before each invocation. They seed
-workspaces and guards with varying patterns, install the input records and
-return sentinel, step until the sentinel PC, then compare the complete
-observable state.
-
-For a direct entry, the common checks include:
-
-- the routine returned through the exact sentinel PC;
-- SP advanced by exactly the return address;
-- promised registers and IY were preserved;
-- input records and source bytes did not change;
-- two-sided guards did not change;
-- immutable code and tables did not change;
-- failure left unpublished destinations unchanged; and
-- no byte outside the declared workspace, output, or stack region changed.
-
-The full-memory audit covers all 65,536 addresses. A passing status byte cannot
-conceal a write elsewhere in the machine.
-
-The encoder lane calls the entries in
-`assets/native-core.json` and repeats the full valid and invalid differential.
-The symbol lane calls the same checked core with guarded caller-owned symbol and
-pending arenas. It checks the complete 64 KiB write set, exact return PC and SP,
-scope transitions, failure atomicity, and record-size boundaries. The tokenizer
-lane supplies a guarded source interval and repeats the complete lexical,
-diagnostic, publication, classifier, and source-boundary corpus against the
-checked core. The expression, parser/patch, output, statement, and driver lanes
-also use the checked core. No subsystem proof links or executes a second native
-image.
-
-## Frozen memory profiles
-
-Files such as `proofs/phase-1-memory.json` describe every region in a direct
-proof map. The corresponding test resolves symbolic boundaries from the checked
-native core and verifies that the regions begin at zero, meet without a gap or
-overlap, have their exact declared sizes, and end at `$10000`.
-
-Later phase profiles apply the same discipline to the symbol, tokenizer,
-expression, parser, output, statement, integration, and driver images. Code,
-immutable tables, fixed workspace, caller buffers, guards, stack, and unused
-memory remain separate accounts.
-
-## Instruction differential
-
-`test/cases.mjs` generates the complete Atom instruction corpus as source text
-plus ten-byte parsed records. For every valid case, the encoder lane:
-
-1. obtains independently captured bytes from the reviewed historical fixture;
-2. calls native `AtomFormLength` directly;
-3. calls native `AtomEncode` directly;
-4. compares length and every emitted byte; and
-5. checks the remaining guarded destination.
-
-The frozen `proofs/azm-form-census.json` fixes the denominator independently of
-the generator. It records 3,445 cases across 69 mnemonics, exact counts by
-mnemonic, and a SHA-256 of the canonical source/record pairs. The proof first
-requires the generated set to match this census, so deleting a family cannot
-leave a misleading 100% differential result.
-
-The negative lane uses captured rejection results and requires both native
-length and encoding entries to reject the corresponding record without output.
-Additional systematic records cover unknown ordinals, unused operand-class
-holes, and hidden trailing operands. Targeted cases cover the DD/FD index-half
-collision rules that are easy to encode incorrectly.
-
-`test/reference-fixtures.mjs` loads the fixed reference corpus and checks its
-content digest. The corpus records 6,788 distinct requests: 6,262 successful
-byte arrays and 526 rejections, including expression and statement cases as
-well as instructions. Its provenance identifies the pre-migration test revision
-and exact historical assembler build. Unrecorded requests fail; there is no
-assembler fallback. New tests need independently reviewed expected results.
-
-## Register and stack contracts
-
-Native public routines carry `;@ROUTINE` comments. Call sites may use
-`;@EXPECTOUT` comments where an output is explicit. These comments remain
-contract documentation. Runtime harnesses execute the checked native bytes.
-
-The annotations state inputs, outputs, possible outputs, clobbers, and flag
-effects. Runtime tests remain necessary: a static contract can describe the
-wrong implementation, and an execution test can miss an unexercised path.
-The ATOM-only core build does not establish a static-analysis guarantee.
-
-The misleading `annotate:contracts` and `verify:strict-contracts` aliases have
-been removed. `verify:native-source` checks self-hosted image reproduction.
-Any contract change requires review against the routine body and direct runtime
-proof before commit.
-
-## Execution budgets
-
-Proof manifests record measured instruction and T-state maxima plus explicit
-ceilings for public entries. Harnesses fail when an execution does not reach the
-sentinel within both budgets. Failure messages retain recent PCs, current PC,
-SP, instruction count, and cycles.
-
-The host runner applies the same principle to complete builds. Its default
-budgets are intentionally above the measured self-host run, and the self-host
-measurement pins its exact current counts. A budget change is reviewed as an
-execution-account change, not used to conceal nontermination.
-
-## Symbol, parser, and output failure proofs
-
-The stateful native modules need discriminators for partial publication:
-
-- Symbol tests fill arenas to exact capacity, attempt the next insertion, and
-  compare cursors and records.
-- Scope tests leave undefined private records or pending invariants and prove
-  that failed global transitions retain the old scope.
-- Parser tests use malformed forms with missing symbols and prove that no
-  symbol or reference appears before complete validation succeeds.
-- Output tests inject sink failures at IMAGE, PATCH, commit, and abort
-  boundaries and inspect pending records and cursor movement.
-- Statement tests combine label, expression, pending, and output failures to
-  prove exact outer category, nested status, and source position.
-- Driver tests distinguish pre-begin configuration failure from every
-  post-begin abort path.
-
-These tests protect the transactional rules that make a streaming assembler
-recoverable even though it cannot roll source input backward.
-
-## Host preparation proofs
-
-The project-preparation tests construct temporary filesystem graphs. They cover:
-
-- deterministic postorder and diamond deduplication;
-- repeated direct dependencies and complete cycle paths;
-- lexical, symlink, absolute, missing, and case-alias path failures;
-- exact part, depth, path, retained-path, and bank limits;
-- path-keyed placement independent of graph-order changes;
-- snapshot stability after filesystem mutation;
-- neutral profile separation from Atom imports;
-- `%` directive recognition without stealing binary literals or remainder;
-- definition, conditional, inactive-include, and header rules;
-- equal lengths, newline bytes, masked ranges, and source positions; and
-- confined `INCBIN` snapshots and equal-length lowering.
-
-Composed tests pass the resolved project into the native runner and check that
-an error in a dependency retains that file's logical identity rather than the
-entry file or an anonymous concatenated stream.
-
-## Native host-runner proofs
-
-`test/host-native-atom-runner.test.mjs` exercises the complete 64 KiB desktop map.
-It checks descriptor construction, the 65,535-byte source boundary, invalid
-source-service reads, read-only code, stack canaries, execution budgets, sink
-status propagation, service exceptions, target boundaries, IMAGE order, PATCH
-targets, layout high-water, and exact source diagnostics.
-
-Replacement-core tests reject empty, truncated, out-of-range, or structurally
-incomplete HEX before execution. A malicious core that requests offset
-`$FFFF` from a short part provides a discriminator for the source-service
-range check.
-
-`INCBIN` bridge tests compare every substituted byte and inject metadata count
-mismatches in both directions. Listing and D8 tests then verify that those bytes
-remain attributed to the original directive line.
-
-## Artifact and publication proofs
-
-Artifact tests independently parse the generated NOBJ, check CRC and record
-order, compare materialized bytes, verify Intel HEX text, inspect listing rows,
-and validate D8 files, segments, symbols, source units, and entry metadata.
-
-Publication tests inject failures during staging, synchronization, generation
-promotion, and `current` selection. They prove that the prior selected
-generation survives, owned temporary paths are removed, and an existing
-content-addressed generation is reused only after complete byte and artifact
-metadata verification.
-
-The shipped example supplies a small stable acceptance program. Its verifier
-checks an exact 19-byte image, Intel HEX, listing provenance, D8 structure,
-NOBJ and artifact metadata presence, and every recorded byte count and SHA-256.
-
-## Package proof
-
-`test/host-package.test.mjs` runs `npm pack`, installs the archive offline under
-a temporary prefix, and executes it from an unrelated project. The test proves
-that:
-
-- Debug80 Runtime is bundled and operational;
-- AZM is absent from the installed dependency tree;
-- the public CLI assembles valid source and `INCBIN`;
-- invalid source returns a positioned diagnostic and publishes nothing;
-- all five artifacts are present;
-- `atom self-host` reproduces the installed native core; and
-- tampering with the checked core or symbol map is detected.
-
-The same test records an exact unpacked byte count and package entry count after
-the packaged file set is frozen. Compressed gzip size remains an observation
-because it can vary with npm and compression tooling.
-
-## Self-host proof
-
-`test/host-self-host.test.mjs` is the broadest native correctness lane. It reads
-the authoritative native source, assembles it with the pinned core, constructs
-a core from that first generation, and assembles the same source again.
-
-It compares the exact initialized address set and every resident byte with the
-pinned image and second generation, and checks recovered ABI symbols between
-generations. Generator statistics, code bytes,
-workspace, resident extent, patch count, instruction count, T-states, output
-service calls, and source-read count are checked against the frozen proof
-record.
-
-## Measurements and proof records
-
-Measurement scripts print current observations rather than editing proof files:
-
-| Command | Measurement |
-| --- | --- |
-| `npm run measure` | Encoder code/data split, LD subtotal, recognition, and instruction census |
-| `npm run measure:symbols` | Symbol and pending code, records, arenas, and boundaries |
-| `npm run measure:tokenizer` | Tokenizer code, workspace, lexical coverage, and maxima |
-| `npm run measure:expression` | Expression code, stacks, semantics, and execution maxima |
-| `npm run measure:parser` | Parser code, references, classification, and execution maxima |
-| `npm run measure:output` | Output code, workspace, logical operations, and failure paths |
-| `npm run measure:statements` | Statement code, directives, diagnostics, and execution maxima |
-| `npm run measure:driver` | Driver code, descriptor limits, lifecycle, and execution maxima |
-| `npm run measure:host-native` | Linked native account, caller-owned desktop regions, and composed execution |
-| `npm run measure:self-host` | Source size, two ATOM generations, pinned-image comparison, ABI symbols and execution account |
-
-`proofs/phase-*.json` freezes reviewed observations and named budgets. A phase
-report explains their basis and classifies each number as Measured, Projected,
-or Hypothesis. When code changes, rerun the measurement after all edits settle;
-do not copy an earlier total into a new report.
-
-## Dependency pin
-
-`package.json` pins standalone Debug80 Runtime and Z80 Tool Services Git
-revisions. `scripts/verify-dependencies.mjs` checks installed package version
-ranges. It does not validate sibling repository branches or worktrees. Core,
-object and CP/M generation use ATOM, as does the CP/M output-candidate
-measurement. Historical comparisons use fixed data without an AZM dependency.
-
-This pin protects the comparison set and emulator semantics. Updating it is a
-separate reviewed dependency checkpoint with fresh native and differential
-evidence.
-
-## Maintainer commands
-
-The principal lanes are:
+Run the narrowest useful test while editing, then the complete gate before a
+commit:
 
 ```sh
-npm run test:host
+node --test test/parser.test.mjs
 npm test
-npm run verify:native-core
-npm run verify:native-source
-npm run measure:host-native
-npm run measure:self-host
 npm run release:check
 ```
 
-`npm run release:check` is the complete local maintainer gate. It runs all
-native and host tests, core and authoritative-source checks, and the final
-host and self-host measurements. `prepublishOnly` invokes the same gate.
+## Native proof maps
 
-The platform-independent census of Atom-owned npm archive entries is a separate
-release audit, not a unit test. Bundled dependencies are checked by the offline
-installation proof because their optional files can differ by host platform.
-Run the census only after packaged files are frozen:
+The JSON files under `proofs/` are machine-read measurement and memory-map
+inputs. The names retain the order in which the proof suites were introduced,
+but they are active test data rather than project history.
+
+Each memory profile accounts for all 65,536 addresses without gaps or overlaps.
+Tests resolve symbolic boundaries from the checked core and distinguish code,
+immutable tables, fixed workspace, caller buffers, guards, stack and unused
+memory.
+
+Native routines carry `;@ROUTINE` contracts. Selected call sites use
+`;@EXPECTOUT`. These comments document register and flag expectations. Runtime
+tests remain responsible for proving behaviour.
+
+## Instruction set proof
+
+`test/cases.mjs` generates the complete supported instruction corpus. The
+encoder tests call `AtomFormLength` and `AtomEncode` directly for every valid
+record, compare the exact bytes with fixed reviewed results and check that
+invalid records change no output.
+
+The checked census fixes the number and distribution of cases independently of
+the generator. This prevents a deleted instruction family from appearing as a
+successful smaller test run. New expected bytes or rejection decisions require
+independent review rather than being copied from Atom's own output.
+
+## Failure atomicity
+
+The stateful tests deliberately fail at publication boundaries:
+
+- Symbol tests fill arenas to their exact capacities.
+- Parser tests reject malformed forms before publishing references.
+- Output tests inject IMAGE, PATCH and sink failures.
+- Statement tests preserve the outer status, nested status and source position.
+- Driver tests distinguish failures before `begin` from failures that require
+  one `abort`.
+- File publication tests fail during staging and replacement, then verify that
+  the previous output survives.
+
+These checks matter because Atom streams its input and output. It cannot repair
+partially published state by making another source pass.
+
+## Measurements
+
+The measurement commands report current code size, workspace and execution
+costs:
 
 ```sh
-npm run verify:package-census
+npm run measure
+npm run measure:symbols
+npm run measure:tokenizer
+npm run measure:expression
+npm run measure:parser
+npm run measure:output
+npm run measure:statements
+npm run measure:driver
+npm run measure:host-native
+npm run measure:self-host
+npm run measure:cpm22
 ```
 
-If the package contents intentionally changed, update the ledger explicitly:
+Do not update a checked measurement by hand from an older report. Run the
+measurement against the current linked image and review both code bytes and
+writable workspace.
+
+## Generated files
+
+Edit native code only under `src/z80/`. Rebuild generated artifacts with their
+own commands:
 
 ```sh
-npm run update:package-census
+npm run build:native-core
+npm run build:native-object
+npm run build:cpm22
 ```
 
-Network and release-authority checks remain explicit:
+The corresponding `verify:*` commands rebuild in check mode and reject drift.
+The package census is updated only after the packaged files are final.
 
-```sh
-git fetch origin
-git status --short --branch
-gh repo view jhlagado/atom --json visibility,licenseInfo
-npm run verify:package-census
-```
+## Change sequence
 
-## Change workflow
+1. Identify the module that owns the behaviour.
+2. Add or select a test that distinguishes the intended result from a plausible
+   wrong one.
+3. Make one coherent change.
+4. Run the narrow test and inspect the complete observable state.
+5. Run the composed host or native lane.
+6. Rebuild any generated artifact whose source changed.
+7. Rerun affected size and execution measurements.
+8. Update this manual when an interface, file owner or build flow changes.
+9. Run `npm run release:check` before committing a release candidate.
 
-A normal change follows this sequence:
-
-1. identify the owning host or native boundary;
-2. read the corresponding chapter, ABI document, source, and closest proof;
-3. add a discriminator that would fail for the plausible wrong implementation;
-4. make one structural change;
-5. run the narrow proof and inspect exact state, not only status;
-6. run the composed host or native lane that observes the public result;
-7. regenerate checked tables, core, or self-host source when their authorities
-   changed;
-8. rerun size and execution measurements from the current linked image;
-9. update this manual when a file owner, flow, public surface, or proof lane
-   changed; and
-10. run the release gate before a release checkpoint.
-
-For native work, preserve both code bytes and writable workspace as separate
-accounts. A reduction in one is not a net saving when it moves unreported bytes
-into the other or into caller-owned RAM.
+The [release checklist](../release-checklist.md) covers repository, package and
+GitHub release checks.

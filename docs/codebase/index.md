@@ -1,13 +1,8 @@
 # Atom engineering manual
 
-This manual is a technical guide for engineers working on Atom. It follows a
-build from a source entry through host preparation, native Z80 assembly,
-append-only output, artifact rendering, publication, and self-host verification.
-It also maps the repository and identifies the tests that protect each boundary.
-
-The guide describes the codebase as it stands on 31 August 2026. The source,
-ABI documents, and executable proofs remain the final authority when a detail
-changes.
+This manual follows a build from a source entry through host preparation,
+native Z80 assembly, output, artifact rendering and self-host verification. It
+also maps the repository and the tests that protect each boundary.
 
 Atom has two implementation domains. The assembler itself is handwritten Z80
 under `src/z80/`. The Node code under `src/host/` supplies filesystem access,
@@ -24,18 +19,10 @@ behind the repository.
 - [Chapter 5 — Native core generation and self-hosting](05-native-core-generation-and-self-hosting.md)
 - [Chapter 6 — Verification and maintenance](06-verification-and-maintenance.md)
 
-## Appendices
-
-- [Appendix A — Directory and file reference](appendices/a-directory-and-file-reference.md)
-- [Appendix B — Build-flow reference](appendices/b-build-flow-reference.md)
-- [Appendix C — Public surface and ABI reference](appendices/c-public-surface-and-abi-reference.md)
-
 ## Related references
 
-- [Native source map](native-source-map.md)
-- [Atom platform contract](https://github.com/jhlagado/debug80/blob/main/docs/specifications/atom-platform-architecture.md)
+- [Documentation index](../index.md)
 - [Architecture](../architecture.md)
 - [Language reference](../language-reference.md)
 - [Native limits and capacity](../limits.md)
-- [Desktop host integration](../desktop-host-integration.md)
-- [TEC-1 deployment design](../tec-1-deployment.md)
+- [Native source map](native-source-map.md)

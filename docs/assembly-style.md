@@ -131,7 +131,7 @@ now a four-byte-cell offset.
 
 Give each workspace declaration its full meaning. State whether a word holds an
 address, index, count, tagged value payload or intermediate arithmetic result.
-Mention shared or phase-dependent uses where they matter. Keep compact assembler
+Mention shared or context-dependent uses where they matter. Keep compact assembler
 names in the source, with their explanation close by.
 
 ## Keep the narrative true

@@ -1,81 +1,15 @@
 # Chapter 5 — Native core generation and self-hosting
 
-[← Host execution, artifacts, and interfaces](04-host-execution-artifacts-and-interfaces.md) | [Verification and maintenance →](06-verification-and-maintenance.md)
+[← Host execution, artifacts and interfaces](04-host-execution-artifacts-and-interfaces.md) | [Verification and maintenance →](06-verification-and-maintenance.md)
 
-Atom keeps one authoritative Z80 implementation in `.asm` and derives the
-pinned native image used by the desktop package. Core generation executes two
-ATOM generations over the same prepared source and compares their results.
+The files under `src/z80/` are Atom's native implementation. The desktop
+package loads a generated image from `assets/native-core.json`, but that image
+is never edited by hand.
 
-The self-host proof compares complete initialized-address sets and resident
-bytes against the pinned image and across two ATOM generations. Recovered host
-ABI symbols must also agree. No second assembler runs in this build path.
+## Source entry
 
-## Native source and link entry
-
-The native implementation is maintained under `src/z80/`. Its entry is
-`atom.asm`, whose `%INCLUDE` header orders twelve source parts. Each part contains
-one native module. The final module contains six fail-closed host sink entries.
-
-The source uses Atom's bare directives and eight-character symbols. Comments
-beginning with `;@ROUTINE` and `;@EXPECTOUT` retain register-contract metadata.
-Atom ignores those comments. They retain ABI documentation; native-core
-generation does not perform static register-contract analysis.
-
-## Building the pinned core
-
-`scripts/generate-native-core.mjs` resolves `src/z80/atom.asm`, runs the checked
-core over the ordered parts, and recovers the long host ABI names through
-`src/z80/atom-symbols.json`. The newly emitted core then assembles the same
-prepared parts again.
-
-Generation fails unless both ATOM generations produce the same initialized
-address set, every resident byte and recovered ABI symbol. On success, the
-script records:
-
-- Intel HEX text;
-- every recovered global ABI address or value;
-- a SHA-256 of the HEX text; and
-- a second SHA-256 covering the HEX and the sorted symbol map.
-
-The rendered object becomes `assets/native-core.json`. The checked asset is
-part of the npm package and is the image loaded by `loadNativeAtomCore()`.
-
-The normal commands are:
-
-```sh
-npm run build:native-core
-npm run verify:native-core
-```
-
-The first command rewrites the asset. The second assembles the source afresh
-and compares the complete rendered JSON with the checked file. The release gate
-uses the check form so an unreviewed generated diff cannot be hidden by a test
-that consumes stale bytes.
-
-## Relocatable native object harness
-
-`src/host/build/object-harness-builder.mjs` composes the core with the shared
-named-object adapter. Its two platform choices are explicit: the link origin
-and the gateway implementation that carries requests to the operating
-environment. `scripts/generate-native-object-harness.mjs` calls the builder at
-origin zero with a fail-closed gateway to produce the checked package asset.
-
-For an immutable-bank profile, the builder also accepts a common-RAM workspace
-origin. The TEC proof places 12,770 bytes of code and tables at
-`$8000..$B1E1`, and 741 bytes of fixed state at `$1800..$1AE4`. It then executes
-a complete multipart assembly through independent source and output providers
-with the bank marked read-only. This is a link-time layout choice, not a runtime
-relocation table.
-
-The gateway binding, 399-byte service workspace, symbol arena, pending arena,
-descriptors, source-name table, and stack remain platform-owned parts of the
-final memory map. A launcher must initialize the fixed-state image in common
-RAM before entering the assembler.
-
-## Native source ledger
-
-The twelve content parts remain below the 65,535-byte per-part logical-offset
-limit. The thirteenth file is the entry and dependency header:
+`src/z80/atom.asm` contains the ordered `%INCLUDE` header for the twelve core
+modules:
 
 ```asm
 %INCLUDE "encoder.asm"
@@ -92,136 +26,68 @@ limit. The thirteenth file is the entry and dependency header:
 %INCLUDE "host.asm"
 ```
 
-The host resolver orders those dependencies before `atom.asm`, so the checked
-self-host project presented to the native driver has thirteen parts. The empty
-entry still has its own identity and descriptor.
+The resolver presents the twelve modules followed by the entry file, giving
+the native driver thirteen source parts. Each module remains below Atom's
+65,535-byte per-part limit.
 
-`src/z80/atom-symbols.json` records the complete original-to-short migration and
-the fixed names required by the host runner. It lets core generation recover
-long ABI names from the declarations emitted by native Atom. Global names use
-a two-letter module prefix and a semantic stem, such as `PR_PARSE` and
-`TK_RESET`. Private names use a dot plus a semantic stem and may be reused under
-different global labels.
+Native names are limited to eight significant characters. Global names use a
+two-letter module prefix, such as `PR_PARSE` or `TK_RESET`. Private labels use
+the ordinary dot prefix and may be reused in another global scope.
+`src/z80/atom-symbols.json` maps the short native names to the longer names
+used by the host API and generated asset.
 
-The authoritative source is managed by:
+## Building the checked image
 
 ```sh
 npm run build:native-core
-npm run verify:native-source
+npm run verify:native-core
 ```
 
-Changes belong in `src/z80/*.asm`. No bootstrap source generator or second native
-implementation remains in the repository.
+`scripts/generate-native-core.mjs` assembles the checked source with the
+shipped Atom core. It recovers the host-visible symbols through the symbol
+ledger and constructs a runnable core from the result. That first-generation
+core then assembles the same source again.
 
-## First Atom generation
+Generation succeeds only when both runs produce the same initialized-address
+set, resident bytes and recovered symbols. The generated JSON contains Intel
+HEX, the symbol map and digests covering both. `verify:native-core` performs
+the same work without rewriting the asset.
 
-The self-host proof resolves `src/z80/atom.asm` through the ordinary host
-project preparation and calls `assembleResolvedAtomProject()` with origin zero and
-a 16 KiB target.
+## Other native builds
 
-The pinned Atom-built native core assembles all thirteen parts. The resulting
-generation contains IMAGE and PATCH operations, symbol declarations, layout
-events, execution measurements, and a complete 12,400-byte materialized image.
+The same source is composed with different platform adapters:
 
-The proof compares that image with the memory initialized by the pinned core's
-Intel HEX through `AtomHostResidentEnd`. Equality establishes that native Atom
-reproduces the code, immutable tables, fixed workspace image, and sink stubs
-checked into the package.
+- `scripts/generate-native-object-harness.mjs` builds the named-object image.
+- `scripts/generate-cpm22.mjs` builds `assets/atom-cpm22.com`.
 
-## Recovering a runnable self-hosted core
+The object builder can place immutable code and tables separately from writable
+workspace. A platform launcher still owns source preparation, descriptors,
+symbol and pending arenas, service workspace, stack and publication policy.
 
-`createSelfHostedAtomCore()` accepts the checked symbol ledger and
-the first Atom generation. It selects declarations whose short names correspond
-to ledger globals, maps them back to original names, and requires all
-entry and range symbols needed by the runner.
+## Self-host checks
 
-The helper reconstructs the ten immutable code ranges, materializes the first
-generation, writes it as Intel HEX, and returns the same structural core shape
-accepted by `assembleResolvedAtomProject({ nativeCore })`.
+The self-host test compares three things:
 
-It also checks that:
+1. the first generated image with the checked package image;
+2. the second generated image with the first; and
+3. recovered entry points and range symbols across both generations.
 
-- every required ledger global has exactly one value;
-- every code start and end is present and ordered;
-- the materialized image begins at zero; and
-- its end equals `AtomHostResidentEnd`.
+The initialized-address comparison matters because a flat byte array cannot
+distinguish an initialized zero from reserved storage. The symbol comparison
+catches a correct byte image paired with the wrong host interface.
 
-The native runner then repeats its full replacement-core validation before
-execution.
+Run the proof directly with:
 
-## Second Atom generation
+```sh
+npm run measure:self-host
+```
 
-The first-generation core assembles the same checked source again. The proof
-compares the second materialized image with the first and compares the complete
-execution record as well.
-
-This step proves that the bytes emitted by Atom are themselves executable as
-the assembler core and reproduce the same result. It catches errors that a
-simple byte comparison with the pinned image could miss if, for example, the
-wrong symbol map or entry address were attached to otherwise equal bytes.
-
-## Retired core comparison
-
-Core generation formerly invoked an AZM translation and strict register check.
-That mandatory comparison has been removed after the earlier equivalence
-proofs. The source converter remains available, but it is not a bootstrap
-dependency. The native-object and CP/M builders also use ATOM. Historical
-comparison results are retained as fixture data; normal tests and dependency
-checks do not execute or require AZM.
-
-The two-generation check retains the initialized-address comparison. It
-distinguishes initialized zero bytes from uninitialized reservations, which a
-flat byte comparison alone would treat as the same fill value. It does not
-replace whole-program static register analysis.
-
-## Current measured self-host build
-
-The checked measurement records:
-
-| Observation | Measured value |
-| --- | ---: |
-| Flattened native statements | 8,677 |
-| Native content parts | 12 |
-| Checked resolver parts, including entry | 13 |
-| Checked source bytes | 429,128 |
-| Ledger global symbols | 876 |
-| Ledger private symbols | 441 |
-| Initialized resident bytes | 11,793 |
-| Reserved resident bytes | 607 |
-| Forward PATCH records | 1,939 |
-| Declared symbols | 1,316 |
-| Linked resident extent | 12,400 bytes |
-
-The first generation currently executes 120,764,193 instructions and
-1,288,845,228 T-states. Those values are measurements pinned by the self-host
-proof, not generic performance limits.
-
-## Authority of each comparison
-
-The self-host lane has three distinct checks:
-
-| Comparison | Faults it can expose |
-| --- | --- |
-| First ATOM image versus pinned image | Source and checked bytes or initialized address sets have drifted |
-| Second ATOM generation versus first | ATOM-emitted core cannot reproduce the assembler's bytes and write coverage |
-| Recovered ABI symbols across generations | Entry addresses, ranges or named values differ despite matching bytes |
-
-All three are required. Passing one does not imply the others.
-
-## Package self-host command
-
-The installed command exposes the first-generation build as:
+The installed package exposes the same first-generation build as:
 
 ```sh
 atom self-host
 ```
 
-It resolves the checked source shipped in the package, assembles it with the
-shipped native core, and publishes `atom.bin` beside the other artifacts. The
-package test installs a packed archive offline in an unrelated directory,
-verifies that AZM is absent, runs this command, and compares the binary with the
-installed pinned core.
-
-This installed-path proof checks packaging as well as self-assembly: required
-source parts, native asset, bundled Debug80 Runtime, package exports, and CLI
-paths must all survive the npm archive.
+Its default output is `build/atom.bin`. The package test runs this command from
+an offline installation, which also checks that the native source, checked
+image, dependencies and command paths were packaged correctly.

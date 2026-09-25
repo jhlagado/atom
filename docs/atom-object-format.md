@@ -59,8 +59,7 @@ Atom MAP revision `$41` has this payload:
 | 10 | part banks | u8[] | one zero for each part |
 
 This map records placement and source-part order without inventing runtime
-storage semantics. A future shared Debug80 object package can support the
-Nucleus and Atom map profiles behind one framing and CRC implementation.
+storage semantics.
 
 ## COMMIT
 
