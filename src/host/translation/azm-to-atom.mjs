@@ -1,4 +1,4 @@
-import { MNEMONICS } from "../../abi.mjs";
+import { MNEMONICS } from "../abi.mjs";
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 
 const mnemonicNames = new Set(MNEMONICS.filter((name) => name !== null));

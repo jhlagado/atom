@@ -1,4 +1,4 @@
-import { MNEMONICS } from "../src/abi.mjs";
+import { MNEMONICS } from "../src/host/abi.mjs";
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 import { invalidCases, systematicInvalidRecords, validCases } from "./cases.mjs";
 import { referenceBytes, referenceRejects } from "./reference-fixtures.mjs";

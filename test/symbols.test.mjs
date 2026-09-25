@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import { packRadix40 } from "../src/abi.mjs";
+import { packRadix40 } from "../src/host/abi.mjs";
 import { createSymbolHarness } from "./symbol-support.mjs";
 
 const h = await createSymbolHarness();

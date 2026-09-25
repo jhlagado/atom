@@ -14,17 +14,12 @@ the owner of a behavior quickly.
 | `package.json` | npm identity, public exports, `atom` and `azm-to-atom` binaries, package contents, dependencies, and verification scripts |
 | `LICENSE` | GPL-3.0-only license text |
 
-## `src/` root
-
-| File | Role |
-| --- | --- |
-| `src/abi.mjs` | JavaScript mnemonic and operand ordinals, parsed-record constructor, and reference RADIX-40 packer used by tests and host tooling |
-
 ## `src/host/` public surface
 
 | File | Role |
 | --- | --- |
 | `index.mjs` | Root package export surface for host assembly, artifacts, native runner, translation, and self-host helpers |
+| `abi.mjs` | JavaScript mnemonic and operand ordinals, parsed-record constructor, and reference RADIX-40 packer used by tests and host tooling |
 | `atom-assembly-error.mjs` | Structured error used by native execution, artifacts, translation, self-host helpers, and publication |
 | `package-metadata.mjs` | Single package-version authority used by the CLI and generated D8 metadata |
 
@@ -40,6 +35,14 @@ the owner of a behavior quickly.
 | File | Role |
 | --- | --- |
 | `native-atom-core.mjs` | Loads the checked core, verifies both digests and required symbols, and derives immutable code ranges and size accounts |
+
+## `src/host/build/`
+
+| File | Role |
+| --- | --- |
+| `z80-source-layout.mjs` | Reads, orders and adapts the authoritative Z80 modules for platform builds |
+| `object-harness-builder.mjs` | Reusable implementation behind the published `atom-z80/native-builder` package export |
+| `object-harness-builder.d.mts` | Type declarations for the object-harness builder export |
 
 ## `src/host/harness/`
 

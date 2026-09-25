@@ -9,16 +9,16 @@ import {
   loadNativeAtomCore,
   materializeAtomGeneration,
   writeAtomD8,
-} from "../src/host/index.mjs";
+} from "../index.mjs";
 import {
   joinNativeCoreModules,
   readNativeCoreModules,
   replaceNativeSourceRead,
   setNativeCoreOrigin,
-} from "./native-source-layout.mjs";
+} from "./z80-source-layout.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
-const repositoryRoot = resolve(scriptDirectory, "..");
+const repositoryRoot = resolve(scriptDirectory, "../../..");
 const nativeRoot = join(repositoryRoot, "src", "z80");
 const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
 const unavailableGateway = [

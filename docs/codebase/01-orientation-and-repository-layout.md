@@ -215,7 +215,7 @@ The best entry point depends on the change:
   `test/tokenizer.test.mjs` beside it.
 - For expressions or forward arithmetic, begin at `AtomExpressionParseDeferred`
   and the pending-reference rules in `docs/symbolic-parser-abi.md`.
-- For an instruction form, begin with the operand record in `src/abi.mjs`, then
+- For an instruction form, begin with the operand record in `src/host/abi.mjs`, then
   follow `AtomParserParse`, `AtomValidateForm`, and `AtomEncode`.
 - For labels or capacity, locate the `SY_` entries under `src/z80/` and read the
   relevant arena boundary tests.

@@ -8,7 +8,7 @@ import {
   NAMED_OBJECT_OPERATION,
   NAMED_OBJECT_STATUS,
 } from "@jhlagado/z80-tool-services";
-import { buildNativeObjectHarness } from "../scripts/native-object-harness-builder.mjs";
+import { buildNativeObjectHarness } from "../src/host/build/object-harness-builder.mjs";
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const encoder = new TextEncoder();

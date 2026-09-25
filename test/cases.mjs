@@ -1,4 +1,4 @@
-import { instruction, M, O } from "../src/abi.mjs";
+import { instruction, M, O } from "../src/host/abi.mjs";
 
 const IMM8 = [0, 1, 127, 128, 255];
 const IMM16 = [0, 1, 0x7fff, 0x8000, 0xffff];

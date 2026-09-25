@@ -29,8 +29,8 @@
     "./cpm22/image": "./assets/atom-cpm22.com",
     "./cpm22/census": "./proofs/cpm22-census.json",
     "./native-builder": {
-      "types": "./scripts/native-object-harness-builder.d.mts",
-      "import": "./scripts/native-object-harness-builder.mjs"
+      "types": "./src/host/build/object-harness-builder.d.mts",
+      "import": "./src/host/build/object-harness-builder.mjs"
     }
   },
   "files": [
@@ -44,10 +44,6 @@
     "examples",
     "src/z80/*.asm",
     "src/z80/atom-symbols.json",
-    "scripts/native-object-harness-builder.mjs",
-    "scripts/native-object-harness-builder.d.mts",
-    "scripts/native-source-layout.mjs",
-    "src/abi.mjs",
     "src/host",
     "LICENSE",
     "README.md"

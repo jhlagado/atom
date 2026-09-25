@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import test from "node:test";
 
-import { NATIVE_CORE_MODULES } from "../scripts/native-source-layout.mjs";
+import { NATIVE_CORE_MODULES } from "../src/host/build/z80-source-layout.mjs";
 
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",

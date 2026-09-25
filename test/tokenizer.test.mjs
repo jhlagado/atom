@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import { M } from "../src/abi.mjs";
+import { M } from "../src/host/abi.mjs";
 import { createTokenizerHarness, TOKEN, TOKEN_STATUS } from "./tokenizer-support.mjs";
 
 const h = await createTokenizerHarness();

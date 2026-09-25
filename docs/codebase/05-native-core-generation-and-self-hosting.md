@@ -54,7 +54,7 @@ that consumes stale bytes.
 
 ## Relocatable native object harness
 
-`scripts/native-object-harness-builder.mjs` composes the core with the shared
+`src/host/build/object-harness-builder.mjs` composes the core with the shared
 named-object adapter. Its two platform choices are explicit: the link origin
 and the gateway implementation that carries requests to the operating
 environment. `scripts/generate-native-object-harness.mjs` calls the builder at

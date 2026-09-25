@@ -10,7 +10,7 @@ import {
   readNativeCoreModules,
   replaceNativeSourceRead,
   setNativeCoreOrigin,
-} from "./native-source-layout.mjs";
+} from "../src/host/build/z80-source-layout.mjs";
 import { loadNativeAtomCore } from "../src/host/index.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));

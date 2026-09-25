@@ -62,11 +62,27 @@ test("the packed desktop CLI installs offline and assembles without AZM or an At
   assert.equal(createHash("sha256").update(cpmImage).digest("hex"), cpmCensus.sha256);
   assert.deepEqual(cpmImage, await fs.readFile(path.resolve("assets/atom-cpm22.com")));
   assert.deepEqual(metadata.exports["./native-builder"], {
-    types: "./scripts/native-object-harness-builder.d.mts",
-    import: "./scripts/native-object-harness-builder.mjs",
+    types: "./src/host/build/object-harness-builder.d.mts",
+    import: "./src/host/build/object-harness-builder.mjs",
   });
-  await fs.access(path.join(installedAtom, "scripts", "native-object-harness-builder.mjs"));
-  await fs.access(path.join(installedAtom, "scripts", "native-object-harness-builder.d.mts"));
+  await fs.access(path.join(installedAtom, "src", "host", "build", "object-harness-builder.mjs"));
+  await fs.access(path.join(installedAtom, "src", "host", "build", "object-harness-builder.d.mts"));
+  const builderProbe = path.join(installDirectory, "verify-native-builder.mjs");
+  await fs.writeFile(builderProbe, [
+    'import { createHash } from "node:crypto";',
+    'import { buildNativeObjectHarness } from "atom-z80/native-builder";',
+    "const built = await buildNativeObjectHarness();",
+    'process.stdout.write(JSON.stringify({ length: built.bytes.length, sha256: createHash("sha256").update(built.bytes).digest("hex") }));',
+    "",
+  ].join("\n"));
+  const probedBuilder = await run(process.execPath, [builderProbe], { cwd: installDirectory });
+  assert.equal(probedBuilder.status, 0, probedBuilder.stderr);
+  const builtHarness = JSON.parse(probedBuilder.stdout);
+  const installedHarness = await fs.readFile(path.join(installedAtom, "assets", "atom-object-harness.bin"));
+  assert.deepEqual(builtHarness, {
+    length: installedHarness.length,
+    sha256: createHash("sha256").update(installedHarness).digest("hex"),
+  });
   await fs.access(path.join(installedAtom, "docs", "phase-6-report.md"));
   await fs.access(path.join(installedAtom, "docs", "phase-11-report.md"));
   await fs.access(path.join(installedAtom, "docs", "language-reference.md"));

@@ -12,7 +12,7 @@ import {
   materializeAtomGeneration,
   resolveAtomProject,
 } from "../src/host/index.mjs";
-import { NATIVE_CORE_MODULES } from "../scripts/native-source-layout.mjs";
+import { NATIVE_CORE_MODULES } from "../src/host/build/z80-source-layout.mjs";
 
 const SELF_HOST_BUDGETS = Object.freeze({
   maxInstructions: 200_000_000,

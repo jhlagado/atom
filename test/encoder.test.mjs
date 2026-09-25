@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MNEMONICS, O, packRadix40 } from "../src/abi.mjs";
+import { MNEMONICS, O, packRadix40 } from "../src/host/abi.mjs";
 import { invalidCases, systematicInvalidRecords, validCases } from "./cases.mjs";
 import { referenceBytes, referenceRejects } from "./reference-fixtures.mjs";
 import { createHarness, extent } from "./support.mjs";
