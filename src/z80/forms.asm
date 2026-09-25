@@ -1,51 +1,34 @@
-;==============================================================================
-;  Instruction-form normalisation and publication
-;==============================================================================
+;=============================================================================
+;  Instruction-form normalisation and validation
+;=============================================================================
 ;
 ;  PURPOSE
 ;  -------
-;  Turn the parser's provisional operand record into the exact form consumed by
-;  the encoder. Resolve source conveniences, check concrete ranges, prepare
-;  deferred symbol patches and commit the validated record atomically.
+;  Turn the parser's provisional operand record into the form consumed by the
+;  encoder. Resolve source conveniences, select an accepted form and check its
+;  concrete ranges before preparing private deferred-reference records.
 ;
-;  PUBLIC ENTRY POINTS
-;  -------------------
+;  MODULE BOUNDARY
+;  ---------------
 ;
-;+---------------------------------------------------------------------------+
-;| PR_CREFE - Preflight pending references before instruction output.        |
-;|                                                                           |
-;| Entry: Public references from the most recent successful parse.           |
-;| Result: Carry clear when all references can be queued.                    |
-;| Error: Carry set, A = symbol/pending publication status.                  |
-;| Effect: Reads symbol and pending arenas without changing them.            |
-;+---------------------------------------------------------------------------+
-;
-;+---------------------------------------------------------------------------+
-;| PR_QREFE - Queue references after instruction output succeeds.            |
-;|                                                                           |
-;| Entry: DE = logical address of the emitted instruction.                   |
-;|        Public references from the most recent successful parse.           |
-;| Result: Carry clear after every pending record is appended.               |
-;| Error: Carry set, A = symbol/pending publication status.                  |
-;| Effect: Appends records to the caller-owned pending arena.                |
-;+---------------------------------------------------------------------------+
+;  This is an internal continuation of parser.asm. PR_POPE1 calls the pipeline
+;  below after syntax parsing succeeds. refs.asm owns deferred-reference
+;  publication, final commit, diagnostics, tables and shared parser workspace.
 ;
 ;  INTERNAL PIPELINE
 ;  -----------------
 ;
 ;  PR_NAALI handles accumulator aliases. PR_NNUMB assigns provisional numeric
-;  classes. PR_VCAND selects an encoder-valid form, PR_CCVAL checks concrete
-;  values, PR_FREFE prepares symbol references and PR_CMT commits the record.
+;  classes. PR_VCAND chooses a form; PR_CCVAL checks its concrete values.
+;  PR_FREFE in refs.asm then prepares deferred references.
 ;
 ;  ABI AND OWNERSHIP
 ;  -----------------
 ;
-;  The module owns the fixed parser workspace between PR_WBEG and PR_WEND. It
-;  uses the caller-owned symbol and pending arenas but does not own their memory.
-;  Calls preserve stack balance, may clobber the registers named by each routine
-;  contract, and are not reentrant. Parse and form failures publish a source
-;  position without changing the caller's destination record. Publication
-;  entries return their symbol or pending status directly.
+;  The module uses fixed parser workspace declared in refs.asm. Calls preserve
+;  stack balance, may clobber the registers named by each routine contract and
+;  are not reentrant. Form failures publish a source position without changing
+;  the caller's destination record.
 ;
 
 ;@ROUTINE OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,HL,ZERO,BC,DE
@@ -64,7 +47,7 @@ PR_NAALI:
     CP   1                           ; Does the source contain one operand?
     JR   NZ,.MAALIAS                 ; Two operands may contain explicit A.
 
-; A one-operand ADD/ADC/SBC would silently imply A, which Atom does not permit.
+; A one-operand ADD/ADC/SBC is invalid because it omits the explicit A.
 
     LD   A,(PR_SCRAT+EN_MNEM)       ; Recover the one-operand ALU mnemonic.
     CP   AT_MADD                     ; ADD requires an explicit accumulator.
@@ -98,8 +81,8 @@ PR_NAALI:
     INC  A                           ; The canonical record has one operand.
     LD   (PR_OPCNT),A                ; Publish its reduced arity.
 
-; If the removed second operand carried a deferred reference, remap its operand
-; index from one to zero and shift the unresolved mask with the record.
+; If operand one held a deferred reference, retarget it to operand zero and
+; shift the unresolved mask to match the canonical record.
 
     LD   A,(PR_UMASK)                ; Read the unresolved-operand mask.
     AND  2                           ; Did operand one carry a reference?
@@ -112,7 +95,7 @@ PR_NAALI:
     RET                              ; Continue with numeric normalisation.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS B,SIGN,PARITY,HALFCARRY,DE,HL,A
-; Rewrite build-reference operand index 1 to 0 after accumulator-alias collapse.
+; Retarget build-reference operand 1 to 0 after accumulator-alias collapse.
 
 PR_RAREF:
     XOR  A                           ; Start at build-reference index zero.
@@ -135,8 +118,8 @@ PR_RAREF:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
 ; Resolve provisional numeric classes after the mnemonic and complete operand
-; list are known. FMASK records byte-immediate candidates that may later widen;
-; CMASK records occurrences of C that may be a condition rather than register C.
+; list are known. FMASK tracks byte candidates that may widen; CMASK tracks C
+; operands that could also mean condition C.
 
 PR_NNUMB:
     XOR  A                           ; Initialise pass masks and index.
@@ -176,8 +159,8 @@ PR_NNUMB:
     JR   .NNEXT                      ; Continue with the next operand.
 .NPNUMBER:
 
-; Parenthesised numbers are absolute memory except in IN and OUT, where they are
-; the immediate eight-bit port form.
+; Parenthesised numbers mean absolute memory, except IN and OUT use them as an
+; immediate eight-bit port.
 
     LD   A,(PR_SCRAT+EN_MNEM)       ; Read the instruction mnemonic.
     CP   AT_MIN                      ; Does IN use an immediate port number?
@@ -199,8 +182,8 @@ PR_NNUMB:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO,BC,DE
 ; Convert one bare generic number according to its mnemonic and operand index.
-; Enumerated operands encode their value in the class itself. Branches select a
-; word or relative class. All remaining numbers start as flexible imm8.
+; Enumerated operands encode their value in the class itself. Branch targets
+; select word or relative classes; other numbers begin as flexible imm8.
 
 PR_NBNUM:
     LD   A,(PR_SCRAT+EN_MNEM)       ; Read the value's mnemonic context.
@@ -229,8 +212,8 @@ PR_NBNUM:
     CP   AT_MOUT                     ; OUT admits the special literal zero.
     JR   NZ,.NFLEXIBL                ; Other numbers start as flexible bytes.
 
-; OUT (C),0 has a dedicated operand class. Other OUT numbers remain byte values
-; and are validated by the complete form.
+; OUT (C),0 has a dedicated class. Other OUT values remain bytes and are
+; checked by the complete form.
 
     CALL PR_SVAL                     ; Load the concrete OUT operand value.
     LD   A,H                         ; Combine both bytes to test for zero.
@@ -255,8 +238,8 @@ PR_NBNUM:
     JR   .SENUM                      ; Store class and clear its value.
 .NRST:
 
-; RST accepts the eight vectors from 0 through 56 in steps of eight. Rotate the
-; vector index down and add the first restart class.
+; RST vectors run from 0 to 56 by eights. Shift the vector index and add
+; the first restart class.
 
     CALL PR_SVAL                     ; Load the requested restart vector.
     LD   A,H                         ; A legal vector has no high byte.
@@ -291,7 +274,7 @@ PR_NBNUM:
     ADD  A,EN_BIT0                   ; Convert the number to its enum class.
 .SENUM:
 
-; The enumerated class now carries the value, so clear the redundant word slot.
+; The enum class carries the value, so clear its redundant word slot.
 
     LD   HL,(PR_CPTR)                ; Address the selected operand class.
     LD   (HL),A                      ; Store the value-bearing enum class.
@@ -310,8 +293,8 @@ PR_NBNUM:
     RET                              ; Preserve the absolute target for now.
 .NFLEXIBL:
 
-; Begin with imm8 and remember this operand in FMASK. If no byte-form candidate
-; validates, PR_WFLEX widens every marked operand to imm16 and tries again.
+; Start with imm8 and mark this operand in FMASK. If no byte form validates,
+; PR_WFLEX widens marked values to imm16 and retries.
 
     LD   HL,(PR_CPTR)                ; Address the selected operand class.
     LD   (HL),EN_IMM8                ; Try the shortest numeric class first.
@@ -369,8 +352,8 @@ PR_IBIT:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Select an encoder-valid interpretation for the normalised record. Candidate
-; order is: provisional classes, each ambiguous C as condition, widened numeric
-; classes, then condition alternatives on the widened record. Success returns
+; order is provisional classes, ambiguous C as condition, widened numeric
+; classes, then condition alternatives for the widened record. Success returns
 ; the encoder-reported length in A.
 
 PR_VCAND:
@@ -391,15 +374,15 @@ PR_VCAND:
     JP   PR_FBEG                     ; Diagnose it at the mnemonic position.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Validate the current private instruction record without examining its values.
+; Validate the private instruction record without examining operand values.
 
 PR_VCUR:
     LD   IX,PR_SCRAT                 ; Point IX at the private record.
     JP   EN_VFORM                    ; Return the encoder validator's result.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY,HL
-; Try each operand marked in CMASK as condition C. Change only one occurrence at
-; a time, restore register C after a failed validation and stop at the first
+; Try each operand marked in CMASK as condition C. Change one candidate at a
+; time, restore register C after failure and stop at the first
 ; complete valid form.
 
 PR_TCOND:
@@ -433,7 +416,7 @@ PR_TCOND:
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS SIGN,PARITY,HALFCARRY,B,DE,HL,A
 ; Widen every flexible imm8 candidate to imm16 before the second validation
-; pass. The chosen form later determines each deferred reference's patch width.
+; pass. The chosen form determines each deferred reference's patch width.
 
 PR_WFLEX:
     XOR  A                           ; Begin with operand index zero.
@@ -457,8 +440,8 @@ PR_WFLEX:
     JR   .WLOOP                      ; Continue through the fixed three slots.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY,DE,HL,IX,IY
-; Check every resolved concrete value against its selected operand class. Values
-; with a bit in UMASK remain zero placeholders and are checked later when their
+; Check each resolved value against its selected class. UMASK bits mark
+; placeholders checked after their symbols resolve.
 ; symbols resolve.
 
 PR_CCVAL:
@@ -478,8 +461,8 @@ PR_CCVAL:
     AND  (HL)                        ; Is this value still a placeholder?
     JR   NZ,.CVNEXT                  ; Defer its range check until resolution.
 
-; Word and absolute classes need no further range conversion. Byte, relative and
-; indexed classes have class-specific checks below.
+; Word and absolute classes need no conversion. Byte, relative and indexed
+; classes need the checks below.
 
     LD   HL,(PR_CPTR)                ; Address the selected operand class.
     LD   A,(HL)                      ; Read the class that defines its range.
@@ -519,9 +502,8 @@ PR_CCVAL:
     JR   .CVNEXT                     ; Accept 0..127 and continue.
 .CRELATIV:
 
-; Convert an absolute branch target to target-(instruction address+length). The
-; 16-bit addition and subtraction deliberately wrap at $FFFF, matching the Z80
-; program counter, then the result must fit a signed byte.
+; Convert target to target-(instruction address+length). The 16-bit arithmetic
+; wraps at $FFFF like the Z80 PC; the result must fit a signed byte.
 
     CALL PR_SVAL                     ; Load the absolute branch target.
     LD   DE,(PR_IADR)                ; Load the instruction's logical address.
@@ -550,619 +532,3 @@ PR_CCVAL:
 
     CALL PR_SHVAL                    ; Store the signed displacement word.
     JR   .CVNEXT                     ; Continue checking later operands.
-
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,IY
-; Turn private build references into public symbol-reference descriptions. The
-; first pass locates the encoded field and final patch kind for each operand.
-
-PR_FREFE:
-    XOR  A
-    LD   (PR_RSCAN),A
-.LRLOOP:
-    LD   A,(PR_RBCNT)
-    LD   B,A
-    LD   A,(PR_RSCAN)
-    CP   B
-    JR   Z,.PREFEREN
-    CALL PR_BRADR
-    LD   HL,PR_BLDOP
-    ADD  HL,DE
-    LD   A,(HL)
-    LD   IX,PR_SCRAT
-    CALL PT_LOCAT
-    JR   C,.UREF
-
-; Save the locator's patch kind and byte offset while returning to the selected
-; thirteen-byte build entry.
-
-    LD   (PR_RKSCR),A
-    LD   A,B
-    LD   (PR_ROSCR),A
-    LD   A,(PR_RSCAN)
-    CALL PR_BRADR
-    LD   HL,PR_BKIND
-    ADD  HL,DE
-    LD   A,(HL)
-    CP   EX_FLO
-    JR   Z,.LLREF
-    CP   EX_FHI
-    JR   Z,.LHREF
-    LD   A,(PR_RKSCR)
-    JR   .LSKIND
-.LLREF:
-    LD   A,PT_KLB
-    JR   .LBFUNCTI
-.LHREF:
-    LD   A,PT_KHB
-.LBFUNCTI:
-
-; LOW/HIGH cannot transform relative or displacement patches. Relative fields
-; subtract an address and both field types require signed-range semantics, not
-; simple byte extraction.
-
-    PUSH AF
-    LD   A,(PR_RKSCR)
-    CP   PT_KRELA
-    JR   Z,.LBFINVAL
-    CP   PT_KDISP
-    JR   Z,.LBFINVAL
-    POP  AF
-.LSKIND:
-
-; Store the final kind and encoded-field offset in the build record.
-
-    LD   (HL),A
-    INC  HL
-    LD   A,(PR_ROSCR)
-    LD   (HL),A
-    LD   HL,PR_RSCAN
-    INC  (HL)
-    JR   .LRLOOP
-.LBFINVAL:
-    POP  AF
-.UREF:
-    LD   A,PR_SUNPA
-    JP   PR_FREF
-.PREFEREN:
-
-; Count exact missing symbol records before inserting any. When both references
-; share one key, only the first contributes to the capacity requirement.
-
-    XOR  A
-    LD   (PR_RMCNT),A
-    LD   (PR_RSKEY),A
-    LD   A,(PR_RBCNT)
-    OR   A
-    RET  Z
-    CP   2
-    JR   NZ,.PFIRST
-    CALL PR_CRKEY
-
-; Carry clear means equal keys. Convert that result to one in PR_RSKEY.
-
-    SBC  A,A
-    INC  A
-    LD   (PR_RSKEY),A
-.PFIRST:
-    XOR  A
-    LD   (PR_RSCAN),A
-    CALL PR_PREF
-    RET  C
-    LD   A,(PR_RBCNT)
-    CP   2
-    JR   NZ,.PCAP
-    LD   A,(PR_RSKEY)
-    OR   A
-    JR   NZ,.PCAP
-    LD   A,1
-    LD   (PR_RSCAN),A
-    CALL PR_PREF
-    RET  C
-.PCAP:
-    LD   A,(PR_RMCNT)
-    OR   A
-    JR   Z,.PREFERE1
-
-; Each missing symbol needs one eight-byte record in the shared arena. Check the
-; complete requirement against the gap between globals and private symbols.
-
-    ADD  A,A
-    ADD  A,A
-    ADD  A,A
-    LD   B,A
-    LD   HL,(SY_LBEG)
-    LD   DE,(SY_GEND)
-    CALL AT_RHCAP
-    JP   C,PR_SCFAI
-.PREFERE1:
-
-; Capacity is now proved. Resolve or insert every key and construct the public
-; nine-byte descriptions in source operand order.
-
-    XOR  A
-    LD   (PR_RSCAN),A
-.PRLOOP:
-    LD   A,(PR_RBCNT)
-    LD   B,A
-    LD   A,(PR_RSCAN)
-    CP   B
-    JR   Z,.PRCNT
-    CALL PR_BRADR
-    LD   H,D
-    LD   L,E
-    CALL SY_REF
-    JP   C,PR_USFAI
-    LD   A,B
-    OR   A
-    JR   Z,.RDREADY
-
-; A newly inserted undefined record retains the first reference position in its
-; otherwise-unused value word. Mark the matching pending kind as the diagnostic
-; anchor that may report an undefined symbol at finalisation.
-
-    LD   A,(PR_RSCAN)
-    CALL PR_BRADR
-    LD   HL,PR_BSOFF
-    ADD  HL,DE
-    LD   A,(HL)
-    LD   (IX+SY_VALLO),A
-    INC  HL
-    LD   A,(HL)
-    LD   (IX+SY_VALHI),A
-    LD   A,(PR_RSCAN)
-    CALL PR_BRADR
-    LD   A,SY_DANCH
-    LD   HL,PR_BKIND
-    ADD  HL,DE
-    OR   (HL)
-    LD   (HL),A
-.RDREADY:
-
-; Public record: symbol pointer, addend, operand index, patch kind/anchor, encoded
-; byte offset, source part and source offset.
-
-    PUSH IX
-    POP  BC
-    LD   A,(PR_RSCAN)
-    CALL PR_PRADR
-    LD   (HL),C
-    INC  HL
-    LD   (HL),B
-    INC  HL
-    PUSH HL
-    LD   A,(PR_RSCAN)
-    CALL PR_BRADR
-    LD   HL,PR_BADDE
-    ADD  HL,DE
-    POP  DE
-    LD   BC,7
-    LDIR
-    LD   HL,PR_RSCAN
-    INC  (HL)
-    JR   .PRLOOP
-.PRCNT:
-
-; Publish the count only after every public record and symbol insertion succeeds.
-
-    LD   A,(PR_RBCNT)
-    LD   (PR_RCNT),A
-    XOR  A
-    RET
-
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,IY
-; Inspect one build key without mutation. Not-found increments the exact missing
-; count; scope and other symbol failures retain their nested status.
-
-PR_PREF:
-    LD   A,(PR_RSCAN)
-    CALL PR_BRADR
-    LD   H,D
-    LD   L,E
-    CALL SY_FIND
-    RET  NC
-    CP   SY_SNFOU
-    JR   NZ,PR_SFAIL
-    LD   HL,PR_RMCNT
-    INC  (HL)
-    XOR  A
-    RET
-PR_SFAIL:
-    LD   (PR_SSTAT),A
-    LD   A,PR_SSYM
-    JP   PR_FREF
-
-;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,B
-; Compare the two six-byte packed keys. Carry clear means identical.
-
-PR_CRKEY:
-    LD   HL,PR_RBLD
-    LD   DE,PR_RBLD+PR_BRB
-    LD   B,6
-.CRKLOOP:
-    LD   A,(DE)
-    CP   (HL)
-    SCF
-    RET  NZ
-    INC  DE
-    INC  HL
-    DJNZ .CRKLOOP
-    OR   A
-    RET
-PR_SCFAI:
-
-; Translate the shared-arena capacity failure through the symbol error category.
-
-    LD   A,SY_SSCAP
-    JR   PR_SFAIL
-PR_USFAI:
-
-; SY_REF cannot fail after exact lookup and capacity preflight unless an internal
-; invariant changed between the two phases.
-
-    LD   (PR_SSTAT),A
-    LD   A,PR_SINT
-    JP   PR_FREF
-
-;@ROUTINE IN A OUT HL CLOBBERS DE,A,F
-; Return public-reference address A. Two fixed nine-byte slots cover the parser
-; reference capacity.
-
-PR_PRADR:
-    LD   HL,PR_REFER
-    OR   A
-    RET  Z
-    LD   DE,PR_PRB
-    ADD  HL,DE
-    RET
-
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO,IX
-; Before any instruction byte is emitted, prove that the pending arena has room
-; for every reference and that each symbol remains undefined. Each pending entry
-; is seven bytes, including its full source-part ordinal; allocation happens in
-; PR_QREFE after output accepts the instruction.
-
-PR_CREFE:
-    LD   A,(PR_RCNT)
-    LD   B,A
-    ADD  A,A
-    ADD  A,B
-    ADD  A,A
-    ADD  A,B
-    LD   B,A
-    LD   HL,(SY_AEND1)
-    LD   DE,(SY_NEXT)
-    CALL AT_RHCAP
-    JR   C,PR_QCAP
-.QCSYMBOL:
-
-; A symbol defined between parse and emission would make the already encoded
-; placeholder invalid. Treat it as a defensive publication-state failure.
-
-    XOR  A
-    LD   (PR_RSCAN),A
-.QCLOOP:
-    LD   A,(PR_RCNT)
-    LD   B,A
-    LD   A,(PR_RSCAN)
-    CP   B
-    JR   Z,.QPDONE
-    CALL PR_PRADR
-    LD   E,(HL)
-    INC  HL
-    LD   D,(HL)
-    EX   DE,HL
-    LD   DE,5
-    ADD  HL,DE
-    BIT  6,(HL)
-    JR   NZ,PR_QADEF
-    LD   HL,PR_RSCAN
-    INC  (HL)
-    JR   .QCLOOP
-.QPDONE:
-    XOR  A
-    RET
-
-;@ROUTINE IN DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Queue every public reference after the encoded bytes have been accepted. DE
-; supplies the instruction's logical start address. A second preflight protects
-; direct callers and keeps this entry self-contained.
-
-PR_QREFE:
-    LD   (PR_QBASE),DE
-    CALL PR_CREFE
-    RET  C
-.QUEUECMT:
-    XOR  A
-    LD   (PR_RSCAN),A
-.QLOOP:
-    LD   A,(PR_RCNT)
-    LD   B,A
-    LD   A,(PR_RSCAN)
-    CP   B
-    JR   Z,.QDONE
-    CALL PR_PRADR
-
-; Load the symbol pointer, signed addend, final kind, source part and encoded
-; byte offset from the public record.
-
-    LD   E,(HL)
-    INC  HL
-    LD   D,(HL)
-    PUSH DE
-    POP  IX
-    INC  HL
-    LD   C,(HL)
-    INC  HL
-    INC  HL
-    LD   B,(HL)
-    INC  HL
-    LD   A,(HL)
-    LD   (PR_ROSCR),A
-    INC  HL
-    LD   A,(HL)
-    LD   (PR_RKSCR),A
-    LD   A,(PR_ROSCR)
-    LD   HL,(PR_QBASE)
-    LD   E,A
-    LD   D,0
-    ADD  HL,DE
-    EX   DE,HL
-
-; SY_ADD receives A=part, IX=symbol, DE=patch address, B=kind/anchor and C=addend.
-
-    LD   A,(PR_RKSCR)
-    CALL SY_ADD
-    RET  C
-    LD   HL,PR_RSCAN
-    INC  (HL)
-    JR   .QLOOP
-.QDONE:
-    XOR  A
-    RET
-PR_QCAP:
-
-; Pending arena cannot hold the complete reference set. No record was appended.
-
-    LD   A,SY_SPCAP
-    SCF
-    RET
-PR_QADEF:
-
-; Defensive status for a reference whose symbol became defined before queueing.
-
-    LD   A,SY_SADEF
-    SCF
-    RET
-PR_FESYM:
-
-; Reference-build failures that arise directly from expression state use the
-; evaluator's retained symbol position. PR_PUB callers diagnose at the enclosing
-; statement position; PR_PARSE callers receive these parser error fields.
-
-    LD   (PR_ESTAT),A
-    LD   A,(EX_SPART)
-    LD   (PR_EPART),A
-    LD   HL,(EX_SOFF)
-    LD   (PR_EOFF),HL
-    LD   A,(PR_ESTAT)
-    SCF
-    RET
-PR_FREF:
-
-; Reference finalisation failures use the source position stored in the current
-; build record selected by PR_RSCAN.
-
-    LD   (PR_ESTAT),A
-    LD   A,(PR_RSCAN)
-    CALL PR_BRADR
-    LD   HL,PR_BPART
-    ADD  HL,DE
-    LD   A,(HL)
-    LD   (PR_EPART),A
-    INC  HL
-    LD   E,(HL)
-    INC  HL
-    LD   D,(HL)
-    LD   (PR_EOFF),DE
-    LD   A,(PR_ESTAT)
-    SCF
-    RET
-
-;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
-; Commit the fully validated private record to the caller's destination and
-; return IX pointing at it. No earlier parser path writes the destination.
-
-PR_CMT:
-    LD   HL,PR_SCRAT
-    LD   DE,(PR_DST)
-    LD   BC,10
-    LDIR
-    LD   IX,(PR_DST)
-    XOR  A
-    RET
-
-; Compact status adapters select the appropriate source anchor below.
-
-PR_EMNEM:
-    LD   A,PR_SEMNE
-    JR   PR_FHERE
-PR_UMNEM:
-    LD   A,PR_SUMNE
-    JR   PR_FHERE
-PR_EXPOP:
-    LD   A,PR_SEOP
-    JR   PR_FHERE
-PR_UOP:
-    LD   A,PR_SUOP
-    JR   PR_FHERE
-PR_EDELI:
-    LD   A,PR_SEDEL
-    JR   PR_FHERE
-PR_TMOPE:
-    LD   A,PR_STMOP
-    JR   PR_FHERE
-PR_VRANG:
-    LD   A,PR_SVRAN
-    JR   PR_FHERE
-PR_RRANG:
-    LD   A,PR_SRRAN
-    JR   PR_FBEG
-
-;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
-; Use the current token position for token-local syntax and value failures.
-
-PR_FHERE:
-    LD   HL,TK_REC+TK_POFF
-    JR   PR_FPOSI
-
-;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
-; Use the instruction's mnemonic position for form and relative-range failures.
-; PR_PARSE captures this position. The statement layer supplies its own outer
-; position when it calls PR_PUB.
-
-PR_FBEG:
-    LD   HL,PR_IPART
-
-;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
-; Copy a contiguous part-and-offset triple into the parser error fields, preserve
-; the status in A and set carry.
-
-PR_FPOSI:
-    LD   (PR_ESTAT),A
-    PUSH BC
-    PUSH DE
-    LD   DE,PR_EPART
-    LD   BC,3
-    LDIR
-    POP  DE
-    POP  BC
-    LD   A,(PR_ESTAT)
-    SCF
-    RET
-PR_RCEND:
-PR_IBEG:
-
-; Sorted RADIX-40 operand-word table. Each three-byte entry contains one packed
-; word and its provisional encoder class. C maps to PR_GC because only complete
-; form validation can distinguish register C from condition C.
-
-PR_OWCNT EQU 27
-PR_OWTAB:
-    DW  $0640
-    DB  EN_A
-    DW  $0730
-    DB  EN_AF
-    DW  $0C80
-    DB  EN_B
-    DW  $0CF8
-    DB  EN_BC
-    DW  $12C0
-    DB  PR_GC
-    DW  $1900
-    DB  EN_D
-    DW  $19C8
-    DB  EN_DE
-    DW  $1F40
-    DB  EN_E
-    DW  $3200
-    DB  EN_H
-    DW  $33E0
-    DB  EN_HL
-    DW  $3840
-    DB  EN_I
-    DW  $3C00
-    DB  EN_IX
-    DW  $3C08
-    DB  EN_IXH
-    DW  $3C0C
-    DB  EN_IXL
-    DW  $3C28
-    DB  EN_IY
-    DW  $3C30
-    DB  EN_IYH
-    DW  $3C34
-    DB  EN_IYL
-    DW  $4B00
-    DB  EN_L
-    DW  $5140
-    DB  EN_M
-    DW  $57F8
-    DB  EN_NC
-    DW  $5B90
-    DB  EN_NZ
-    DW  $6400
-    DB  EN_P
-    DW  $64C8
-    DB  EN_PE
-    DW  $6658
-    DB  EN_PO
-    DW  $7080
-    DB  EN_R
-    DW  $7940
-    DB  EN_SP
-    DW  $A280
-    DB  EN_Z
-PR_OWTEN:
-PR_IEND:
-PR_CEND:
-PR_WBEG:
-
-; Per-call destinations and instruction identity. PR_ILEN is the length returned
-; by EN_VFORM and is required for relative-target conversion.
-
-PR_DST: DW 0                      ; Caller-owned ten-byte commit destination.
-PR_IADR: DW 0                     ; Logical address of the current instruction.
-PR_IPART: DB 0                    ; Source part containing the mnemonic.
-PR_IOFF: DW 0                     ; Byte offset of the mnemonic in that part.
-PR_ILEN: DB 0                     ; Validated encoded instruction length.
-PR_OPCNT: DB 0                    ; Number of operands parsed, from zero to three.
-
-; Shared scan index, ambiguity masks and selected class/value pointers used by
-; operand normalisation and range checking.
-
-PR_SINDE: DB 0                    ; Operand index used by normalisation loops.
-PR_FMASK: DB 0                    ; Bits for byte values that may widen to words.
-PR_CMASK: DB 0                    ; Bits for C operands that may be condition C.
-PR_CPTR: DW 0                     ; Address of the selected operand-class byte.
-PR_VPTR: DW 0                     ; Address of the selected operand-value word.
-PR_LCLAS: DB 0                    ; Operand-word class saved across token fetch.
-PR_MBASE: DB 0                    ; Parenthesised register or port base class.
-PR_ICLAS: DB 0                    ; Indexed IX/IY class saved during parsing.
-
-; Retained workspace byte with no caller in the current parser implementation.
-
-PR_DSIGN: DB 0                    ; Reserved legacy displacement-sign scratch.
-
-; Six-byte temporary packed operand key and private ten-byte instruction record.
-; Selected scratch bytes are also reused for nested status and source fields.
-; Terminal errors prevent commit, but a recovered short-word probe may leave
-; ignored error bytes in unused operand-value slots of a successful record.
-
-PR_NKEY: DS 6                     ; Packed short operand-word key buffer.
-PR_SCRAT: DS 10                   ; Private encoder-format instruction record.
-PR_ESTAT EQU PR_SCRAT+6           ; Public parser error status overlay.
-PR_EPART EQU PR_SCRAT+7           ; Public error source-part overlay.
-PR_EOFF EQU PR_SCRAT+8            ; Public error source-offset overlay.
-PR_ESTA1 EQU PR_SCRAT+5           ; Nested expression status overlay.
-PR_SSTAT EQU PR_SCRAT+5           ; Nested symbol status overlay.
-
-; Reference publication state. PR_RBCNT counts private build entries; PR_RCNT is
-; published only after their symbols and public records are complete.
-
-PR_RCNT: DB 0                     ; Published reference-description count.
-PR_RBCNT: DB 0                    ; Private build-reference count.
-PR_UMASK: DB 0                    ; Bits marking unresolved operand values.
-PR_RSCAN: DB 0                    ; Current reference index during publication.
-PR_RMCNT: DB 0                    ; Missing symbols needed by this instruction.
-PR_RSKEY: DB 0                    ; One when both build records share a key.
-PR_RKSCR: DB 0                    ; Patch kind or queued source-part ordinal.
-PR_ROSCR: DB 0                    ; Encoded field offset carried across lookup.
-PR_RASCR: DW 0                    ; Signed expression addend before key copying.
-PR_QBASE: DW 0                    ; Logical instruction base while queueing.
-
-; Two thirteen-byte build entries followed by two nine-byte public entries. The
-; complete fixed parser workspace is 92 bytes.
-
-PR_RBLD: DS PR_BRB*PR_RCAP        ; Two private thirteen-byte build records.
-PR_REFER: DS PR_PRB*PR_RCAP       ; Two public nine-byte reference records.
-PR_WEND:

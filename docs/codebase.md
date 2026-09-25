@@ -136,7 +136,8 @@ src/host/translation/   source migration tools
 | `exprmath.asm` | Concrete 24-bit arithmetic and expression workspace | internal arithmetic helpers |
 | `patch.asm` | Encoded field location and patch transforms | `PT_LOCAT` |
 | `parser.asm` | Mnemonic and operand syntax | `PR_PUB`, `PR_PARSE`, `PR_POP`, `PR_PMEMO` |
-| `forms.asm` | Operand normalisation, validation, reference publication and parser workspace | `PR_NAALI`, `PR_VCAND`, `PR_FREFE`, `PR_CMT` |
+| `forms.asm` | Operand normalisation, form selection and concrete range checks | `PR_NAALI`, `PR_VCAND`, `PR_CCVAL` |
+| `refs.asm` | Deferred symbols, reference publication, record commit and parser workspace | `PR_FREFE`, `PR_CREFE`, `PR_QREFE`, `PR_CMT` |
 | `output.asm` | Logical cursor, IMAGE output and resolved patches | `OU_RESET`, `OU_EMITB`, `OU_RESER`, `OU_EINS`, `OU_RSLV` |
 | `stmts.asm` | Labels, equates, directives and source statements | `DR_APART`, `ST_NEXT` |
 | `driver.asm` | Descriptor validation, multipart assembly and final checks | `DR_ASM`, `DR_VDESC`, `DR_AFIN` |
@@ -251,9 +252,9 @@ counts and package contents. Tests consume them directly.
 
 Start with `driver.asm` and `stmts.asm` for the build and statement loops. Read
 `token.asm`, `tokdisp.asm`, `expr.asm`, `exprmath.asm`, `parser.asm` and
-`forms.asm` for the language path. Read `output.asm` with `symbols.asm` to trace
-forward references. Leave `encoder.asm` until the instruction record is
-familiar.
+`forms.asm` for the language path. Continue through `refs.asm`, `output.asm`
+and `symbols.asm` to trace forward references. Leave `encoder.asm` until the
+instruction record is familiar.
 
 For the host, begin at `assemble-atom-project.mjs`. Follow source work into
 `resolve-atom-project.mjs` and `src/host/atom/`, execution into
