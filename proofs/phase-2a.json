@@ -3,7 +3,6 @@
   "source": "../src/z80/atom.asm",
   "nativeCore": "../assets/native-core.json",
   "memoryProfile": "phase-2a-memory.json",
-  "contracts": "strict through automatic Atom-to-AZM translation",
   "proofCapacity": {
     "symbolRecords": 8,
     "pendingRecords": 4

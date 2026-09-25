@@ -2,7 +2,6 @@
   "name": "Atom authoritative native multipart driver correctness proof",
   "source": "../src/z80/atom.asm",
   "nativeCore": "../assets/native-core.json",
-  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "executionBudgets": {
     "AtomDriverValidateDescriptor": {

@@ -430,46 +430,46 @@ CP_SOURCE_CODE_START:
 ; Prepare a blank ordinary FCB whose name/type fields are space-filled.
 
 CP_CLEAR_INPUT_FCB:
-    LD   DE,CP_INPUT_FCB
-    XOR  A
-    LD   (DE),A
-    INC  DE
-    LD   B,11
-    LD   A,' '
-    CALL CP_CLEAR_WORK_FCB
-    JP   CP_CLEAR_FCB_TAIL
+    LD   DE,CP_INPUT_FCB ; Point at the input FCB's drive byte.
+    XOR  A ; Select the logged-in drive by default.
+    LD   (DE),A ; Store drive zero before filling the name.
+    INC  DE ; Advance to the eleven name/type bytes.
+    LD   B,11 ; Count all eight name and three type bytes.
+    LD   A,' ' ; CP/M pads unused name fields with spaces.
+    CALL CP_CLEAR_WORK_FCB ; Fill the complete name/type area.
+    JP   CP_CLEAR_FCB_TAIL ; Clear the remaining FCB control fields.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Reject output, temporary or backup names that collide with the source name.
 
 CP_CHECK_SOURCE_CONFLICT:
-    LD   HL,CP_INPUT_FCB
-    LD   DE,CP_OUTPUT_NAME
-    CALL CP_NAMES_EQUAL
-    JR   Z,CP_SOURCE_NAME_CONFLICT
-    CALL CP_SET_TEMP_FCB
-    LD   HL,CP_INPUT_FCB
-    LD   DE,CP_WORK_FCB
-    CALL CP_NAMES_EQUAL
-    JR   Z,CP_SOURCE_NAME_CONFLICT
-    CALL CP_SET_BACKUP_FCB
-    LD   HL,CP_INPUT_FCB
-    LD   DE,CP_WORK_FCB
-    CALL CP_NAMES_EQUAL
-    JR   Z,CP_SOURCE_NAME_CONFLICT
-    XOR  A
-    RET
+    LD   HL,CP_INPUT_FCB ; Keep the original source identity in HL.
+    LD   DE,CP_OUTPUT_NAME ; Compare it with the requested output name.
+    CALL CP_NAMES_EQUAL ; Z means both twelve-byte FCB identities match.
+    JR   Z,CP_SOURCE_NAME_CONFLICT ; Never let output replace the source file.
+    CALL CP_SET_TEMP_FCB ; Construct the temporary output filename.
+    LD   HL,CP_INPUT_FCB ; Restore the source FCB pointer for comparison.
+    LD   DE,CP_WORK_FCB ; The temporary name occupies the work FCB.
+    CALL CP_NAMES_EQUAL ; Reject a temporary name that aliases the source.
+    JR   Z,CP_SOURCE_NAME_CONFLICT ; Preserve the source file.
+    CALL CP_SET_BACKUP_FCB ; Construct the backup filename for the output.
+    LD   HL,CP_INPUT_FCB ; Compare the source against that third identity.
+    LD   DE,CP_WORK_FCB ; The backup candidate is now in the work FCB.
+    CALL CP_NAMES_EQUAL ; Z again means the names would collide.
+    JR   Z,CP_SOURCE_NAME_CONFLICT ; Refuse a source/output collision.
+    XOR  A ; A=0 reports that all three names are distinct.
+    RET ; Return clear carry with the success result.
 CP_SOURCE_NAME_CONFLICT:
-    LD   DE,CP_NAME_CONFLICT_TEXT
-    SCF
-    RET
+    LD   DE,CP_NAME_CONFLICT_TEXT ; Return the collision message in DE.
+    SCF ; Mark the preflight check as failed.
+    RET ; Leave file creation to the caller's error path.
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; Read one logical source byte through a 128-byte random-record cache. The
 ; pre-scan proves every requested record exists for the life of this transient.
 
 CP_SOURCE_READ_BYTE:
-    JP   CP_RESOLVED_READ_BYTE
+    JP   CP_RESOLVED_READ_BYTE ; Expose the resolved source-byte reader.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Resolve the root source and its leading %INCLUDE graph. Names are retained
@@ -477,206 +477,207 @@ CP_SOURCE_READ_BYTE:
 ; first order. No intermediate source-order file is involved.
 
 CP_RESOLVE_SOURCE:
-    XOR  A
-    LD   (CP_DESCRIPTOR),A
-    LD   (CP_ORDER_COUNT),A
-    LD   (CP_SCAN_INDEX),A
-    INC  A
-    LD   (CP_NAME_COUNT),A
-    LD   HL,CP_INPUT_FCB+1
-    LD   DE,CP_PART_NAMES
-    LD   BC,11
-    LDIR
-    LD   A,$FF
-    LD   (CP_ACTIVE_PART),A
+    XOR  A ; Start with no published descriptors or order.
+    LD   (CP_DESCRIPTOR),A ; The native core must not see a stale part count.
+    LD   (CP_ORDER_COUNT),A ; No source has reached dependency order yet.
+    LD   (CP_SCAN_INDEX),A ; Discovery begins at root ordinal zero.
+    INC  A ; The root itself is the first retained name.
+    LD   (CP_NAME_COUNT),A ; Record one known source part.
+    LD   HL,CP_INPUT_FCB+1 ; Skip the drive byte and retain the 8.3 name.
+    LD   DE,CP_PART_NAMES ; Store it in the root's ordinal-zero slot.
+    LD   BC,11 ; FCB name and type fields occupy eleven bytes.
+    LDIR ; Copy the root name into the resolver table.
+    LD   A,$FF ; Prepare the source-selection field for this run.
+    LD   (CP_ACTIVE_PART),A ; Clear any stale current-part selection.
 
 ; First discover every exact name reachable from the root.
 
 CP_DISCOVER_PART:
-    XOR  A
-    LD   (CP_SCAN_MODE),A
-    LD   A,(CP_SCAN_INDEX)
-    CALL CP_SCAN_PART
-    JP   C,CP_RESOLVE_FAILURE
-    LD   HL,CP_SCAN_INDEX
-    INC  (HL)
-    LD   A,(CP_NAME_COUNT)
-    CP   (HL)
-    JR   NZ,CP_DISCOVER_PART
+    XOR  A ; Mode zero records newly found include names.
+    LD   (CP_SCAN_MODE),A ; Discovery does not test dependency ordering.
+    LD   A,(CP_SCAN_INDEX) ; Select the next retained source name.
+    CALL CP_SCAN_PART ; Read its leading header and visit its includes.
+; The scan helper reports malformed input, open failure or offset overflow.
+    JP   C,CP_RESOLVE_FAILURE ; Stop on any reported scan failure.
+    LD   HL,CP_SCAN_INDEX ; Advance the discovery cursor in place.
+    INC  (HL) ; Each retained name is scanned for dependencies.
+    LD   A,(CP_NAME_COUNT) ; New includes may have extended this count.
+    CP   (HL) ; Compare the next ordinal with the live count.
+    JR   NZ,CP_DISCOVER_PART ; Scan every discovered source part.
 
 ; Repeatedly emit a part whose dependencies have all been emitted. Bit 7 of the
 ; first retained-name byte records that state; comparisons and FCB reconstruction
 ; mask it away. Failure to make progress proves a cycle without recursion.
 
 CP_TOPO_PASS:
-    XOR  A
-    LD   (CP_SCAN_INDEX),A
-    LD   (CP_SCAN_PROGRESS),A
+    XOR  A ; Begin another pass over all discovered files.
+    LD   (CP_SCAN_INDEX),A ; Restart at the root ordinal.
+    LD   (CP_SCAN_PROGRESS),A ; Track whether this pass emits any source.
 CP_TOPO_PART:
-    LD   A,(CP_SCAN_INDEX)
-    CALL CP_NAME_POINTER
-    BIT  7,(HL)
-    JR   NZ,CP_TOPO_NEXT
-    LD   A,1
-    LD   (CP_SCAN_MODE),A
-    LD   A,(CP_SCAN_INDEX)
-    CALL CP_SCAN_PART
-    JP   C,CP_RESOLVE_FAILURE
-    OR   A
-    JR   NZ,CP_TOPO_NEXT
-    LD   A,(CP_ORDER_COUNT)
-    LD   E,A
-    LD   D,CP_PART_ORDER/256
-    LD   A,(CP_SCAN_INDEX)
-    LD   (DE),A
-    CALL CP_NAME_POINTER
-    SET  7,(HL)
-    LD   HL,CP_ORDER_COUNT
-    INC  (HL)
-    LD   A,1
-    LD   (CP_SCAN_PROGRESS),A
+    LD   A,(CP_SCAN_INDEX) ; Read the candidate part's ordinal.
+    CALL CP_NAME_POINTER ; HL points to its retained eleven-byte name.
+    BIT  7,(HL) ; Bit 7 marks a part already placed in the order.
+    JR   NZ,CP_TOPO_NEXT ; Do not emit a part twice.
+    LD   A,1 ; Mode one checks whether the includes are ready.
+    LD   (CP_SCAN_MODE),A ; The scanner reports one for a pending child.
+    LD   A,(CP_SCAN_INDEX) ; Scan this candidate's leading include directives.
+    CALL CP_SCAN_PART ; A=0 means every dependency is already ordered.
+    JP   C,CP_RESOLVE_FAILURE ; Preserve scanner errors as resolver failures.
+    OR   A ; Test whether an include still has an unordered child.
+    JR   NZ,CP_TOPO_NEXT ; Defer this part until a later pass.
+    LD   A,(CP_ORDER_COUNT) ; Append at the next dependency-order position.
+    LD   E,A ; E is the byte offset into the order table.
+    LD   D,CP_PART_ORDER/256 ; The table remains within its fixed page.
+    LD   A,(CP_SCAN_INDEX) ; Store this source's original ordinal.
+    LD   (DE),A ; The order table maps output order to part identity.
+    CALL CP_NAME_POINTER ; Recover the name after writing the order byte.
+    SET  7,(HL) ; Mark this name as emitted for later scans.
+    LD   HL,CP_ORDER_COUNT ; Point to the number of ordered source parts.
+    INC  (HL) ; Include the part just appended above.
+    LD   A,1 ; Record that this pass made progress.
+    LD   (CP_SCAN_PROGRESS),A ; Newly ready dependants can run next pass.
 CP_TOPO_NEXT:
-    LD   HL,CP_SCAN_INDEX
-    INC  (HL)
-    LD   A,(CP_NAME_COUNT)
-    CP   (HL)
-    JR   NZ,CP_TOPO_PART
-    LD   A,(CP_ORDER_COUNT)
-    LD   HL,CP_NAME_COUNT
-    CP   (HL)
-    JR   Z,CP_BUILD_DESCRIPTORS
-    LD   A,(CP_SCAN_PROGRESS)
-    OR   A
-    JR   NZ,CP_TOPO_PASS
-    LD   DE,CP_INCLUDE_CYCLE_TEXT
-    JR   CP_RESOLVE_FAILURE
+    LD   HL,CP_SCAN_INDEX ; Advance to the next discovered name.
+    INC  (HL) ; The table follows original discovery order.
+    LD   A,(CP_NAME_COUNT) ; Read the current count, including new includes.
+    CP   (HL) ; Compare against the next candidate ordinal.
+    JR   NZ,CP_TOPO_PART ; Continue this pass while names remain.
+    LD   A,(CP_ORDER_COUNT) ; Count the parts already placed in order.
+    LD   HL,CP_NAME_COUNT ; Compare it with the total discovered count.
+    CP   (HL) ; Equality means every dependency was ordered.
+    JR   Z,CP_BUILD_DESCRIPTORS ; Turn the order into native part descriptors.
+    LD   A,(CP_SCAN_PROGRESS) ; Check whether this pass placed any source.
+    OR   A ; A zero value means ordering made no progress.
+    JR   NZ,CP_TOPO_PASS ; Retry now that some dependencies are ready.
+    LD   DE,CP_INCLUDE_CYCLE_TEXT ; No progress with parts left means a cycle.
+    JR   CP_RESOLVE_FAILURE ; Report it through the shared failure path.
 
 ; Measure the already validated parts in final order and build the ordinary
 ; native five-byte descriptors. Their start is logical zero and their end is the
 ; measured 16-bit byte length; source storage itself remains in CP/M files.
 
 CP_BUILD_DESCRIPTORS:
-    XOR  A
-    LD   (CP_SCAN_INDEX),A
-    LD   HL,CP_PART_DESCRIPTORS
-    LD   (CP_DESCRIPTOR_CURSOR),HL
+    XOR  A ; Start at the first dependency-ordered part.
+    LD   (CP_SCAN_INDEX),A ; This cursor indexes CP_PART_ORDER.
+    LD   HL,CP_PART_DESCRIPTORS ; Point to the native part-descriptor array.
+    LD   (CP_DESCRIPTOR_CURSOR),HL ; The append helper advances this pointer.
 CP_BUILD_DESCRIPTOR:
-    LD   A,(CP_SCAN_INDEX)
-    LD   E,A
-    LD   D,CP_PART_ORDER/256
-    LD   A,(DE)
-    CALL CP_OPEN_PART
-    JP   C,CP_RESOLVE_FAILURE
-    LD   HL,0
+    LD   A,(CP_SCAN_INDEX) ; Select the next output-order position.
+    LD   E,A ; E indexes the one-byte order table.
+    LD   D,CP_PART_ORDER/256 ; Address its fixed high-page storage.
+    LD   A,(DE) ; Recover the original discovery ordinal.
+    CALL CP_OPEN_PART ; Reopen it before measuring its logical length.
+    JP   C,CP_RESOLVE_FAILURE ; Abort if the part cannot be reopened.
+    LD   HL,0 ; Count source bytes from logical offset zero.
 CP_MEASURE_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE
-    JR   NC,CP_MEASURE_BYTE
-    OR   A
-    JP   NZ,CP_RESOLVE_IO
-    CALL CP_APPEND_DESCRIPTOR
-    LD   HL,CP_SCAN_INDEX
-    INC  (HL)
-    LD   A,(CP_NAME_COUNT)
-    CP   (HL)
-    JR   NZ,CP_BUILD_DESCRIPTOR
-    LD   A,(CP_NAME_COUNT)
-    LD   (CP_DESCRIPTOR),A
-    XOR  A
-    RET
+    CALL CP_NEXT_SOURCE_BYTE ; Read one source byte and advance logical offset HL.
+    JR   NC,CP_MEASURE_BYTE ; Carry clear means more source bytes remain.
+    OR   A ; A=0 is EOF or a failed read; A=2 is offset overflow.
+    JP   NZ,CP_RESOLVE_IO ; Report a source length beyond the 16-bit range.
+    CALL CP_APPEND_DESCRIPTOR ; Store this ordinal and measured [0,HL) range.
+    LD   HL,CP_SCAN_INDEX ; Advance the position in dependency order.
+    INC  (HL) ; The order table has one entry per retained name.
+    LD   A,(CP_NAME_COUNT) ; Compare with the total number of source parts.
+    CP   (HL) ; Continue while another descriptor remains.
+    JR   NZ,CP_BUILD_DESCRIPTOR ; Measure the next dependency-ordered file.
+    LD   A,(CP_NAME_COUNT) ; Publish the final descriptor count to the core.
+    LD   (CP_DESCRIPTOR),A ; Descriptors are complete and ready for assembly.
+    XOR  A ; Return success with carry clear.
+    RET ; Return success after publishing the descriptor count.
 CP_RESOLVE_IO:
-    LD   HL,CP_INPUT_FCB
-    CALL CP_PRINT_NAME
-    LD   DE,CP_READ_FAILED_TEXT
+    LD   HL,CP_INPUT_FCB ; Identify the source that exceeded the offset range.
+    CALL CP_PRINT_NAME ; Print its parsed 8.3 name before the error text.
+    LD   DE,CP_READ_FAILED_TEXT ; Select the adapter's source-read error text.
 CP_RESOLVE_FAILURE:
-    CALL CP_PRINT
-    SCF
-    RET
+    CALL CP_PRINT ; Print the error selected in DE.
+    SCF ; Return failure to the command entry point.
+    RET ; No partial descriptor set reaches the core.
 
 ;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Scan and validate one source header. Mode zero discovers names; mode one
 ; reports A=1 when any dependency has not yet been emitted.
 
 CP_SCAN_PART:
-    CALL CP_OPEN_PART
-    JR   C,CP_SCAN_FAILURE
-    LD   A,1
-    LD   (CP_HEADER_OPEN),A
-    LD   HL,0
+    CALL CP_OPEN_PART ; Open the requested source part for scanning.
+    JR   C,CP_SCAN_FAILURE ; Stop if the FCB cannot be opened.
+    LD   A,1 ; The header accepts directives until code begins.
+    LD   (CP_HEADER_OPEN),A ; A source statement closes this header.
+    LD   HL,0 ; Begin at the first logical source byte.
 CP_SCAN_LINE:
 
 ; Blank space, line endings and comment lines remain in the header. The first
 ; ordinary source byte closes it permanently; a later percent directive fails.
 
-    CALL CP_NEXT_SOURCE_BYTE
-    JR   C,CP_SCAN_EOF
-    CP   ' '
-    JR   Z,CP_SCAN_LINE
-    CP   9
-    JR   Z,CP_SCAN_LINE
-    CP   13
-    JR   Z,CP_SCAN_LINE
-    CP   10
-    JR   Z,CP_SCAN_LINE
-    CP   ';'
-    JR   Z,CP_SCAN_SKIP_LINE
-    CP   '%'
-    JR   Z,CP_SCAN_DIRECTIVE
-    XOR  A
-    LD   (CP_HEADER_OPEN),A
+    CALL CP_NEXT_SOURCE_BYTE ; Read the byte at the current logical offset.
+    JR   C,CP_SCAN_EOF ; Carry marks EOF, failed read or offset overflow.
+    CP   ' ' ; A space does not close the leading header.
+    JR   Z,CP_SCAN_LINE ; Continue over horizontal whitespace.
+    CP   9 ; Tabs are also header whitespace.
+    JR   Z,CP_SCAN_LINE ; Test the next byte without advancing a line.
+    CP   13 ; CR remains inside a blank header line.
+    JR   Z,CP_SCAN_LINE ; LF is checked separately for CR/LF and LF files.
+    CP   10 ; LF remains inside the leading header as well.
+    JR   Z,CP_SCAN_LINE ; Continue scanning after the line ending.
+    CP   ';' ; Semicolon starts a full-line source comment here.
+    JR   Z,CP_SCAN_SKIP_LINE ; Ignore the remainder of that physical line.
+    CP   '%' ; A percent byte may begin an INCLUDE directive.
+    JR   Z,CP_SCAN_DIRECTIVE ; Parse one while the header is still open.
+    XOR  A ; Any ordinary source byte closes the header.
+    LD   (CP_HEADER_OPEN),A ; A later percent directive is then invalid.
 CP_SCAN_SKIP_LINE:
-    CALL CP_SKIP_SOURCE_LINE
-    JR   NC,CP_SCAN_LINE
-    OR   A
-    JR   Z,CP_SCAN_COMPLETE
-    JR   CP_SCAN_IO
+    CALL CP_SKIP_SOURCE_LINE ; Discard the rest of this physical line.
+    JR   NC,CP_SCAN_LINE ; Carry clear means another line is available.
+    OR   A ; A=0 is EOF or read failure; A=2 means the offset wrapped.
+    JR   Z,CP_SCAN_COMPLETE ; Treat a zero status as the end of this source.
+    JR   CP_SCAN_IO ; Reject a source offset outside the 16-bit range.
 CP_SCAN_DIRECTIVE:
-    LD   A,(CP_HEADER_OPEN)
-    OR   A
-    JR   Z,CP_SCAN_INVALID
-    CALL CP_PARSE_INCLUDE
-    JR   C,CP_SCAN_FAILURE
-    OR   A
-    JR   NZ,CP_SCAN_DONE
-    JR   CP_SCAN_LINE
+    LD   A,(CP_HEADER_OPEN) ; Check whether source has closed the header.
+    OR   A ; A=0 means this percent directive came too late.
+    JR   Z,CP_SCAN_INVALID ; Report a misplaced or unsupported directive.
+    CALL CP_PARSE_INCLUDE ; Visit the include or test its ordering state.
+    JR   C,CP_SCAN_FAILURE ; Parsing and file errors share this return path.
+    OR   A ; In ordering mode A=1 means a child is not ready.
+    JR   NZ,CP_SCAN_DONE ; Stop so the caller can defer this source part.
+    JR   CP_SCAN_LINE ; Continue through the remaining header lines.
 CP_SCAN_EOF:
-    OR   A
-    JR   NZ,CP_SCAN_IO
+    OR   A ; A=0 ends input; A=2 reports a 16-bit offset overflow.
+    JR   NZ,CP_SCAN_IO ; Reject a source offset that wrapped.
 CP_SCAN_COMPLETE:
-    XOR  A
+    XOR  A ; Return zero unresolved dependencies at accepted end of input.
 CP_SCAN_DONE:
-    RET
+    RET ; Preserve A for the discovery/order caller.
 CP_SCAN_IO:
-    LD   HL,CP_INPUT_FCB
-    CALL CP_PRINT_NAME
-    LD   DE,CP_READ_FAILED_TEXT
-    JR   CP_SCAN_FAILURE
+    LD   HL,CP_INPUT_FCB ; The open-part helper retains the current FCB here.
+    CALL CP_PRINT_NAME ; Identify the file whose scan could not continue.
+    LD   DE,CP_READ_FAILED_TEXT ; Select the source-read error message.
+    JR   CP_SCAN_FAILURE ; Return the read error through the shared exit.
 CP_SCAN_INVALID:
-    LD   DE,CP_INVALID_INCLUDE_TEXT
+    LD   DE,CP_INVALID_INCLUDE_TEXT ; Select the malformed-header message.
 CP_SCAN_FAILURE:
-    SCF
-    RET
+    SCF ; Carry marks failure independently of message text.
+    RET ; Do not accept an incomplete dependency scan.
 
 ;@ROUTINE IN HL OUT A,DE,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Append the current source ordinal and byte range to the part descriptor table.
+; Append the resolved ordinal and measured byte range to the descriptor table.
 
 CP_APPEND_DESCRIPTOR:
-    LD   DE,(CP_DESCRIPTOR_CURSOR)
-    LD   A,(CP_SCAN_INDEX)
-    LD   (DE),A
-    INC  DE
-    XOR  A
-    LD   (DE),A
-    INC  DE
-    LD   (DE),A
-    INC  DE
-    LD   A,L
-    LD   (DE),A
-    INC  DE
-    LD   A,H
-    LD   (DE),A
-    INC  DE
-    LD   (CP_DESCRIPTOR_CURSOR),DE
-    RET
+    LD   DE,(CP_DESCRIPTOR_CURSOR) ; Start the next five-byte descriptor.
+    LD   A,(CP_SCAN_INDEX) ; Assign the next ordinal in resolved source order.
+    LD   (DE),A ; Descriptor byte zero is that ordinal.
+    INC  DE ; Advance to the logical start low byte.
+    XOR  A ; Every file is exposed as a range starting at zero.
+    LD   (DE),A ; Store the start low byte.
+    INC  DE ; Advance to the logical start high byte.
+    LD   (DE),A ; Store the start high byte.
+    INC  DE ; Advance to the exclusive end low byte.
+    LD   A,L ; HL holds the measured source length.
+    LD   (DE),A ; Store the low byte of the half-open end.
+    INC  DE ; Advance to the exclusive end high byte.
+    LD   A,H ; Complete the 16-bit source length.
+    LD   (DE),A ; Store the high byte of the half-open end.
+    INC  DE ; Point at the following descriptor slot.
+    LD   (CP_DESCRIPTOR_CURSOR),DE ; Save the cursor for the next descriptor.
+    RET ; The caller advances order and measures another file.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse INCLUDE, one quoted current-drive 8.3 filename, and the rest of its

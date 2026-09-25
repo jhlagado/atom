@@ -32,17 +32,5 @@
     "initializedAddresses": true,
     "recoveredSymbols": true,
     "secondAtomGeneration": true
-  },
-  "package": {
-    "packedBytesObserved": 588976,
-    "unpackedBytes": 3147528,
-    "entries": 484,
-    "installedSelfHostWithoutAzm": true
-  },
-  "proofs": {
-    "tests": 277,
-    "passed": 277,
-    "failed": 0,
-    "strictRegisterContracts": true
   }
 }

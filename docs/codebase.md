@@ -28,8 +28,8 @@ test/         native, host, package and self-host tests
 ```
 
 Files in `src/` are authoritative source. Files in `assets/` are generated and
-must be rebuilt through their scripts. Every JSON record remaining in `proofs/`
-is consumed by a test, build check, package check or release step.
+must be rebuilt through their scripts. Every proof file is referenced by a test,
+build check, package check or release step.
 
 ## Maintainer tools
 
@@ -274,8 +274,8 @@ The native-core generator uses the checked Atom image to assemble the source,
 then uses that result to assemble the source again. Both generations must have
 the same initialised addresses, bytes, symbols and resident extent.
 
-The JSON files under `proofs/` fix memory maps, instruction counts, boundary
-counts and package contents. Tests consume them directly.
+The JSON files under `proofs/` record memory maps, instruction budgets, boundary
+counts and package censuses. Tests and release checks read the records they need.
 
 ## Reading routes
 

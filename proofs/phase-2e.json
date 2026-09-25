@@ -3,7 +3,6 @@
   "source": "../src/z80/atom.asm",
   "nativeCore": "../assets/native-core.json",
   "memoryProfile": "parser-integration-memory.json",
-  "contracts": "strict through automatic Atom-to-AZM translation",
   "targetCpu": "Zilog Z80",
   "proofCapacity": {
     "sourcePartBytes": 512,
