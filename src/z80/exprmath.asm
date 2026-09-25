@@ -8,8 +8,8 @@
 ;  source-offset range; it is assembled immediately after expr.asm.
 ;
 ;@ROUTINE OUT A,BC,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Load the low bytes and sign bytes used by the 24-bit add/subtract paths. A is
-; the left low byte, HL points at the right result and B/C retain both signs.
+; Save both sign bytes for overflow checks, load the left low byte, and point
+; HL at the right/result record for the bytewise operation.
 
 EX_LARIT:
     LD   A,(EX_LVAL+2)        ; Load the left operand's sign/high byte.
@@ -314,8 +314,7 @@ EX_REMAI:
 ; EX_QUOTI the quotient.
 
 EX_DCOMM:
-; Reject zero before magnitude conversion.
-; Reject zero before magnitude conversion.
+; Reject a zero divisor before copying or changing either operand workspace.
 
     LD   A,(EX_RVAL)          ; Begin folding divisor bytes together.
     LD   B,A                  ; Preserve its low-byte contribution.
