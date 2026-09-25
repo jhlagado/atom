@@ -114,6 +114,7 @@ OU_SORIG:
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY,DE,IX,IY
 ; Submit A as one IMAGE byte at the current cursor. C=0 is the base output class.
 ; Publish cursor and capacity changes only after HS_IB accepts the operation.
+; Each caller preflights capacity before entering this shared tail.
 
 OU_EBREA:
     LD   HL,(OU_CURSO)             ; Supply the current logical address to the sink.
@@ -198,7 +199,6 @@ OU_EINS:
 ; record, computes and submits its final bytes, then removes that exact record.
 
 OU_RSLV:
-; Resolution is valid only after the symbol has a final value.
 ; Resolution is valid only after the symbol has a final value.
 
     BIT  6,(IX+5)                  ; Test the symbol record's defined flag.
@@ -406,6 +406,9 @@ OU_WBEG:                       ; Begin the output module's fixed workspace.
 ; Fourteen bytes of fixed workspace. Cursor/capacity occupy four bytes. The ten-
 ; byte union is an instruction buffer during emission and resolution state while
 ; draining one symbol's pending patches.
+
+; The statement handler calls OU_EINS and OU_RSLV in sequence, never nested, so
+; their scratch lifetimes do not overlap.
 
 OU_CURSO: DW 0                 ; Current logical target address.
 OU_REM: DW 0                   ; Remaining bytes in the initial target interval.
