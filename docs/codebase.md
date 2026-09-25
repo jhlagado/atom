@@ -43,13 +43,11 @@ prepare packages. The installed command-line programs live in `bin/`.
 | `scripts/generate-cpm22.mjs` | Build or verify the CP/M executable and its census. |
 | `scripts/generate-native-core.mjs` | Assemble the core twice and build or verify its checked image and symbols. |
 | `scripts/generate-native-object-harness.mjs` | Build or verify the standalone object-service harness. |
-| `scripts/generate-stage1-record.mjs` | Build or check the small portable-host conformance record. |
 | `scripts/measure-cpm22-output-candidates.mjs` | Measure CP/M output-kernel alternatives and verify their recorded sizes. |
 | `scripts/package-census.mjs` | Record or check the files and unpacked size in the npm package. |
 | `scripts/prepare-github-release.mjs` | Prepare the CP/M executable, release metadata and checksums. |
 | `scripts/verify-dependencies.mjs` | Check installed shared-package versions against supported release ranges. |
 | `scripts/verify-example.mjs` | Build the shipped example and check its generated artifacts. |
-| `scripts/verify-stage3-node-deno.mjs` | Compare CLI output from Node and Deno. |
 | `scripts/verify-triptych-wasm.mjs` | Optionally compare Atom execution through the Triptych WASM adapter; requires its local module. |
 
 The native measurement commands use `test/measure-*.mjs` because they share the

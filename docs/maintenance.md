@@ -59,8 +59,7 @@ npm test
 
 Native tests check the return address, stack, preserved registers, memory
 guards, immutable ranges and complete write set as well as the returned status.
-Deno parity tests skip when Deno is absent. Run `npm run verify:deno-stage1` and
-`npm run verify:stage3` to check the Deno paths explicitly. The main lanes are:
+The main test lanes are:
 
 | Tests | Boundary |
 | --- | --- |
