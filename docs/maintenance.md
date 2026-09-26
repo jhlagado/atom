@@ -130,9 +130,10 @@ Before tagging a release:
 
 1. Confirm `main` is current with its remote and the working tree is clean.
 2. Confirm `package.json` has the intended version.
-3. Inspect `npm pack --dry-run` and the package census.
-4. Run the release gate.
-5. Tag the exact commit as `v<version>`.
+3. Prepare the versioned Triptych image and run its verification.
+4. Inspect `npm pack --dry-run` and the package census.
+5. Run the release gate.
+6. Tag the exact commit as `v<version>`.
 
 If the packaged files changed deliberately, refresh the census only after the
 file set is final:
@@ -145,3 +146,23 @@ npm run verify:package-census
 Pushing the version tag runs `.github/workflows/release.yml`. The workflow
 publishes `ATOM.COM`, `ATOM.manifest.json` and `SHA256SUMS` after repeating the
 release checks.
+
+### Triptych release image
+
+Each release also has a versioned two-MiB CP/M image on the Atom Pages site.
+Prepare it before tagging, using a clean Triptych checkout containing the
+pinned N04 resident image:
+
+```sh
+TRIPTYCH_ROOT=/path/to/triptych npm run prepare:triptych-release
+npm test
+```
+
+Commit the generated `site/releases/<version>/atom.img`, its `system.json`
+descriptor, and the updated `site/index.html` with the release candidate. The
+image contains the Triptych N04 system and the exact `ATOM.COM` from the checked
+census. The release workflow adds the official GitHub release files to the same
+versioned directory and deploys the complete site. The stable page is
+`https://jhlagado.github.io/atom/`; its Triptych link opens the descriptor from
+that release directory. Published version directories are immutable. The
+separate Pages workflow can redeploy the current site on demand.

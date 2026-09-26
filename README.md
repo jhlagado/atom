@@ -27,6 +27,8 @@ atom main.asm build/main.bin build/main.hex
 
 Download [ATOM.COM](https://github.com/jhlagado/atom/releases/latest/download/ATOM.COM)
 from the latest release and copy it to a CP/M disk.
+The [Atom downloads page](https://jhlagado.github.io/atom/) has the direct
+download and a ready-to-run Triptych image.
 
 ```text
 A>ATOM HELLO

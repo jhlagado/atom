@@ -61,6 +61,8 @@
     "verify:package-census": "node scripts/package-census.mjs --check",
     "verify:triptych-wasm": "node scripts/verify-triptych-wasm.mjs",
     "prepare:github-release": "node scripts/prepare-github-release.mjs",
+    "prepare:triptych-release": "node scripts/prepare-triptych-release.mjs",
+    "prepare:pages-releases": "node scripts/materialize-pages-releases.mjs",
     "update:package-census": "node scripts/package-census.mjs --update",
     "prepare:proof": "npm run verify:dependencies",
     "pretest": "npm run prepare:proof",

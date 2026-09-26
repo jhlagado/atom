@@ -5,6 +5,11 @@ Download `ATOM.COM` from the
 file is retained in this repository as
 [`assets/atom-cpm22.com`](../assets/atom-cpm22.com).
 
+The [Atom downloads page](https://jhlagado.github.io/atom/) serves the current
+`ATOM.COM` directly and can open the matching disk image in Triptych. The disk
+image starts CP/M from protected drive A and seeds writable drive B with the
+same release. Switch to `B:` before running Atom.
+
 ## Command line
 
 With no arguments, Atom reads `INPUT.ASM` and writes `OUTPUT.COM`:
