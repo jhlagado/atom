@@ -1,11 +1,11 @@
 {
   "name": "Atom native self-hosting proof",
   "source": {
-    "statements": 8781,
+    "statements": 8773,
     "sourceParts": 16,
-    "sourceBytes": 564343,
+    "sourceBytes": 561313,
     "checkedParts": 17,
-    "checkedBytes": 565516,
+    "checkedBytes": 562486,
     "globalSymbols": 876,
     "privateSymbols": 441
   },
@@ -20,10 +20,10 @@
     "declaredSymbols": 1316
   },
   "execution": {
-    "instructions": 128691429,
-    "cycles": 1373941998,
+    "instructions": 128524227,
+    "cycles": 1372184386,
     "serviceCalls": 13734,
-    "sourceReads": 1195626,
+    "sourceReads": 1189550,
     "maxInstructions": 200000000,
     "maxCycles": 2000000000
   },
