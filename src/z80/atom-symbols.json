@@ -3,10 +3,10 @@
   "version": 2,
   "statistics": {
     "statements": 8773,
-    "sourceBytes": 559683,
+    "sourceBytes": 558887,
     "sourceParts": 16,
     "checkedParts": 17,
-    "checkedBytes": 560856,
+    "checkedBytes": 560060,
     "globalSymbols": 876,
     "privateSymbols": 441
   },
