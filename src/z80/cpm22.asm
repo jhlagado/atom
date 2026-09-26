@@ -1,6 +1,4 @@
-;==============================================================================
 ; Atom CP/M 2.2 transient adapter
-;==============================================================================
 ;
 ; The generated COM places the native Atom core at $0110. The first sixteen
 ; bytes are supplied by scripts/generate-cpm22.mjs. Source bytes are read from
@@ -1486,17 +1484,37 @@ CP_ADAPTER_WORKSPACE1_END:
 
 CP_ADAPTER_IMMUTABLE_START:
 CP_WRITTEN_TEXT: DB ' ','w','r','i','t','t','e','n',13,10,'$'
-CP_READ_FAILED_TEXT: DB ' ','r','e','a','d',' ','f','a','i','l','e','d',13,10,'$'
+CP_READ_FAILED_TEXT:
+    DB ' ','r','e','a','d',' ','f','a','i','l','e','d',13,10,'$'
 CP_ASSEMBLY_TEXT: DB 13,10,'A','t','o','m',' ','e','r','r','o','r',' ','$'
 CP_NEWLINE_TEXT: DB 13,10,'$'
-CP_USAGE_TEXT: DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' ','[','S','O','U','R','C','E',' ','[','O','U','T','P','U','T',']',']',13,10,'$'
-CP_SOURCE_NAME_TEXT: DB 13,10,'I','n','v','a','l','i','d',' ','s','o','u','r','c','e',' ','n','a','m','e',13,10,'$'
-CP_OUTPUT_NAME_TEXT: DB 13,10,'I','n','v','a','l','i','d',' ','o','u','t','p','u','t',' ','n','a','m','e',13,10,'$'
-CP_NAME_CONFLICT_TEXT: DB 13,10,'S','o','u','r','c','e','/','o','u','t','p','u','t',' ','c','o','n','f','l','i','c','t',13,10,'$'
-CP_AUXILIARY_EXISTS_TEXT: DB 13,10,'T','e','m','p','/','b','a','c','k','u','p',' ','f','i','l','e',' ','e','x','i','s','t','s',13,10,'$'
-CP_INVALID_INCLUDE_TEXT: DB 13,10,'I','n','v','a','l','i','d',' ','%','I','N','C','L','U','D','E',13,10,'$'
-CP_INCLUDE_CYCLE_TEXT: DB 13,10,'I','n','c','l','u','d','e',' ','c','y','c','l','e',13,10,'$'
-CP_SOURCE_CAPACITY_TEXT: DB 13,10,'T','o','o',' ','m','a','n','y',' ','s','o','u','r','c','e','s',13,10,'$'
+CP_USAGE_TEXT:
+    DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' ' ; Syntax prefix.
+    DB '[','S','O','U','R','C','E',' '                  ; Optional source.
+    DB '[','O','U','T','P','U','T',']',']',13,10,'$'  ; Optional output.
+CP_SOURCE_NAME_TEXT:
+    DB 13,10,'I','n','v','a','l','i','d',' '            ; Error prefix.
+    DB 's','o','u','r','c','e',' ','n','a','m','e',13,10,'$' ; Source name.
+CP_OUTPUT_NAME_TEXT:
+    DB 13,10,'I','n','v','a','l','i','d',' '            ; Error prefix.
+    DB 'o','u','t','p','u','t',' ','n','a','m','e',13,10,'$' ; Output name.
+CP_NAME_CONFLICT_TEXT:
+    DB 13,10,'S','o','u','r','c','e','/'               ; First filename.
+    DB 'o','u','t','p','u','t',' '                      ; Second filename.
+    DB 'c','o','n','f','l','i','c','t',13,10,'$'       ; Conflict suffix.
+CP_AUXILIARY_EXISTS_TEXT:
+    DB 13,10,'T','e','m','p','/'                     ; Temporary file.
+    DB 'b','a','c','k','u','p',' '                    ; Backup file.
+    DB 'f','i','l','e',' ','e','x','i','s','t','s',13,10,'$'
+CP_INVALID_INCLUDE_TEXT:
+    DB 13,10,'I','n','v','a','l','i','d',' '           ; Error prefix.
+    DB '%','I','N','C','L','U','D','E',13,10,'$'      ; Directive name.
+CP_INCLUDE_CYCLE_TEXT:
+    DB 13,10,'I','n','c','l','u','d','e',' '           ; Include prefix.
+    DB 'c','y','c','l','e',13,10,'$'                 ; Cycle suffix.
+CP_SOURCE_CAPACITY_TEXT:
+    DB 13,10,'T','o','o',' ','m','a','n','y',' '       ; Error prefix.
+    DB 's','o','u','r','c','e','s',13,10,'$'          ; Source count.
 CP_INCLUDE_WORD: DB 'I','N','C','L','U','D','E'
 CP_ASM_EXTENSION: DB 'A','S','M'
 CP_COM_EXTENSION: DB 'C','O','M'
