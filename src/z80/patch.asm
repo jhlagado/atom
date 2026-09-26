@@ -1,12 +1,12 @@
-;==============================================================================
+;=============================================================================
 ;  Patch-field locator
-;==============================================================================
+;=============================================================================
 ;
-;  Locate the encoded field associated with one operand in a form the encoder has
-;  already validated. The result identifies the field offset and its base kind:
-;  byte, word, relative displacement or index displacement. Patch records also
-;  support low-byte truncation, LOW and HIGH transforms. DB selects truncation;
-;  unresolved LOW/HIGH expressions retain their transform for later patching.
+;  Find the encoded field for one operand of a validated instruction.
+;  Return its byte offset and base kind: byte, word, relative displacement
+;  or index displacement. Patch records also support low-byte truncation
+;  and LOW/HIGH transforms. DB selects truncation; unresolved LOW/HIGH
+;  expressions retain their transform until patching.
 ;
 ;  Principal entry:
 ;    PT_LOCAT  map an operand index to its encoded field and patch kind
@@ -25,17 +25,17 @@ PT_KLB EQU 6                ; Apply LOW to a resolved word.
 PT_KHB EQU 7                ; Apply HIGH to a resolved word.
 
 ;@ROUTINE IN IX,A OUT A,B,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,DE,ZERO
-; A is operand index 0..2 and IX is the validated instruction record. Return A as
+; A is operand index 0..2; IX points at a validated record. Return A as
 ; base patch kind and B as byte offset from the instruction start.
 
 PT_LOCAT:
     CP   3                  ; Only operand slots zero, one and two exist.
     JR   NC,.INVALID        ; Reject an index outside the instruction record.
     LD   E,A                ; Retain the operand index as a table offset.
-    LD   D,0                ; Widen the index for sixteen-bit address arithmetic.
-    PUSH DE                 ; Save the operand index across EN_LEN's DE clobber.
+    LD   D,0                ; Extend the index to 16 bits.
+    PUSH DE                 ; Save the index across EN_LEN.
     CALL EN_LEN             ; Validate the form and obtain its encoded length.
-    POP  DE                 ; Restore the operand index without changing carry.
+    POP  DE                 ; Restore the index, preserving carry.
     JR   C,.INVALID         ; A rejected form cannot have a patch field.
 
 ; EN_LEN supplies the total byte length without reading operand values.
@@ -52,7 +52,7 @@ PT_LOCAT:
 ; table deliberately rejects PORT_C, which has no encoded value field.
 
     SUB  EN_IIX             ; Convert the first patchable class to index zero.
-    CP   7                  ; Seven consecutive class slots feed the kind table.
+    CP   7                  ; Seven class slots feed the kind table.
     JR   NC,.INVALID        ; Classes outside that interval contain no field.
     LD   E,A                ; Retain the bounded patch-kind table index.
     LD   D,0                ; Widen it for address arithmetic.
@@ -84,7 +84,7 @@ PT_LOCAT:
 ; prefix, opcode, displacement; indexed-CB forms are prefix, CB, displacement,
 ; opcode.
 
-    LD   B,2                ; Skip the index prefix and following opcode or CB.
+    LD   B,2                ; Skip the index prefix and opcode or CB.
     OR   A                  ; Preserve PT_KDISP while clearing carry.
     RET                     ; Return the fixed indexed-displacement position.
 PT_OKIND:
@@ -92,6 +92,6 @@ PT_OKIND:
 ; EN_IIX, EN_IIY, EN_MABS, EN_IMM8, EN_IMM16, EN_PORTC, EN_REL8.
 
     DB PT_KDISP,PT_KDISP    ; IX/IY memory operands patch their displacement.
-    DB PT_KINDW,PT_KINDB,PT_KINDW ; Absolute, byte-immediate and word-immediate.
+    DB PT_KINDW,PT_KINDB,PT_KINDW ; Memory field; byte/word immediates.
     DB 0,PT_KRELA           ; Port C has no field; REL8 patches relatively.
 PT_CEND:

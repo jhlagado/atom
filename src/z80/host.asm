@@ -1,12 +1,11 @@
-;==============================================================================
+;=============================================================================
 ;  Fail-closed host-service defaults
-;==============================================================================
+;=============================================================================
 ;
-;  Define the six output-service entry points used by the platform-neutral Atom
-;  core. This standalone implementation is deliberately unusable: every entry
-;  falls through to one common failure return. A platform image omits this whole
-;  module and supplies concrete BEGIN, IMAGE-byte, PATCH-byte, PATCH-word, COMMIT
-;  and ABORT implementations at the same public labels.
+;  These six output-service entries belong to the platform-neutral core.
+;  The standalone version fails closed: each entry reaches one failure tail.
+;  A platform image omits this module and supplies BEGIN, IMAGE, PATCH,
+;  COMMIT and ABORT implementations at the same labels.
 ;
 ;  BEGIN receives IX = build descriptor. IMAGE/PATCH byte receive A = value,
 ;  C = output class and HL = logical address. PATCH word receives HL = value,
@@ -14,7 +13,7 @@
 ;  HL = final cursor and DE = remaining capacity. ABORT has no inputs.
 ;
 ;  The separate NOPs preserve distinct hook addresses for host interception.
-;  Without interception, execution reaches HS_FCLOS and returns A=$FF, carry set.
+;  Without interception, HS_FCLOS returns A=$FF with carry set.
 
 HS_SCBEG:
 
@@ -22,31 +21,31 @@ HS_SCBEG:
 ; Reserve the replaceable BEGIN service entry and fail closed when unbound.
 
 HS_BEG:
-    NOP                     ; Reserve the BEGIN hook; fall through when unbound.
+    NOP                     ; BEGIN hook; fall through if unbound.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
-; Reserve the replaceable IMAGE-byte service entry and fail closed when unbound.
+; Reserve the IMAGE-byte entry; fail closed when unbound.
 
 HS_IB:
-    NOP                     ; Reserve the IMAGE-byte hook; fall through unbound.
+    NOP                     ; IMAGE-byte hook; fall through unbound.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
-; Reserve the replaceable PATCH-byte service entry and fail closed when unbound.
+; Reserve the PATCH-byte entry; fail closed when unbound.
 
 HS_PB:
-    NOP                     ; Reserve the PATCH-byte hook; fall through unbound.
+    NOP                     ; PATCH-byte hook; fall through unbound.
 
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
-; Reserve the replaceable PATCH-word service entry and fail closed when unbound.
+; Reserve the PATCH-word entry; fail closed when unbound.
 
 HS_PW:
-    NOP                     ; Reserve the PATCH-word hook; fall through unbound.
+    NOP                     ; PATCH-word hook; fall through unbound.
 
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable COMMIT service entry and fail closed when unbound.
 
 HS_CMT:
-    NOP                     ; Reserve the COMMIT hook; fall through when unbound.
+    NOP                     ; COMMIT hook; fall through if unbound.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable ABORT entry and return the common unbound failure.
