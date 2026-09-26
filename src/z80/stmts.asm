@@ -1,26 +1,20 @@
-;==============================================================================
-;  Statements, labels and directives
-;==============================================================================
+; Statements, labels and directives
 ;
 ;  PURPOSE
 ;  -------
-;  Turn the token stream for one source part into labels, constants, directives
-;  and encoded instructions. This layer owns source-statement grammar; it leaves
+;  Turn one source part into labels, constants, directives and instructions.
+;  This layer owns source-statement grammar. It leaves
 ;  token recognition, expression arithmetic, instruction forms, symbols and
 ;  output transactions to the modules below it.
 ;
 ;  PUBLIC ENTRY POINT
 ;  ------------------
 ;
-;+---------------------------------------------------------------------------+
-;| DR_APART / ST_NEXT - Assemble the current source part.                    |
-;|                                                                           |
-;| Entry: TK_RESET has selected a source part and range.                     |
-;| Result: Carry clear and A = 0 after that part reaches EOF.                 |
-;| Error: Carry set and A = ST_S* category. ST_DETAI contains the nested      |
-;|        subsystem status; ST_EPART/ST_EOFF retain the statement location.  |
-;| Side effects: Declares symbols and emits IMAGE/PATCH operations.           |
-;+---------------------------------------------------------------------------+
+; DR_APART / ST_NEXT assembles the current source part.
+; TK_RESET must first select its part and range. At EOF, carry is clear and
+; A = 0. On error, carry is set and A holds an ST_S* category. ST_DETAI holds
+; the nested status; ST_EPART/ST_EOFF hold the source location.
+; Side effects: symbol declarations and IMAGE/PATCH output.
 ;
 ;  STATEMENT SHAPES
 ;  ----------------
@@ -38,7 +32,7 @@
 ;  decision never needs to rewind the stream.
 ;
 ;  Label declarations immediately call OU_RSLV. This emits patches for waiting
-;  references and removes their pending records only after the sink accepts the
+;  references. It removes pending records only after the sink accepts the
 ;  patch. EQU uses the same resolution path once its expression is concrete.
 ;
 ;  WORKSPACE AND REENTRANCY
@@ -78,21 +72,21 @@ ST_ALIGN EQU 9             ; Advance to the next address boundary.
 ST_CNT EQU 9               ; Number of recognized directive names.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Assemble statements from the current source part until its end-of-file token.
+; Assemble the current source part through its EOF token.
 
 DR_APART:
 ST_NEXT:
 
-; Fetch the first significant token. EOF finishes only this source part; an EOL
+; Fetch the first token. EOF finishes only this source part; an EOL
 ; is an empty statement and simply restarts the loop.
 
-    CALL ST_NTKIN              ; Fetch the first token and copy its kind into A.
+    CALL ST_NTKIN              ; Fetch the first token kind into A.
     JP   C,ST_LFAIL            ; Preserve an exact tokenizer failure location.
     CP   TK_EOF                ; Has this source part ended?
     JP   Z,ST_SUCCE            ; Yes: return success to the multipart driver.
     CP   TK_EOL                ; Is this an empty source line?
     JR   Z,ST_NEXT             ; Yes: ignore it and fetch the next statement.
-    CP   TK_NAME               ; Every non-empty statement must start with a name.
+    CP   TK_NAME               ; Does this statement start with a name?
     JP   NZ,ST_EHERE           ; Report the unexpected starting token.
 
 ; Preserve the statement's starting position before any nested parser advances
@@ -107,16 +101,16 @@ ST_NEXT:
     CALL EN_PSYM               ; Pack and validate the possible symbol name.
     JP   C,ST_SFAIL            ; Translate packing failure to symbol status.
 
-; Independently classify the same lexeme as a mnemonic. ST_MVALI records whether
-; ST_MNEM is meaningful; an ordinal of zero is not used as a validity sentinel.
+; Classify the same lexeme as a mnemonic. ST_MVALI marks ST_MNEM as valid;
+; ordinal zero is not a validity sentinel.
 
     CALL TK_LLEXE              ; Reload the still-current leading lexeme.
     CALL EN_RECOG              ; Look for an exact mnemonic match.
-    JR   C,ST_NMNEM            ; Try the directive table if no mnemonic matched.
+    JR   C,ST_NMNEM            ; No mnemonic: try the directive table.
     LD   (ST_MNEM),A           ; Cache the recognized mnemonic ordinal.
     LD   A,1                   ; Form an explicit Boolean validity marker.
     LD   (ST_MVALI),A          ; Mark the cached mnemonic as usable.
-    XOR  A                     ; A mnemonic cannot simultaneously be a directive.
+    XOR  A                     ; Clear the alternative classification.
     LD   (ST_DVALI),A          ; Clear the directive-valid marker.
     JR   ST_AFNAM              ; Inspect the token following the leading name.
 ST_NMNEM:
@@ -126,7 +120,7 @@ ST_NMNEM:
 
     XOR  A                     ; Record that mnemonic recognition failed.
     LD   (ST_MVALI),A          ; Prevent stale mnemonic data being consumed.
-    CALL TK_LLEXE              ; Reload the leading lexeme for directive lookup.
+    CALL TK_LLEXE              ; Reload the lexeme for directive lookup.
     CALL EN_RDIR               ; Search the compact directive-name table.
     JR   C,ST_NDIR             ; Leave both validity flags clear if absent.
     LD   (ST_DIR),A            ; Cache the directive ordinal.
@@ -150,7 +144,7 @@ ST_AFNAM:
 
     LD   A,(ST_MVALI)          ; Test the cached mnemonic classification.
     OR   A                     ; Set Z when no mnemonic matched.
-    JP   NZ,ST_IPUB            ; Parse operands for the recognized instruction.
+    JP   NZ,ST_IPUB            ; Matched: parse its operands.
 
 ; A recognized non-EQU directive without a colon goes to directive dispatch.
 
@@ -164,7 +158,7 @@ ST_TEQUA:
 ; An unrecognized leading name may still be the destination of colonless EQU.
 ; The current token must itself be the recognized EQU directive.
 
-    LD   A,(TK_REC+TK_KOFF)    ; Read the token after the prospective constant name.
+    LD   A,(TK_REC+TK_KOFF)    ; Inspect the token after the constant name.
     CP   TK_NAME               ; Only another name can be the EQU directive.
     JP   NZ,ST_ESAVE           ; Otherwise report the unexpected token kind.
     CALL TK_LLEXE              ; Expose the second name's characters.
@@ -178,15 +172,15 @@ ST_LABEL:
 ; After a colon, recognize the special convenience form "label: EQU value".
 ; Any other token leaves the declaration as an address label.
 
-    CALL ST_NTKIN              ; Consume the colon and fetch the following token.
+    CALL ST_NTKIN              ; Consume colon and fetch the next token.
     JP   C,ST_LFAIL            ; Preserve any tokenizer error.
     CP   TK_NAME               ; A name here might be the EQU directive.
     JR   NZ,ST_LPUBL           ; Anything else leaves an address label.
     CALL TK_LLEXE              ; Expose the possible directive text.
     CALL EN_RDIR               ; Attempt directive recognition.
-    JR   C,ST_LPUBL            ; An instruction name still means address label.
+    JR   C,ST_LPUBL            ; No directive: declare an address label.
     CP   ST_EQU                ; Is this specifically EQU?
-    JR   Z,ST_EQUAT            ; Yes: declare a constant instead of an address.
+    JR   Z,ST_EQUAT            ; EQU: declare a constant.
 ST_LPUBL:
 
 ; The packed key's private bit selects the declaration rule. A global address
@@ -194,47 +188,47 @@ ST_LPUBL:
 
     LD   HL,ST_KEY+5           ; Address the packed symbol's flag byte.
     BIT  7,(HL)                ; Test the private-name marker.
-    LD   HL,ST_KEY             ; Restore the packed symbol address for declaration.
+    LD   HL,ST_KEY             ; Supply the packed symbol key.
     LD   DE,(OU_CURSO)         ; Bind the label to the current output address.
     JR   NZ,ST_PLABE           ; Private names use the current global scope.
     CALL SY_DGLAB              ; Declare a global and open its private scope.
-    JR   ST_LDECL              ; Share declaration failure and resolution handling.
+    JR   ST_LDECL              ; Share declaration and resolution checks.
 ST_PLABE:
-    CALL SY_DECL               ; Declare the private label in the active scope.
+    CALL SY_DECL               ; Declare in the active private scope.
 ST_LDECL:
-    JP   C,ST_SFAIL            ; Report duplicate, capacity or missing-scope failure.
+    JP   C,ST_SFAIL            ; Report a symbol declaration failure.
 
 ; A newly known address may satisfy several forward references. Resolution is
 ; transactional with the sink and leaves diagnostics intact on failure.
 
-    CALL OU_RSLV               ; Emit and retire patches waiting on this symbol.
+    CALL OU_RSLV               ; Emit and retire this symbol's patches.
     JP   C,ST_OFAIL            ; Preserve transactional output failure.
 
 ; A bare label ends at EOL. Otherwise the same line may continue with exactly
 ; one instruction or directive name.
 
-    LD   A,(TK_REC+TK_KOFF)    ; Inspect the token already fetched after the label.
+    LD   A,(TK_REC+TK_KOFF)    ; Inspect the token after the label.
     CP   TK_EOL                ; Is the label the complete statement?
     JP   Z,ST_NEXT             ; Yes: begin the next line.
     CP   TK_NAME               ; A statement tail must start with a name.
-    JP   NZ,ST_EHERE           ; Reject punctuation or literals in this position.
-    CALL ST_CPOSI              ; Move diagnostics to the post-label operation name.
+    JP   NZ,ST_EHERE           ; Reject a non-name statement tail.
+    CALL ST_CPOSI              ; Anchor errors at the operation name.
     CALL TK_LLEXE              ; Expose that name for mnemonic lookup.
     CALL EN_RECOG              ; Try to recognize an instruction.
     JR   C,ST_LDIR             ; If absent, try the directive table instead.
 
-; Publish the recognized mnemonic, consume the name token and share the ordinary
+; Cache the mnemonic, consume its name and share the ordinary
 ; instruction path used by statements without a label.
 
     LD   (ST_MNEM),A           ; Cache the post-label mnemonic ordinal.
-    CALL TK_NEXT               ; Consume the mnemonic and expose its first operand.
-    JP   C,ST_LFAIL            ; Preserve a lexical failure in the operand field.
+    CALL TK_NEXT               ; Consume the name; expose its first operand.
+    JP   C,ST_LFAIL            ; Retain a lexical error in its operands.
     JR   ST_IPUB               ; Join ordinary instruction parsing.
 ST_LDIR:
 
 ; The post-label name was not a mnemonic. It must be a recognized directive.
 
-    CALL TK_LLEXE              ; Reload the operation name as a directive candidate.
+    CALL TK_LLEXE              ; Reload the name for directive lookup.
     CALL EN_RDIR               ; Look for an exact directive match.
     JP   C,ST_ESAVE            ; Unknown operation names are statement errors.
     LD   (ST_DIR),A            ; Save the directive across token advancement.
@@ -244,16 +238,16 @@ ST_LDIR:
     JR   ST_DPUB               ; Enter the common directive dispatcher.
 ST_IPUB:
 
-; Parse and validate operands into ST_INS using the current output cursor as the
+; Parse and validate operands into ST_INS. Use the output cursor as the
 ; instruction address. Relative expressions depend on that address.
 
     LD   A,(ST_MNEM)           ; Supply the recognized mnemonic ordinal.
     LD   BC,(OU_CURSO)         ; Supply the instruction's output address.
     LD   DE,ST_INS             ; Select the union's parsed-instruction record.
-    CALL PR_PUB                ; Parse operands and validate the complete form.
-    JP   C,ST_IFAIL            ; Translate parser status to instruction failure.
+    CALL PR_PUB                ; Parse and validate the instruction form.
+    JP   C,ST_IFAIL            ; Wrap a parser error as instruction failure.
 
-; Emit the validated instruction's one-to-four bytes, then fetch the next line.
+; Emit one to four instruction bytes, then fetch the next line.
 
     CALL OU_EINS               ; Encode and publish the validated instruction.
 ST_OTNEX:
@@ -263,18 +257,18 @@ ST_EQUAT:
 
 ; Consume EQU and evaluate its expression at the current output address.
 
-    CALL TK_NEXT               ; Consume EQU and expose the expression's first token.
+    CALL TK_NEXT               ; Consume EQU; expose its expression.
     JP   C,ST_LFAIL            ; Preserve a lexical failure before evaluation.
-    CALL ST_PEXPR              ; Evaluate relative to the current output address.
-    JP   C,ST_EFAIL            ; Report the nested expression status as EQU failure.
+    CALL ST_PEXPR              ; Evaluate at the current output address.
+    JP   C,ST_EFAIL            ; Wrap an expression error as EQU failure.
 
-; EQU must be known now. Allowing a forward EQU would require delayed expression
+; EQU must be known now. A forward EQU would require delayed expression
 ; evaluation rather than the byte patches used for address references.
 
     OR   A                     ; A is nonzero when the result is unresolved.
     JP   NZ,ST_EUNRE           ; EQU requires a value immediately.
 
-; Save the low 16-bit value and derive its signedness from the expression's high
+; Save the low word. Derive its sign from the expression's high
 ; extension byte: zero is unsigned/non-negative, nonzero is negative.
 
     LD   (ST_EVAL),HL          ; Save the result's low sixteen bits.
@@ -289,23 +283,23 @@ ST_ESREA:
 ; No token may follow the EQU expression on the statement.
 
     LD   A,(TK_REC+TK_KOFF)    ; Inspect the token left by expression parsing.
-    CP   TK_EOL                ; Did the expression consume the rest of the line?
+    CP   TK_EOL                ; Did the expression end at EOL?
     JP   NZ,ST_EDELI           ; Report any trailing delimiter or token.
 
-; EQU declares within the current scope but never opens a new global-label scope.
+; EQU declares in the current scope without opening a new global scope.
 
     LD   HL,ST_KEY             ; Supply the packed constant name.
     LD   DE,(ST_EVAL)          ; Supply its immediate sixteen-bit value.
     CALL SY_DECL               ; Declare it without changing global scope.
-    JP   C,ST_SFAIL            ; Preserve duplicate, capacity or scope failure.
+    JP   C,ST_SFAIL            ; Preserve a symbol declaration failure.
 
-; Preserve a negative constant's sign-extension flag in the packed symbol record
+; Mark negative constants in the packed symbol record
 ; before resolving any waiting references to its newly concrete value.
 
     LD   A,(ST_ESIGN)          ; Recover the saved sign-extension flag.
     OR   A                     ; Set Z for a non-negative constant.
     JR   Z,ST_ERSLV            ; Leave its symbol flags unchanged.
-    SET  5,(IX+5)              ; Mark a negative constant for later expressions.
+    SET  5,(IX+5)              ; Mark it negative for later expressions.
 ST_ERSLV:
     CALL OU_RSLV               ; Resolve pending uses of the new constant.
     JR   ST_OTNEX              ; Check output status and continue.
@@ -314,8 +308,8 @@ ST_DPUB:
 ; EQU is handled by the declaration grammar above. Subtracting ST_ORG maps the
 ; remaining contiguous ordinals onto the eight-entry address table.
 
-    SUB  ST_ORG                ; Convert ORG..ALIGN into zero-based table indices.
-    CP   8                     ; Does the ordinal name a dispatchable directive?
+    SUB  ST_ORG                ; Index ORG..ALIGN from zero.
+    CP   8                     ; Is this one of eight table entries?
     JP   NC,ST_ESAVE           ; Reject EQU or a corrupt/out-of-range ordinal.
     ADD  A,A                   ; Scale the index for a two-byte address entry.
     LD   L,A                   ; Place the scaled offset in HL.
@@ -325,7 +319,7 @@ ST_DPUB:
     LD   E,(HL)                ; Load the handler address low byte.
     INC  HL                    ; Advance to its high byte.
     LD   D,(HL)                ; Complete the handler address in DE.
-    EX   DE,HL                 ; Move the handler address into jump register HL.
+    EX   DE,HL                 ; Put the handler address in HL.
     JP   (HL)                  ; Dispatch without another comparison chain.
 ST_DDTAB:
 
@@ -336,10 +330,10 @@ ST_DDTAB:
     DW ST_ALIG1                            ; Address-alignment directive.
 ST_ORG1:
 
-; ORG requires one concrete expression and no trailing token. The output layer
-; enforces target bounds and represents any gap according to the sink contract.
+; ORG requires one concrete expression and no trailing token. It changes the
+; logical output cursor; the platform adapter owns extent and append policy.
 
-    CALL ST_PEXPR              ; Evaluate the requested absolute cursor address.
+    CALL ST_PEXPR              ; Evaluate the absolute output address.
     JP   C,ST_DFAIL            ; Preserve expression syntax or range detail.
     OR   A                     ; Test the unresolved-result flag.
     JP   NZ,ST_DUNR1           ; ORG cannot wait for a forward definition.
@@ -348,11 +342,11 @@ ST_ORG1:
     CP   TK_EOL                ; ORG accepts exactly one expression.
     JP   NZ,ST_DDEL1           ; Report the unexpected trailing token.
     LD   HL,(ST_DVAL)          ; Restore the requested origin.
-    CALL OU_SORIG              ; Set the logical origin; the sink validates its range.
+    CALL OU_SORIG              ; Set the logical output cursor.
     JP   ST_OTNEX              ; Check output status and continue.
 ST_DB1:
 
-; Data-list width and default unresolved patch kind distinguish DB from DW; both
+; Width and default patch kind distinguish DB from DW. Both
 ; then share the comma-separated item loop.
 
     LD   A,1                   ; Select one emitted byte per scalar item.
@@ -374,8 +368,8 @@ ST_DITEM:
     JP   Z,ST_DEXP             ; Report the missing expression.
 
 ; Quoted strings are accepted only in DB. They use mode zero so the common
-; string emitter returns to the data-list delimiter path rather than ending the
-; whole statement.
+; string emitter returns to the data-list delimiter path, not the end of
+; the whole statement.
 
     CP   TK_STRIN              ; Is this item a quoted string?
     JR   NZ,ST_DEXPR           ; No: parse it as a scalar expression.
@@ -406,13 +400,13 @@ ST_DORES:
     JP   ST_DDELI              ; Require comma or end-of-line next.
 ST_DUNRE:
 
-; A simple unresolved symbol may be represented by a pending patch. Save the
-; expression addend and symbol pointer before any capacity or emission call can
+; A simple unresolved symbol may be represented by a pending patch. Save
+; the addend and symbol pointer before a capacity or emission call can
 ; reuse IX, HL or the shared expression workspace.
 
-    LD   A,L                   ; Capture the unresolved expression's signed addend.
+    LD   A,L                   ; Capture the signed expression addend.
     LD   (ST_DADDE),A          ; Preserve it for the pending record.
-    PUSH IX                    ; Copy the expression symbol pointer without flags.
+    PUSH IX                    ; Save the expression symbol pointer.
     POP  HL                    ; Receive that pointer in HL.
     LD   (ST_DKEY),HL          ; Preserve it across capacity checks.
     LD   A,(ST_DWIDT)          ; Recover the placeholder byte count.
@@ -420,13 +414,13 @@ ST_DUNRE:
     LD   H,0                   ; Zero-extend it for output preflight.
 
 ; Prove both output and pending-record capacity before publishing a zero
-; placeholder. Failure therefore leaves neither stream nor symbol state changed.
+; placeholder. On failure, stream and symbol state remain unchanged.
 
     CALL OU_CCAP               ; Prove the placeholder fits the output range.
     JP   C,ST_OFAIL            ; Fail before any visible write on exhaustion.
     CALL SY_CCAP               ; Prove one pending record fits its arena.
     JP   C,ST_SFAIL            ; Fail before emission if it does not.
-    LD   A,(EX_RUNRE)          ; Read the unresolved expression's projection form.
+    LD   A,(EX_RUNRE)          ; Read the unresolved projection form.
     CP   EX_FLO                ; Was LOW(...) requested?
     JR   Z,ST_DPLO             ; Yes: use a low-byte patch.
     CP   EX_FHI                ; Was HIGH(...) requested?
@@ -455,7 +449,7 @@ ST_DPKRE:
     OR   A                     ; Set Z for a previously referenced symbol.
     JR   Z,ST_DDREA            ; Reuse its existing diagnostic anchor.
 
-; Store the first reference's source offset in the undefined symbol's value word
+; Store the first reference offset in the undefined symbol's value word
 ; and mark this pending record as its diagnostic anchor.
 
     LD   HL,(EX_SOFF)          ; Recover the expression's source-byte offset.
@@ -463,7 +457,7 @@ ST_DPKRE:
     LD   (IX+SY_VALHI),H       ; Store its high byte to complete the anchor.
     LD   A,SY_DANCH            ; Select the diagnostic-anchor flag.
     LD   HL,ST_DPKI1           ; Address the pending patch kind.
-    OR   (HL)                  ; Add the anchor flag without changing its kind.
+    OR   (HL)                  ; Add the anchor flag to the patch kind.
     LD   (HL),A                ; Retain the combined pending metadata.
 ST_DDREA:
 
@@ -478,10 +472,10 @@ ST_DDREA:
     CP   1                     ; Is this an unresolved DB item?
     JR   Z,ST_DPB              ; Yes: emit one zero byte.
 
-; The reserved bytes are zero. A later PATCH operation carries the final value.
+; Emit a zero-filled placeholder. A later PATCH carries the final value.
 
     LD   HL,0                  ; Form a two-byte zero placeholder.
-    CALL OU_EMITW              ; Emit the two-byte placeholder after preflight.
+    CALL OU_EMITW              ; Emit the preflighted two-byte placeholder.
     JP   C,ST_OFAIL            ; Preserve any unexpected sink failure.
     JR   ST_DQUEU              ; Append its pending patch record.
 ST_DPB:
@@ -504,8 +498,8 @@ ST_DQUEU:
     JP   C,ST_SFAIL            ; Preserve capacity or invariant failure.
 ST_DDELI:
 
-; Accept EOL or a comma followed by another item. A trailing comma is diagnosed
-; as a missing expression by returning to ST_DITEM with EOL current.
+; Accept EOL or comma followed by another item. A trailing comma reports
+; a missing expression.
 
     LD   A,(TK_REC+TK_KOFF)    ; Inspect the token following the emitted item.
     CP   TK_EOL                ; Has the data list ended?
@@ -519,9 +513,9 @@ ST_DDELI:
     JP   ST_DITEM              ; Parse the next scalar or string item.
 ST_DSTRI:
 
-; First pass over the quoted token: count decoded output bytes without emitting.
-; The tokenizer has already validated the closing quote and token length. HL is
-; the raw character offset, B the raw bytes remaining, and C the decoded count.
+; First pass: count decoded bytes without emitting. The tokenizer has
+; validated the closing quote and token length. HL is the raw offset,
+; B the raw bytes remaining and C the decoded count.
 
     LD   HL,(TK_REC+TK_SOFF)   ; Start at the string token's opening quote.
     INC  HL                    ; Advance to its first raw content byte.
@@ -534,11 +528,11 @@ ST_SCLOO:
     OR   A                     ; Set Z after the final raw byte.
     JR   Z,ST_SCDON            ; Finish the counting pass.
 
-; Read one raw character through the source service. Preserve the offset across
+; Read one raw byte through the source service. Preserve the offset across
 ; the call because TK_SREAD returns the byte in A but may clobber HL.
 
-    PUSH HL                    ; Preserve the logical offset across the callback.
-    LD   A,(TK_REC+TK_POFF)    ; Supply the string token's source-part ordinal.
+    PUSH HL                    ; Save the offset across the callback.
+    LD   A,(TK_REC+TK_POFF)    ; Supply the string's source-part ordinal.
     CALL TK_SREAD              ; Read the raw byte at that logical offset.
     POP  HL                    ; Restore the current raw cursor.
     INC  HL                    ; Advance past the consumed raw byte.
@@ -546,10 +540,10 @@ ST_SCLOO:
     CP   $5C                   ; Was the byte a backslash escape introducer?
     JR   NZ,ST_SCONE           ; No: it decodes directly to one byte.
 
-; A backslash escape consumes at least one additional raw character while still
+; A backslash escape consumes at least one more raw character while still
 ; producing one byte. A hexadecimal escape consumes two further digits.
 
-    PUSH HL                    ; Preserve the cursor while reading the escape code.
+    PUSH HL                    ; Save the cursor across the escape read.
     LD   A,(TK_REC+TK_POFF)    ; Reuse the string's source-part ordinal.
     CALL TK_SREAD              ; Read the character following the backslash.
     POP  HL                    ; Restore the raw cursor.
@@ -565,7 +559,7 @@ ST_SCONE:
 
 ; Count the decoded byte represented by the raw character or complete escape.
 
-    INC  C                     ; One raw character or escape yields one output byte.
+    INC  C                     ; Count one decoded output byte.
     JR   ST_SCLOO              ; Count the remaining encoded characters.
 ST_SCDON:
 
@@ -583,8 +577,8 @@ ST_SCDON:
     SUB  2                     ; Exclude both quote bytes again.
     LD   (ST_SREM),A           ; Initialize raw bytes remaining for emission.
 
-; Standalone string directives must occupy the rest of the statement. DB string
-; mode deliberately postpones delimiter checking so the data list can continue.
+; Standalone strings occupy the rest of the statement. DB strings defer
+; delimiter checking so the data list can continue.
 
     LD   A,(ST_SMODE)          ; Test whether this is embedded DB-string mode.
     OR   A                     ; Mode zero keeps the data-list grammar active.
@@ -609,7 +603,7 @@ ST_SCAP:
 ST_SCEXT:
     INC  HL                    ; Include the terminator or prefix byte.
 ST_SCREA:
-    CALL OU_CCAP               ; Preflight the complete string output atomically.
+    CALL OU_CCAP               ; Preflight the complete string output.
     JP   C,ST_OFAIL            ; Fail before publishing any prefix or payload.
 
 ; PSTR writes its one-byte decoded length before the payload.
@@ -660,17 +654,17 @@ ST_SHEX:
     OR   (HL)                  ; Combine both nibbles into the decoded byte.
 ST_SEMIT:
 
-; ISTR marks its final decoded byte by setting bit 7. ST_SREM counts raw bytes;
+; ISTR sets bit 7 on its final decoded byte. ST_SREM counts raw bytes;
 ; after ST_STAKE finishes a character or escape, zero therefore identifies the
 ; final output character.
 
     LD   C,A                   ; Preserve the decoded byte during mode checks.
     LD   A,(ST_SMODE)          ; Read the active string representation.
     CP   3                     ; Is this high-bit-terminated ISTR mode?
-    LD   A,C                   ; Restore the decoded byte without changing flags.
+    LD   A,C                   ; Restore the byte without changing flags.
     JR   NZ,ST_SEREA           ; Other modes emit it unchanged.
     LD   HL,ST_SREM            ; Address the raw-byte countdown.
-    LD   A,(HL)                ; Read the count after consuming this character.
+    LD   A,(HL)                ; Read the remaining raw-byte count.
     OR   A                     ; Is this the last decoded character?
     LD   A,C                   ; Restore the decoded byte while retaining Z.
     JR   NZ,ST_SEREA           ; Not last: leave bit 7 untouched.
@@ -686,7 +680,7 @@ ST_SDONE:
 
     LD   A,(ST_SMODE)          ; Select completion behavior by string format.
     OR   A                     ; Is this an inline DB string?
-    JR   Z,ST_SDDON            ; Yes: return to the data-list delimiter grammar.
+    JR   Z,ST_SDDON            ; Yes: check the data-list delimiter.
     CP   1                     ; Is this zero-terminated CSTR mode?
     JP   NZ,ST_NEXT            ; PSTR and ISTR are already complete.
     XOR  A                     ; Form CSTR's trailing zero byte.
@@ -706,9 +700,9 @@ ST_PSTR1:
     LD   A,2                   ; Select length-prefixed PSTR representation.
     JR   ST_SDIR1              ; Share standalone string validation.
 ST_ISTR1:
-    LD   A,3                   ; Select high-bit-terminated ISTR representation.
+    LD   A,3                   ; Select high-bit-terminated ISTR.
 ST_SDIR1:
-    LD   (ST_SMODE),A          ; Retain the selected representation during emission.
+    LD   (ST_SMODE),A          ; Retain the string mode for emission.
 
 ; Standalone string directives accept exactly one quoted-string token.
 
@@ -718,7 +712,7 @@ ST_SDIR1:
     JP   ST_DSTRI              ; Count, preflight and emit it.
 ST_DS1:
 
-; DS count must be concrete. With no comma it reserves an unwritten range; with
+; DS count must be concrete. Without comma it reserves a gap; with
 ; a comma it emits count copies of the fill byte.
 
     CALL ST_PEXPR              ; Evaluate the number of bytes to allocate.
@@ -734,19 +728,19 @@ ST_DS1:
 
 ; Parse the optional fill expression and require an immediate low-byte value.
 
-    CALL TK_NEXT               ; Consume the comma and expose the fill expression.
+    CALL TK_NEXT               ; Consume comma; expose the fill value.
     JP   C,ST_LFAIL            ; Preserve a lexical failure after the comma.
     CALL ST_PEXPR              ; Evaluate the repeated fill byte.
     JP   C,ST_DFAIL            ; Preserve nested expression failure detail.
     OR   A                     ; Is the fill expression unresolved?
-    JP   NZ,ST_DUNR1           ; Forward fills cannot be represented as one patch.
+    JP   NZ,ST_DUNR1           ; A forward fill cannot use one patch.
     LD   A,L                   ; Select the expression's low byte as the fill.
     LD   (ST_DFILL),A          ; Preserve it across capacity preflight.
-    LD   A,(TK_REC+TK_KOFF)    ; Inspect the token following the fill expression.
+    LD   A,(TK_REC+TK_KOFF)    ; Inspect the token after the fill value.
     CP   TK_EOL                ; DS accepts no third argument.
     JP   NZ,ST_DDEL1           ; Reject any trailing token.
 
-; Preflight the complete filled range so the byte loop cannot fail for capacity
+; Preflight the full range so the byte loop cannot fail for capacity
 ; after publishing only a prefix.
 
     LD   HL,(ST_DCNT)          ; Supply the complete filled-range length.
@@ -754,7 +748,7 @@ ST_DS1:
     JP   C,ST_OFAIL            ; Preserve atomic capacity failure.
 ST_DFLOO:
 
-; Emit one fill byte per iteration. ST_DCNT reaches zero before control returns
+; Emit one fill byte per iteration. ST_DCNT reaches zero before returning
 ; to the outer statement loop.
 
     LD   HL,(ST_DCNT)          ; Read the remaining fill-byte count.
@@ -772,12 +766,12 @@ ST_DRESE:
 
 ; The no-fill form advances the output cursor without creating IMAGE bytes.
 
-    LD   HL,(ST_DCNT)          ; Supply the number of unwritten bytes to reserve.
+    LD   HL,(ST_DCNT)          ; Supply the byte count to reserve.
     CALL OU_RESER              ; Advance the cursor without IMAGE emission.
     JP   ST_OTNEX              ; Check output status and continue.
 ST_ALIG1:
 
-; ALIGN accepts a positive 16-bit boundary. A nonzero 24-bit extension, or zero
+; ALIGN needs a positive 16-bit boundary. A nonzero extension or zero
 ; in the low word, is outside the directive's domain.
 
     CALL ST_PEXPR              ; Evaluate the requested alignment boundary.
@@ -786,7 +780,7 @@ ST_ALIG1:
     JP   NZ,ST_DUNR1           ; ALIGN requires an immediate value.
     LD   A,(EX_RVAL+2)         ; Read the expression's extension byte.
     OR   A                     ; Does the extension mark a negative boundary?
-    JP   NZ,ST_DRANG           ; Reject it as outside the supported address domain.
+    JP   NZ,ST_DRANG           ; Reject it outside the address domain.
     LD   A,H                   ; Begin testing the low word for zero.
     OR   L                     ; Z identifies the invalid boundary zero.
     JP   Z,ST_DRANG            ; Reject division by a zero alignment.
@@ -795,15 +789,15 @@ ST_ALIG1:
     CP   TK_EOL                ; ALIGN accepts exactly one argument.
     JP   NZ,ST_DDEL1           ; Reject any trailing token.
 
-; Reuse the expression divider to compute cursor modulo alignment. Both operands
+; Use the expression divider for cursor modulo alignment. Both operands
 ; are explicitly zero-extended to 24 bits before EX_REMAI is called.
 
     LD   HL,(OU_CURSO)         ; Load the current output address as dividend.
-    LD   (EX_LVAL),HL          ; Store its low sixteen bits in the left operand.
+    LD   (EX_LVAL),HL          ; Store the dividend's low word.
     XOR  A                     ; Form the common zero extension byte.
     LD   (EX_LVAL+2),A         ; Zero-extend the current address to 24 bits.
     LD   HL,(ST_DVAL)          ; Restore the alignment as divisor.
-    LD   (EX_RVAL),HL          ; Store its low sixteen bits in the right operand.
+    LD   (EX_RVAL),HL          ; Store the divisor's low word.
     LD   (EX_RVAL+2),A         ; Zero-extend the divisor to 24 bits.
     CALL EX_REMAI              ; Replace EX_RVAL with cursor modulo boundary.
     JP   C,ST_DFAIL            ; Preserve any defensive arithmetic failure.
@@ -813,7 +807,7 @@ ST_ALIG1:
 
     LD   HL,(EX_RVAL)          ; Load the sixteen-bit remainder.
     LD   A,H                   ; Begin testing whether it is zero.
-    OR   L                     ; Z means the cursor already meets the boundary.
+    OR   L                     ; Z means the cursor is aligned.
     JR   Z,ST_ACREA            ; Emit no padding in that case.
     EX   DE,HL                 ; Preserve the nonzero remainder in DE.
     LD   HL,(ST_DVAL)          ; Reload the alignment boundary.
@@ -836,12 +830,12 @@ ST_SUCCE:
     RET                        ; Return control to the multipart driver.
 
 ;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
-; Directive names are at most five characters. Pack the current lexeme into the
+; Directive names have at most five characters. Pack the lexeme into the
 ; shared RADIX-40 scratch buffer for exact, case-insensitive comparison.
 
 EN_RDIR:
-    LD   A,B                   ; Copy the lexeme length for a cheap upper bound.
-    CP   6                     ; Can the name fit the five-character directive set?
+    LD   A,B                   ; Load the lexeme length for the bound check.
+    CP   6                     ; Is it at most five characters?
     JR   NC,EN_RDNFO           ; Six or more characters cannot match.
     LD   DE,EN_SCRAT           ; Select the shared four-byte packing buffer.
     CALL EN_R40PK              ; Pack case-insensitively into RADIX-40 words.
@@ -851,7 +845,7 @@ EN_RDIR:
     LD   C,ST_EQU              ; Track the one-based ordinal alongside IX.
 EN_RDLOO:
 
-; Compare all four packed bytes. C tracks the one-based directive ordinal while
+; Compare four packed bytes. C tracks the one-based directive ordinal as
 ; IX advances through the fixed table.
 
     LD   A,(EN_SCRAT)          ; Load packed byte zero.
@@ -897,14 +891,14 @@ ST_DTABL:
     DW $0829,$2DF0             ; ALIGN
 
 ;@ROUTINE OUT A CLOBBERS DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Consume one raw byte from the saved string cursor. The source service receives
-; the original part ordinal in A and offset in HL; workspace advances only after
+; Consume one raw byte. The source service receives the original part
+; in A and offset in HL. Advance workspace only after
 ; the read, leaving A as the consumed character.
 
 ST_STAKE:
     LD   HL,(ST_SPTR)          ; Load the next logical source-byte offset.
     LD   A,(ST_SPART)          ; Supply its source-part ordinal.
-    CALL TK_SREAD              ; Fetch the byte through the host source service.
+    CALL TK_SREAD              ; Fetch the byte through source service.
     LD   HL,(ST_SPTR)          ; Reload the cursor after callback clobbering.
     INC  HL                    ; Advance to the following raw byte.
     LD   (ST_SPTR),HL          ; Persist the new cursor.
@@ -916,9 +910,9 @@ ST_STAKE:
 ; Fetch a token and mirror its kind into A for compact statement dispatch.
 
 ST_NTKIN:
-    CALL TK_NEXT               ; Ask the tokenizer to publish the next token record.
+    CALL TK_NEXT               ; Fetch the next token record.
     LD   A,(TK_REC+TK_KOFF)    ; Mirror its kind into the dispatch register.
-    RET                        ; Preserve tokenizer carry and return both results.
+    RET                        ; Return kind and tokenizer carry.
 
 ;@ROUTINE OUT A,HL,IX,CARRY CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Expressions see the current output address in BC so '$' and relative forms
@@ -926,10 +920,10 @@ ST_NTKIN:
 
 ST_PEXPR:
     LD   BC,(OU_CURSO)         ; Supply '$' as the current output address.
-    JP   EX_PDEFR              ; Parse without publishing a new symbol reference.
+    JP   EX_PDEFR              ; Parse without a new symbol reference.
 
 ;@ROUTINE OUT CARRY CLOBBERS A,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Snapshot the current token's part and start offset as the statement diagnostic
+; Save the current token's part and start offset as the diagnostic
 ; location before a nested component advances the token stream.
 
 ST_CPOSI:
@@ -940,7 +934,7 @@ ST_CPOSI:
     RET                        ; Return with the stable anchor recorded.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
-; Lexical failures use the tokenizer's own exact error position rather than the
+; Lexical failures use the tokenizer's exact position rather than the
 ; outer statement start captured by ST_CPOSI.
 
 ST_LFAIL:
@@ -955,19 +949,19 @@ ST_LFAIL:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; A token that cannot begin or continue a statement is normally an expression
-; syntax failure. Preserve a dedicated directive category for a bare '%' token.
+; syntax failure. A bare '%' token has a separate directive category.
 
 ST_EHERE:
-    CALL ST_CPOSI              ; Anchor the diagnostic at the unexpected token.
+    CALL ST_CPOSI              ; Anchor the error at this token.
     LD   A,(TK_REC+TK_KOFF)    ; Read its token kind as detailed status.
     CP   TK_DIR                ; Is it a bare percent directive marker?
-    JR   NZ,ST_ESAVE           ; No: classify it as statement/expression syntax.
+    JR   NZ,ST_ESAVE           ; No: report a syntax error.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS C,HALFCARRY,ZERO,SIGN,PARITY
 ; Report a bare or unsupported percent directive at the current token.
 
 ST_UDIR:
-    LD   A,TK_DIR              ; Retain the unsupported directive token as detail.
+    LD   A,TK_DIR              ; Report the unsupported directive token.
     LD   C,ST_SDIR             ; Select the public directive-failure category.
     JR   ST_FAIL               ; Store detail and return failure.
 
@@ -975,7 +969,7 @@ ST_UDIR:
 ; Report the current unexpected token as a statement-expression failure.
 
 ST_ESAVE:
-    LD   A,(TK_REC+TK_KOFF)    ; Use the unexpected token kind as detailed status.
+    LD   A,(TK_REC+TK_KOFF)    ; Report the unexpected token kind.
     LD   C,ST_SEXP             ; Select the statement/expression category.
     JR   ST_FAIL               ; Store detail and return failure.
 
@@ -1020,19 +1014,19 @@ ST_DFAIL:
     LD   C,ST_SDIR             ; Wrap A as a directive-argument failure.
 
 ;@ROUTINE IN A,C OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
-; All nested failure adapters store the detailed component status from A, replace
+; Failure adapters store component status from A, replace
 ; A with their outer statement category from C and set carry for the driver.
 
 ST_FAIL:
     LD   (ST_DETAI),A          ; Preserve the nested subsystem status.
-    LD   A,C                   ; Publish the selected statement-layer category.
+    LD   A,C                   ; Return the statement category.
     SCF                        ; Mark the statement as failed.
     RET                        ; Return to the multipart driver.
 ST_DUNR1:
-    LD   A,EX_UNRES            ; Detail: directive expression remained unresolved.
+    LD   A,EX_UNRES            ; Detail: unresolved directive value.
     JR   ST_DFAIL              ; Return through the directive wrapper.
 ST_DRANG:
-    LD   A,EX_SRANG            ; Detail: directive value lies outside its domain.
+    LD   A,EX_SRANG            ; Detail: directive value out of range.
     JR   ST_DFAIL              ; Return through the directive wrapper.
 ST_DEXP:
     LD   A,EX_SEPRI            ; Detail: a required expression was absent.
@@ -1050,7 +1044,7 @@ ST_WBEG:
 
 ST_WUNIO: DS 20            ; Union storage shared by all statement phases.
 
-; Packed leading label/EQU name, or parsed instruction record at the same base.
+; Packed label/EQU name or instruction record at the same base.
 
 ST_KEY EQU ST_WUNIO        ; Six-byte packed leading symbol key.
 ST_INS EQU ST_WUNIO        ; Parsed instruction record at the same base.
