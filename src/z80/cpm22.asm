@@ -117,19 +117,9 @@ CP_ASSEMBLY_FAILED:
     CALL CP_PRINT           ; Print the assembly-error prefix.
     POP  AF                 ; Recover the original assembler status.
     CALL CP_PRINT_HEX       ; Print the status as two hexadecimal digits.
-    LD   A,' '              ; Separate status from the source-part ordinal.
+    LD   A,' '              ; Separate status from its source location.
     CALL CP_PUTC            ; Emit the field separator.
-    LD   A,(ST_EPART)       ; Load the zero-based source-part ordinal.
-    CALL CP_PRINT_HEX       ; Print the part ordinal in hexadecimal.
-    LD   A,' '              ; Separate the part from the byte offset.
-    CALL CP_PUTC            ; Emit the second field separator.
-    LD   HL,(ST_EOFF)       ; Load the source's zero-based byte offset.
-    PUSH HL                 ; Save the offset while printing its high byte.
-    LD   A,H                ; Select the high byte of the offset.
-    CALL CP_PRINT_HEX       ; Print the high byte first.
-    POP  HL                 ; Restore the offset and recover its low byte.
-    LD   A,L                ; Select the low byte of the offset.
-    CALL CP_PRINT_HEX       ; Complete the four-digit hexadecimal offset.
+    CALL CP_PRINT_ERROR_LOCATION  ; Print name and one-based position.
     LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
     CALL CP_PRINT           ; Finish the diagnostic line.
 CP_BUILD_FAILED:
@@ -140,6 +130,118 @@ CP_RETURN:
 
     LD   SP,(CP_SAVED_SP)   ; Restore the caller's command-processor stack.
     RET                     ; Return the status in A to the CCP.
+
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Map Atom's source ordinal to the retained CP/M filename, then reread only
+; the bytes before the failing position. If the file cannot be read, keep the
+; original byte offset instead of printing a guessed line or column.
+
+CP_PRINT_ERROR_LOCATION:
+    LD   A,(ST_EPART)       ; Select the failed dependency-order part.
+    LD   HL,CP_DESCRIPTOR   ; Read the count of valid part ordinals.
+    CP   (HL)               ; Reject an impossible ordinal defensively.
+    JR   NC,CP_ERROR_RAW_PART  ; Retain the original numeric diagnostic.
+    LD   E,A                ; Index the dependency-order table.
+    LD   D,CP_PART_ORDER/256  ; The table occupies one fixed page.
+    LD   A,(DE)             ; Recover the retained-name ordinal.
+    CALL CP_OPEN_PART       ; Reopen its source for position counting.
+    JR   C,CP_ERROR_OPEN_OFFSET  ; Its name was printed; retain the offset.
+    CALL CP_COUNT_ERROR_LOCATION  ; Convert the byte offset in this file.
+    JR   C,CP_ERROR_BYTE_OFFSET  ; Report the raw offset on a read failure.
+    LD   HL,CP_INPUT_FCB    ; Address the reopened file's 8.3 name.
+    CALL CP_PRINT_NAME      ; Print the physical source filename.
+    LD   A,':'              ; Separate filename from line number.
+    CALL CP_PUTC            ; Print the first colon.
+    LD   HL,(CP_DIAG_LINE)  ; Load the one-based source line.
+    CALL CP_PRINT_DECIMAL   ; Print it without leading zeroes.
+    LD   A,':'              ; Separate line from source column.
+    CALL CP_PUTC            ; Print the second colon.
+    LD   HL,(CP_DIAG_COLUMN)  ; Load the one-based byte column.
+    JP   CP_PRINT_DECIMAL   ; Finish the location and return.
+CP_ERROR_BYTE_OFFSET:
+    LD   HL,CP_INPUT_FCB    ; The filename remains in the opened FCB.
+    CALL CP_PRINT_NAME      ; Identify the unreadable source part.
+CP_ERROR_OPEN_OFFSET:
+    LD   DE,CP_BYTE_OFFSET_TEXT  ; Mark the fallback as a byte offset.
+    CALL CP_PRINT           ; Never confuse it with line and column.
+    JR   CP_ERROR_RAW_OFFSET  ; Print the unchanged hexadecimal offset.
+CP_ERROR_RAW_PART:
+    LD   A,(ST_EPART)       ; Recover the impossible source ordinal.
+    CALL CP_PRINT_HEX       ; Preserve its two-digit hexadecimal form.
+    LD   A,' '              ; Separate ordinal from byte offset.
+    CALL CP_PUTC            ; Print the separator.
+CP_ERROR_RAW_OFFSET:
+    LD   HL,(ST_EOFF)       ; Recover Atom's original byte offset.
+    PUSH HL                 ; Save it across printing its high byte.
+    LD   A,H                ; Select the high byte first.
+    CALL CP_PRINT_HEX       ; Emit two hexadecimal digits.
+    POP  HL                 ; Restore the offset's low byte.
+    LD   A,L                ; Select its remaining byte.
+    JP   CP_PRINT_HEX       ; Finish the four-digit offset and return.
+
+;@ROUTINE OUT CARRY CLOBBERS A,BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+; Count physical line breaks and byte columns before the reported offset.
+; CRLF is one break; lone CR and lone LF are each one break. Counters start
+; at one, and zero represents the sole possible overflow value, 65,536.
+
+CP_COUNT_ERROR_LOCATION:
+    LD   HL,1               ; Both positions are one-based.
+    LD   (CP_DIAG_LINE),HL  ; Begin on the first source line.
+    LD   (CP_DIAG_COLUMN),HL  ; Begin at its first byte column.
+    LD   HL,0               ; Scan from the first source byte.
+    LD   (CP_DIAG_CURSOR),HL  ; Store the current zero-based offset.
+    XOR  A                  ; No preceding byte was CR.
+    LD   (CP_DIAG_CR),A     ; Clear the CRLF state.
+CP_DIAG_SCAN:
+    LD   HL,(CP_DIAG_CURSOR)  ; Read the next byte offset.
+    LD   DE,(ST_EOFF)       ; Read the failing offset as an exclusive end.
+    OR   A                  ; Clear carry before comparing positions.
+    SBC  HL,DE              ; Stop before consuming the failing byte.
+    JR   Z,CP_DIAG_SCAN_DONE  ; The counters now describe that byte.
+    LD   HL,(CP_DIAG_CURSOR)  ; Address the current source byte.
+    CALL CP_RAW_SOURCE_BYTE  ; Read it through the existing CP/M cache.
+    RET  C                  ; Changed or unreadable input needs a fallback.
+    LD   B,A                ; Preserve the byte across cursor update.
+    LD   HL,(CP_DIAG_CURSOR)  ; Advance by exactly one source byte.
+    INC  HL                 ; Move to the following zero-based offset.
+    LD   (CP_DIAG_CURSOR),HL  ; Save the advanced cursor.
+    LD   A,B                ; Classify the byte just consumed.
+    CP   13                 ; A carriage return always starts a new line.
+    JR   Z,CP_DIAG_CR_BYTE  ; Remember it for an optional following LF.
+    CP   10                 ; A lone line feed also starts a new line.
+    JR   Z,CP_DIAG_LF_BYTE  ; Avoid double-counting CRLF.
+    XOR  A                  ; Ordinary text ends CRLF lookbehind.
+    LD   (CP_DIAG_CR),A     ; The preceding byte is not CR.
+    LD   HL,(CP_DIAG_COLUMN)  ; Move one byte to the right.
+    INC  HL                 ; Advance the one-based column.
+    LD   (CP_DIAG_COLUMN),HL  ; Keep its full 16-bit value.
+    JR   CP_DIAG_SCAN       ; Continue toward the error offset.
+CP_DIAG_CR_BYTE:
+    LD   A,1                ; Remember a preceding CR.
+    LD   (CP_DIAG_CR),A     ; The next LF belongs to this break.
+    CALL CP_DIAG_NEWLINE    ; Start the next line at column one.
+    JR   CP_DIAG_SCAN       ; Continue after the CR byte.
+CP_DIAG_LF_BYTE:
+    LD   A,(CP_DIAG_CR)     ; Check whether CR already advanced the line.
+    OR   A                  ; Z means this LF is a lone break.
+    CALL Z,CP_DIAG_NEWLINE  ; Count a lone LF exactly once.
+    XOR  A                  ; The lookbehind ends at this LF.
+    LD   (CP_DIAG_CR),A     ; Clear it before another source byte.
+    JR   CP_DIAG_SCAN       ; Continue after the LF byte.
+CP_DIAG_SCAN_DONE:
+    OR   A                  ; Return success with carry clear.
+    RET                     ; Leave the computed line and column in RAM.
+
+;@ROUTINE CLOBBERS A,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Advance to a physical source line and reset its byte column.
+
+CP_DIAG_NEWLINE:
+    LD   HL,(CP_DIAG_LINE)  ; Load the current line number.
+    INC  HL                 ; Move to the next line.
+    LD   (CP_DIAG_LINE),HL  ; Keep the complete 16-bit result.
+    LD   HL,1               ; The first byte has column one.
+    LD   (CP_DIAG_COLUMN),HL  ; Reset the column for that line.
+    RET                     ; Return to the source-byte classifier.
 
 CP_COMMAND_CODE_START:
 
@@ -1403,10 +1505,12 @@ CP_PRINT_NAME:
 CP_PRINT_NAME_BYTE:
     LD   A,(HL)             ; Read the next basename character.
     INC  HL                 ; Advance to the next FCB name byte.
+    AND  $7F                ; Remove any CP/M filename attribute bit.
     CP   ' '                ; FCB padding marks an unused character position.
     CALL NZ,CP_PUTC         ; Print only non-padding bytes.
     DJNZ CP_PRINT_NAME_BYTE  ; Check the remaining basename positions.
     LD   A,(HL)             ; Inspect the first character of the extension.
+    AND  $7F                ; Ignore its read-only attribute bit.
     CP   ' '                ; A blank extension has no visible suffix.
     RET  Z                  ; Return without printing a dot for an empty type.
     LD   A,'.'              ; Select the filename separator.
@@ -1415,6 +1519,7 @@ CP_PRINT_NAME_BYTE:
 CP_PRINT_TYPE_BYTE:
     LD   A,(HL)             ; Read the next extension character.
     INC  HL                 ; Advance to the following FCB byte.
+    AND  $7F                ; Ignore system and archive attribute bits.
     CP   ' '                ; Skip blank extension positions.
     CALL NZ,CP_PUTC         ; Print a nonblank extension character.
     DJNZ CP_PRINT_TYPE_BYTE  ; Check the remaining extension positions.
@@ -1458,6 +1563,55 @@ CP_PRINT_NIBBLE:
     ADD  A,7                ; Convert 10..15 to A..F.
     JR   CP_PUTC            ; Print the uppercase hex digit.
 
+;@ROUTINE IN HL OUT A CLOBBERS BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Print a one-based 16-bit position in decimal. A wrapped zero can only mean
+; 65,536 because no source part exceeds 65,535 bytes.
+
+CP_PRINT_DECIMAL:
+    LD   A,H                ; Test whether the counter wrapped to zero.
+    OR   L                  ; Both bytes must be zero for 65,536.
+    JR   NZ,CP_DECIMAL_START  ; Ordinary positions fit in 16 bits.
+    LD   DE,CP_DECIMAL_65536  ; Select the one possible overflow value.
+    JP   CP_PRINT           ; Print it and return.
+CP_DECIMAL_START:
+    LD   IX,CP_DECIMAL_POWERS  ; Start with the ten-thousands place.
+    LD   C,5                ; Five places cover every 16-bit value.
+    XOR  A                  ; No nonzero digit has been printed yet.
+    LD   (CP_DECIMAL_SEEN),A  ; Suppress leading zeroes.
+CP_DECIMAL_PLACE:
+    LD   E,(IX+0)           ; Load the divisor's low byte.
+    LD   D,(IX+1)           ; Load the divisor's high byte.
+    LD   B,0                ; Count this place's decimal digit.
+CP_DECIMAL_SUBTRACT:
+    OR   A                  ; Clear carry before a 16-bit subtraction.
+    SBC  HL,DE              ; Remove one place value if it fits.
+    JR   C,CP_DECIMAL_DIGIT  ; Borrow means the digit is complete.
+    INC  B                  ; Count the successful subtraction.
+    JR   CP_DECIMAL_SUBTRACT  ; Try the next unit of this place.
+CP_DECIMAL_DIGIT:
+    ADD  HL,DE              ; Undo the first subtraction that borrowed.
+    LD   A,B                ; Inspect the computed digit.
+    OR   A                  ; Nonzero digits begin visible output.
+    JR   NZ,CP_DECIMAL_EMIT  ; Print the first nonzero digit.
+    LD   A,(CP_DECIMAL_SEEN)  ; Check whether output has begun.
+    OR   A                  ; Later zero digits must still be printed.
+    JR   NZ,CP_DECIMAL_EMIT  ; Preserve interior and trailing zeroes.
+    LD   A,C                ; Is this the units place?
+    CP   1                  ; A number must print at least one digit.
+    JR   NZ,CP_DECIMAL_NEXT  ; Skip only a leading zero.
+CP_DECIMAL_EMIT:
+    LD   A,1                ; Mark decimal output as started.
+    LD   (CP_DECIMAL_SEEN),A  ; Preserve the mark across console calls.
+    LD   A,B                ; Reload the digit for ASCII conversion.
+    ADD  A,'0'              ; Convert it to a printable numeral.
+    CALL CP_PUTC            ; Send the digit to the CP/M console.
+CP_DECIMAL_NEXT:
+    INC  IX                 ; Move to the next divisor's low byte.
+    INC  IX                 ; Skip the previous divisor's high byte.
+    DEC  C                  ; Count down the remaining decimal places.
+    JR   NZ,CP_DECIMAL_PLACE  ; Continue through units.
+    RET                     ; Finish the decimal position.
+
 CP_ADAPTER_CODE_END:
 
 ; Descriptor and FCB workspace retained for the complete command. The 36-byte
@@ -1488,6 +1642,9 @@ CP_READ_FAILED_TEXT:
     DB ' ','r','e','a','d',' ','f','a','i','l','e','d',13,10,'$'
 CP_ASSEMBLY_TEXT: DB 13,10,'A','t','o','m',' ','e','r','r','o','r',' ','$'
 CP_NEWLINE_TEXT: DB 13,10,'$'
+CP_BYTE_OFFSET_TEXT: DB ':','b','y','t','e',' ','$'
+CP_DECIMAL_65536: DB '6','5','5','3','6','$'
+CP_DECIMAL_POWERS: DW 10000,1000,100,10,1
 CP_USAGE_TEXT:
     DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' '  ; Syntax prefix.
     DB '[','S','O','U','R','C','E',' '  ; Optional source.
@@ -1540,6 +1697,11 @@ CP_HEX_ERROR: DB 0
 CP_HEX_SUM: DB 0
 CP_HEX_SIZE: DB 0
 CP_HEX_DATA_LEFT: DB 0
+CP_DIAG_CURSOR: DW 0
+CP_DIAG_LINE: DW 0
+CP_DIAG_COLUMN: DW 0
+CP_DIAG_CR: DB 0
+CP_DECIMAL_SEEN: DB 0
 CP_ADAPTER_WORKSPACE2_END:
 HS_SCEND:
 HS_REND:

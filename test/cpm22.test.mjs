@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { readCpm22File } from "@jhlagado/debug80-runtime/platforms/cpm22/filesystem";
+import {
+  CPM22_FILESYSTEM_DIRECTORY_ENTRIES,
+  CPM22_FILESYSTEM_DIRECTORY_ENTRY_BYTES,
+  CPM22_FILESYSTEM_SYSTEM_BYTES,
+  readCpm22File,
+} from "@jhlagado/debug80-runtime/platforms/cpm22/filesystem";
 import {
   expectedMultipartProgram,
   expectedRepresentativeProgram,
@@ -111,7 +116,7 @@ test("native Atom publishes checksummed Intel HEX", async () => {
 test("a rejected assembly preserves an earlier OUTPUT.COM and removes its temp", async () => {
   const prior = Uint8Array.from([0xc9]);
   const result = await runCpm22Atom(Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"), prior);
-  assert.match(result.atomTranscript, /Atom error 02 00 000A/);
+  assert.match(result.atomTranscript, /Atom error 02 INPUT\.ASM:2:1/);
   assert.equal(result.returnA, 1);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(
@@ -119,6 +124,83 @@ test("a rejected assembly preserves an earlier OUTPUT.COM and removes its temp",
       .readCpm22File(result.finalDisk, "OUTPUT.$$$"),
     undefined,
   );
+});
+
+test("CP/M diagnostics use the source filename and one-based byte column", async () => {
+  const source = Buffer.from("; header\r\nORG $100\n  NOT_AN_INSTRUCTION\r", "ascii");
+  const result = await runCpm22Atom(source, undefined, {
+    sourceName: "MIXED.ASM",
+    outputName: "MIXED.COM",
+  });
+  assert.match(result.atomTranscript, /Atom error 02 MIXED\.ASM:3:3/);
+  assert.equal(result.outputFile, undefined);
+});
+
+test("CP/M diagnostics identify the failing included file, not its importer", async () => {
+  const result = await runMultipart([
+    Buffer.from("ORG $100\r\nDB 1\r\n", "ascii"),
+    Buffer.from("ORG $100\r\n  NOT_AN_INSTRUCTION\r\n", "ascii"),
+  ]);
+  assert.match(result.atomTranscript, /Atom error 02 P1\.ASM:2:3/);
+  assert.equal(result.outputFile, undefined);
+});
+
+test("CP/M diagnostics retain undefined-symbol status and decimal positions", async () => {
+  const undefinedSymbol = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nJP MISSING\r\n", "ascii"),
+  );
+  assert.match(undefinedSymbol.atomTranscript, /Atom error 03 INPUT\.ASM:2:4/);
+
+  const manyLines = await runCpm22Atom(
+    Buffer.from(`${"\n".repeat(123)}NOT_AN_INSTRUCTION\n`, "ascii"),
+  );
+  assert.match(manyLines.atomTranscript, /Atom error 02 INPUT\.ASM:124:1/);
+
+  const wideLine = await runCpm22Atom(
+    Buffer.from(`ORG $100\r\n${" ".repeat(130)}NOT_AN_INSTRUCTION\r\n`, "ascii"),
+  );
+  assert.match(wideLine.atomTranscript, /Atom error 02 INPUT\.ASM:2:131/);
+});
+
+test("CP/M diagnostics ignore filename attribute bits", async () => {
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"),
+    undefined,
+    {
+      prepareDiskImage(image) {
+        const marked = image.slice();
+        for (let index = 0; index < CPM22_FILESYSTEM_DIRECTORY_ENTRIES; index += 1) {
+          const entry = CPM22_FILESYSTEM_SYSTEM_BYTES + index * CPM22_FILESYSTEM_DIRECTORY_ENTRY_BYTES;
+          if (marked[entry] !== 0) continue;
+          const name = String.fromCharCode(...marked.slice(entry + 1, entry + 12)).trimEnd();
+          if (name !== "INPUT   ASM") continue;
+          marked[entry + 9] |= 0x80;
+          return marked;
+        }
+        assert.fail("INPUT.ASM directory entry not found");
+      },
+    },
+  );
+  assert.match(result.atomTranscript, /Atom error 02 INPUT\.ASM:2:1/);
+});
+
+test("CP/M diagnostics retain the raw offset when the source cannot be reopened", async () => {
+  let changed = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"),
+    undefined,
+    {
+      beforeBdos({ call, fcb, memory, output }) {
+        if (changed || call !== 15 || !output.includes("Atom error 02 ")) return;
+        memory[fcb + 1] = "Z".charCodeAt(0);
+        changed = true;
+      },
+    },
+  );
+  assert.equal(changed, true);
+  assert.match(result.atomTranscript, /Atom error 02 ZNPUT\.ASM:byte 000A/);
+  assert.equal(result.returnA, 1);
+  assert.equal(result.returnSp, (result.entrySp + 2) & 0xffff);
 });
 
 test("command-tail filenames select a different source and output COM", async () => {
@@ -268,7 +350,7 @@ test("named rollback preserves an earlier output and removes the selected temp",
     prior,
     { sourceName: "BROKEN.ASM", outputName: "MADE.COM" },
   );
-  assert.match(result.atomTranscript, /Atom error 02 00 000A/);
+  assert.match(result.atomTranscript, /Atom error 02 BROKEN\.ASM:2:1/);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(readCpm22File(result.finalDisk, "MADE.$$$"), undefined);
   assert.equal(readCpm22File(result.finalDisk, "MADE.BAK"), undefined);
@@ -435,7 +517,7 @@ test("a malformed source beyond 4 KiB retains its exact offset and rolls back", 
     Buffer.concat([prefix, Buffer.from("NOT_AN_INSTRUCTION\r\n", "ascii")]),
     prior,
   );
-  assert.match(result.atomTranscript, /Atom error 02 00 1389/);
+  assert.match(result.atomTranscript, /Atom error 02 INPUT\.ASM:2:1/);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
   assert.ok(result.atomMinimumSp >= 0xd800);
@@ -489,6 +571,6 @@ test("the CP/M target accepts 18,304 bytes and rejects the next byte atomically"
     Buffer.from("ORG $100\r\nDS $4781,0\r\n", "ascii"),
     prior,
   );
-  assert.match(rejected.atomTranscript, /Atom error 02 00 000A/);
+  assert.match(rejected.atomTranscript, /Atom error 02 INPUT\.ASM:2:1/);
   assert.deepEqual(rejected.outputFile?.bytes.slice(0, prior.length), prior);
 });

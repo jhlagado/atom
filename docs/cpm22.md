@@ -113,15 +113,17 @@ starts at `$0100` and ends no later than `$487F`.
 
 ## Diagnostics
 
-The CP/M program reports a native status, source-part ordinal and byte offset:
+An assembly error reports its status, source filename, line and column:
 
 ```text
-Atom error 02 00 033C
+Atom error 02 INPUT.ASM:2:1
 ```
 
-All three fields are hexadecimal. Here, `02` means that Atom rejected a source
-statement, `00` identifies the first source part and `033C` is the zero-based
-byte offset within that file.
+Here, `02` means that Atom rejected a source statement. The position is the
+first byte of line 2 in `INPUT.ASM`. Line and column numbers are one-based
+decimal values. A column counts source bytes, which are characters in an
+ordinary CP/M text file. For an included file, the message names that file
+rather than the root source.
 
 | Status | Meaning |
 | ---: | --- |
@@ -131,8 +133,10 @@ byte offset within that file.
 | `04` | Output service failure |
 | `05` | Internal invariant failure |
 
-The Node command converts the same part and offset into a filename, line and
-column. The compact CP/M program does not yet perform that conversion.
+If the source cannot be reread after an assembly failure, Atom reports its
+filename and original hexadecimal byte offset instead of an unverified line
+and column. An internal error with an invalid part number retains the numeric
+part and offset fields.
 
 ## Verification
 

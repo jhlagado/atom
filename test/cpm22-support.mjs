@@ -68,6 +68,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   for (const [name, bytes] of options.files ?? []) {
     diskImage = installCpm22File(diskImage, name, bytes);
   }
+  diskImage = options.prepareDiskImage?.(diskImage) ?? diskImage;
   const memory = new Uint8Array(0x10000);
   memory.set(bootstrapBytes);
   const platform = createCpm22PlatformRuntime({ diskImage });
@@ -114,6 +115,12 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
           const call = registers.c;
           bdosCalls.push(call);
           const fcb = (registers.d << 8) | registers.e;
+          options.beforeBdos?.({
+            call,
+            fcb,
+            memory: runtimeMemory,
+            output: transcript(atomOutputStart),
+          });
           if (call === 33) {
             const fcb = census.inputFcbAddress;
             randomReadRecords.push(
