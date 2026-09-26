@@ -3,6 +3,16 @@
 Atom's Z80 source is both production code and an explanation of a small native
 assembler. Changes must preserve that explanation as well as the executable.
 
+## Planned output work
+
+The [ASO specification](aso-format.md) defines Atom's chronological IMAGE/PATCH
+stream and its [implementation order](aso-format.md#8-implementation-order-and-acceptance).
+The specification is merged, but the output changes are not yet implemented.
+Begin with shared byte-exact vectors, then the ordered Node interface and an
+explicit high-water result from native COMMIT. Follow with bounded CP/M disk
+output and ASO replay, and finally move Node's normal outputs to the same
+stream. Keep current output paths working and prove each step independently.
+
 ## Assembly source style
 
 Begin each module with its purpose, public calling convention, errors, memory

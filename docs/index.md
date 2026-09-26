@@ -19,3 +19,4 @@ Use the [command-line guide](command-line.md) to assemble a program. The
 ## Maintenance
 
 - [Development and release guide](maintenance.md)
+- [ASO output format and implementation roadmap](aso-format.md)
