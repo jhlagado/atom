@@ -1,31 +1,28 @@
-;==============================================================================
+;==========================================================================
 ;  Multipart assembly driver
-;==============================================================================
+;==========================================================================
 ;
 ;  PURPOSE
 ;  -------
-;  Own the lifetime of one complete assembly. The driver validates the caller's
+;  Own one complete assembly. The driver validates the caller's
 ;  descriptor, resets the resident subsystems, opens an output generation,
 ;  assembles each ordered source part, performs the final symbol checks and
 ;  commits the generation.
 ;
 ;  The driver does not read files. Each part record supplies an ordinal and a
-;  half-open source range. TK_RESET presents that range to the tokenizer, whose
+;  half-open source range. TK_RESET passes it to the tokenizer, whose
 ;  byte service may be backed by memory, an emulator or a native host.
 ;
 ;  PUBLIC ENTRY POINT
 ;  ------------------
 ;
-;+---------------------------------------------------------------------------+
-;| DR_ASM - Assemble one ordered multipart source stream.                    |
-;|                                                                           |
-;| Entry: IX -> build descriptor described below.                            |
-;| Result: Carry clear and A = 0 after a committed generation.               |
-;| Error: Carry set and A = DR_S* status. DR_DETAI gives the subsystem or     |
-;|        configuration detail. ST_EPART/ST_EOFF identify source failures.   |
-;| Side effects: Resets all resident assembler state. A successful BEGIN is  |
-;|               followed by exactly one COMMIT or one ABORT.                |
-;+---------------------------------------------------------------------------+
+;  DR_ASM assembles one ordered multipart source stream.
+;    Entry: IX points to the build descriptor below.
+;    Success: carry clear, A=0, generation committed.
+;    Failure: carry set, A=DR_S* status. DR_DETAI holds the subsystem or
+;             configuration detail. ST_EPART/ST_EOFF locate source errors.
+;    State: resident assembler state is reset. A successful BEGIN ends in
+;           a successful COMMIT or one ABORT. Failed COMMIT also needs ABORT.
 ;
 ;  BUILD DESCRIPTOR
 ;  ----------------
@@ -47,8 +44,8 @@
 ;  -----------------
 ;
 ;  Descriptor and resident-reset failures happen before BEGIN and therefore do
-;  not call ABORT. After BEGIN succeeds, every failure path calls ABORT exactly
-;  once and preserves the status that caused it. COMMIT failure also aborts the
+;  not call ABORT. After BEGIN succeeds, each failure calls ABORT once
+;  and preserves its original status. COMMIT failure also aborts the
 ;  open generation.
 
 DR_CBEG:
@@ -100,7 +97,7 @@ DR_DESCB EQU 15             ; Complete descriptor size.
 ; free to use IX, so the entry register cannot remain its owner.
 
 DR_ASM:
-    PUSH IX                 ; Copy the caller's descriptor pointer through stack.
+    PUSH IX                 ; Transfer descriptor pointer via stack.
     POP  HL                 ; HL now owns the address supplied in IX.
     LD   (DR_DESC),HL       ; Retain it while subsystem calls reuse IX.
 
@@ -112,7 +109,7 @@ DR_ASM:
     LD   (DR_USYM),A        ; Clear the undefined-symbol pointer low byte.
     LD   (DR_USYM+1),A      ; Clear its high byte as well.
 
-; Initialise the source location to part zero, offset zero. Configuration errors
+; Initialise source location to part zero, offset zero. Config errors
 ; therefore have a deterministic location even though no source has been read.
 
     LD   HL,ST_EPART        ; Address the contiguous part-and-offset location.
@@ -122,7 +119,7 @@ DR_ASM:
     INC  HL                 ; Advance to the offset high byte.
     LD   (HL),A             ; Complete the zero source offset.
 
-; Reject an invalid descriptor before changing any subsystem or opening output.
+; Reject invalid descriptors before resetting subsystems or opening output.
 
     CALL DR_VDESC           ; Validate every descriptor field and part record.
     RET  C                  ; Configuration failure occurs before BEGIN.
@@ -132,12 +129,12 @@ DR_ASM:
     LD   IX,(DR_DESC)       ; Reload the immutable build descriptor.
     LD   C,DR_DSBEG         ; Select its symbol begin/end word pair.
     CALL DR_LRANG           ; Return symbol begin in HL and end in DE.
-    CALL SY_RESET           ; Attach an empty symbol table to the caller arena.
-    JP   C,DR_IFAIL         ; Treat an impossible post-validation rejection internally.
+    CALL SY_RESET           ; Reset symbols in caller arena.
+    JP   C,DR_IFAIL         ; Post-validation rejection is internal.
 
 ; Reset the pending-reference table over its independent caller-owned arena.
 
-    LD   IX,(DR_DESC)       ; Reload the descriptor after symbol initialization.
+    LD   IX,(DR_DESC)       ; Reload descriptor after symbol reset.
     LD   C,DR_DPBEG         ; Select its pending begin/end word pair.
     CALL DR_LRANG           ; Return pending begin in HL and end in DE.
     CALL SY_RESE1           ; Reset the pending arena's live-record cursor.
@@ -202,11 +199,11 @@ DR_PLOOP:
 
 ; Assemble statements until the tokenizer reports end of this part.
 
-    CALL DR_APART           ; Consume and assemble every statement in the part.
+    CALL DR_APART           ; Assemble statements in this part.
     JR   C,DR_SFAIL         ; Preserve its source-facing failure detail.
 
 ; Advance both sides of the loop invariant: next expected ordinal, one fewer
-; record remaining. Descriptor validation proved the record cursor stays valid.
+; record remaining. Validation proved the record cursor stays valid.
 
     LD   HL,DR_PINDE        ; Address the expected source ordinal.
     INC  (HL)               ; Select the next dense ordinal.
@@ -218,10 +215,10 @@ DR_FIN:
 ; Validate the last private scope without evicting it, then prove that no
 ; pending or undefined symbols remain before exposing the generation.
 
-    CALL DR_AFIN            ; Validate pending, private and global symbol state.
+    CALL DR_AFIN            ; Validate pending and symbol state.
     JR   C,DR_FFAIL         ; Classify undefined versus internal failure.
 
-; COMMIT receives the output cursor and remaining capacity, allowing the host to
+; COMMIT receives output cursor and remaining capacity, letting the host
 ; derive the final written range without duplicating output-layer arithmetic.
 
     LD   IX,(DR_DESC)       ; COMMIT receives the original build descriptor.
@@ -247,7 +244,7 @@ DR_FFAIL:
 ; internal record. Its detailed status remains available in DR_DETAI.
 
     LD   (DR_DETAI),A       ; Retain finalization's detailed status.
-    CP   ST_SUNDE           ; Did validation find an ordinary undefined symbol?
+    CP   ST_SUNDE           ; Is this an undefined symbol?
     LD   A,DR_SUNDE         ; Prepare the public undefined-symbol category.
     JR   Z,DR_ABORT         ; Report it after discarding the generation.
     LD   A,DR_SINT          ; Other finalization failures violate invariants.
@@ -310,7 +307,7 @@ DR_VDESC:
     LD   H,(IX+DR_DPART+1)  ; Complete the first-record address.
     LD   (DR_PCURS),HL      ; Publish the validation cursor.
 
-; Prove that base + count*5 is representable in 16 bits. The loop may then walk
+; Prove base + count*5 fits in 16 bits. The loop may then walk
 ; exactly count records without its cursor wrapping through address zero.
 
     LD   C,A                ; BC receives the unsigned part count.
@@ -359,7 +356,7 @@ DR_VPLOO:
     LD   L,C                ; Complete the exclusive-end value.
     OR   A                  ; Clear carry before unsigned subtraction.
     SBC  HL,DE              ; Measure end minus begin.
-    JR   C,DR_BSRAN         ; Borrow means the half-open range wraps backwards.
+    JR   C,DR_BSRAN         ; Borrow means range wraps backwards.
 
 ; Advance the expected ordinal and remaining-record count together.
 
@@ -371,7 +368,7 @@ DR_VPLOO:
 DR_VAREN:
 
 ; Symbol and pending arenas are each ordinary non-wrapping half-open ranges.
-; Empty arenas are structurally valid; later capacity checks reject insertions.
+; Empty arenas are valid. Capacity checks later reject insertions.
 
     LD   IX,(DR_DESC)       ; Reload the build descriptor.
     LD   C,DR_DSBEG         ; Select symbol-arena begin and end.
@@ -393,7 +390,7 @@ DR_VAREN:
     CALL DR_LRANG           ; Return origin in HL and capacity in DE.
     ADD  HL,DE              ; Compute the wrapped sixteen-bit exclusive end.
     JR   NC,.RANGEOK        ; No carry is an ordinary in-range sum.
-    LD   A,H                ; Carry is legal only when the wrapped sum is zero.
+    LD   A,H                ; Carry is legal only at exact wrap.
     OR   L                  ; Combine both result bytes for that exact test.
     JR   NZ,DR_BORAN        ; Nonzero plus carry exceeds mathematical $10000.
 .RANGEOK:
@@ -402,7 +399,7 @@ DR_VAREN:
 
 ;@ROUTINE IN IX,C OUT HL,DE CLOBBERS A,B,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 ; Address field C in the descriptor, read two adjacent little-endian words and
-; return the first in HL and the second in DE. Keeping this decoding here makes
+; return the first in HL and second in DE. Shared decoding makes
 ; all three range users agree on the descriptor layout.
 
 DR_LRANG:
@@ -428,7 +425,7 @@ DR_VRANG:
     EX   DE,HL              ; Put exclusive end in HL and begin in DE.
     OR   A                  ; Clear carry before unsigned subtraction.
     SBC  HL,DE              ; Compute end minus begin.
-    RET  NC                 ; No borrow accepts both empty and nonempty ranges.
+    RET  NC                 ; No borrow accepts empty or live ranges.
     SCF                     ; Restore the helper's explicit failure contract.
     RET                     ; Report a range that wraps backwards.
 DR_BPCNT:
@@ -483,7 +480,7 @@ DR_FPLOO:
     JR   DR_FINT            ; Pending data without any anchor is corrupt.
 DR_FANCH:
 
-; Preserve the anchor's symbol-record pointer before validating it. A malformed
+; Preserve the anchor's symbol pointer before validation. A malformed
 ; pointer must never be dereferenced merely to improve a diagnostic.
 
     LD   L,(IX+0)           ; Read the anchor's symbol pointer low byte.
@@ -493,22 +490,22 @@ DR_FANCH:
     JR   C,DR_FINT          ; Never dereference a malformed pointer.
 
 ; A live anchor must point at an undefined symbol. A defined target means the
-; patch-resolution path left stale metadata and is therefore an internal fault.
+; patch path left stale metadata, an internal fault.
 
     LD   IY,(DR_USYM)       ; Address the now-validated symbol record.
     BIT  6,(IY+5)           ; Test the symbol's defined flag.
     JR   NZ,DR_FINT         ; A defined symbol must have no live anchor.
 
-; The low kind bits must name one of the patch field forms. Zero and values past
+; Low kind bits must name a patch field form. Zero and values past
 ; PT_KHB are corrupt even when the diagnostic-anchor bit itself is valid.
 
-    LD   A,(IX+4)           ; Read anchor flag and encoded patch kind together.
+    LD   A,(IX+4)           ; Read anchor flag and patch kind.
     AND  SY_KMASK           ; Keep only the low patch-kind bits.
     JR   Z,DR_FINT          ; Kind zero is not a patch operation.
     CP   PT_KHB+1           ; PT_KHB is the highest defined patch kind.
     JR   NC,DR_FINT         ; Reject every out-of-range kind value.
 
-; Recover the exact source location: the anchor owns the part ordinal, while an
+; Recover exact source location: the anchor has the part ordinal, while an
 ; undefined symbol's otherwise-unused value word retains the reference offset.
 
     LD   A,(IX+SY_PMASK)    ; Read the anchor's complete source-part ordinal.
@@ -519,7 +516,7 @@ DR_FANCH:
     XOR  A                  ; No nested statement detail applies here.
     LD   (ST_DETAI),A       ; Clear any detail left by the final statement.
 
-; Return both the public undefined status and the symbol pointer for diagnostic
+; Return public undefined status and symbol pointer for diagnostic
 ; name unpacking. Carry marks the finalisation failure.
 
     LD   IX,(DR_USYM)       ; Return the validated record for name decoding.
@@ -535,7 +532,7 @@ DR_FNPEN:
     CALL SY_VSCOP           ; Validate the current private scope in place.
     JR   C,DR_FINT          ; A private failure without an anchor is corrupt.
 
-; Private validation succeeded and may evict that scope. Walk permanent globals
+; Private validation leaves that scope intact. Walk permanent globals
 ; and require every record's defined flag; an undefined global without pending
 ; metadata is likewise an internal invariant failure.
 
@@ -545,7 +542,7 @@ DR_FGLOO:
     CALL AT_CIDE            ; Compare the symbol cursor with the arena end.
     JR   Z,DR_FSUCC         ; Every retained global is defined.
     BIT  6,(IX+5)           ; Test this global record's defined flag.
-    JR   Z,DR_FINT          ; Undefined without pending metadata is inconsistent.
+    JR   Z,DR_FINT          ; Undefined with no pending data is corrupt.
     LD   BC,SY_RECB         ; Load the eight-byte symbol-record stride.
     ADD  IX,BC              ; Advance to the next permanent global.
     JR   DR_FGLOO           ; Validate it or finish the scan.
@@ -568,24 +565,24 @@ DR_FINT:
 ; candidate around each subtraction because the comparisons destroy HL.
 
 DR_VSPTR:
-    PUSH HL                 ; Preserve the candidate across lower-bound compare.
+    PUSH HL                 ; Preserve candidate for lower-bound test.
     LD   DE,(SY_ABASE)      ; Load the first live global-record address.
     OR   A                  ; Clear carry before unsigned subtraction.
-    SBC  HL,DE              ; Compare candidate against the global lower bound.
+    SBC  HL,DE              ; Compare against global lower bound.
     POP  HL                 ; Restore the original candidate pointer.
-    JR   C,DR_VPPTR         ; Below globals may still belong to private storage.
+    JR   C,DR_VPPTR         ; Check private storage if below globals.
     PUSH HL                 ; Preserve it across the upper-bound compare.
     LD   DE,(SY_GEND)       ; Load the exclusive end of live globals.
     OR   A                  ; Clear carry before unsigned subtraction.
     SBC  HL,DE              ; Compare candidate against that exclusive end.
     POP  HL                 ; Restore the candidate again.
-    JR   NC,DR_VPPTR        ; At or above global end requires private checking.
+    JR   NC,DR_VPPTR        ; Check private storage at/above global end.
 
 ; A global pointer is valid only at an eight-byte record boundary from the
 ; arena base. SY_RECB is a power of two, so a mask performs the modulus test.
 
     LD   DE,(SY_ABASE)      ; Measure candidate from the global arena base.
-    OR   A                  ; Clear carry before the known in-range subtraction.
+    OR   A                  ; Clear carry before subtraction.
     SBC  HL,DE              ; Produce the byte displacement from that base.
     LD   A,L                ; Only low alignment bits can affect modulo eight.
     AND  SY_RECB-1          ; Keep displacement modulo the record size.
@@ -596,7 +593,7 @@ DR_VPPTR:
 
 ; Private records occupy [SY_LBEG, SY_AEND) and grow down from SY_AEND.
 
-    PUSH HL                 ; Preserve the candidate across lower-bound compare.
+    PUSH HL                 ; Preserve candidate for lower-bound test.
     LD   DE,(SY_LBEG)       ; Load the first live private-record address.
     OR   A                  ; Clear carry before unsigned subtraction.
     SBC  HL,DE              ; Compare candidate with the private lower bound.
@@ -645,7 +642,7 @@ DR_PINDE: DB 0              ; Expected dense part ordinal.
 
 DR_DETAI: DB 0              ; Nested status or configuration detail.
 
-; Validated symbol-record pointer for an undefined-symbol diagnostic, else zero.
+; Validated symbol pointer for undefined diagnostic, else zero.
 
 DR_USYM: DW 0               ; Validated undefined-symbol record address.
 DR_WEND:
