@@ -24,6 +24,24 @@ function assertInstructionExplanation(line, location) {
   }
 }
 
+function inlineCommentColumn(line) {
+  let quote = null;
+  let escaped = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (quote !== null) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || (char === "'" && !/[A-Za-z0-9_]/.test(line[index - 1] ?? ""))) {
+      quote = char;
+    } else if (char === ";") {
+      return index;
+    }
+  }
+  return -1;
+}
+
 const KEY_NAMES = Object.freeze({
   AtomAssemble: "DR_ASM",
   AtomEncoderCodeStart: "EN_CODEB",
@@ -58,6 +76,13 @@ test("inline instruction commentary also covers label-prefixed instructions", ()
   assert.doesNotThrow(() => assertInstructionExplanation("DATA: DB 1"));
 });
 
+test("comment-column scan ignores quoted semicolons and detects tight comments", () => {
+  assert.equal(inlineCommentColumn("    CP ';'   ; Compare the delimiter."), 13);
+  assert.equal(inlineCommentColumn("    EX AF,AF'  ; Swap registers."), 15);
+  assert.equal(inlineCommentColumn("VALUE EQU 1;comment"), 11);
+  assert.equal(inlineCommentColumn("    DB ';'"), -1);
+});
+
 test("maintained Z80 source follows the readable layout convention", async () => {
   const names = (await fs.readdir("src/z80")).filter((name) => name.endsWith(".asm"));
   for (const name of names) {
@@ -66,8 +91,21 @@ test("maintained Z80 source follows the readable layout convention", async () =>
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index];
       assert.doesNotMatch(line, /\t/, `${name}:${index + 1} contains a tab`);
+      if (!line.startsWith(";@ROUTINE")) {
+        assert.ok(line.length <= 78, `${name}:${index + 1} exceeds 78 columns`);
+      }
       if (line === "" || line.startsWith(";")) continue;
       assertInstructionExplanation(line, `${name}:${index + 1}`);
+      if (name === "cpm22.asm") {
+        const column = inlineCommentColumn(line);
+        if (column >= 0) {
+          const codeEnd = line.slice(0, column).trimEnd().length;
+          assert.equal(column, Math.max(28, codeEnd + 2),
+            `${name}:${index + 1} has an unaligned inline comment`);
+          assert.match(line.slice(column), /^;\s+\S/,
+            `${name}:${index + 1} needs space after its semicolon`);
+        }
+      }
       if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*:(?:\s|$)/.test(line)) continue;
       if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*\s+EQU\s/.test(line)) continue;
       assert.match(line, /^ {4}\S/, `${name}:${index + 1} must indent non-label assembly by four spaces`);

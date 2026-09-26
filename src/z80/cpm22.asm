@@ -69,12 +69,12 @@ CP_ADAPTER_CODE_START:
 ; registers promised by Atom's private tool-service client adapter.
 
 CP_BDOS:
-    PUSH IX                    ; Preserve IX across BDOS.
-    PUSH IY                    ; Protect the second index register as well.
-    CALL CP_BDOS_ENTRY         ; Enter the CP/M dispatcher with function in C.
-    POP  IY                    ; Restore IY before returning to the caller.
-    POP  IX                    ; Restore IX after the 8080-compatible service.
-    RET                        ; Return the BDOS result and flags unchanged.
+    PUSH IX                 ; Preserve IX across BDOS.
+    PUSH IY                 ; Protect the second index register as well.
+    CALL CP_BDOS_ENTRY      ; Enter the CP/M dispatcher with function in C.
+    POP  IY                 ; Restore IY before returning to the caller.
+    POP  IX                 ; Restore IX after the 8080-compatible service.
+    RET                     ; Return the BDOS result and flags unchanged.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Leave the CCP stack, parse arguments and includes, clear the tentative image
@@ -82,64 +82,64 @@ CP_BDOS:
 ; Return 0 for success or help, 1 for build failure or 2 for command failure.
 
 CP_ENTRY:
-    LD   (CP_SAVED_SP),SP      ; Retain the CCP stack for the final return.
-    LD   SP,CP_STACK_TOP       ; Use private RAM for calls and pushes.
-    CALL CP_PARSE_COMMAND     ; Parse source and output names.
+    LD   (CP_SAVED_SP),SP   ; Retain the CCP stack for the final return.
+    LD   SP,CP_STACK_TOP    ; Use private RAM for calls and pushes.
+    CALL CP_PARSE_COMMAND   ; Parse source and output names.
     JR   C,CP_COMMAND_FAILED  ; Report a usage or filename error before I/O.
-    OR   A                    ; Test whether parsing selected help-only mode.
-    JR   NZ,CP_SUCCESS        ; Help returns success without assembly.
-    CALL CP_RESOLVE_SOURCE    ; Resolve includes and measure all parts.
-    JR   C,CP_BUILD_FAILED    ; Report an invalid source graph.
-    LD   HL,CP_OUTPUT_START   ; Point at the tentative image's first byte.
-    LD   DE,CP_OUTPUT_START+1 ; Point DE at the next byte to initialise.
-    LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1 ; Count the remaining image bytes.
-    LD   (HL),0               ; Initialise the first image byte to zero.
-    LDIR                     ; Zero gaps and reservations.
-    LD   IX,CP_DESCRIPTOR     ; Pass the measured source descriptor.
-    CALL DR_ASM               ; Assemble all parts into the private RAM image.
-    JR   C,CP_ASSEMBLY_FAILED ; Leave the old output intact on failure.
-    LD   DE,CP_NEWLINE_TEXT   ; Lead the success message with a newline.
-    CALL CP_PRINT             ; Separate the result from any command echo.
-    LD   HL,CP_OUTPUT_NAME    ; Point at the selected output name.
-    CALL CP_PRINT_NAME        ; Print the basename and any nonblank extension.
-    LD   DE,CP_WRITTEN_TEXT   ; Select the completion suffix.
-    CALL CP_PRINT             ; Report success after the sink has committed.
+    OR   A                  ; Test whether parsing selected help-only mode.
+    JR   NZ,CP_SUCCESS      ; Help returns success without assembly.
+    CALL CP_RESOLVE_SOURCE  ; Resolve includes and measure all parts.
+    JR   C,CP_BUILD_FAILED  ; Report an invalid source graph.
+    LD   HL,CP_OUTPUT_START  ; Point at the tentative image's first byte.
+    LD   DE,CP_OUTPUT_START+1  ; Point DE at the next byte to initialise.
+    LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1  ; Count remaining bytes.
+    LD   (HL),0             ; Initialise the first image byte to zero.
+    LDIR                    ; Zero gaps and reservations.
+    LD   IX,CP_DESCRIPTOR   ; Pass the measured source descriptor.
+    CALL DR_ASM             ; Assemble all parts into the private RAM image.
+    JR   C,CP_ASSEMBLY_FAILED  ; Leave the old output intact on failure.
+    LD   DE,CP_NEWLINE_TEXT  ; Lead the success message with a newline.
+    CALL CP_PRINT           ; Separate the result from any command echo.
+    LD   HL,CP_OUTPUT_NAME  ; Point at the selected output name.
+    CALL CP_PRINT_NAME      ; Print the basename and any nonblank extension.
+    LD   DE,CP_WRITTEN_TEXT  ; Select the completion suffix.
+    CALL CP_PRINT           ; Report success after the sink has committed.
 CP_SUCCESS:
-    XOR  A                    ; Return status zero for success or help.
-    JR   CP_RETURN            ; Restore the CCP stack through the common exit.
+    XOR  A                  ; Return status zero for success or help.
+    JR   CP_RETURN          ; Restore the CCP stack through the common exit.
 CP_COMMAND_FAILED:
-    CALL CP_PRINT             ; DE holds the parser's diagnostic text.
-    LD   A,2                  ; Use status two for argument errors.
-    JR   CP_RETURN            ; Restore the CCP stack and return status two.
+    CALL CP_PRINT           ; DE holds the parser's diagnostic text.
+    LD   A,2                ; Use status two for argument errors.
+    JR   CP_RETURN          ; Restore the CCP stack and return status two.
 CP_ASSEMBLY_FAILED:
-    PUSH AF                   ; Save Atom's status while printing.
+    PUSH AF                 ; Save Atom's status while printing.
     LD   DE,CP_ASSEMBLY_TEXT  ; Point at the diagnostic prefix.
-    CALL CP_PRINT             ; Print the assembly-error prefix.
-    POP  AF                   ; Recover the original assembler status.
-    CALL CP_PRINT_HEX         ; Print the status as two hexadecimal digits.
-    LD   A,' '                ; Separate status from the source-part ordinal.
-    CALL CP_PUTC              ; Emit the field separator.
-    LD   A,(ST_EPART)         ; Load the zero-based source-part ordinal.
-    CALL CP_PRINT_HEX         ; Print the part ordinal in hexadecimal.
-    LD   A,' '                ; Separate the part from the byte offset.
-    CALL CP_PUTC              ; Emit the second field separator.
-    LD   HL,(ST_EOFF)         ; Load the source's zero-based byte offset.
-    PUSH HL                   ; Save the offset while printing its high byte.
-    LD   A,H                  ; Select the high byte of the offset.
-    CALL CP_PRINT_HEX         ; Print the high byte first.
-    POP  HL                   ; Restore the offset and recover its low byte.
-    LD   A,L                  ; Select the low byte of the offset.
-    CALL CP_PRINT_HEX         ; Complete the four-digit hexadecimal offset.
-    LD   DE,CP_NEWLINE_TEXT   ; Point at the terminating line break.
-    CALL CP_PRINT             ; Finish the diagnostic line.
+    CALL CP_PRINT           ; Print the assembly-error prefix.
+    POP  AF                 ; Recover the original assembler status.
+    CALL CP_PRINT_HEX       ; Print the status as two hexadecimal digits.
+    LD   A,' '              ; Separate status from the source-part ordinal.
+    CALL CP_PUTC            ; Emit the field separator.
+    LD   A,(ST_EPART)       ; Load the zero-based source-part ordinal.
+    CALL CP_PRINT_HEX       ; Print the part ordinal in hexadecimal.
+    LD   A,' '              ; Separate the part from the byte offset.
+    CALL CP_PUTC            ; Emit the second field separator.
+    LD   HL,(ST_EOFF)       ; Load the source's zero-based byte offset.
+    PUSH HL                 ; Save the offset while printing its high byte.
+    LD   A,H                ; Select the high byte of the offset.
+    CALL CP_PRINT_HEX       ; Print the high byte first.
+    POP  HL                 ; Restore the offset and recover its low byte.
+    LD   A,L                ; Select the low byte of the offset.
+    CALL CP_PRINT_HEX       ; Complete the four-digit hexadecimal offset.
+    LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
+    CALL CP_PRINT           ; Finish the diagnostic line.
 CP_BUILD_FAILED:
-    LD   A,1                  ; Return status one for build failure.
+    LD   A,1                ; Return status one for build failure.
 CP_RETURN:
 
 ; Restore the CCP's original stack before returning its conventional status.
 
-    LD   SP,(CP_SAVED_SP)     ; Restore the caller's command-processor stack.
-    RET                       ; Return the status in A to the CCP.
+    LD   SP,(CP_SAVED_SP)   ; Restore the caller's command-processor stack.
+    RET                     ; Return the status in A to the CCP.
 
 CP_COMMAND_CODE_START:
 
@@ -149,183 +149,183 @@ CP_COMMAND_CODE_START:
 ; output name with COM extension. All names are current-drive CP/M 8.3 names.
 
 CP_PARSE_COMMAND:
-    XOR  A                    ; Clear command state.
-    LD   (CP_ACTIVE_PART),A   ; Drop any cached source-part ordinal.
-    LD   A,(CP_COMMAND_LENGTH) ; Read the CCP's command-tail byte count.
-    LD   B,A                  ; Keep the remaining count beside the HL cursor.
+    XOR  A                  ; Clear command state.
+    LD   (CP_ACTIVE_PART),A  ; Drop any cached source-part ordinal.
+    LD   A,(CP_COMMAND_LENGTH)  ; Read the CCP's command-tail byte count.
+    LD   B,A                ; Keep the remaining count beside the HL cursor.
     LD   HL,CP_COMMAND_START  ; Start at the first command-tail character.
-    CALL CP_SKIP_SPACES       ; Skip leading spaces.
-    JP   Z,CP_CHECK_AUXILIARY_NAMES ; Use the two default names.
-    LD   A,B                  ; Inspect the non-space argument length.
-    CP   1                    ; A lone question mark is the only help form.
-    JR   NZ,CP_COMMAND_SOURCE ; Longer input must begin with a source name.
-    LD   A,(HL)               ; Read the sole non-space character.
-    CP   '?'                  ; Select help only for the exact `?` argument.
-    JR   NZ,CP_COMMAND_SOURCE ; Otherwise validate it as a filename.
-    LD   DE,CP_USAGE_TEXT     ; Point at the compact command syntax.
-    CALL CP_PRINT             ; Print help without file I/O.
-    XOR  A                    ; Begin the help-only success marker.
-    INC  A                    ; Skip assembly after showing help.
-    RET                       ; Preserve that help marker in A.
+    CALL CP_SKIP_SPACES     ; Skip leading spaces.
+    JP   Z,CP_CHECK_AUXILIARY_NAMES  ; Use the two default names.
+    LD   A,B                ; Inspect the non-space argument length.
+    CP   1                  ; A lone question mark is the only help form.
+    JR   NZ,CP_COMMAND_SOURCE  ; Longer input must begin with a source name.
+    LD   A,(HL)             ; Read the sole non-space character.
+    CP   '?'                ; Select help only for the exact `?` argument.
+    JR   NZ,CP_COMMAND_SOURCE  ; Otherwise validate it as a filename.
+    LD   DE,CP_USAGE_TEXT   ; Point at the compact command syntax.
+    CALL CP_PRINT           ; Print help without file I/O.
+    XOR  A                  ; Begin the help-only success marker.
+    INC  A                  ; Skip assembly after showing help.
+    RET                     ; Preserve that help marker in A.
 CP_COMMAND_SOURCE:
-    CALL CP_PARSE_FILENAME    ; Parse the source argument as 8.3.
-    JP   C,CP_BAD_SOURCE_NAME ; Distinguish a bad source name.
-    CALL CP_SKIP_SPACES       ; Look for a second name.
-    JR   Z,CP_SINGLE_NAME     ; Derive the output name and type.
-    CALL CP_PARSE_FILENAME    ; Validate the explicit output name.
-    JP   C,CP_BAD_OUTPUT_NAME ; Report malformed output fields separately.
-    CALL CP_SKIP_SPACES       ; Check for trailing text.
-    JP   NZ,CP_BAD_USAGE      ; Reject a third argument or trailing junk.
-    JR   CP_COMMAND_NAMES_READY ; Continue with the CCP's normalized FCBs.
+    CALL CP_PARSE_FILENAME  ; Parse the source argument as 8.3.
+    JP   C,CP_BAD_SOURCE_NAME  ; Distinguish a bad source name.
+    CALL CP_SKIP_SPACES     ; Look for a second name.
+    JR   Z,CP_SINGLE_NAME   ; Derive the output name and type.
+    CALL CP_PARSE_FILENAME  ; Validate the explicit output name.
+    JP   C,CP_BAD_OUTPUT_NAME  ; Report malformed output fields separately.
+    CALL CP_SKIP_SPACES     ; Check for trailing text.
+    JP   NZ,CP_BAD_USAGE    ; Reject a third argument or trailing junk.
+    JR   CP_COMMAND_NAMES_READY  ; Continue with the CCP's normalized FCBs.
 CP_SINGLE_NAME:
 
 ; The CCP populated default FCB 1 from the sole argument. Copy it to FCB 2 and
 ; replace only the extension, retaining the same normalized basename.
 
-    LD   HL,$005C             ; Address the CCP's default source FCB.
-    LD   DE,$006C             ; Address the second FCB used for output.
-    LD   BC,12                ; Copy drive, basename and extension bytes.
-    LDIR                     ; Copy the source basename to output.
+    LD   HL,$005C           ; Address the CCP's default source FCB.
+    LD   DE,$006C           ; Address the second FCB used for output.
+    LD   BC,12              ; Copy drive, basename and extension bytes.
+    LDIR                    ; Copy the source basename to output.
     LD   HL,CP_COM_EXTENSION  ; Select the conventional `.COM` output type.
-    LD   DE,$006C+9           ; Point at the output FCB's three-byte type.
-    LD   BC,3                 ; Copy exactly the extension bytes.
-    LDIR                     ; Complete the one-argument output default.
+    LD   DE,$006C+9         ; Point at the output FCB's three-byte type.
+    LD   BC,3               ; Copy exactly the extension bytes.
+    LDIR                    ; Complete the one-argument output default.
 CP_COMMAND_NAMES_READY:
-    LD   HL,$005C             ; Read the CCP-normalized source FCB.
-    LD   DE,CP_INPUT_FCB      ; Store a private copy for BDOS operations.
-    LD   BC,12                ; Include drive, basename and extension.
-    LDIR                     ; Preserve the selected input filename.
+    LD   HL,$005C           ; Read the CCP-normalized source FCB.
+    LD   DE,CP_INPUT_FCB    ; Store a private copy for BDOS operations.
+    LD   BC,12              ; Include drive, basename and extension.
+    LDIR                    ; Preserve the selected input filename.
     LD   A,(CP_INPUT_FCB+9)  ; Inspect the first byte of its type field.
-    CP   ' '                  ; A blank type means the argument omitted it.
-    JR   NZ,CP_INPUT_TYPE_READY ; Keep any explicit source extension.
+    CP   ' '                ; A blank type means the argument omitted it.
+    JR   NZ,CP_INPUT_TYPE_READY  ; Keep any explicit source extension.
     LD   HL,CP_ASM_EXTENSION  ; Supply the native source extension `.ASM`.
-    LD   DE,CP_INPUT_FCB+9   ; Point at the private FCB's type field.
-    LD   BC,3                 ; The CP/M type occupies three bytes.
-    LDIR                     ; Complete the input FCB with its default type.
+    LD   DE,CP_INPUT_FCB+9  ; Point at the private FCB's type field.
+    LD   BC,3               ; The CP/M type occupies three bytes.
+    LDIR                    ; Complete the input FCB with its default type.
 CP_INPUT_TYPE_READY:
-    LD   HL,$006C             ; Read the CCP-normalized output FCB.
-    LD   DE,CP_OUTPUT_NAME    ; Store the selected output name.
-    LD   BC,12                ; Copy drive, basename and three-byte type.
-    LDIR                     ; Retain the caller's requested output name.
-    LD   HL,CP_OUTPUT_NAME+9 ; Point at the output extension.
-    LD   DE,CP_COM_EXTENSION ; Compare with the default COM format.
-    CALL CP_OUTPUT_TYPE_EQUAL ; Check all three extension bytes.
-    JR   Z,CP_OUTPUT_TYPE_COM ; Select format zero for COM.
-    LD   HL,CP_OUTPUT_NAME+9 ; Reuse HL for another extension comparison.
-    LD   DE,CP_BIN_EXTENSION ; Compare with the raw binary format.
-    CALL CP_OUTPUT_TYPE_EQUAL ; Check for an exact BIN extension.
-    JR   Z,CP_OUTPUT_TYPE_BIN ; Select format one for BIN.
-    LD   HL,CP_OUTPUT_NAME+9 ; Test the last supported output extension.
-    LD   DE,CP_HEX_EXTENSION ; Compare with the Intel HEX format.
-    CALL CP_OUTPUT_TYPE_EQUAL ; Check for an exact HEX extension.
-    JR   NZ,CP_BAD_OUTPUT_NAME ; Reject any other output type.
-    LD   A,2                  ; Assign format code two to Intel HEX.
-    JR   CP_OUTPUT_TYPE_READY ; Save the format and check names.
+    LD   HL,$006C           ; Read the CCP-normalized output FCB.
+    LD   DE,CP_OUTPUT_NAME  ; Store the selected output name.
+    LD   BC,12              ; Copy drive, basename and three-byte type.
+    LDIR                    ; Retain the caller's requested output name.
+    LD   HL,CP_OUTPUT_NAME+9  ; Point at the output extension.
+    LD   DE,CP_COM_EXTENSION  ; Compare with the default COM format.
+    CALL CP_OUTPUT_TYPE_EQUAL  ; Check all three extension bytes.
+    JR   Z,CP_OUTPUT_TYPE_COM  ; Select format zero for COM.
+    LD   HL,CP_OUTPUT_NAME+9  ; Reuse HL for another extension comparison.
+    LD   DE,CP_BIN_EXTENSION  ; Compare with the raw binary format.
+    CALL CP_OUTPUT_TYPE_EQUAL  ; Check for an exact BIN extension.
+    JR   Z,CP_OUTPUT_TYPE_BIN  ; Select format one for BIN.
+    LD   HL,CP_OUTPUT_NAME+9  ; Test the last supported output extension.
+    LD   DE,CP_HEX_EXTENSION  ; Compare with the Intel HEX format.
+    CALL CP_OUTPUT_TYPE_EQUAL  ; Check for an exact HEX extension.
+    JR   NZ,CP_BAD_OUTPUT_NAME  ; Reject any other output type.
+    LD   A,2                ; Assign format code two to Intel HEX.
+    JR   CP_OUTPUT_TYPE_READY  ; Save the format and check names.
 CP_OUTPUT_TYPE_BIN:
-    LD   A,1                  ; Assign format code one to raw BIN.
-    JR   CP_OUTPUT_TYPE_READY ; Save the type and continue filename checks.
+    LD   A,1                ; Assign format code one to raw BIN.
+    JR   CP_OUTPUT_TYPE_READY  ; Save the type and continue filename checks.
 CP_OUTPUT_TYPE_COM:
-    XOR  A                    ; Assign format code zero to CP/M COM.
+    XOR  A                  ; Assign format code zero to CP/M COM.
 CP_OUTPUT_TYPE_READY:
 
 ; Preserve the normalized input and output names in adapter-owned FCB storage.
 ; Input defaults to ASM when no type was supplied; output type selects 0=COM,
 ; 1=BIN or 2=HEX.
 
-    LD   (CP_OUTPUT_FORMAT),A ; Retain the format selected from the extension.
-    LD   HL,CP_INPUT_FCB      ; Compare source and output identities.
-    LD   DE,CP_OUTPUT_NAME    ; Address the output's twelve-byte identity.
-    CALL CP_NAMES_EQUAL       ; Reject overwriting the file being assembled.
-    JR   Z,CP_BAD_NAME_CONFLICT ; Source and output must be distinct files.
-    CALL CP_SET_TEMP_FCB      ; Build the transaction's temporary filename.
-    CALL CP_CHECK_WORK_NAME   ; Check for source collision or existing file.
-    RET  C                    ; Stop on a temp-name conflict.
-    CALL CP_SET_BACKUP_FCB    ; Build the transaction's backup filename.
-    CALL CP_CHECK_WORK_NAME   ; Apply the same collision and existence checks.
-    RET                       ; Return the final preflight status in carry.
+    LD   (CP_OUTPUT_FORMAT),A  ; Save the selected output format.
+    LD   HL,CP_INPUT_FCB    ; Compare source and output identities.
+    LD   DE,CP_OUTPUT_NAME  ; Address the output's twelve-byte identity.
+    CALL CP_NAMES_EQUAL     ; Reject overwriting the file being assembled.
+    JR   Z,CP_BAD_NAME_CONFLICT  ; Source and output must be distinct files.
+    CALL CP_SET_TEMP_FCB    ; Build the transaction's temporary filename.
+    CALL CP_CHECK_WORK_NAME  ; Check for source collision or existing file.
+    RET  C                  ; Stop on a temp-name conflict.
+    CALL CP_SET_BACKUP_FCB  ; Build the transaction's backup filename.
+    CALL CP_CHECK_WORK_NAME  ; Apply the same collision and existence checks.
+    RET                     ; Return the final preflight status in carry.
 
 ;@ROUTINE IN DE,HL OUT A,B,DE,HL,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
 ; Compare the three-byte output-type selectors at DE and HL.
 
 CP_OUTPUT_TYPE_EQUAL:
-    LD   B,3                  ; Count the three bytes in a CP/M file type.
+    LD   B,3                ; Count the three bytes in a CP/M file type.
 CP_OUTPUT_TYPE_BYTE:
-    LD   A,(DE)               ; Read the candidate extension byte.
-    CP   (HL)                 ; Compare it with the requested extension.
-    RET  NZ                   ; Stop on the first mismatch, preserving NZ.
-    INC  DE                   ; Advance to the next byte in the candidate.
-    INC  HL                   ; Advance to the corresponding expected byte.
+    LD   A,(DE)             ; Read the candidate extension byte.
+    CP   (HL)               ; Compare it with the requested extension.
+    RET  NZ                 ; Stop on the first mismatch, preserving NZ.
+    INC  DE                 ; Advance to the next byte in the candidate.
+    INC  HL                 ; Advance to the corresponding expected byte.
     DJNZ CP_OUTPUT_TYPE_BYTE  ; Compare all three type bytes.
-    RET                       ; Return Z when every byte matched.
+    RET                     ; Return Z when every byte matched.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Prove the temporary name differs from the source and is not already present.
 
 CP_CHECK_WORK_NAME:
-    LD   HL,CP_INPUT_FCB      ; Address the source name.
-    LD   DE,CP_WORK_FCB       ; Address the temporary or backup name.
-    CALL CP_NAMES_EQUAL       ; Test all drive, basename and type bytes.
-    JR   Z,CP_BAD_NAME_CONFLICT ; Never let publication replace the source.
-    JP   CP_AUXILIARY_MUST_NOT_EXIST ; Require an unused work name.
+    LD   HL,CP_INPUT_FCB    ; Address the source name.
+    LD   DE,CP_WORK_FCB     ; Address the temporary or backup name.
+    CALL CP_NAMES_EQUAL     ; Test all drive, basename and type bytes.
+    JR   Z,CP_BAD_NAME_CONFLICT  ; Never let publication replace the source.
+    JP   CP_AUXILIARY_MUST_NOT_EXIST  ; Require an unused work name.
 CP_BAD_USAGE:
-    LD   DE,CP_USAGE_TEXT     ; Select the command syntax diagnostic.
-    SCF                      ; Return parser failure to CP_ENTRY.
-    RET                       ; Keep the message address in DE.
+    LD   DE,CP_USAGE_TEXT   ; Select the command syntax diagnostic.
+    SCF                     ; Return parser failure to CP_ENTRY.
+    RET                     ; Keep the message address in DE.
 CP_BAD_SOURCE_NAME:
-    LD   DE,CP_SOURCE_NAME_TEXT ; Select the source-name diagnostic.
-    SCF                      ; Mark the invalid source argument.
-    RET                       ; Return its message address in DE.
+    LD   DE,CP_SOURCE_NAME_TEXT  ; Select the source-name diagnostic.
+    SCF                     ; Mark the invalid source argument.
+    RET                     ; Return its message address in DE.
 CP_BAD_OUTPUT_NAME:
-    LD   DE,CP_OUTPUT_NAME_TEXT ; Select the output-name diagnostic.
-    SCF                      ; Mark the invalid output argument.
-    RET                       ; Return its message address in DE.
+    LD   DE,CP_OUTPUT_NAME_TEXT  ; Select the output-name diagnostic.
+    SCF                     ; Mark the invalid output argument.
+    RET                     ; Return its message address in DE.
 CP_BAD_NAME_CONFLICT:
-    LD   DE,CP_NAME_CONFLICT_TEXT ; Select the name-conflict message.
-    SCF                      ; Refuse a colliding output or work filename.
-    RET                       ; Return the diagnostic address in DE.
+    LD   DE,CP_NAME_CONFLICT_TEXT  ; Select the name-conflict message.
+    SCF                     ; Refuse a colliding output or work filename.
+    RET                     ; Return the diagnostic address in DE.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Refuse to claim pre-existing temporary or backup files. CP/M is
 ; single-tasking, so successful preflight reserves both names until return.
 
 CP_CHECK_AUXILIARY_NAMES:
-    CALL CP_SET_TEMP_FCB      ; Build the temporary name for the first check.
-    CALL CP_AUXILIARY_MUST_NOT_EXIST ; Reject a pre-existing temporary file.
-    RET  C                    ; Stop after a collision or I/O error.
-    CALL CP_SET_BACKUP_FCB    ; Prepare the backup name for the next check.
+    CALL CP_SET_TEMP_FCB    ; Build the temporary name for the first check.
+    CALL CP_AUXILIARY_MUST_NOT_EXIST  ; Reject a pre-existing temporary file.
+    RET  C                  ; Stop after a collision or I/O error.
+    CALL CP_SET_BACKUP_FCB  ; Prepare the backup name for the next check.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Require the auxiliary file named by CP_WORK_FCB not to exist.
 
 CP_AUXILIARY_MUST_NOT_EXIST:
-    LD   DE,CP_WORK_FCB      ; Address the candidate temporary or backup FCB.
+    LD   DE,CP_WORK_FCB     ; Address the candidate temporary or backup FCB.
     LD   C,CP_OPEN_FUNCTION  ; Ask BDOS whether the named file already exists.
-    CALL CP_BDOS             ; FF means the file was not found.
-    INC  A                   ; Convert the not-found result into zero.
-    JR   Z,CP_AUXILIARY_AVAILABLE ; The name is free.
-    LD   DE,CP_WORK_FCB      ; Reuse the opened candidate FCB for closing it.
-    LD   C,CP_CLOSE_FUNCTION ; Select the matching CP/M close operation.
-    CALL CP_BDOS             ; Close the existing file.
-    LD   DE,CP_AUXILIARY_EXISTS_TEXT ; Select the collision diagnostic.
-    SCF                      ; Report that the auxiliary file is occupied.
-    RET                       ; Preserve its message pointer in DE.
+    CALL CP_BDOS            ; FF means the file was not found.
+    INC  A                  ; Convert the not-found result into zero.
+    JR   Z,CP_AUXILIARY_AVAILABLE  ; The name is free.
+    LD   DE,CP_WORK_FCB     ; Reuse the opened candidate FCB for closing it.
+    LD   C,CP_CLOSE_FUNCTION  ; Select the matching CP/M close operation.
+    CALL CP_BDOS            ; Close the existing file.
+    LD   DE,CP_AUXILIARY_EXISTS_TEXT  ; Select the collision diagnostic.
+    SCF                     ; Report that the auxiliary file is occupied.
+    RET                     ; Preserve its message pointer in DE.
 CP_AUXILIARY_AVAILABLE:
-    XOR  A                    ; Clear carry and status for an unused name.
-    RET                       ; Allow the caller to check or use the name.
+    XOR  A                  ; Clear carry and status for an unused name.
+    RET                     ; Allow the caller to check or use the name.
 
 ;@ROUTINE IN B,HL OUT A,B,HL,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
 ; Advance HL and reduce B past leading command-tail spaces.
 
 CP_SKIP_SPACES:
-    LD   A,B                  ; Check whether any command-tail bytes remain.
-    OR   A                    ; Z marks the end of the tail.
-    RET  Z                    ; Leave HL at the end when no bytes remain.
-    LD   A,(HL)               ; Inspect the next unconsumed character.
-    CP   ' '                  ; CP/M command separators are ordinary spaces.
-    RET  NZ                   ; Stop at the first non-space byte.
-    INC  HL                   ; Consume one leading or separating space.
-    DEC  B                    ; Keep the remaining-byte count in step with HL.
-    JR   CP_SKIP_SPACES       ; Skip a run of spaces before returning.
+    LD   A,B                ; Check whether any command-tail bytes remain.
+    OR   A                  ; Z marks the end of the tail.
+    RET  Z                  ; Leave HL at the end when no bytes remain.
+    LD   A,(HL)             ; Inspect the next unconsumed character.
+    CP   ' '                ; CP/M command separators are ordinary spaces.
+    RET  NZ                 ; Stop at the first non-space byte.
+    INC  HL                 ; Consume one leading or separating space.
+    DEC  B                  ; Keep the remaining-byte count in step with HL.
+    JR   CP_SKIP_SPACES     ; Skip a run of spaces before returning.
 
 ;@ROUTINE IN B,HL OUT A,B,HL,CARRY CLOBBERS C,D,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one unquoted, current-drive 8.3 filename without consuming its
@@ -333,92 +333,92 @@ CP_SKIP_SPACES:
 ; or otherwise invalid field.
 
 CP_PARSE_FILENAME:
-    LD   D,8                  ; Start with the eight-character basename limit.
-    LD   C,0                  ; Count characters in the current name field.
+    LD   D,8                ; Start with the eight-character basename limit.
+    LD   C,0                ; Count characters in the current name field.
 CP_PARSE_FILENAME_BYTE:
-    LD   A,B                  ; Check the remaining tail length.
-    OR   A                    ; Z marks the end of the tail.
-    JR   Z,CP_FILENAME_DONE   ; Validate the final name or extension length.
-    LD   A,(HL)               ; Read the next unquoted filename character.
-    CP   ' '                  ; Space terminates this name.
-    JR   Z,CP_FILENAME_DONE   ; Leave the separator for CP_SKIP_SPACES.
-    CP   '.'                  ; A dot switches from basename to extension.
+    LD   A,B                ; Check the remaining tail length.
+    OR   A                  ; Z marks the end of the tail.
+    JR   Z,CP_FILENAME_DONE  ; Validate the final name or extension length.
+    LD   A,(HL)             ; Read the next unquoted filename character.
+    CP   ' '                ; Space terminates this name.
+    JR   Z,CP_FILENAME_DONE  ; Leave the separator for CP_SKIP_SPACES.
+    CP   '.'                ; A dot switches from basename to extension.
     JR   NZ,CP_FILENAME_DATA  ; Validate an ordinary name byte.
-    LD   A,D                  ; D holds the current field limit.
-    CP   8                    ; Accept a dot only after the basename field.
-    JR   NZ,CP_FILENAME_FAILURE ; Reject a second dot in the extension.
-    LD   A,C                  ; Require at least one basename character.
-    OR   A                    ; Test the current field's character count.
-    JR   Z,CP_FILENAME_FAILURE ; Reject a leading dot and empty basename.
-    LD   D,3                  ; Limit the extension to three bytes.
-    LD   C,0                  ; Start counting extension characters.
+    LD   A,D                ; D holds the current field limit.
+    CP   8                  ; Accept a dot only after the basename field.
+    JR   NZ,CP_FILENAME_FAILURE  ; Reject a second dot in the extension.
+    LD   A,C                ; Require at least one basename character.
+    OR   A                  ; Test the current field's character count.
+    JR   Z,CP_FILENAME_FAILURE  ; Reject a leading dot and empty basename.
+    LD   D,3                ; Limit the extension to three bytes.
+    LD   C,0                ; Start counting extension characters.
     JR   CP_FILENAME_CONSUME  ; Consume the separator dot without counting it.
 CP_FILENAME_DATA:
-    CALL CP_FILENAME_CHAR    ; Validate the name byte.
-    RET  C                    ; Propagate an invalid byte.
-    INC  C                    ; Count this character in the current field.
-    LD   A,D                  ; Load the basename or extension capacity.
-    CP   C                    ; Compare limit and new length.
-    JR   C,CP_FILENAME_FAILURE ; Reject an overlong field.
+    CALL CP_FILENAME_CHAR   ; Validate the name byte.
+    RET  C                  ; Propagate an invalid byte.
+    INC  C                  ; Count this character in the current field.
+    LD   A,D                ; Load the basename or extension capacity.
+    CP   C                  ; Compare limit and new length.
+    JR   C,CP_FILENAME_FAILURE  ; Reject an overlong field.
 CP_FILENAME_CONSUME:
-    INC  HL                   ; Advance past a validated character or the dot.
-    DEC  B                    ; Reduce the remaining command-tail byte count.
-    JR   CP_PARSE_FILENAME_BYTE ; Continue until a separator or end of tail.
+    INC  HL                 ; Advance past a validated character or the dot.
+    DEC  B                  ; Reduce the remaining command-tail byte count.
+    JR   CP_PARSE_FILENAME_BYTE  ; Continue until a separator or end of tail.
 CP_FILENAME_DONE:
-    LD   A,C                  ; Check the final field length.
-    OR   A                    ; Set Z for an empty final field.
-    JR   Z,CP_FILENAME_FAILURE ; Reject an empty name or a trailing dot.
-    RET                       ; Leave any separating space unconsumed.
+    LD   A,C                ; Check the final field length.
+    OR   A                  ; Set Z for an empty final field.
+    JR   Z,CP_FILENAME_FAILURE  ; Reject an empty name or a trailing dot.
+    RET                     ; Leave any separating space unconsumed.
 CP_FILENAME_FAILURE:
-    SCF                      ; Report an invalid name.
-    RET                       ; Return carry to the command parser.
+    SCF                     ; Report an invalid name.
+    RET                     ; Return carry to the command parser.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Validate one character for use in a CP/M 8.3 filename.
 
 CP_FILENAME_CHAR:
-    CP   '!'                  ; Reject control characters and space below '!'.
-    RET  C                    ; Reject bytes below '!'.
-    CP   $7F                  ; Reject DEL and high-bit bytes.
-    JR   NC,CP_FILENAME_CHAR_BAD ; Not printable ASCII.
-    CP   '*'                  ; Punctuation before '*' is allowed after '!'.
-    JR   C,CP_FILENAME_CHAR_HIGH ; Accept this punctuation range.
-    CP   '-'                  ; Exclude '*', '+' and ',' before the hyphen.
-    JR   C,CP_FILENAME_CHAR_BAD ; Exclude '*', '+' and ','.
-    CP   '/'                  ; Reject the path separator.
-    JR   Z,CP_FILENAME_CHAR_BAD ; Reject a path separator explicitly.
-    CP   ':'                  ; Test the next punctuation range.
-    JR   C,CP_FILENAME_CHAR_HIGH ; Permit bytes below ':'.
-    CP   '@'                  ; Exclude ':', ';', '<', '=', '>' and '?'.
-    JR   C,CP_FILENAME_CHAR_BAD ; These include drive and wildcard syntax.
+    CP   '!'                ; Reject control characters and space below '!'.
+    RET  C                  ; Reject bytes below '!'.
+    CP   $7F                ; Reject DEL and high-bit bytes.
+    JR   NC,CP_FILENAME_CHAR_BAD  ; Not printable ASCII.
+    CP   '*'                ; Punctuation before '*' is allowed after '!'.
+    JR   C,CP_FILENAME_CHAR_HIGH  ; Accept this punctuation range.
+    CP   '-'                ; Exclude '*', '+' and ',' before the hyphen.
+    JR   C,CP_FILENAME_CHAR_BAD  ; Exclude '*', '+' and ','.
+    CP   '/'                ; Reject the path separator.
+    JR   Z,CP_FILENAME_CHAR_BAD  ; Reject a path separator explicitly.
+    CP   ':'                ; Test the next punctuation range.
+    JR   C,CP_FILENAME_CHAR_HIGH  ; Permit bytes below ':'.
+    CP   '@'                ; Exclude ':', ';', '<', '=', '>' and '?'.
+    JR   C,CP_FILENAME_CHAR_BAD  ; These include drive and wildcard syntax.
 CP_FILENAME_CHAR_HIGH:
-    CP   '['                  ; Uppercase letters below '[' are accepted.
-    JR   C,CP_FILENAME_CHAR_OK ; Permit digits, punctuation and A through Z.
-    CP   '^'                  ; Set the boundary after '[', backslash and ']'.
-    JR   C,CP_FILENAME_CHAR_BAD ; Exclude '[', '\\' and ']'.
-    CP   '_'                  ; Check the underscore boundary explicitly.
-    JR   Z,CP_FILENAME_CHAR_BAD ; Do not admit underscore into an 8.3 field.
+    CP   '['                ; Uppercase letters below '[' are accepted.
+    JR   C,CP_FILENAME_CHAR_OK  ; Permit digits, punctuation and A through Z.
+    CP   '^'                ; Set the boundary after '[', backslash and ']'.
+    JR   C,CP_FILENAME_CHAR_BAD  ; Exclude '[', '\\' and ']'.
+    CP   '_'                ; Check the underscore boundary explicitly.
+    JR   Z,CP_FILENAME_CHAR_BAD  ; Do not admit underscore into an 8.3 field.
 CP_FILENAME_CHAR_OK:
-    OR   A                    ; Clear carry; keep the valid byte.
-    RET                       ; Return the accepted character in A.
+    OR   A                  ; Clear carry; keep the valid byte.
+    RET                     ; Return the accepted character in A.
 CP_FILENAME_CHAR_BAD:
-    SCF                      ; Mark this character as invalid for a filename.
-    RET                       ; Return carry to CP_PARSE_FILENAME.
+    SCF                     ; Mark this character as invalid for a filename.
+    RET                     ; Return carry to CP_PARSE_FILENAME.
 
 ;@ROUTINE IN DE,HL OUT A,ZERO CLOBBERS B,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
 ; Compare two drive-plus-8.3-name records for exact equality.
 
 CP_NAMES_EQUAL:
-    LD   B,12                 ; Compare drive and eleven name/type bytes.
+    LD   B,12               ; Compare drive and eleven name/type bytes.
 CP_NAMES_EQUAL_BYTE:
-    LD   A,(DE)               ; Read the first FCB's name byte.
-    CP   (HL)                 ; Compare it with the corresponding second byte.
-    RET  NZ                   ; Return immediately when the identities differ.
-    INC  DE                   ; Advance the first name cursor.
-    INC  HL                   ; Advance the second name cursor.
+    LD   A,(DE)             ; Read the first FCB's name byte.
+    CP   (HL)               ; Compare it with the corresponding second byte.
+    RET  NZ                 ; Return immediately when the identities differ.
+    INC  DE                 ; Advance the first name cursor.
+    INC  HL                 ; Advance the second name cursor.
     DJNZ CP_NAMES_EQUAL_BYTE  ; Compare the complete twelve-byte identity.
-    XOR  A                    ; Return Z after all bytes match.
-    RET                       ; Carry is clear for the equal-name result.
+    XOR  A                  ; Return Z after all bytes match.
+    RET                     ; Carry is clear for the equal-name result.
 CP_COMMAND_CODE_END:
 
 CP_SOURCE_CODE_START:
@@ -427,46 +427,46 @@ CP_SOURCE_CODE_START:
 ; Prepare a blank ordinary FCB whose name/type fields are space-filled.
 
 CP_CLEAR_INPUT_FCB:
-    LD   DE,CP_INPUT_FCB ; Point at the input FCB's drive byte.
-    XOR  A ; Select the logged-in drive by default.
-    LD   (DE),A ; Store drive zero before filling the name.
-    INC  DE ; Advance to the eleven name/type bytes.
-    LD   B,11 ; Count all eight name and three type bytes.
-    LD   A,' ' ; CP/M pads unused name fields with spaces.
-    CALL CP_CLEAR_WORK_FCB ; Fill the complete name/type area.
-    JP   CP_CLEAR_FCB_TAIL ; Clear the remaining FCB control fields.
+    LD   DE,CP_INPUT_FCB    ; Point at the input FCB's drive byte.
+    XOR  A                  ; Select the logged-in drive by default.
+    LD   (DE),A             ; Store drive zero before filling the name.
+    INC  DE                 ; Advance to the eleven name/type bytes.
+    LD   B,11               ; Count all eight name and three type bytes.
+    LD   A,' '              ; CP/M pads unused name fields with spaces.
+    CALL CP_CLEAR_WORK_FCB  ; Fill the complete name/type area.
+    JP   CP_CLEAR_FCB_TAIL  ; Clear the remaining FCB control fields.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Reject output, temporary or backup names that collide with the source name.
 
 CP_CHECK_SOURCE_CONFLICT:
-    LD   HL,CP_INPUT_FCB ; Keep the original source identity in HL.
-    LD   DE,CP_OUTPUT_NAME ; Compare it with the requested output name.
-    CALL CP_NAMES_EQUAL ; Z means both twelve-byte FCB identities match.
-    JR   Z,CP_SOURCE_NAME_CONFLICT ; Never let output replace the source file.
-    CALL CP_SET_TEMP_FCB ; Construct the temporary output filename.
-    LD   HL,CP_INPUT_FCB ; Restore the source FCB pointer for comparison.
-    LD   DE,CP_WORK_FCB ; The temporary name occupies the work FCB.
-    CALL CP_NAMES_EQUAL ; Reject a temporary name that aliases the source.
-    JR   Z,CP_SOURCE_NAME_CONFLICT ; Preserve the source file.
-    CALL CP_SET_BACKUP_FCB ; Construct the backup filename for the output.
-    LD   HL,CP_INPUT_FCB ; Compare the source against that third identity.
-    LD   DE,CP_WORK_FCB ; The backup candidate is now in the work FCB.
-    CALL CP_NAMES_EQUAL ; Z again means the names would collide.
-    JR   Z,CP_SOURCE_NAME_CONFLICT ; Refuse a source/output collision.
-    XOR  A ; A=0 reports that all three names are distinct.
-    RET ; Return clear carry with the success result.
+    LD   HL,CP_INPUT_FCB    ; Keep the original source identity in HL.
+    LD   DE,CP_OUTPUT_NAME  ; Compare it with the requested output name.
+    CALL CP_NAMES_EQUAL     ; Z means both twelve-byte FCB identities match.
+    JR   Z,CP_SOURCE_NAME_CONFLICT  ; Never replace the source file.
+    CALL CP_SET_TEMP_FCB    ; Construct the temporary output filename.
+    LD   HL,CP_INPUT_FCB    ; Restore the source FCB pointer for comparison.
+    LD   DE,CP_WORK_FCB     ; The temporary name occupies the work FCB.
+    CALL CP_NAMES_EQUAL     ; Reject a temporary name that aliases the source.
+    JR   Z,CP_SOURCE_NAME_CONFLICT  ; Preserve the source file.
+    CALL CP_SET_BACKUP_FCB  ; Construct the backup filename for the output.
+    LD   HL,CP_INPUT_FCB    ; Compare the source against that third identity.
+    LD   DE,CP_WORK_FCB     ; The backup candidate is now in the work FCB.
+    CALL CP_NAMES_EQUAL     ; Z again means the names would collide.
+    JR   Z,CP_SOURCE_NAME_CONFLICT  ; Refuse a source/output collision.
+    XOR  A                  ; A=0 reports that all three names are distinct.
+    RET                     ; Return clear carry with the success result.
 CP_SOURCE_NAME_CONFLICT:
-    LD   DE,CP_NAME_CONFLICT_TEXT ; Return the collision message in DE.
-    SCF ; Mark the preflight check as failed.
-    RET ; Leave file creation to the caller's error path.
+    LD   DE,CP_NAME_CONFLICT_TEXT  ; Return the collision message in DE.
+    SCF                     ; Mark the preflight check as failed.
+    RET                     ; Leave file creation to the caller's error path.
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; Read one logical source byte through a 128-byte random-record cache. The
 ; pre-scan proves each requested record exists until this command returns.
 
 CP_SOURCE_READ_BYTE:
-    JP   CP_RESOLVED_READ_BYTE ; Expose the resolved source-byte reader.
+    JP   CP_RESOLVED_READ_BYTE  ; Expose the resolved source-byte reader.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Resolve the root source and its leading %INCLUDE graph. Names are retained
@@ -474,472 +474,472 @@ CP_SOURCE_READ_BYTE:
 ; first order. No intermediate source-order file is involved.
 
 CP_RESOLVE_SOURCE:
-    XOR  A ; Start with no published descriptors or order.
-    LD   (CP_DESCRIPTOR),A ; The native core must not see a stale part count.
-    LD   (CP_ORDER_COUNT),A ; No source has reached dependency order yet.
-    LD   (CP_SCAN_INDEX),A ; Discovery begins at root ordinal zero.
-    INC  A ; The root itself is the first retained name.
-    LD   (CP_NAME_COUNT),A ; Record one known source part.
-    LD   HL,CP_INPUT_FCB+1 ; Skip the drive byte and retain the 8.3 name.
-    LD   DE,CP_PART_NAMES ; Store it in the root's ordinal-zero slot.
-    LD   BC,11 ; FCB name and type fields occupy eleven bytes.
-    LDIR ; Copy the root name into the resolver table.
-    LD   A,$FF ; Prepare the source-selection field for this run.
-    LD   (CP_ACTIVE_PART),A ; Clear any stale current-part selection.
+    XOR  A                  ; Start with no published descriptors or order.
+    LD   (CP_DESCRIPTOR),A  ; The native core must not see a stale part count.
+    LD   (CP_ORDER_COUNT),A  ; No source has reached dependency order yet.
+    LD   (CP_SCAN_INDEX),A  ; Discovery begins at root ordinal zero.
+    INC  A                  ; The root itself is the first retained name.
+    LD   (CP_NAME_COUNT),A  ; Record one known source part.
+    LD   HL,CP_INPUT_FCB+1  ; Skip the drive byte and retain the 8.3 name.
+    LD   DE,CP_PART_NAMES   ; Store it in the root's ordinal-zero slot.
+    LD   BC,11              ; FCB name and type fields occupy eleven bytes.
+    LDIR                    ; Copy the root name into the resolver table.
+    LD   A,$FF              ; Prepare the source-selection field for this run.
+    LD   (CP_ACTIVE_PART),A  ; Clear any stale current-part selection.
 
 ; First discover every exact name reachable from the root.
 
 CP_DISCOVER_PART:
-    XOR  A ; Mode zero records newly found include names.
-    LD   (CP_SCAN_MODE),A ; Discovery does not test dependency ordering.
-    LD   A,(CP_SCAN_INDEX) ; Select the next retained source name.
-    CALL CP_SCAN_PART ; Read its leading header and visit its includes.
+    XOR  A                  ; Mode zero records newly found include names.
+    LD   (CP_SCAN_MODE),A   ; Discovery does not test dependency ordering.
+    LD   A,(CP_SCAN_INDEX)  ; Select the next retained source name.
+    CALL CP_SCAN_PART       ; Read its leading header and visit its includes.
 ; The scan helper reports malformed input, open failure or offset overflow.
-    JP   C,CP_RESOLVE_FAILURE ; Stop on any reported scan failure.
-    LD   HL,CP_SCAN_INDEX ; Advance the discovery cursor in place.
-    INC  (HL) ; Each retained name is scanned for dependencies.
-    LD   A,(CP_NAME_COUNT) ; New includes may have extended this count.
-    CP   (HL) ; Compare the next ordinal with the live count.
-    JR   NZ,CP_DISCOVER_PART ; Scan every discovered source part.
+    JP   C,CP_RESOLVE_FAILURE  ; Stop on any reported scan failure.
+    LD   HL,CP_SCAN_INDEX   ; Advance the discovery cursor in place.
+    INC  (HL)               ; Each retained name is scanned for dependencies.
+    LD   A,(CP_NAME_COUNT)  ; New includes may have extended this count.
+    CP   (HL)               ; Compare the next ordinal with the live count.
+    JR   NZ,CP_DISCOVER_PART  ; Scan every discovered source part.
 
 ; Emit parts after their dependencies. Bit 7 of the first retained-name byte
 ; marks an emitted part. Name comparisons and FCB reconstruction mask it away.
 ; A pass with no progress proves a cycle without recursion.
 
 CP_TOPO_PASS:
-    XOR  A ; Begin another pass over all discovered files.
-    LD   (CP_SCAN_INDEX),A ; Restart at the root ordinal.
-    LD   (CP_SCAN_PROGRESS),A ; Track whether this pass emits any source.
+    XOR  A                  ; Begin another pass over all discovered files.
+    LD   (CP_SCAN_INDEX),A  ; Restart at the root ordinal.
+    LD   (CP_SCAN_PROGRESS),A  ; Track whether this pass emits any source.
 CP_TOPO_PART:
-    LD   A,(CP_SCAN_INDEX) ; Read the candidate part's ordinal.
-    CALL CP_NAME_POINTER ; HL points to its retained eleven-byte name.
-    BIT  7,(HL) ; Bit 7 marks a part already placed in the order.
-    JR   NZ,CP_TOPO_NEXT ; Do not emit a part twice.
-    LD   A,1 ; Mode one checks whether the includes are ready.
-    LD   (CP_SCAN_MODE),A ; The scanner reports one for a pending child.
-    LD   A,(CP_SCAN_INDEX) ; Scan this candidate's leading include directives.
-    CALL CP_SCAN_PART ; A=0 means every dependency is already ordered.
-    JP   C,CP_RESOLVE_FAILURE ; Preserve scanner errors as resolver failures.
-    OR   A ; Test whether an include still has an unordered child.
-    JR   NZ,CP_TOPO_NEXT ; Defer this part until a later pass.
-    LD   A,(CP_ORDER_COUNT) ; Append at the next dependency-order position.
-    LD   E,A ; E is the byte offset into the order table.
-    LD   D,CP_PART_ORDER/256 ; The table remains within its fixed page.
-    LD   A,(CP_SCAN_INDEX) ; Store this source's original ordinal.
-    LD   (DE),A ; The order table maps output order to part identity.
-    CALL CP_NAME_POINTER ; Recover the name after writing the order byte.
-    SET  7,(HL) ; Mark this name as emitted for later scans.
-    LD   HL,CP_ORDER_COUNT ; Point to the number of ordered source parts.
-    INC  (HL) ; Include the part just appended above.
-    LD   A,1 ; Record that this pass made progress.
-    LD   (CP_SCAN_PROGRESS),A ; Newly ready dependants can run next pass.
+    LD   A,(CP_SCAN_INDEX)  ; Read the candidate part's ordinal.
+    CALL CP_NAME_POINTER    ; HL points to its retained eleven-byte name.
+    BIT  7,(HL)             ; Bit 7 marks a part already placed in the order.
+    JR   NZ,CP_TOPO_NEXT    ; Do not emit a part twice.
+    LD   A,1                ; Mode one checks whether the includes are ready.
+    LD   (CP_SCAN_MODE),A   ; The scanner reports one for a pending child.
+    LD   A,(CP_SCAN_INDEX)  ; Scan this part's include header.
+    CALL CP_SCAN_PART       ; A=0 means every dependency is already ordered.
+    JP   C,CP_RESOLVE_FAILURE  ; Preserve scanner errors as resolver failures.
+    OR   A                  ; Is an included child still unordered?
+    JR   NZ,CP_TOPO_NEXT    ; Defer this part until a later pass.
+    LD   A,(CP_ORDER_COUNT)  ; Append at the next dependency-order position.
+    LD   E,A                ; E is the byte offset into the order table.
+    LD   D,CP_PART_ORDER/256  ; The table remains within its fixed page.
+    LD   A,(CP_SCAN_INDEX)  ; Store this source's original ordinal.
+    LD   (DE),A             ; Map output order to source identity.
+    CALL CP_NAME_POINTER    ; Recover the name after writing the order byte.
+    SET  7,(HL)             ; Mark this name as emitted for later scans.
+    LD   HL,CP_ORDER_COUNT  ; Point to the number of ordered source parts.
+    INC  (HL)               ; Include the part just appended above.
+    LD   A,1                ; Record that this pass made progress.
+    LD   (CP_SCAN_PROGRESS),A  ; Newly ready dependants can run next pass.
 CP_TOPO_NEXT:
-    LD   HL,CP_SCAN_INDEX ; Advance to the next discovered name.
-    INC  (HL) ; The table follows original discovery order.
-    LD   A,(CP_NAME_COUNT) ; Read the current count, including new includes.
-    CP   (HL) ; Compare against the next candidate ordinal.
-    JR   NZ,CP_TOPO_PART ; Continue this pass while names remain.
-    LD   A,(CP_ORDER_COUNT) ; Count the parts already placed in order.
-    LD   HL,CP_NAME_COUNT ; Compare it with the total discovered count.
-    CP   (HL) ; Equality means every dependency was ordered.
-    JR   Z,CP_BUILD_DESCRIPTORS ; Turn the order into native part descriptors.
-    LD   A,(CP_SCAN_PROGRESS) ; Check whether this pass placed any source.
-    OR   A ; A zero value means ordering made no progress.
-    JR   NZ,CP_TOPO_PASS ; Retry now that some dependencies are ready.
-    LD   DE,CP_INCLUDE_CYCLE_TEXT ; No progress with parts left means a cycle.
-    JR   CP_RESOLVE_FAILURE ; Report it through the shared failure path.
+    LD   HL,CP_SCAN_INDEX   ; Advance to the next discovered name.
+    INC  (HL)               ; The table follows original discovery order.
+    LD   A,(CP_NAME_COUNT)  ; Read the current count, including new includes.
+    CP   (HL)               ; Compare against the next candidate ordinal.
+    JR   NZ,CP_TOPO_PART    ; Continue this pass while names remain.
+    LD   A,(CP_ORDER_COUNT)  ; Count the parts already placed in order.
+    LD   HL,CP_NAME_COUNT   ; Compare it with the total discovered count.
+    CP   (HL)               ; Equality means every dependency was ordered.
+    JR   Z,CP_BUILD_DESCRIPTORS  ; Build the native part descriptors.
+    LD   A,(CP_SCAN_PROGRESS)  ; Check whether this pass placed any source.
+    OR   A                  ; A zero value means ordering made no progress.
+    JR   NZ,CP_TOPO_PASS    ; Retry now that some dependencies are ready.
+    LD   DE,CP_INCLUDE_CYCLE_TEXT  ; No progress means an include cycle.
+    JR   CP_RESOLVE_FAILURE  ; Report it through the shared failure path.
 
 ; Measure the already validated parts in final order and build the ordinary
 ; native five-byte descriptors. Each starts at logical zero and ends at the
 ; measured 16-bit byte length; source storage itself remains in CP/M files.
 
 CP_BUILD_DESCRIPTORS:
-    XOR  A ; Start at the first dependency-ordered part.
-    LD   (CP_SCAN_INDEX),A ; This cursor indexes CP_PART_ORDER.
-    LD   HL,CP_PART_DESCRIPTORS ; Point to the native part-descriptor array.
-    LD   (CP_DESCRIPTOR_CURSOR),HL ; The append helper advances this pointer.
+    XOR  A                  ; Start at the first dependency-ordered part.
+    LD   (CP_SCAN_INDEX),A  ; This cursor indexes CP_PART_ORDER.
+    LD   HL,CP_PART_DESCRIPTORS  ; Point to the native part-descriptor array.
+    LD   (CP_DESCRIPTOR_CURSOR),HL  ; The append helper advances this pointer.
 CP_BUILD_DESCRIPTOR:
-    LD   A,(CP_SCAN_INDEX) ; Select the next output-order position.
-    LD   E,A ; E indexes the one-byte order table.
-    LD   D,CP_PART_ORDER/256 ; Address its fixed high-page storage.
-    LD   A,(DE) ; Recover the original discovery ordinal.
-    CALL CP_OPEN_PART ; Reopen it before measuring its logical length.
-    JP   C,CP_RESOLVE_FAILURE ; Abort if the part cannot be reopened.
-    LD   HL,0 ; Count source bytes from logical offset zero.
+    LD   A,(CP_SCAN_INDEX)  ; Select the next output-order position.
+    LD   E,A                ; E indexes the one-byte order table.
+    LD   D,CP_PART_ORDER/256  ; Address its fixed high-page storage.
+    LD   A,(DE)             ; Recover the original discovery ordinal.
+    CALL CP_OPEN_PART       ; Reopen it before measuring its logical length.
+    JP   C,CP_RESOLVE_FAILURE  ; Abort if the part cannot be reopened.
+    LD   HL,0               ; Count source bytes from logical offset zero.
 CP_MEASURE_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE ; Read a byte and advance logical offset HL.
-    JR   NC,CP_MEASURE_BYTE ; Carry clear means more source bytes remain.
-    OR   A ; A=0 is EOF or a failed read; A=2 is offset overflow.
-    JP   NZ,CP_RESOLVE_IO ; Report a source length beyond the 16-bit range.
-    CALL CP_APPEND_DESCRIPTOR ; Store this ordinal and measured [0,HL) range.
-    LD   HL,CP_SCAN_INDEX ; Advance the position in dependency order.
-    INC  (HL) ; The order table has one entry per retained name.
-    LD   A,(CP_NAME_COUNT) ; Compare with the total number of source parts.
-    CP   (HL) ; Continue while another descriptor remains.
-    JR   NZ,CP_BUILD_DESCRIPTOR ; Measure the next dependency-ordered file.
-    LD   A,(CP_NAME_COUNT) ; Publish the final descriptor count to the core.
-    LD   (CP_DESCRIPTOR),A ; Descriptors are complete and ready for assembly.
-    XOR  A ; Return success with carry clear.
-    RET ; Return success after publishing the descriptor count.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read a byte and advance logical offset HL.
+    JR   NC,CP_MEASURE_BYTE  ; Carry clear means more source bytes remain.
+    OR   A                  ; A=0 means EOF/read failure; A=2 overflow.
+    JP   NZ,CP_RESOLVE_IO   ; Report a source length beyond the 16-bit range.
+    CALL CP_APPEND_DESCRIPTOR  ; Store this ordinal and measured [0,HL) range.
+    LD   HL,CP_SCAN_INDEX   ; Advance the position in dependency order.
+    INC  (HL)               ; The order table has one entry per retained name.
+    LD   A,(CP_NAME_COUNT)  ; Compare with the total number of source parts.
+    CP   (HL)               ; Continue while another descriptor remains.
+    JR   NZ,CP_BUILD_DESCRIPTOR  ; Measure the next dependency-ordered file.
+    LD   A,(CP_NAME_COUNT)  ; Publish the final descriptor count to the core.
+    LD   (CP_DESCRIPTOR),A  ; Descriptors are complete and ready for assembly.
+    XOR  A                  ; Return success with carry clear.
+    RET                     ; Return after publishing the count.
 CP_RESOLVE_IO:
-    LD   HL,CP_INPUT_FCB ; Identify the source that exceeded the offset range.
-    CALL CP_PRINT_NAME ; Print its parsed 8.3 name before the error text.
-    LD   DE,CP_READ_FAILED_TEXT ; Select the adapter's source-read error text.
+    LD   HL,CP_INPUT_FCB    ; Identify the overlong source.
+    CALL CP_PRINT_NAME      ; Print its parsed 8.3 name before the error text.
+    LD   DE,CP_READ_FAILED_TEXT  ; Select the source-read error text.
 CP_RESOLVE_FAILURE:
-    CALL CP_PRINT ; Print the error selected in DE.
-    SCF ; Return failure to the command entry point.
-    RET ; No partial descriptor set reaches the core.
+    CALL CP_PRINT           ; Print the error selected in DE.
+    SCF                     ; Return failure to the command entry point.
+    RET                     ; No partial descriptor set reaches the core.
 
 ;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Scan and validate one source header. Mode zero discovers names; mode one
 ; reports A=1 when any dependency has not yet been emitted.
 
 CP_SCAN_PART:
-    CALL CP_OPEN_PART ; Open the requested source part for scanning.
-    JR   C,CP_SCAN_FAILURE ; Stop if the FCB cannot be opened.
-    LD   A,1 ; The header accepts directives until code begins.
-    LD   (CP_HEADER_OPEN),A ; A source statement closes this header.
-    LD   HL,0 ; Begin at the first logical source byte.
+    CALL CP_OPEN_PART       ; Open the requested source part for scanning.
+    JR   C,CP_SCAN_FAILURE  ; Stop if the FCB cannot be opened.
+    LD   A,1                ; The header accepts directives until code begins.
+    LD   (CP_HEADER_OPEN),A  ; A source statement closes this header.
+    LD   HL,0               ; Begin at the first logical source byte.
 CP_SCAN_LINE:
 
 ; Blank space, line endings and comment lines remain in the header. The first
 ; ordinary source byte closes it permanently; a later percent directive fails.
 
-    CALL CP_NEXT_SOURCE_BYTE ; Read the byte at the current logical offset.
-    JR   C,CP_SCAN_EOF ; Carry marks EOF, failed read or offset overflow.
-    CP   ' ' ; A space does not close the leading header.
-    JR   Z,CP_SCAN_LINE ; Continue over horizontal whitespace.
-    CP   9 ; Tabs are also header whitespace.
-    JR   Z,CP_SCAN_LINE ; Test the next byte without advancing a line.
-    CP   13 ; CR remains inside a blank header line.
-    JR   Z,CP_SCAN_LINE ; LF is checked separately for CR/LF and LF files.
-    CP   10 ; LF remains inside the leading header as well.
-    JR   Z,CP_SCAN_LINE ; Continue scanning after the line ending.
-    CP   ';' ; Semicolon starts a full-line source comment here.
-    JR   Z,CP_SCAN_SKIP_LINE ; Ignore the remainder of that physical line.
-    CP   '%' ; A percent byte may begin an INCLUDE directive.
-    JR   Z,CP_SCAN_DIRECTIVE ; Parse one while the header is still open.
-    XOR  A ; Any ordinary source byte closes the header.
-    LD   (CP_HEADER_OPEN),A ; A later percent directive is then invalid.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the byte at the current logical offset.
+    JR   C,CP_SCAN_EOF      ; Carry marks EOF, failed read or offset overflow.
+    CP   ' '                ; A space does not close the leading header.
+    JR   Z,CP_SCAN_LINE     ; Continue over horizontal whitespace.
+    CP   9                  ; Tabs are also header whitespace.
+    JR   Z,CP_SCAN_LINE     ; Test the next byte without advancing a line.
+    CP   13                 ; CR remains inside a blank header line.
+    JR   Z,CP_SCAN_LINE     ; LF is checked separately for CR/LF and LF files.
+    CP   10                 ; LF remains inside the leading header as well.
+    JR   Z,CP_SCAN_LINE     ; Continue scanning after the line ending.
+    CP   ';'                ; Semicolon starts a source comment.
+    JR   Z,CP_SCAN_SKIP_LINE  ; Ignore the remainder of that physical line.
+    CP   '%'                ; A percent byte may begin an INCLUDE directive.
+    JR   Z,CP_SCAN_DIRECTIVE  ; Parse one while the header is still open.
+    XOR  A                  ; Any ordinary source byte closes the header.
+    LD   (CP_HEADER_OPEN),A  ; A later percent directive is then invalid.
 CP_SCAN_SKIP_LINE:
-    CALL CP_SKIP_SOURCE_LINE ; Discard the rest of this physical line.
-    JR   NC,CP_SCAN_LINE ; Carry clear means another line is available.
-    OR   A ; A=0 is EOF or read failure; A=2 means the offset wrapped.
-    JR   Z,CP_SCAN_COMPLETE ; Treat a zero status as the end of this source.
-    JR   CP_SCAN_IO ; Reject a source offset outside the 16-bit range.
+    CALL CP_SKIP_SOURCE_LINE  ; Discard the rest of this physical line.
+    JR   NC,CP_SCAN_LINE    ; Carry clear means another line is available.
+    OR   A                  ; A=0 means EOF/read failure; A=2 wrap.
+    JR   Z,CP_SCAN_COMPLETE  ; Treat a zero status as the end of this source.
+    JR   CP_SCAN_IO         ; Reject a source offset outside the 16-bit range.
 CP_SCAN_DIRECTIVE:
-    LD   A,(CP_HEADER_OPEN) ; Check whether source has closed the header.
-    OR   A ; A=0 means this percent directive came too late.
-    JR   Z,CP_SCAN_INVALID ; Report a misplaced or unsupported directive.
-    CALL CP_PARSE_INCLUDE ; Visit the include or test its ordering state.
-    JR   C,CP_SCAN_FAILURE ; Parsing and file errors share this return path.
-    OR   A ; In ordering mode A=1 means a child is not ready.
-    JR   NZ,CP_SCAN_DONE ; Stop so the caller can defer this source part.
-    JR   CP_SCAN_LINE ; Continue through the remaining header lines.
+    LD   A,(CP_HEADER_OPEN)  ; Check whether source has closed the header.
+    OR   A                  ; A=0 means this percent directive came too late.
+    JR   Z,CP_SCAN_INVALID  ; Report a misplaced or unsupported directive.
+    CALL CP_PARSE_INCLUDE   ; Visit the include or test its ordering state.
+    JR   C,CP_SCAN_FAILURE  ; Parsing and file errors share this return path.
+    OR   A                  ; In ordering mode A=1 means a child is not ready.
+    JR   NZ,CP_SCAN_DONE    ; Stop so the caller can defer this source part.
+    JR   CP_SCAN_LINE       ; Continue through the remaining header lines.
 CP_SCAN_EOF:
-    OR   A ; A=0 ends input; A=2 reports a 16-bit offset overflow.
-    JR   NZ,CP_SCAN_IO ; Reject a source offset that wrapped.
+    OR   A                  ; A=0 means EOF/read failure; A=2 overflow.
+    JR   NZ,CP_SCAN_IO      ; Reject a source offset that wrapped.
 CP_SCAN_COMPLETE:
-    XOR  A ; Return zero unresolved dependencies at accepted end of input.
+    XOR  A                  ; No unresolved dependencies remain.
 CP_SCAN_DONE:
-    RET ; Preserve A for the discovery/order caller.
+    RET                     ; Preserve A for the discovery/order caller.
 CP_SCAN_IO:
-    LD   HL,CP_INPUT_FCB ; The open-part helper retains the current FCB here.
-    CALL CP_PRINT_NAME ; Identify the file whose scan could not continue.
-    LD   DE,CP_READ_FAILED_TEXT ; Select the source-read error message.
-    JR   CP_SCAN_FAILURE ; Return the read error through the shared exit.
+    LD   HL,CP_INPUT_FCB    ; The current FCB names the open part.
+    CALL CP_PRINT_NAME      ; Identify the file whose scan could not continue.
+    LD   DE,CP_READ_FAILED_TEXT  ; Select the source-read error message.
+    JR   CP_SCAN_FAILURE    ; Return the read error through the shared exit.
 CP_SCAN_INVALID:
-    LD   DE,CP_INVALID_INCLUDE_TEXT ; Select the malformed-header message.
+    LD   DE,CP_INVALID_INCLUDE_TEXT  ; Select the malformed-header message.
 CP_SCAN_FAILURE:
-    SCF ; Carry marks failure independently of message text.
-    RET ; Do not accept an incomplete dependency scan.
+    SCF                     ; Carry marks failure regardless of text.
+    RET                     ; Do not accept an incomplete dependency scan.
 
 ;@ROUTINE IN HL OUT A,DE,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Append the resolved ordinal and measured byte range to the descriptor table.
 
 CP_APPEND_DESCRIPTOR:
-    LD   DE,(CP_DESCRIPTOR_CURSOR) ; Start the next five-byte descriptor.
-    LD   A,(CP_SCAN_INDEX) ; Assign the next ordinal in resolved source order.
-    LD   (DE),A ; Descriptor byte zero is that ordinal.
-    INC  DE ; Advance to the logical start low byte.
-    XOR  A ; Every file is exposed as a range starting at zero.
-    LD   (DE),A ; Store the start low byte.
-    INC  DE ; Advance to the logical start high byte.
-    LD   (DE),A ; Store the start high byte.
-    INC  DE ; Advance to the exclusive end low byte.
-    LD   A,L ; HL holds the measured source length.
-    LD   (DE),A ; Store the low byte of the half-open end.
-    INC  DE ; Advance to the exclusive end high byte.
-    LD   A,H ; Complete the 16-bit source length.
-    LD   (DE),A ; Store the high byte of the half-open end.
-    INC  DE ; Point at the following descriptor slot.
-    LD   (CP_DESCRIPTOR_CURSOR),DE ; Save the cursor for the next descriptor.
-    RET ; The caller advances order and measures another file.
+    LD   DE,(CP_DESCRIPTOR_CURSOR)  ; Start the next five-byte descriptor.
+    LD   A,(CP_SCAN_INDEX)  ; Assign the resolved-order ordinal.
+    LD   (DE),A             ; Descriptor byte zero is that ordinal.
+    INC  DE                 ; Advance to the logical start low byte.
+    XOR  A                  ; Each part starts at logical zero.
+    LD   (DE),A             ; Store the start low byte.
+    INC  DE                 ; Advance to the logical start high byte.
+    LD   (DE),A             ; Store the start high byte.
+    INC  DE                 ; Advance to the exclusive end low byte.
+    LD   A,L                ; HL holds the measured source length.
+    LD   (DE),A             ; Store the low byte of the half-open end.
+    INC  DE                 ; Advance to the exclusive end high byte.
+    LD   A,H                ; Complete the 16-bit source length.
+    LD   (DE),A             ; Store the high byte of the half-open end.
+    INC  DE                 ; Point at the following descriptor slot.
+    LD   (CP_DESCRIPTOR_CURSOR),DE  ; Save the cursor for the next descriptor.
+    RET                     ; Measure the next file after return.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse INCLUDE, one quoted current-drive 8.3 name and the rest of its line.
 ; Discovery records the child. Ordering checks whether it was emitted.
 
 CP_PARSE_INCLUDE:
-    LD   DE,CP_INCLUDE_WORD ; Point at the uppercase directive name.
-    LD   B,7 ; Match all seven letters in INCLUDE.
+    LD   DE,CP_INCLUDE_WORD  ; Point at the uppercase directive name.
+    LD   B,7                ; Match all seven letters in INCLUDE.
 CP_INCLUDE_WORD_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE ; Read the next directive-name byte.
-    JP   C,CP_INCLUDE_INVALID ; A truncated name is not a directive.
-    CP   'a' ; Test whether ASCII lowercase folding applies.
-    JR   C,CP_INCLUDE_WORD_CASED ; Leave uppercase and punctuation unchanged.
-    CP   'z'+1 ; Compare with the first byte above lowercase letters.
-    JR   NC,CP_INCLUDE_WORD_CASED ; Leave bytes beyond 'z' unchanged.
-    AND  $DF ; Convert this ASCII lowercase letter to uppercase.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the next directive-name byte.
+    JP   C,CP_INCLUDE_INVALID  ; A truncated name is not a directive.
+    CP   'a'                ; Test whether ASCII lowercase folding applies.
+    JR   C,CP_INCLUDE_WORD_CASED  ; Leave uppercase and punctuation unchanged.
+    CP   'z'+1              ; Test the exclusive lowercase bound.
+    JR   NC,CP_INCLUDE_WORD_CASED  ; Leave bytes beyond 'z' unchanged.
+    AND  $DF                ; Fold lowercase ASCII to uppercase.
 CP_INCLUDE_WORD_CASED:
-    EX   DE,HL ; Compare through DE without losing the source cursor.
-    CP   (HL) ; Match the current byte against INCLUDE.
-    INC  HL ; Advance to the next byte of the directive name.
-    EX   DE,HL ; Restore HL as the source cursor.
-    JP   NZ,CP_INCLUDE_INVALID ; Reject any mismatched directive byte.
-    DJNZ CP_INCLUDE_WORD_BYTE ; Check the remaining keyword bytes.
-    CALL CP_NEXT_SOURCE_BYTE ; Read the delimiter after INCLUDE.
-    JP   C,CP_INCLUDE_INVALID ; The keyword must have a following delimiter.
-    CP   ' ' ; Accept an ordinary space before the filename.
-    JR   Z,CP_INCLUDE_SPACE ; Skip additional horizontal whitespace.
-    CP   9 ; Also accept a horizontal tab as delimiter.
-    JP   NZ,CP_INCLUDE_INVALID ; Require whitespace before the quote.
+    EX   DE,HL              ; Keep the source cursor in HL.
+    CP   (HL)               ; Match the current byte against INCLUDE.
+    INC  HL                 ; Advance to the next byte of the directive name.
+    EX   DE,HL              ; Restore HL as the source cursor.
+    JP   NZ,CP_INCLUDE_INVALID  ; Reject any mismatched directive byte.
+    DJNZ CP_INCLUDE_WORD_BYTE  ; Check the remaining keyword bytes.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the delimiter after INCLUDE.
+    JP   C,CP_INCLUDE_INVALID  ; The keyword must have a following delimiter.
+    CP   ' '                ; Accept an ordinary space before the filename.
+    JR   Z,CP_INCLUDE_SPACE  ; Skip additional horizontal whitespace.
+    CP   9                  ; Also accept a horizontal tab as delimiter.
+    JP   NZ,CP_INCLUDE_INVALID  ; Require whitespace before the quote.
 CP_INCLUDE_SPACE:
-    CALL CP_NEXT_SOURCE_BYTE ; Read past the current whitespace byte.
-    JP   C,CP_INCLUDE_INVALID ; A filename must follow the delimiter.
-    CP   ' ' ; Check for another space before the filename.
-    JR   Z,CP_INCLUDE_SPACE ; Continue across repeated spaces.
-    CP   9 ; Check for a repeated tab.
-    JR   Z,CP_INCLUDE_SPACE ; Continue across repeated tabs.
-    CP   '"' ; The filename must begin with a double quote.
-    JP   NZ,CP_INCLUDE_INVALID ; Reject unquoted include names.
-    CALL CP_CLEAR_INCLUDE_FCB ; Prepare a blank current-drive filename.
-    PUSH IX ; Preserve the caller's index while parsing the FCB name.
-    CALL CP_PARSE_INCLUDE_NAME ; Store the quoted 8.3 name in the FCB.
-    POP  IX ; Restore the caller's index after filename parsing.
-    RET  C ; Propagate an invalid or incomplete filename.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read past the current whitespace byte.
+    JP   C,CP_INCLUDE_INVALID  ; A filename must follow the delimiter.
+    CP   ' '                ; Check for another space before the filename.
+    JR   Z,CP_INCLUDE_SPACE  ; Continue across repeated spaces.
+    CP   9                  ; Check for a repeated tab.
+    JR   Z,CP_INCLUDE_SPACE  ; Continue across repeated tabs.
+    CP   '"'                ; The filename must begin with a double quote.
+    JP   NZ,CP_INCLUDE_INVALID  ; Reject unquoted include names.
+    CALL CP_CLEAR_INCLUDE_FCB  ; Prepare a blank current-drive filename.
+    PUSH IX                 ; Save the caller's index register.
+    CALL CP_PARSE_INCLUDE_NAME  ; Store the quoted 8.3 name in the FCB.
+    POP  IX                 ; Restore the caller's index register.
+    RET  C                  ; Propagate an invalid or incomplete filename.
 CP_INCLUDE_TRAILING:
-    CALL CP_NEXT_SOURCE_BYTE ; Read the next byte after the closing quote.
-    JR   C,CP_INCLUDE_TRAILING_EOF ; Branch on EOF or offset overflow.
-    CP   ' ' ; Permit spaces after the filename.
-    JR   Z,CP_INCLUDE_TRAILING ; Skip trailing spaces.
-    CP   9 ; Permit tabs after the filename.
-    JR   Z,CP_INCLUDE_TRAILING ; Skip trailing tabs.
-    CP   ';' ; A semicolon starts a trailing comment.
-    JR   Z,CP_INCLUDE_SKIP_COMMENT ; Validate the rest of the comment line.
-    CP   13 ; Accept a CR line ending.
-    JR   Z,CP_INCLUDE_READY ; The include name is complete.
-    CP   10 ; Also accept an LF line ending.
-    JP   NZ,CP_INCLUDE_INVALID ; Reject any other trailing byte.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the next byte after the closing quote.
+    JR   C,CP_INCLUDE_TRAILING_EOF  ; Branch on EOF or offset overflow.
+    CP   ' '                ; Permit spaces after the filename.
+    JR   Z,CP_INCLUDE_TRAILING  ; Skip trailing spaces.
+    CP   9                  ; Permit tabs after the filename.
+    JR   Z,CP_INCLUDE_TRAILING  ; Skip trailing tabs.
+    CP   ';'                ; A semicolon starts a trailing comment.
+    JR   Z,CP_INCLUDE_SKIP_COMMENT  ; Validate the rest of the comment line.
+    CP   13                 ; Accept a CR line ending.
+    JR   Z,CP_INCLUDE_READY  ; The include name is complete.
+    CP   10                 ; Also accept an LF line ending.
+    JP   NZ,CP_INCLUDE_INVALID  ; Reject any other trailing byte.
 CP_INCLUDE_READY:
 
 ; Deduplicate the eleven-byte CP/M name. Discovery adds missing names.
 ; Ordering reports whether each child has already been emitted.
 
-    PUSH IX ; Preserve the source reader's index across name lookup.
-    PUSH HL ; Preserve the source cursor after the include line.
-    CALL CP_FIND_OR_ADD_NAME ; Reuse a known child or append its name.
-    POP  HL ; Restore the source cursor for the next scan step.
-    POP  IX ; Restore the caller's index register.
-    RET  C ; Return a name-capacity failure to the resolver.
-    PUSH HL ; Preserve the source cursor across dependency-state lookup.
-    CALL CP_VISIT_INCLUDED_CHILD ; Return the pending-child status.
-    POP  HL ; Restore the cursor without changing the result flags.
-    RET ; Return the child's pending status to the scan loop.
+    PUSH IX                 ; Save IX across name lookup.
+    PUSH HL                 ; Save the source cursor.
+    CALL CP_FIND_OR_ADD_NAME  ; Reuse a known child or append its name.
+    POP  HL                 ; Restore the source cursor.
+    POP  IX                 ; Restore the caller's index register.
+    RET  C                  ; Return a name-capacity failure to the resolver.
+    PUSH HL                 ; Save cursor across child lookup.
+    CALL CP_VISIT_INCLUDED_CHILD  ; Return the pending-child status.
+    POP  HL                 ; Restore cursor; preserve result flags.
+    RET                     ; Return the pending-child status.
 CP_INCLUDE_SKIP_COMMENT:
-    CALL CP_SKIP_SOURCE_LINE ; Consume the trailing comment through line end.
-    JR   C,CP_INCLUDE_TRAILING_EOF ; Check the carried end status.
-    JR   CP_INCLUDE_READY ; The include line has no more source text.
+    CALL CP_SKIP_SOURCE_LINE  ; Consume the trailing comment through line end.
+    JR   C,CP_INCLUDE_TRAILING_EOF  ; Check the carried end status.
+    JR   CP_INCLUDE_READY   ; The include line has no more source text.
 CP_INCLUDE_TRAILING_EOF:
-    OR   A ; Zero accepts end-of-input. NZ signals offset overflow.
-    JP   NZ,CP_INCLUDE_INVALID ; Reject an offset that wrapped.
-    JR   CP_INCLUDE_READY ; Accept the include at end of input.
+    OR   A                  ; Zero means EOF; NZ means overflow.
+    JP   NZ,CP_INCLUDE_INVALID  ; Reject an offset that wrapped.
+    JR   CP_INCLUDE_READY   ; Accept the include at end of input.
 CP_INCLUDE_INVALID:
-    LD   DE,CP_INVALID_INCLUDE_TEXT ; Select the malformed-include message.
-    SCF ; Mark the include directive as invalid.
-    RET ; Return the message pointer and failure flag.
+    LD   DE,CP_INVALID_INCLUDE_TEXT  ; Select the malformed-include message.
+    SCF                     ; Mark the include directive as invalid.
+    RET                     ; Return the message pointer and failure flag.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one quoted include filename into the working CP/M FCB.
 
 CP_PARSE_INCLUDE_NAME:
-    LD   IX,CP_WORK_FCB+1 ; Begin writing the eight-byte base field.
-    LD   D,8 ; Set the base-name capacity.
-    LD   C,0 ; Count characters in the current name field.
+    LD   IX,CP_WORK_FCB+1   ; Begin writing the eight-byte base field.
+    LD   D,8                ; Set the base-name capacity.
+    LD   C,0                ; Count characters in the current name field.
 CP_INCLUDE_NAME_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE ; Read the next quoted filename byte.
-    JP   C,CP_INCLUDE_NAME_BAD ; Require a complete closing quote.
-    CP   '"' ; Check for the end of the filename.
-    JR   Z,CP_INCLUDE_NAME_DONE ; Validate that the final field is nonempty.
-    CP   '.' ; Check for the single base/extension separator.
-    JR   NZ,CP_INCLUDE_NAME_DATA ; Other bytes belong to the current field.
-    LD   A,D ; Read the active field's maximum width.
-    CP   8 ; A dot is legal only while parsing the base field.
-    JP   NZ,CP_INCLUDE_NAME_BAD ; Reject repeated separators.
-    LD   A,C ; Read the number of base-name characters.
-    OR   A ; Set Z when the base field is empty.
-    JP   Z,CP_INCLUDE_NAME_BAD ; Require at least one base character.
-    LD   IX,CP_WORK_FCB+9 ; Continue writing at the three-byte type field.
-    LD   D,3 ; Set the extension capacity.
-    LD   C,0 ; Start the extension character count.
-    JR   CP_INCLUDE_NAME_BYTE ; Read the first extension character.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the next quoted filename byte.
+    JP   C,CP_INCLUDE_NAME_BAD  ; Require a complete closing quote.
+    CP   '"'                ; Check for the end of the filename.
+    JR   Z,CP_INCLUDE_NAME_DONE  ; Validate that the final field is nonempty.
+    CP   '.'                ; Check for the single base/extension separator.
+    JR   NZ,CP_INCLUDE_NAME_DATA  ; Other bytes belong to the current field.
+    LD   A,D                ; Read the active field's maximum width.
+    CP   8                  ; Dot is valid only after the base.
+    JP   NZ,CP_INCLUDE_NAME_BAD  ; Reject repeated separators.
+    LD   A,C                ; Read the number of base-name characters.
+    OR   A                  ; Set Z when the base field is empty.
+    JP   Z,CP_INCLUDE_NAME_BAD  ; Require at least one base character.
+    LD   IX,CP_WORK_FCB+9   ; Continue writing at the three-byte type field.
+    LD   D,3                ; Set the extension capacity.
+    LD   C,0                ; Start the extension character count.
+    JR   CP_INCLUDE_NAME_BYTE  ; Read the first extension character.
 CP_INCLUDE_NAME_DATA:
-    CP   'a' ; Test for an ASCII lowercase filename letter.
-    JR   C,CP_INCLUDE_NAME_CASED ; Keep non-lowercase bytes unchanged.
-    CP   'z'+1 ; Compare with the exclusive lowercase upper bound.
-    JR   NC,CP_INCLUDE_NAME_CASED ; Keep bytes above 'z' unchanged.
-    AND  $DF ; Fold lowercase ASCII to uppercase for CP/M lookup.
+    CP   'a'                ; Test for an ASCII lowercase filename letter.
+    JR   C,CP_INCLUDE_NAME_CASED  ; Keep non-lowercase bytes unchanged.
+    CP   'z'+1              ; Test the lowercase upper bound.
+    JR   NC,CP_INCLUDE_NAME_CASED  ; Keep bytes above 'z' unchanged.
+    AND  $DF                ; Fold ASCII lowercase for lookup.
 CP_INCLUDE_NAME_CASED:
-    CALL CP_FILENAME_CHAR ; Reject characters outside the CP/M name set.
-    JP   C,CP_INCLUDE_NAME_BAD ; Carry marks a forbidden filename character.
-    INC  C ; Include the validated byte in this field's length.
-    LD   B,A ; Save the normalised byte while checking field capacity.
-    LD   A,D ; Load the active base or extension limit.
-    CP   C ; Compare the limit with the updated character count.
-    JP   C,CP_INCLUDE_NAME_BAD ; Reject a field wider than 8.3 allows.
-    LD   A,B ; Restore the normalized filename byte.
-    LD   (IX+0),A ; Store it in the current FCB name field.
-    INC  IX ; Advance to the next character slot.
-    JR   CP_INCLUDE_NAME_BYTE ; Continue through the closing quote.
+    CALL CP_FILENAME_CHAR   ; Reject characters outside the CP/M name set.
+    JP   C,CP_INCLUDE_NAME_BAD  ; Carry marks a forbidden filename character.
+    INC  C                  ; Count this field's next byte.
+    LD   B,A                ; Save byte during capacity check.
+    LD   A,D                ; Load the active base or extension limit.
+    CP   C                  ; Compare limit with new length.
+    JP   C,CP_INCLUDE_NAME_BAD  ; Reject a field wider than 8.3 allows.
+    LD   A,B                ; Restore the normalized filename byte.
+    LD   (IX+0),A           ; Store it in the current FCB name field.
+    INC  IX                 ; Advance to the next character slot.
+    JR   CP_INCLUDE_NAME_BYTE  ; Continue through the closing quote.
 CP_INCLUDE_NAME_DONE:
-    LD   A,C ; Read the character count of the final field.
-    OR   A ; Set Z only when that field is empty.
-    RET  NZ ; Accept a nonempty base or extension field.
+    LD   A,C                ; Read the character count of the final field.
+    OR   A                  ; Set Z only when that field is empty.
+    RET  NZ                 ; Accept a nonempty base or extension field.
 CP_INCLUDE_NAME_BAD:
-    LD   DE,CP_INVALID_INCLUDE_TEXT ; Select the malformed-include message.
-    SCF ; Mark the filename as invalid.
-    RET ; Return failure to the directive parser.
+    LD   DE,CP_INVALID_INCLUDE_TEXT  ; Select the malformed-include message.
+    SCF                     ; Mark the filename as invalid.
+    RET                     ; Return failure to the directive parser.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Visit a discovered include child when dependency scanning is active.
 
 CP_VISIT_INCLUDED_CHILD:
-    LD   E,A ; Keep the child ordinal across the mode check.
-    LD   A,(CP_SCAN_MODE) ; Read whether this is discovery or ordering.
-    OR   A ; Discovery mode is zero.
-    RET  Z ; Discovery needs no pending-child result.
-    LD   A,E ; Restore the child's retained-name ordinal.
-    CALL CP_NAME_POINTER ; Address its eleven-byte name record.
-    BIT  7,(HL) ; Test the emitted marker in the first name byte.
-    LD   A,0 ; Use zero when the child has already been emitted.
-    RET  NZ ; A set marker means no dependency remains pending.
-    INC  A ; An unset marker means the child still needs emission.
-    RET ; Return one for a pending child.
+    LD   E,A                ; Keep the child ordinal across the mode check.
+    LD   A,(CP_SCAN_MODE)   ; Read whether this is discovery or ordering.
+    OR   A                  ; Discovery mode is zero.
+    RET  Z                  ; Discovery needs no pending-child result.
+    LD   A,E                ; Restore the child's retained-name ordinal.
+    CALL CP_NAME_POINTER    ; Address its eleven-byte name record.
+    BIT  7,(HL)             ; Test the emitted marker in the first name byte.
+    LD   A,0                ; Zero means child already emitted.
+    RET  NZ                 ; An emitted child is ready.
+    INC  A                  ; One means child is still pending.
+    RET                     ; Return one for a pending child.
 
 ;@ROUTINE OUT A CLOBBERS B,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Reset the working include FCB to a blank 8.3 filename.
 
 CP_CLEAR_INCLUDE_FCB:
-    LD   DE,CP_WORK_FCB ; Address the temporary working FCB.
-    XOR  A ; Select the current drive.
-    LD   (DE),A ; Clear the explicit drive byte.
-    INC  DE ; Advance to the eleven-byte 8.3 name.
-    LD   B,11 ; Clear all eight base and three extension bytes.
-    LD   A,' ' ; CP/M represents unused name bytes with spaces.
-    CALL CP_CLEAR_WORK_FCB ; Fill the name and extension fields.
-    JP   CP_CLEAR_FCB_TAIL ; Clear the remaining FCB control bytes.
+    LD   DE,CP_WORK_FCB     ; Address the temporary working FCB.
+    XOR  A                  ; Select the current drive.
+    LD   (DE),A             ; Clear the explicit drive byte.
+    INC  DE                 ; Advance to the eleven-byte 8.3 name.
+    LD   B,11               ; Clear all eight base and three extension bytes.
+    LD   A,' '              ; CP/M represents unused name bytes with spaces.
+    CALL CP_CLEAR_WORK_FCB  ; Fill the name and extension fields.
+    JP   CP_CLEAR_FCB_TAIL  ; Clear the remaining FCB control bytes.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Find an exact retained name, or append it if capacity remains.
 
 CP_FIND_OR_ADD_NAME:
-    LD   C,0 ; Start with retained-name ordinal zero.
+    LD   C,0                ; Start with retained-name ordinal zero.
 CP_FIND_NAME_LOOP:
-    LD   A,(CP_NAME_COUNT) ; Read the number of names already retained.
-    CP   C ; Compare the count with the current candidate ordinal.
-    JR   Z,CP_ADD_NAME ; Append when no existing slot remains to inspect.
-    LD   A,C ; Select this retained name's ordinal.
-    CALL CP_NAME_POINTER ; Address its eleven-byte name record.
-    LD   IX,CP_WORK_FCB+1 ; Address the normalized candidate filename.
-    LD   B,11 ; Compare the complete base and extension fields.
+    LD   A,(CP_NAME_COUNT)  ; Read the number of names already retained.
+    CP   C                  ; Compare count with candidate ordinal.
+    JR   Z,CP_ADD_NAME      ; Append when no existing slot remains to inspect.
+    LD   A,C                ; Select this retained name's ordinal.
+    CALL CP_NAME_POINTER    ; Address its eleven-byte name record.
+    LD   IX,CP_WORK_FCB+1   ; Address the normalized candidate filename.
+    LD   B,11               ; Compare the complete base and extension fields.
 CP_FIND_NAME_BYTE:
-    LD   A,(HL) ; Read one byte from the retained name.
-    AND  $7F ; Ignore its high-bit emitted marker during comparison.
-    CP   (IX+0) ; Compare with the corresponding candidate byte.
-    JR   NZ,CP_FIND_NAME_NEXT ; Try the next ordinal on any mismatch.
-    INC  HL ; Advance the retained-name cursor.
-    INC  IX ; Advance the candidate-name cursor.
-    DJNZ CP_FIND_NAME_BYTE ; Compare the remaining name bytes.
-    LD   A,C ; Return the ordinal whose full name matched.
-    OR   A ; Clear carry and set zero for ordinal zero.
-    RET ; Report the existing name without adding another entry.
+    LD   A,(HL)             ; Read one byte from the retained name.
+    AND  $7F                ; Ignore the emitted bit in the name.
+    CP   (IX+0)             ; Compare with the corresponding candidate byte.
+    JR   NZ,CP_FIND_NAME_NEXT  ; Try the next ordinal on any mismatch.
+    INC  HL                 ; Advance the retained-name cursor.
+    INC  IX                 ; Advance the candidate-name cursor.
+    DJNZ CP_FIND_NAME_BYTE  ; Compare the remaining name bytes.
+    LD   A,C                ; Return the ordinal whose full name matched.
+    OR   A                  ; Clear carry and set zero for ordinal zero.
+    RET                     ; Return the existing name ordinal.
 CP_FIND_NAME_NEXT:
-    INC  C ; Advance to the next retained-name ordinal.
-    JR   CP_FIND_NAME_LOOP ; Continue until a name matches or the table ends.
+    INC  C                  ; Advance to the next retained-name ordinal.
+    JR   CP_FIND_NAME_LOOP  ; Continue until a name matches or the table ends.
 CP_ADD_NAME:
 
 ; The one-byte part ABI admits ordinals 0..254: at most 255 retained files.
 
-    LD   A,C ; The next ordinal is the current number of names.
-    CP   255 ; The byte-sized table has no ordinal 255 entry.
-    JR   Z,CP_NAME_CAPACITY ; Reject a 256th distinct source file.
-    PUSH AF ; Preserve the new zero-based ordinal across the copy.
-    CALL CP_NAME_POINTER ; Address the next eleven-byte table slot.
-    EX   DE,HL ; Put the slot destination in DE for LDIR.
-    LD   HL,CP_WORK_FCB+1 ; Point to the normalized 8.3 name bytes.
-    LD   BC,11 ; Copy the base and extension, excluding the drive byte.
-    LDIR ; Store the new name in its ordinal slot.
-    LD   HL,CP_NAME_COUNT ; Address the count published to the resolver.
-    INC  (HL) ; Publish the slot only after all eleven bytes are copied.
-    POP  AF ; Return the allocated ordinal.
-    OR   A ; Clear carry to mark successful insertion.
-    RET ; Return the new retained-name identity.
+    LD   A,C                ; The next ordinal is the current number of names.
+    CP   255                ; The byte-sized table has no ordinal 255 entry.
+    JR   Z,CP_NAME_CAPACITY  ; Reject a 256th distinct source file.
+    PUSH AF                 ; Save the new source ordinal.
+    CALL CP_NAME_POINTER    ; Address the next eleven-byte table slot.
+    EX   DE,HL              ; Put the slot destination in DE for LDIR.
+    LD   HL,CP_WORK_FCB+1   ; Point to the normalized 8.3 name bytes.
+    LD   BC,11              ; Copy name and type, not drive.
+    LDIR                    ; Store the new name in its ordinal slot.
+    LD   HL,CP_NAME_COUNT   ; Address the count published to the resolver.
+    INC  (HL)               ; Publish the completed name slot.
+    POP  AF                 ; Return the allocated ordinal.
+    OR   A                  ; Clear carry to mark successful insertion.
+    RET                     ; Return the new retained-name identity.
 CP_NAME_CAPACITY:
-    LD   DE,CP_SOURCE_CAPACITY_TEXT ; Select the part-capacity diagnostic.
-    SCF ; Mark the resolver's name table as full.
-    RET ; Return without changing the retained-name count.
+    LD   DE,CP_SOURCE_CAPACITY_TEXT  ; Select the part-capacity diagnostic.
+    SCF                     ; Mark the resolver's name table as full.
+    RET                     ; Return without changing the retained-name count.
 
 ;@ROUTINE IN A OUT A,HL CLOBBERS DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert a source ordinal to its retained name-table entry address.
 
 CP_NAME_POINTER:
-    LD   L,A ; Place the ordinal in the low byte of HL.
-    LD   H,0 ; Extend the ordinal to a 16-bit value.
-    LD   D,H ; Clear the high byte of the temporary DE value.
-    LD   E,L ; Copy the ordinal into DE for multiplication by eleven.
-    ADD  HL,HL ; Compute twice the ordinal.
-    ADD  HL,HL ; Compute four times the ordinal.
-    ADD  HL,DE ; Combine to make five times the ordinal.
-    ADD  HL,HL ; Compute ten times the ordinal.
-    ADD  HL,DE ; Complete eleven times the ordinal.
-    LD   DE,CP_PART_NAMES ; Load the base of the retained-name table.
-    ADD  HL,DE ; Convert the byte offset to the slot address.
-    RET ; Return the address of this eleven-byte name record.
+    LD   L,A                ; Place the ordinal in the low byte of HL.
+    LD   H,0                ; Extend the ordinal to a 16-bit value.
+    LD   D,H                ; Clear the high byte of the temporary DE value.
+    LD   E,L                ; Copy ordinal for ×11.
+    ADD  HL,HL              ; Compute twice the ordinal.
+    ADD  HL,HL              ; Compute four times the ordinal.
+    ADD  HL,DE              ; Combine to make five times the ordinal.
+    ADD  HL,HL              ; Compute ten times the ordinal.
+    ADD  HL,DE              ; Complete eleven times the ordinal.
+    LD   DE,CP_PART_NAMES   ; Load the base of the retained-name table.
+    ADD  HL,DE              ; Convert the byte offset to the slot address.
+    RET                     ; Return this name-record address.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Rebuild and open the ordinary input FCB from one retained name.
 
 CP_OPEN_PART:
-    PUSH AF ; Preserve the source ordinal while clearing its input FCB.
-    CALL CP_CLEAR_INPUT_FCB ; Reset the file-control block for this source.
-    POP  AF ; Restore the ordinal used to find its retained name.
-    CALL CP_NAME_POINTER ; Address the source's eleven-byte name record.
-    LD   DE,CP_INPUT_FCB+1 ; Point past the drive byte to the 8.3 fields.
-    LD   B,11 ; Copy the eight-character name and three-character type.
+    PUSH AF                 ; Save ordinal while clearing FCB.
+    CALL CP_CLEAR_INPUT_FCB  ; Reset the file-control block for this source.
+    POP  AF                 ; Restore the source ordinal.
+    CALL CP_NAME_POINTER    ; Address the source's eleven-byte name record.
+    LD   DE,CP_INPUT_FCB+1  ; Point past the drive byte to the 8.3 fields.
+    LD   B,11               ; Copy the full 8.3 name.
 CP_OPEN_NAME_BYTE:
-    LD   A,(HL) ; Read the next byte of the retained source name.
-    AND  $7F ; Clear the high-bit ordering marker if this is the first byte.
-    LD   (DE),A ; Copy the ordinary name byte into the input FCB.
-    INC  HL ; Advance within the retained name record.
-    INC  DE ; Advance within the input FCB name fields.
-    DJNZ CP_OPEN_NAME_BYTE ; Copy all eleven name and type bytes.
-    CALL CP_CHECK_SOURCE_CONFLICT ; Protect output and transaction files.
-    RET  C ; Do not open a source that aliases an output name.
-    LD   DE,CP_INPUT_FCB ; Pass the prepared FCB to CP/M.
-    LD   C,CP_OPEN_FUNCTION ; Select the CP/M open-file service.
-    CALL CP_BDOS ; Open the selected source file.
-    INC  A ; Convert BDOS's $FF failure result to zero.
-    JR   Z,CP_OPEN_FAILURE ; Report an unavailable source by name.
-    LD   A,1 ; Choose a non-aligned cache key to force the next refill.
-    LD   (CP_SOURCE_CACHE_KEY),A ; Aligned record offsets cannot equal one.
-    XOR  A ; Return zero with carry clear on a successful open.
-    RET ; Leave the opened input FCB ready for random reads.
+    LD   A,(HL)             ; Read the next byte of the retained source name.
+    AND  $7F                ; Clear the first byte's order bit.
+    LD   (DE),A             ; Copy the ordinary name byte into the input FCB.
+    INC  HL                 ; Advance within the retained name record.
+    INC  DE                 ; Advance within the input FCB name fields.
+    DJNZ CP_OPEN_NAME_BYTE  ; Copy all eleven name and type bytes.
+    CALL CP_CHECK_SOURCE_CONFLICT  ; Protect output and transaction files.
+    RET  C                  ; Reject a source/output alias.
+    LD   DE,CP_INPUT_FCB    ; Pass the prepared FCB to CP/M.
+    LD   C,CP_OPEN_FUNCTION  ; Select the CP/M open-file service.
+    CALL CP_BDOS            ; Open the selected source file.
+    INC  A                  ; Convert BDOS's $FF failure result to zero.
+    JR   Z,CP_OPEN_FAILURE  ; Report an unavailable source by name.
+    LD   A,1                ; Force the next cache refill.
+    LD   (CP_SOURCE_CACHE_KEY),A  ; Aligned record offsets cannot equal one.
+    XOR  A                  ; Return success with carry clear.
+    RET                     ; Leave the input FCB open.
 CP_OPEN_FAILURE:
-    LD   HL,CP_INPUT_FCB ; Address the filename that failed to open.
-    CALL CP_PRINT_NAME ; Print its drive-independent 8.3 name.
-    LD   DE,CP_READ_FAILED_TEXT ; Select the source-open error message.
-    SCF ; Mark the open operation as failed.
-    RET ; Return the message pointer with carry set.
+    LD   HL,CP_INPUT_FCB    ; Address the filename that failed to open.
+    CALL CP_PRINT_NAME      ; Print its drive-independent 8.3 name.
+    LD   DE,CP_READ_FAILED_TEXT  ; Select the source-open error message.
+    SCF                     ; Mark the open operation as failed.
+    RET                     ; Return the message pointer with carry set.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Return the next raw source byte and advance HL. Carry with A=0 means EOF or
@@ -948,26 +948,26 @@ CP_OPEN_FAILURE:
 ; A part is limited to 65,535 bytes so the next offset cannot wrap to zero.
 
 CP_NEXT_SOURCE_BYTE:
-    PUSH BC ; Preserve the parser's byte-sized working values.
-    PUSH DE ; Preserve the parser's filename or pointer register.
-    PUSH HL ; Keep the logical source offset across the raw read.
-    CALL CP_RAW_SOURCE_BYTE ; Read from the current CP/M record cache.
-    POP  HL ; Restore the logical offset before checking the result.
-    POP  DE ; Restore the caller's DE value.
-    POP  BC ; Restore the caller's BC value.
-    RET  C ; Return EOF or a read failure without advancing HL.
-    LD   (CP_NEXT_VALUE),A ; Save the byte while advancing the offset.
-    INC  HL ; Prepare the logical offset of the following byte.
-    LD   A,H ; Test the high byte of the advanced offset.
-    OR   L ; Zero means the 16-bit offset wrapped.
-    JR   Z,CP_SOURCE_TOO_LONG ; Reject a part that would exceed 65,535 bytes.
-    LD   A,(CP_NEXT_VALUE) ; Restore the byte read from the source.
-    OR   A ; Clear carry and set zero when the byte itself is zero.
-    RET ; Return the byte with HL advanced to its next offset.
+    PUSH BC                 ; Preserve the parser's byte-sized working values.
+    PUSH DE                 ; Save the parser's DE value.
+    PUSH HL                 ; Save the logical offset.
+    CALL CP_RAW_SOURCE_BYTE  ; Read from the current CP/M record cache.
+    POP  HL                 ; Restore the logical offset.
+    POP  DE                 ; Restore the caller's DE value.
+    POP  BC                 ; Restore the caller's BC value.
+    RET  C                  ; Return EOF/read failure; keep HL.
+    LD   (CP_NEXT_VALUE),A  ; Save the byte while advancing the offset.
+    INC  HL                 ; Advance to the following offset.
+    LD   A,H                ; Test the high byte of the advanced offset.
+    OR   L                  ; Zero means the 16-bit offset wrapped.
+    JR   Z,CP_SOURCE_TOO_LONG  ; Reject a part that would exceed 65,535 bytes.
+    LD   A,(CP_NEXT_VALUE)  ; Restore the byte read from the source.
+    OR   A                  ; Clear carry; set Z for byte zero.
+    RET                     ; Return byte and advanced offset.
 CP_SOURCE_TOO_LONG:
-    LD   A,2 ; Distinguish offset overflow from ordinary end-of-input.
-    SCF ; Report that the logical source offset wrapped.
-    RET ; Return the overflow status to the resolver.
+    LD   A,2                ; Distinguish offset overflow.
+    SCF                     ; Report that the logical source offset wrapped.
+    RET                     ; Return the overflow status to the resolver.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Align the logical offset to its 128-byte CP/M record base. The cache
@@ -976,60 +976,60 @@ CP_SOURCE_TOO_LONG:
 ; It then uses the low seven bits to select the requested byte.
 
 CP_RAW_SOURCE_BYTE:
-    LD   (CP_RAW_OFFSET),HL ; Save the requested logical byte offset.
-    LD   A,L ; Inspect the low byte of the requested offset.
-    AND  $80 ; Keep its 128-byte record-boundary bit.
-    LD   E,A ; Form the aligned offset's low byte.
-    LD   D,H ; Form its high byte from the logical offset.
-    LD   HL,(CP_SOURCE_CACHE_KEY) ; Read the offset currently in the cache.
-    OR   A ; Clear carry before subtracting the requested base.
-    SBC  HL,DE ; Compare the cached and requested record bases.
-    JR   Z,CP_RAW_CACHE_READY ; Reuse the cache when both bases match.
+    LD   (CP_RAW_OFFSET),HL  ; Save the requested logical byte offset.
+    LD   A,L                ; Inspect the low byte of the requested offset.
+    AND  $80                ; Keep its 128-byte record-boundary bit.
+    LD   E,A                ; Form the aligned offset's low byte.
+    LD   D,H                ; Form its high byte from the logical offset.
+    LD   HL,(CP_SOURCE_CACHE_KEY)  ; Read the offset currently in the cache.
+    OR   A                  ; Clear carry for base subtraction.
+    SBC  HL,DE              ; Compare the cached and requested record bases.
+    JR   Z,CP_RAW_CACHE_READY  ; Reuse the cache when both bases match.
 CP_RAW_CACHE_MISS:
-    LD   (CP_SOURCE_CACHE_KEY),DE ; Remember the aligned offset being loaded.
-    RLC  E ; Move offset bit 7 into bit 0 of the record number.
-    LD   A,D ; Load the high byte for the low record-number byte.
-    ADD  A,A ; Shift its bits left one place.
-    OR   E ; Add the original offset's bit 7.
-    LD   (CP_INPUT_FCB+33),A ; Store the random record number's low byte.
-    LD   A,D ; Reload the offset's high byte.
-    RLCA ; Move offset bit 15 into bit 0.
-    AND  1 ; Keep only the record number's high bit.
-    LD   (CP_INPUT_FCB+34),A ; Store the random record number's high byte.
-    LD   DE,CP_SOURCE_CACHE ; Select the 128-byte DMA buffer.
-    LD   C,CP_DMA_FUNCTION ; Set the CP/M transfer address.
-    CALL CP_BDOS ; Direct the next read into the source cache.
-    LD   DE,CP_INPUT_FCB ; Pass the file and record number to CP/M.
-    LD   C,CP_RANDOM_READ_FUNCTION ; Select a random-record read.
-    CALL CP_BDOS ; Load the requested 128-byte source record.
-    OR   A ; Zero means the random read succeeded.
-    JR   NZ,CP_RAW_READ_EOF ; Treat a BDOS read failure as no source byte.
+    LD   (CP_SOURCE_CACHE_KEY),DE  ; Remember the aligned offset being loaded.
+    RLC  E                  ; Move offset bit 7 into record bit 0.
+    LD   A,D                ; Load the offset high byte.
+    ADD  A,A                ; Shift its bits left one place.
+    OR   E                  ; Add the original offset's bit 7.
+    LD   (CP_INPUT_FCB+33),A  ; Store the random record number's low byte.
+    LD   A,D                ; Reload the offset's high byte.
+    RLCA                    ; Move offset bit 15 into bit 0.
+    AND  1                  ; Keep only the record number's high bit.
+    LD   (CP_INPUT_FCB+34),A  ; Store the random record number's high byte.
+    LD   DE,CP_SOURCE_CACHE  ; Select the 128-byte DMA buffer.
+    LD   C,CP_DMA_FUNCTION  ; Set the CP/M transfer address.
+    CALL CP_BDOS            ; Direct the next read into the source cache.
+    LD   DE,CP_INPUT_FCB    ; Pass the file and record number to CP/M.
+    LD   C,CP_RANDOM_READ_FUNCTION  ; Select a random-record read.
+    CALL CP_BDOS            ; Load the requested 128-byte source record.
+    OR   A                  ; Zero means the random read succeeded.
+    JR   NZ,CP_RAW_READ_EOF  ; Treat a BDOS read failure as no source byte.
 CP_RAW_CACHE_READY:
-    LD   HL,(CP_RAW_OFFSET) ; Restore the byte's logical offset.
-    SET  7,L ; Map its within-record offset into $80..$FF.
-    LD   H,CP_SOURCE_CACHE/256 ; Select the source cache's memory page.
-    LD   A,(HL) ; Read the byte from the cached record.
-    CP   $1A ; Test CP/M's text-file end marker.
-    JR   Z,CP_RAW_EOF ; Return end-of-input at control-Z.
-    OR   A ; Clear carry while preserving the source byte in A.
-    RET ; Return the raw byte to the caller.
+    LD   HL,(CP_RAW_OFFSET)  ; Restore the byte's logical offset.
+    SET  7,L                ; Map its within-record offset into $80..$FF.
+    LD   H,CP_SOURCE_CACHE/256  ; Select the source cache's memory page.
+    LD   A,(HL)             ; Read the byte from the cached record.
+    CP   $1A                ; Test CP/M's text-file end marker.
+    JR   Z,CP_RAW_EOF       ; Return end-of-input at control-Z.
+    OR   A                  ; Clear carry; retain source byte.
+    RET                     ; Return the raw byte to the caller.
 CP_RAW_READ_EOF:
 CP_RAW_EOF:
-    XOR  A ; Return zero for a read failure or text-file end marker.
-    SCF ; Carry reports that no source byte is available.
-    RET ; Share one end-of-input result for both conditions.
+    XOR  A                  ; Return EOF or read failure.
+    SCF                     ; Carry reports that no source byte is available.
+    RET                     ; Share the no-byte result.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Consume source bytes through the next CR, LF or end of file.
 
 CP_SKIP_SOURCE_LINE:
-    CALL CP_NEXT_SOURCE_BYTE ; Read the next byte in the current line.
-    RET  C ; Stop at accepted end-of-input or report offset overflow.
-    CP   13 ; Test for a carriage return.
-    RET  Z ; Stop after consuming CR.
-    CP   10 ; Test for a line feed.
-    JR   NZ,CP_SKIP_SOURCE_LINE ; Continue until LF or another CR.
-    RET ; Stop after consuming LF.
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the next byte in the current line.
+    RET  C                  ; Stop at EOF or offset overflow.
+    CP   13                 ; Test for a carriage return.
+    RET  Z                  ; Stop after consuming CR.
+    CP   10                 ; Test for a line feed.
+    JR   NZ,CP_SKIP_SOURCE_LINE  ; Continue until LF or another CR.
+    RET                     ; Stop after consuming LF.
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; Open a part on ordinal change, then return one source byte.
@@ -1037,72 +1037,72 @@ CP_SKIP_SOURCE_LINE:
 ; so Atom reads the rest of that directive line as a comment.
 
 CP_RESOLVED_READ_BYTE:
-    LD   E,A ; Keep the resolved source-part ordinal.
-    LD   A,(CP_ACTIVE_PART) ; Read the ordinal of the open source file.
-    CP   E ; Compare it with the requested part.
-    JR   Z,CP_RESOLVED_SOURCE_READY ; Reuse the file when ordinals match.
-    PUSH BC ; Preserve the caller's byte-sized parser state.
-    PUSH HL ; Preserve the logical byte offset across file open.
-    LD   A,E ; Restore the requested resolved ordinal.
-    LD   (CP_ACTIVE_PART),A ; Record which resolved part is now active.
-    LD   D,CP_PART_ORDER/256 ; Address the order table's fixed memory page.
-    LD   A,(DE) ; Map resolved order back to the discovered source ordinal.
-    CALL CP_OPEN_PART ; Open the source named by that original ordinal.
-    POP  HL ; Restore the byte offset in the newly opened file.
-    POP  BC ; Restore the caller's parser state.
+    LD   E,A                ; Keep the resolved source-part ordinal.
+    LD   A,(CP_ACTIVE_PART)  ; Read the ordinal of the open source file.
+    CP   E                  ; Compare it with the requested part.
+    JR   Z,CP_RESOLVED_SOURCE_READY  ; Reuse the file when ordinals match.
+    PUSH BC                 ; Preserve the caller's byte-sized parser state.
+    PUSH HL                 ; Save offset across file open.
+    LD   A,E                ; Restore the requested resolved ordinal.
+    LD   (CP_ACTIVE_PART),A  ; Record which resolved part is now active.
+    LD   D,CP_PART_ORDER/256  ; Address the order table's fixed memory page.
+    LD   A,(DE)             ; Map order to source ordinal.
+    CALL CP_OPEN_PART       ; Open the source named by that original ordinal.
+    POP  HL                 ; Restore the byte offset.
+    POP  BC                 ; Restore the caller's parser state.
 CP_RESOLVED_SOURCE_READY:
-    PUSH BC ; Preserve parser state while the raw reader uses BC.
-    PUSH HL ; Preserve the source offset across cache lookup.
-    CALL CP_RAW_SOURCE_BYTE ; Read one byte from the active source file.
-    POP  HL ; Restore the offset used by the host source interface.
-    POP  BC ; Restore the caller's parser state.
-    RET  C ; Return end-of-input or a failed read unchanged.
-    CP   '%' ; Check for a possible preprocessor directive marker.
-    JR   Z,CP_RESOLVED_PERCENT ; Test whether the percent is line-leading.
-    OR   A ; Clear carry for an ordinary source byte.
-    RET ; Return the byte without changing its contents.
+    PUSH BC                 ; Save parser BC across raw read.
+    PUSH HL                 ; Preserve the source offset across cache lookup.
+    CALL CP_RAW_SOURCE_BYTE  ; Read one byte from the active source file.
+    POP  HL                 ; Restore the source offset.
+    POP  BC                 ; Restore the caller's parser state.
+    RET  C                  ; Return end-of-input or a failed read unchanged.
+    CP   '%'                ; Check for host directive marker.
+    JR   Z,CP_RESOLVED_PERCENT  ; Test whether the percent is line-leading.
+    OR   A                  ; Clear carry for an ordinary source byte.
+    RET                     ; Return the byte without changing its contents.
 CP_RESOLVED_PERCENT:
-    PUSH HL ; Preserve the current offset during the backward scan.
-    CALL CP_PERCENT_IS_DIRECTIVE ; Check preceding bytes for line start.
-    POP  HL ; Restore the offset of the percent byte.
-    JR   Z,CP_RESOLVED_DIRECTIVE ; Mask it only at the start of a line.
-    LD   A,'%' ; Restore a percent used in ordinary source text.
-    OR   A ; Clear carry and set flags from the returned byte.
-    RET ; Return the unchanged percent character.
+    PUSH HL                 ; Save offset during backward scan.
+    CALL CP_PERCENT_IS_DIRECTIVE  ; Check preceding bytes for line start.
+    POP  HL                 ; Restore the offset of the percent byte.
+    JR   Z,CP_RESOLVED_DIRECTIVE  ; Mask it only at the start of a line.
+    LD   A,'%'              ; Restore a percent used in ordinary source text.
+    OR   A                  ; Return unchanged percent byte.
+    RET                     ; Return the unchanged percent character.
 CP_RESOLVED_DIRECTIVE:
-    LD   A,';' ; Make Atom's tokenizer ignore the rest of the directive line.
-    OR   A ; Return the comment marker with carry clear.
-    RET ; Preserve the original source offset in HL.
+    LD   A,';'              ; Mask directive as Atom comment.
+    OR   A                  ; Return the comment marker with carry clear.
+    RET                     ; Preserve the original source offset in HL.
 
 ;@ROUTINE IN HL OUT A,ZERO CLOBBERS BC,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
 ; Decide whether a percent character begins a recognized host directive.
 
 CP_PERCENT_IS_DIRECTIVE:
-    LD   A,H ; Test the current source offset's high byte.
-    OR   L ; Zero means the percent is the first source byte.
-    RET  Z ; Report line start when no preceding byte exists.
-    DEC  HL ; Begin scanning at the byte before the percent.
+    LD   A,H                ; Test the current source offset's high byte.
+    OR   L                  ; Zero means the percent is the first source byte.
+    RET  Z                  ; Report line start when no preceding byte exists.
+    DEC  HL                 ; Begin scanning at the byte before the percent.
 CP_PERCENT_PREFIX:
-    PUSH HL ; Preserve the backward-scan cursor during the raw read.
-    CALL CP_RAW_SOURCE_BYTE ; Read the preceding source byte.
-    POP  HL ; Restore the offset used for the backward scan.
-    CP   13 ; Check whether the percent follows a carriage return.
-    JR   Z,CP_PERCENT_YES ; CR marks the start of a source line.
-    CP   10 ; Check whether the percent follows a line feed.
-    JR   Z,CP_PERCENT_YES ; LF also marks the start of a source line.
-    CP   ' ' ; Check for a space before the percent.
-    JR   Z,CP_PERCENT_PREVIOUS ; Skip whitespace while scanning backwards.
-    CP   9 ; Check for a horizontal tab.
-    RET  NZ ; Any other preceding byte makes this ordinary source text.
+    PUSH HL                 ; Save the backward-scan cursor.
+    CALL CP_RAW_SOURCE_BYTE  ; Read the preceding source byte.
+    POP  HL                 ; Restore the offset used for the backward scan.
+    CP   13                 ; Does percent follow CR?
+    JR   Z,CP_PERCENT_YES   ; CR marks the start of a source line.
+    CP   10                 ; Check whether the percent follows a line feed.
+    JR   Z,CP_PERCENT_YES   ; LF also marks the start of a source line.
+    CP   ' '                ; Check for a space before the percent.
+    JR   Z,CP_PERCENT_PREVIOUS  ; Skip whitespace while scanning backwards.
+    CP   9                  ; Check for a horizontal tab.
+    RET  NZ                 ; Other prefix means ordinary text.
 CP_PERCENT_PREVIOUS:
-    LD   A,H ; Test whether the preceding whitespace reaches source byte zero.
-    OR   L ; Zero means no non-whitespace byte precedes this position.
-    JR   Z,CP_PERCENT_YES ; Only spaces or tabs precede the percent.
-    DEC  HL ; Move to the byte before this whitespace character.
-    JR   CP_PERCENT_PREFIX ; Continue until line start or ordinary text.
+    LD   A,H                ; Did whitespace reach offset zero?
+    OR   L                  ; No preceding non-space byte.
+    JR   Z,CP_PERCENT_YES   ; Only spaces or tabs precede the percent.
+    DEC  HL                 ; Step back one source byte.
+    JR   CP_PERCENT_PREFIX  ; Continue until line start or ordinary text.
 CP_PERCENT_YES:
-    XOR  A ; Return A=0 and Z set to mark a line-leading percent.
-    RET ; Carry is clear for the recognized line-start result.
+    XOR  A                  ; Mark a line-leading percent.
+    RET                     ; Return with carry clear.
 CP_SOURCE_CODE_END:
 
 ; These Atom sink entries replace the fail-closed host stubs. The fixed RAM
@@ -1116,10 +1116,10 @@ HS_SCBEG:
 ; Begin a fresh tentative generation. No file is created until COMMIT.
 
 HS_BEG:
-    XOR  A ; Start both output-transaction flags in the clear state.
-    LD   (CP_OUTPUT_OPEN),A ; No temporary output file is open yet.
-    LD   (CP_BACKED_UP),A ; No previous output has been moved aside.
-    RET ; Return success with carry clear.
+    XOR  A                  ; Clear both transaction flags.
+    LD   (CP_OUTPUT_OPEN),A  ; No temporary output file is open yet.
+    LD   (CP_BACKED_UP),A   ; No previous output has been moved aside.
+    RET                     ; Return success with carry clear.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Store one IMAGE or byte-PATCH value in the private CP/M target image.
@@ -1128,26 +1128,26 @@ HS_BEG:
 
 HS_IB:
 HS_PB:
-    PUSH AF ; Preserve the value while translating its logical address.
-    LD   DE,CP_OUTPUT_START-CP_TARGET_START ; Form the target-to-image offset.
-    ADD  HL,DE ; Point at the byte's location in the private image.
-    POP  AF ; Recover the byte supplied by the core.
-    LD   (HL),A ; Store it without publishing a file yet.
-    XOR  A ; Return success with carry clear.
-    RET ; Finish the IMAGE or byte-PATCH operation.
+    PUSH AF                 ; Save the byte during translation.
+    LD   DE,CP_OUTPUT_START-CP_TARGET_START  ; Form target-to-image offset.
+    ADD  HL,DE              ; Address the byte in private RAM.
+    POP  AF                 ; Recover the byte supplied by the core.
+    LD   (HL),A             ; Store it without publishing a file yet.
+    XOR  A                  ; Return success with carry clear.
+    RET                     ; Finish the IMAGE or byte-PATCH operation.
 
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Store one little-endian word at its translated logical address.
 
 HS_PW:
-    EX   DE,HL ; Put the logical address in HL and the word in DE.
-    LD   BC,CP_OUTPUT_START-CP_TARGET_START ; Form the image translation.
-    ADD  HL,BC ; Point at the word's first byte in the private image.
-    LD   (HL),E ; Store the low byte at the lower address.
-    INC  HL ; Advance to the word's high-byte position.
-    LD   (HL),D ; Store the high byte in little-endian order.
-    XOR  A ; Return success with carry clear.
-    RET ; Finish the word-PATCH operation.
+    EX   DE,HL              ; Exchange address and word.
+    LD   BC,CP_OUTPUT_START-CP_TARGET_START  ; Form the image translation.
+    ADD  HL,BC              ; Address the word in private RAM.
+    LD   (HL),E             ; Store the low byte at the lower address.
+    INC  HL                 ; Advance to the word's high-byte position.
+    LD   (HL),D             ; Store the high byte in little-endian order.
+    XOR  A                  ; Return success with carry clear.
+    RET                     ; Finish the word-PATCH operation.
 
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert the final cursor to image length, create a temporary file and
@@ -1155,135 +1155,135 @@ HS_PW:
 ; image; HEX streams records through the shared final-image helper below.
 
 HS_CMT:
-    LD   DE,CP_TARGET_START ; Load the image's logical base address.
-    OR   A ; Clear carry before subtracting the base from the final cursor.
-    SBC  HL,DE ; Convert the final address into an image byte count.
-    LD   (CP_OUTPUT_REMAINING),HL ; Retain bytes to write as records.
-    LD   HL,CP_OUTPUT_START ; Point at the first byte of the tentative image.
-    LD   (CP_OUTPUT_CURSOR),HL ; Seed the sequential record cursor.
-    CALL CP_SET_TEMP_FCB ; Select the transaction's temporary filename.
-    LD   DE,CP_WORK_FCB ; Pass its FCB to the delete service.
-    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
-    CALL CP_BDOS ; Delete the temp name before creating the new file.
-    CALL CP_SET_TEMP_FCB ; Rebuild the FCB for file creation.
-    LD   DE,CP_WORK_FCB ; Pass the temp FCB to the make service.
-    LD   C,CP_MAKE_FUNCTION ; Select CP/M make-file function 22.
-    CALL CP_BDOS ; Create the tentative output file.
-    INC  A ; Convert BDOS's $FF failure result to zero.
-    JP   Z,CP_COMMIT_FAILURE ; Abort if CP/M could not create the temp file.
-    LD   A,1 ; Mark that abort must close the open temp file.
-    LD   (CP_OUTPUT_OPEN),A ; Record ownership of the new file.
-    LD   A,(CP_OUTPUT_FORMAT) ; Read the format selected from the extension.
-    CP   2 ; Format two is Intel HEX.
-    JR   NZ,CP_WRITE_LOOP ; Write COM and BIN as raw image records.
-    CALL CP_WRITE_HEX ; Serialize the image as Intel HEX text.
-    JP   C,CP_COMMIT_FAILURE ; Leave HEX write failures for the abort path.
-    JR   CP_WRITE_CLOSE ; Close the completed HEX temporary file.
+    LD   DE,CP_TARGET_START  ; Load the image's logical base address.
+    OR   A                  ; Clear carry before subtracting base.
+    SBC  HL,DE              ; Convert cursor to image length.
+    LD   (CP_OUTPUT_REMAINING),HL  ; Retain bytes to write as records.
+    LD   HL,CP_OUTPUT_START  ; Point at the first byte of the tentative image.
+    LD   (CP_OUTPUT_CURSOR),HL  ; Seed the sequential record cursor.
+    CALL CP_SET_TEMP_FCB    ; Select the transaction's temporary filename.
+    LD   DE,CP_WORK_FCB     ; Pass its FCB to the delete service.
+    LD   C,CP_DELETE_FUNCTION  ; Select CP/M delete-file function 19.
+    CALL CP_BDOS            ; Remove any prior temp file.
+    CALL CP_SET_TEMP_FCB    ; Rebuild the FCB for file creation.
+    LD   DE,CP_WORK_FCB     ; Pass the temp FCB to the make service.
+    LD   C,CP_MAKE_FUNCTION  ; Select CP/M make-file function 22.
+    CALL CP_BDOS            ; Create the tentative output file.
+    INC  A                  ; Convert BDOS's $FF failure result to zero.
+    JP   Z,CP_COMMIT_FAILURE  ; Abort if CP/M could not create the temp file.
+    LD   A,1                ; Mark that abort must close the open temp file.
+    LD   (CP_OUTPUT_OPEN),A  ; Record ownership of the new file.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Read the format selected from the extension.
+    CP   2                  ; Format two is Intel HEX.
+    JR   NZ,CP_WRITE_LOOP   ; Write COM and BIN as raw image records.
+    CALL CP_WRITE_HEX       ; Serialize the image as Intel HEX text.
+    JP   C,CP_COMMIT_FAILURE  ; Leave HEX write failures for the abort path.
+    JR   CP_WRITE_CLOSE     ; Close the completed HEX temporary file.
 CP_WRITE_LOOP:
-    LD   HL,(CP_OUTPUT_REMAINING) ; Read the unconsumed image byte count.
-    LD   A,H ; Test its high byte first.
-    OR   L ; Zero means every image byte has been written.
-    JR   Z,CP_WRITE_CLOSE ; Close the temporary file at the end of the image.
-    LD   DE,(CP_OUTPUT_CURSOR) ; Select the next 128-byte source block.
-    LD   C,CP_DMA_FUNCTION ; Point CP/M's DMA at that block.
-    CALL CP_BDOS ; Install the image block as the transfer buffer.
-    LD   DE,CP_WORK_FCB ; Pass the temporary file's FCB to CP/M.
-    LD   C,CP_WRITE_FUNCTION ; Select sequential record-write function 21.
-    CALL CP_BDOS ; Append one 128-byte image record.
-    OR   A ; Zero indicates a successful record write.
-    JP   NZ,CP_COMMIT_FAILURE ; Abort publication after a failed write.
-    LD   HL,(CP_OUTPUT_CURSOR) ; Read the current image-block address.
-    LD   DE,128 ; Advance by one CP/M record.
-    ADD  HL,DE ; Select the following image block.
-    LD   (CP_OUTPUT_CURSOR),HL ; Retain its address for the next iteration.
-    LD   HL,(CP_OUTPUT_REMAINING) ; Reload bytes not yet covered by records.
-    LD   DE,128 ; Subtract the record size from that remainder.
-    OR   A ; Clear carry before the subtraction.
-    SBC  HL,DE ; Calculate the byte count after this record.
-    JR   NC,CP_WRITE_MORE ; Keep a non-negative remainder unchanged.
-    LD   HL,0 ; Saturate a partial final record's remainder at zero.
+    LD   HL,(CP_OUTPUT_REMAINING)  ; Read the unconsumed image byte count.
+    LD   A,H                ; Test its high byte first.
+    OR   L                  ; Zero means every image byte has been written.
+    JR   Z,CP_WRITE_CLOSE   ; Close at end of image.
+    LD   DE,(CP_OUTPUT_CURSOR)  ; Select the next 128-byte source block.
+    LD   C,CP_DMA_FUNCTION  ; Point CP/M's DMA at that block.
+    CALL CP_BDOS            ; Install the image block as the transfer buffer.
+    LD   DE,CP_WORK_FCB     ; Pass the temporary file's FCB to CP/M.
+    LD   C,CP_WRITE_FUNCTION  ; Select sequential record-write function 21.
+    CALL CP_BDOS            ; Append one 128-byte image record.
+    OR   A                  ; Zero indicates a successful record write.
+    JP   NZ,CP_COMMIT_FAILURE  ; Abort publication after a failed write.
+    LD   HL,(CP_OUTPUT_CURSOR)  ; Read the current image-block address.
+    LD   DE,128             ; Advance by one CP/M record.
+    ADD  HL,DE              ; Select the following image block.
+    LD   (CP_OUTPUT_CURSOR),HL  ; Retain its address for the next iteration.
+    LD   HL,(CP_OUTPUT_REMAINING)  ; Reload bytes not yet covered by records.
+    LD   DE,128             ; Subtract the record size from that remainder.
+    OR   A                  ; Clear carry before the subtraction.
+    SBC  HL,DE              ; Calculate the byte count after this record.
+    JR   NC,CP_WRITE_MORE   ; Keep a non-negative remainder unchanged.
+    LD   HL,0               ; Clamp a partial record to zero.
 CP_WRITE_MORE:
-    LD   (CP_OUTPUT_REMAINING),HL ; Save the count for the next loop test.
-    JR   CP_WRITE_LOOP ; Write another record or begin publication.
+    LD   (CP_OUTPUT_REMAINING),HL  ; Save the count for the next loop test.
+    JR   CP_WRITE_LOOP      ; Write another record or begin publication.
 
 ; Close temp, move an existing output to backup, rename temp to final, then
 ; delete the backup. Preflight proved the backup name was initially unused.
 
 CP_WRITE_CLOSE:
-    LD   DE,CP_WORK_FCB ; Pass the temporary file's FCB to the close service.
-    LD   C,CP_CLOSE_FUNCTION ; Select CP/M close-file function 16.
-    CALL CP_BDOS ; Flush and close the completed temporary file.
-    INC  A ; Convert BDOS's $FF close failure to zero.
-    JP   Z,CP_COMMIT_FAILURE ; Keep the previous final file on close failure.
-    XOR  A ; Prepare the closed-file state.
-    LD   (CP_OUTPUT_OPEN),A ; Prevent abort from closing the file again.
-    CALL CP_SET_BACKUP_FCB ; Name the backup file for the selected output.
-    LD   DE,CP_WORK_FCB ; Pass its FCB to the delete service.
-    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
-    CALL CP_BDOS ; Delete the backup name before renaming the current output.
-    LD   HL,CP_OUTPUT_NAME ; Supply the current final name as rename source.
-    LD   DE,CP_WORK_FCB ; Supply the backup name as rename destination.
-    CALL CP_BUILD_RENAME ; Build a CP/M rename FCB for the old output.
-    LD   DE,CP_RENAME_FCB ; Pass the completed rename FCB to CP/M.
-    LD   C,CP_RENAME_FUNCTION ; Select CP/M rename-file function 23.
-    CALL CP_BDOS ; Move an existing final output to the backup name.
-    INC  A ; Set zero when CP/M returned $FF for the rename.
-    JR   Z,CP_NO_BACKUP ; Skip backup state when the rename did not succeed.
-    LD   A,1 ; Mark that the old final output is now recoverable as backup.
-    LD   (CP_BACKED_UP),A ; Let abort restore it if the next rename fails.
+    LD   DE,CP_WORK_FCB     ; Close the temporary FCB.
+    LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function 16.
+    CALL CP_BDOS            ; Flush and close the completed temporary file.
+    INC  A                  ; Convert BDOS's $FF close failure to zero.
+    JP   Z,CP_COMMIT_FAILURE  ; Keep the previous final file on close failure.
+    XOR  A                  ; Prepare the closed-file state.
+    LD   (CP_OUTPUT_OPEN),A  ; Prevent abort from closing the file again.
+    CALL CP_SET_BACKUP_FCB  ; Name the backup file for the selected output.
+    LD   DE,CP_WORK_FCB     ; Pass its FCB to the delete service.
+    LD   C,CP_DELETE_FUNCTION  ; Select CP/M delete-file function 19.
+    CALL CP_BDOS            ; Remove any prior backup file.
+    LD   HL,CP_OUTPUT_NAME  ; Supply the current final name as rename source.
+    LD   DE,CP_WORK_FCB     ; Supply the backup name as rename destination.
+    CALL CP_BUILD_RENAME    ; Build a CP/M rename FCB for the old output.
+    LD   DE,CP_RENAME_FCB   ; Pass the completed rename FCB to CP/M.
+    LD   C,CP_RENAME_FUNCTION  ; Select CP/M rename-file function 23.
+    CALL CP_BDOS            ; Move old output to backup.
+    INC  A                  ; Set zero when CP/M returned $FF for the rename.
+    JR   Z,CP_NO_BACKUP     ; Skip backup on rename failure.
+    LD   A,1                ; Mark old output as backed up.
+    LD   (CP_BACKED_UP),A   ; Let abort restore it if the next rename fails.
 CP_NO_BACKUP:
-    CALL CP_SET_TEMP_FCB ; Select the completed temporary output name.
-    LD   HL,CP_WORK_FCB ; Supply the temporary name as rename source.
-    LD   DE,CP_OUTPUT_NAME ; Supply the requested final name as destination.
-    CALL CP_BUILD_RENAME ; Build the CP/M rename FCB for publication.
-    LD   DE,CP_RENAME_FCB ; Pass the completed rename FCB to CP/M.
-    LD   C,CP_RENAME_FUNCTION ; Select CP/M rename-file function 23.
-    CALL CP_BDOS ; Publish the completed output under its final name.
-    INC  A ; Convert BDOS's $FF rename failure result to zero.
-    JP   Z,CP_COMMIT_FAILURE ; Preserve the backup until abort restores it.
-    CALL CP_SET_BACKUP_FCB ; Rebuild the backup name for cleanup.
-    LD   DE,CP_WORK_FCB ; Pass the backup FCB to the delete service.
-    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
-    CALL CP_BDOS ; Ask CP/M to remove the old output after publication.
-    XOR  A ; Clear the transaction state after cleanup attempts.
-    LD   (CP_BACKED_UP),A ; Clear the flag after attempting backup deletion.
-    RET ; Report successful publication with carry clear.
+    CALL CP_SET_TEMP_FCB    ; Select the completed temporary output name.
+    LD   HL,CP_WORK_FCB     ; Supply the temporary name as rename source.
+    LD   DE,CP_OUTPUT_NAME  ; Supply the requested final name as destination.
+    CALL CP_BUILD_RENAME    ; Build the CP/M rename FCB for publication.
+    LD   DE,CP_RENAME_FCB   ; Pass the completed rename FCB to CP/M.
+    LD   C,CP_RENAME_FUNCTION  ; Select CP/M rename-file function 23.
+    CALL CP_BDOS            ; Publish temp under final name.
+    INC  A                  ; Test for BDOS rename failure.
+    JP   Z,CP_COMMIT_FAILURE  ; Preserve the backup until abort restores it.
+    CALL CP_SET_BACKUP_FCB  ; Rebuild the backup name for cleanup.
+    LD   DE,CP_WORK_FCB     ; Pass the backup FCB to the delete service.
+    LD   C,CP_DELETE_FUNCTION  ; Select CP/M delete-file function 19.
+    CALL CP_BDOS            ; Remove old output after commit.
+    XOR  A                  ; Clear transaction state.
+    LD   (CP_BACKED_UP),A   ; Clear the flag after attempting backup deletion.
+    RET                     ; Report successful publication with carry clear.
 CP_COMMIT_FAILURE:
-    LD   A,1 ; Return a nonzero sink status for the failed commit.
-    SCF ; Mark the sink operation as failed.
-    RET ; Let the driver call HS_ABORT to restore the prior output.
+    LD   A,1                ; Return failed-commit status.
+    SCF                     ; Mark the sink operation as failed.
+    RET                     ; Driver will call HS_ABORT.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Close temporary output if open, then delete it. If commit moved the old
 ; final file aside, restore the backup. Cleanup tolerates early failure.
 
 HS_ABORT:
-    LD   A,(CP_OUTPUT_OPEN) ; Check whether the temporary file is open.
-    OR   A ; Set zero when no close operation is required.
-    JR   Z,CP_ABORT_DELETE ; Continue directly to removing the temp name.
-    LD   DE,CP_WORK_FCB ; Pass the temporary file's FCB to CP/M.
-    LD   C,CP_CLOSE_FUNCTION ; Select CP/M close-file function 16.
-    CALL CP_BDOS ; Close the temporary file before deleting it.
+    LD   A,(CP_OUTPUT_OPEN)  ; Check whether the temporary file is open.
+    OR   A                  ; Set zero when no close operation is required.
+    JR   Z,CP_ABORT_DELETE  ; Continue directly to removing the temp name.
+    LD   DE,CP_WORK_FCB     ; Pass the temporary file's FCB to CP/M.
+    LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function 16.
+    CALL CP_BDOS            ; Close the temporary file before deleting it.
 CP_ABORT_DELETE:
-    CALL CP_SET_TEMP_FCB ; Rebuild the temporary file's FCB.
-    LD   DE,CP_WORK_FCB ; Pass the temporary FCB to CP/M.
-    LD   C,CP_DELETE_FUNCTION ; Select CP/M delete-file function 19.
-    CALL CP_BDOS ; Attempt to remove the uncommitted temporary output.
-    LD   A,(CP_BACKED_UP) ; Check whether commit moved an old output aside.
-    OR   A ; Set zero when there is no prior output to restore.
-    JR   Z,CP_ABORT_DONE ; Finish after attempting temporary-file deletion.
-    CALL CP_SET_BACKUP_FCB ; Rebuild the backup file's FCB.
-    LD   HL,CP_WORK_FCB ; Supply the backup name as rename source.
-    LD   DE,CP_OUTPUT_NAME ; Supply the requested output name as destination.
-    CALL CP_BUILD_RENAME ; Build a CP/M rename FCB for restoration.
-    LD   DE,CP_RENAME_FCB ; Pass the completed rename FCB to CP/M.
-    LD   C,CP_RENAME_FUNCTION ; Select CP/M rename-file function 23.
-    CALL CP_BDOS ; Attempt to restore the previous output name.
+    CALL CP_SET_TEMP_FCB    ; Rebuild the temporary file's FCB.
+    LD   DE,CP_WORK_FCB     ; Pass the temporary FCB to CP/M.
+    LD   C,CP_DELETE_FUNCTION  ; Select CP/M delete-file function 19.
+    CALL CP_BDOS            ; Delete uncommitted temp output.
+    LD   A,(CP_BACKED_UP)   ; Check whether commit moved an old output aside.
+    OR   A                  ; No backup means no restore.
+    JR   Z,CP_ABORT_DONE    ; Finish after attempting temporary-file deletion.
+    CALL CP_SET_BACKUP_FCB  ; Rebuild the backup file's FCB.
+    LD   HL,CP_WORK_FCB     ; Supply the backup name as rename source.
+    LD   DE,CP_OUTPUT_NAME  ; Supply the requested output name as destination.
+    CALL CP_BUILD_RENAME    ; Build a CP/M rename FCB for restoration.
+    LD   DE,CP_RENAME_FCB   ; Pass the completed rename FCB to CP/M.
+    LD   C,CP_RENAME_FUNCTION  ; Select CP/M rename-file function 23.
+    CALL CP_BDOS            ; Attempt to restore the previous output name.
 CP_ABORT_DONE:
-    XOR  A ; Clear the temporary-file and backup state.
-    LD   (CP_OUTPUT_OPEN),A ; Clear the open flag after cleanup attempts.
-    LD   (CP_BACKED_UP),A ; Clear backup state after all cleanup attempts.
-    RET ; Finish cleanup with the flags cleared.
+    XOR  A                  ; Clear the temporary-file and backup state.
+    LD   (CP_OUTPUT_OPEN),A  ; Clear the open flag after cleanup attempts.
+    LD   (CP_BACKED_UP),A   ; Clear backup state after all cleanup attempts.
+    RET                     ; Finish cleanup with the flags cleared.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert the tentative binary image to Intel HEX while streaming 128-byte
@@ -1291,99 +1291,99 @@ CP_ABORT_DONE:
 ; PATCH application until Atom calls this routine.
 
 CP_WRITE_HEX:
-    CALL ZTS_CPM_HEX_BEGIN ; Reset the helper's buffer and status flags.
-    LD   HL,CP_TARGET_START ; Set the first logical address written to HEX.
-    LD   (CP_HEX_ADDRESS),HL ; Save the address used in record headers.
-    CALL ZTS_CPM_HEX_SEGMENT ; Render the image as checksummed HEX records.
-    JP   ZTS_CPM_HEX_END ; Write EOF, pad the final record and return status.
+    CALL ZTS_CPM_HEX_BEGIN  ; Reset the helper's buffer and status flags.
+    LD   HL,CP_TARGET_START  ; Set the first logical address written to HEX.
+    LD   (CP_HEX_ADDRESS),HL  ; Save the address used in record headers.
+    CALL ZTS_CPM_HEX_SEGMENT  ; Render the image as checksummed HEX records.
+    JP   ZTS_CPM_HEX_END    ; Write HEX EOF and final record.
 
 ;@ROUTINE IN C,DE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
 ; Route final-image writer requests through the index-preserving BDOS wrapper.
 
 ZTS_CPM_FINAL_BDOS:
-    JP   CP_BDOS ; Forward requests through the index-preserving BDOS wrapper.
-ZTS_CPM_FINAL_FCB EQU CP_WORK_FCB ; FCB used for writing HEX records.
-ZTS_CPM_FINAL_DMA EQU CP_SOURCE_CACHE ; 128-byte buffer shared with input.
-ZTS_CPM_FINAL_SOURCE_CURSOR EQU CP_OUTPUT_CURSOR ; Current byte in the image.
-ZTS_CPM_FINAL_REMAINING EQU CP_OUTPUT_REMAINING ; Image bytes left to render.
-ZTS_CPM_FINAL_ADDRESS EQU CP_HEX_ADDRESS ; Address in the next HEX record.
-ZTS_CPM_FINAL_DMA_CURSOR EQU CP_HEX_CURSOR ; Next byte in the HEX buffer.
-ZTS_CPM_FINAL_DMA_COUNT EQU CP_HEX_COUNT ; Bytes queued for transfer.
-ZTS_CPM_FINAL_ERROR EQU CP_HEX_ERROR ; Sticky record-write error status.
-ZTS_CPM_FINAL_SUM EQU CP_HEX_SUM ; Checksum accumulator for one HEX record.
-ZTS_CPM_FINAL_SIZE EQU CP_HEX_SIZE ; Payload length of the current HEX record.
-ZTS_CPM_FINAL_DATA_LEFT EQU CP_HEX_DATA_LEFT ; Payload bytes still to render.
+    JP   CP_BDOS            ; Use the index-preserving wrapper.
+ZTS_CPM_FINAL_FCB EQU CP_WORK_FCB  ; FCB used for writing HEX records.
+ZTS_CPM_FINAL_DMA EQU CP_SOURCE_CACHE  ; 128-byte buffer shared with input.
+ZTS_CPM_FINAL_SOURCE_CURSOR EQU CP_OUTPUT_CURSOR  ; Current byte in the image.
+ZTS_CPM_FINAL_REMAINING EQU CP_OUTPUT_REMAINING  ; Image bytes left to render.
+ZTS_CPM_FINAL_ADDRESS EQU CP_HEX_ADDRESS  ; Address in the next HEX record.
+ZTS_CPM_FINAL_DMA_CURSOR EQU CP_HEX_CURSOR  ; Next byte in the HEX buffer.
+ZTS_CPM_FINAL_DMA_COUNT EQU CP_HEX_COUNT  ; Bytes queued for transfer.
+ZTS_CPM_FINAL_ERROR EQU CP_HEX_ERROR  ; Sticky record-write error status.
+ZTS_CPM_FINAL_SUM EQU CP_HEX_SUM  ; Checksum accumulator for one HEX record.
+ZTS_CPM_FINAL_SIZE EQU CP_HEX_SIZE  ; Current HEX record payload length.
+ZTS_CPM_FINAL_DATA_LEFT EQU CP_HEX_DATA_LEFT  ; Payload bytes still to render.
 ;@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@
 
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Rebuild the single ordinary output FCB before each new BDOS operation phase.
 
 CP_COPY_OUTPUT_FCB:
-    LD   HL,CP_OUTPUT_NAME ; Read the normalized drive-plus-name record.
-    LD   DE,CP_WORK_FCB ; Select the reusable working FCB as destination.
-    LD   BC,12 ; Count the drive byte and eleven name/type bytes.
-    LDIR ; Copy the requested output name into the working FCB.
+    LD   HL,CP_OUTPUT_NAME  ; Read the normalized drive-plus-name record.
+    LD   DE,CP_WORK_FCB     ; Select the reusable working FCB as destination.
+    LD   BC,12              ; Count the drive byte and eleven name/type bytes.
+    LDIR                    ; Copy output name to work FCB.
 
 ;@ROUTINE IN DE OUT A,B,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Zero the unused tail of the current CP/M file-control block.
 
 CP_CLEAR_FCB_TAIL:
-    XOR  A ; Select zero as the byte written to the FCB tail.
-    LD   B,24 ; Clear the 24 bytes after the drive and filename fields.
+    XOR  A                  ; Select zero as the byte written to the FCB tail.
+    LD   B,24               ; Clear remaining FCB fields.
 
 ;@ROUTINE IN A,B,DE OUT B,DE
 ; Fill B bytes at DE with A while advancing the destination pointer.
 
 CP_CLEAR_WORK_FCB:
-    LD   (DE),A ; Write the fill byte at the current FCB address.
-    INC  DE ; Advance to the next byte in the control block.
-    DJNZ CP_CLEAR_WORK_FCB ; Repeat until B bytes have been written.
-    RET ; Return with DE advanced past the cleared region.
+    LD   (DE),A             ; Write the fill byte at the current FCB address.
+    INC  DE                 ; Advance to the next byte in the control block.
+    DJNZ CP_CLEAR_WORK_FCB  ; Repeat until B bytes have been written.
+    RET                     ; Return with DE advanced past the cleared region.
 
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Derive the transaction's temporary filename from the requested output name.
 
 CP_SET_TEMP_FCB:
-    CALL CP_COPY_OUTPUT_FCB ; Start from the caller's requested output name.
-    LD   HL,$2424 ; Form two '$' bytes for the first extension positions.
-    LD   (CP_WORK_FCB+9),HL ; Mark the first two extension characters.
-    LD   A,'$' ; Select '$' for the extension's final character.
-    LD   (CP_WORK_FCB+11),A ; Complete the temporary type '$$$'.
-    RET ; Return the temporary filename in the working FCB.
+    CALL CP_COPY_OUTPUT_FCB  ; Start from the caller's requested output name.
+    LD   HL,$2424           ; Form two '$' bytes.
+    LD   (CP_WORK_FCB+9),HL  ; Mark the first two extension characters.
+    LD   A,'$'              ; Select '$' for the extension's final character.
+    LD   (CP_WORK_FCB+11),A  ; Complete the temporary type '$$$'.
+    RET                     ; Return the temporary FCB name.
 
 ;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Derive the transaction's backup filename from the requested output name.
 
 CP_SET_BACKUP_FCB:
-    CALL CP_COPY_OUTPUT_FCB ; Start from the caller's requested output name.
-    LD   HL,$4142 ; Form 'B' and 'A' in little-endian memory order.
-    LD   (CP_WORK_FCB+9),HL ; Set the first two backup extension characters.
-    LD   A,'K' ; Select the extension's final character.
-    LD   (CP_WORK_FCB+11),A ; Complete the backup type 'BAK'.
-    RET ; Return the backup filename in the working FCB.
+    CALL CP_COPY_OUTPUT_FCB  ; Start from the caller's requested output name.
+    LD   HL,$4142           ; Form 'B' and 'A' in little-endian memory order.
+    LD   (CP_WORK_FCB+9),HL  ; Set the first two backup extension characters.
+    LD   A,'K'              ; Select the extension's final character.
+    LD   (CP_WORK_FCB+11),A  ; Complete the backup type 'BAK'.
+    RET                     ; Return the backup filename in the working FCB.
 
 ;@ROUTINE IN DE,HL CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Construct a CP/M rename FCB in the input FCB's dead storage. HL addresses
 ; the old 12-byte name and DE the new 12-byte name.
 
 CP_BUILD_RENAME:
-    PUSH HL ; Preserve the old drive-plus-name source pointer.
-    PUSH DE ; Preserve the new drive-plus-name destination pointer.
-    LD   DE,CP_RENAME_FCB ; Select the start of the 36-byte rename FCB.
-    XOR  A ; Use zero to clear unused FCB fields.
-    LD   B,36 ; Count every byte in the rename FCB.
-    CALL CP_CLEAR_WORK_FCB ; Clear it before copying either filename.
-    POP  DE ; Restore the pointer to the new filename.
-    POP  HL ; Restore the pointer to the old filename.
-    PUSH DE ; Save the new filename while DE becomes the copy destination.
-    LD   DE,CP_RENAME_FCB ; Place the old name at the start of the FCB.
-    LD   BC,12 ; Copy its drive, basename and extension fields.
-    LDIR ; Fill the rename FCB's old-name field.
-    POP  HL ; Move the new-name pointer into the source register pair.
-    LD   DE,CP_RENAME_FCB+16 ; Select the new-name field in the FCB.
-    LD   BC,12 ; Copy its drive, basename and extension fields.
-    LDIR ; Fill the rename FCB's new-name field.
-    RET ; Return the completed rename FCB in workspace.
+    PUSH HL                 ; Preserve the old drive-plus-name source pointer.
+    PUSH DE                 ; Save new-name source pointer.
+    LD   DE,CP_RENAME_FCB   ; Select the start of the 36-byte rename FCB.
+    XOR  A                  ; Use zero to clear unused FCB fields.
+    LD   B,36               ; Count every byte in the rename FCB.
+    CALL CP_CLEAR_WORK_FCB  ; Clear it before copying either filename.
+    POP  DE                 ; Restore the pointer to the new filename.
+    POP  HL                 ; Restore the pointer to the old filename.
+    PUSH DE                 ; Save new name during old-name copy.
+    LD   DE,CP_RENAME_FCB   ; Place the old name at the start of the FCB.
+    LD   BC,12              ; Copy its drive, basename and extension fields.
+    LDIR                    ; Fill the rename FCB's old-name field.
+    POP  HL                 ; Use new name as LDIR source.
+    LD   DE,CP_RENAME_FCB+16  ; Select the new-name field in the FCB.
+    LD   BC,12              ; Copy its drive, basename and extension fields.
+    LDIR                    ; Fill the rename FCB's new-name field.
+    RET                     ; Return the completed rename FCB in workspace.
 
 CP_OUTPUT_CODE_END:
 
@@ -1391,72 +1391,72 @@ CP_OUTPUT_CODE_END:
 ; Print a dollar-terminated string through CP/M BDOS function 9.
 
 CP_PRINT:
-    LD   C,CP_PRINT_FUNCTION ; Select CP/M dollar-terminated string output.
-    JP   CP_BDOS ; Print the string addressed by DE.
+    LD   C,CP_PRINT_FUNCTION  ; Select CP/M dollar-terminated string output.
+    JP   CP_BDOS            ; Print the string addressed by DE.
 
 ;@ROUTINE IN HL OUT A CLOBBERS B,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print the non-space characters of one drive-plus-8.3 filename record.
 
 CP_PRINT_NAME:
-    INC  HL ; Skip the drive byte and point at the basename.
-    LD   B,8 ; Count the eight basename characters.
+    INC  HL                 ; Skip the drive byte and point at the basename.
+    LD   B,8                ; Count the eight basename characters.
 CP_PRINT_NAME_BYTE:
-    LD   A,(HL) ; Read the next basename character.
-    INC  HL ; Advance to the next FCB name byte.
-    CP   ' ' ; FCB padding marks an unused character position.
-    CALL NZ,CP_PUTC ; Print this character only when it is not padding.
-    DJNZ CP_PRINT_NAME_BYTE ; Check the remaining basename positions.
-    LD   A,(HL) ; Inspect the first character of the extension.
-    CP   ' ' ; A blank extension has no visible suffix.
-    RET  Z ; Return without printing a dot for an empty type.
-    LD   A,'.' ; Select the filename separator.
-    CALL CP_PUTC ; Print the dot before the extension.
-    LD   B,3 ; Count the three extension characters.
+    LD   A,(HL)             ; Read the next basename character.
+    INC  HL                 ; Advance to the next FCB name byte.
+    CP   ' '                ; FCB padding marks an unused character position.
+    CALL NZ,CP_PUTC         ; Print only non-padding bytes.
+    DJNZ CP_PRINT_NAME_BYTE  ; Check the remaining basename positions.
+    LD   A,(HL)             ; Inspect the first character of the extension.
+    CP   ' '                ; A blank extension has no visible suffix.
+    RET  Z                  ; Return without printing a dot for an empty type.
+    LD   A,'.'              ; Select the filename separator.
+    CALL CP_PUTC            ; Print the dot before the extension.
+    LD   B,3                ; Count the three extension characters.
 CP_PRINT_TYPE_BYTE:
-    LD   A,(HL) ; Read the next extension character.
-    INC  HL ; Advance to the following FCB byte.
-    CP   ' ' ; Skip blank extension positions.
-    CALL NZ,CP_PUTC ; Print a nonblank extension character.
-    DJNZ CP_PRINT_TYPE_BYTE ; Check the remaining extension positions.
-    RET ; Finish printing the normalized filename.
+    LD   A,(HL)             ; Read the next extension character.
+    INC  HL                 ; Advance to the following FCB byte.
+    CP   ' '                ; Skip blank extension positions.
+    CALL NZ,CP_PUTC         ; Print a nonblank extension character.
+    DJNZ CP_PRINT_TYPE_BYTE  ; Check the remaining extension positions.
+    RET                     ; Finish printing the normalized filename.
 
 ;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print one character while preserving the caller's working registers.
 
 CP_PUTC:
-    PUSH BC ; Preserve the caller's BC pair across the console call.
-    PUSH DE ; Preserve the caller's DE pair.
-    PUSH HL ; Preserve the caller's HL pair.
-    LD   E,A ; Pass the requested character in E.
-    LD   C,2 ; Select CP/M console-output function 2.
-    CALL CP_BDOS ; Write the character to the console.
-    POP  HL ; Restore the caller's HL pair.
-    POP  DE ; Restore the caller's DE pair.
-    POP  BC ; Restore the caller's BC pair.
-    RET ; Return after the console output attempt.
+    PUSH BC                 ; Save caller's BC pair.
+    PUSH DE                 ; Preserve the caller's DE pair.
+    PUSH HL                 ; Preserve the caller's HL pair.
+    LD   E,A                ; Pass the requested character in E.
+    LD   C,2                ; Select CP/M console-output function 2.
+    CALL CP_BDOS            ; Write the character to the console.
+    POP  HL                 ; Restore the caller's HL pair.
+    POP  DE                 ; Restore the caller's DE pair.
+    POP  BC                 ; Restore the caller's BC pair.
+    RET                     ; Return after the console output attempt.
 
 ;@ROUTINE IN A OUT A CLOBBERS BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print A as two uppercase hexadecimal digits.
 
 CP_PRINT_HEX:
-    PUSH AF ; Preserve the original byte for its low digit.
-    RRCA ; Begin rotating the high nibble toward bits 0..3.
-    RRCA ; Continue moving the high nibble toward bits 0..3.
-    RRCA ; Rotate one more position within the byte.
-    RRCA ; Place the original bits 4..7 in the low nibble.
-    CALL CP_PRINT_NIBBLE ; Print the high hexadecimal digit.
-    POP  AF ; Restore the original byte before printing its low digit.
+    PUSH AF                 ; Preserve the original byte for its low digit.
+    RRCA                    ; Begin rotating the high nibble toward bits 0..3.
+    RRCA                    ; Move high nibble toward bits 0..3.
+    RRCA                    ; Rotate one more position within the byte.
+    RRCA                    ; Place the original bits 4..7 in the low nibble.
+    CALL CP_PRINT_NIBBLE    ; Print the high hexadecimal digit.
+    POP  AF                 ; Restore original byte for low digit.
 
 ;@ROUTINE IN A OUT A CLOBBERS BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print the low nibble of A as one uppercase hexadecimal digit.
 
 CP_PRINT_NIBBLE:
-    AND  $0F ; Keep only the nibble selected by the caller.
-    ADD  A,'0' ; Convert values zero through nine to digit characters.
-    CP   '9'+1 ; Separate decimal digits from hexadecimal letters.
-    JR   C,CP_PUTC ; Send a decimal digit directly to the console.
-    ADD  A,7 ; Convert the values ten through fifteen to A through F.
-    JR   CP_PUTC ; Send the resulting uppercase hexadecimal character.
+    AND  $0F                ; Keep only the nibble selected by the caller.
+    ADD  A,'0'              ; Convert values 0..9 to ASCII.
+    CP   '9'+1              ; Separate decimal from hex letters.
+    JR   C,CP_PUTC          ; Send a decimal digit directly to the console.
+    ADD  A,7                ; Convert 10..15 to A..F.
+    JR   CP_PUTC            ; Print the uppercase hex digit.
 
 CP_ADAPTER_CODE_END:
 
@@ -1489,32 +1489,32 @@ CP_READ_FAILED_TEXT:
 CP_ASSEMBLY_TEXT: DB 13,10,'A','t','o','m',' ','e','r','r','o','r',' ','$'
 CP_NEWLINE_TEXT: DB 13,10,'$'
 CP_USAGE_TEXT:
-    DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' ' ; Syntax prefix.
-    DB '[','S','O','U','R','C','E',' '                  ; Optional source.
+    DB 13,10,'U','s','a','g','e',':',' ','A','T','O','M',' '  ; Syntax prefix.
+    DB '[','S','O','U','R','C','E',' '  ; Optional source.
     DB '[','O','U','T','P','U','T',']',']',13,10,'$'  ; Optional output.
 CP_SOURCE_NAME_TEXT:
-    DB 13,10,'I','n','v','a','l','i','d',' '            ; Error prefix.
-    DB 's','o','u','r','c','e',' ','n','a','m','e',13,10,'$' ; Source name.
+    DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
+    DB 's','o','u','r','c','e',' ','n','a','m','e',13,10,'$'  ; Source name.
 CP_OUTPUT_NAME_TEXT:
-    DB 13,10,'I','n','v','a','l','i','d',' '            ; Error prefix.
-    DB 'o','u','t','p','u','t',' ','n','a','m','e',13,10,'$' ; Output name.
+    DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
+    DB 'o','u','t','p','u','t',' ','n','a','m','e',13,10,'$'  ; Output name.
 CP_NAME_CONFLICT_TEXT:
-    DB 13,10,'S','o','u','r','c','e','/'               ; First filename.
-    DB 'o','u','t','p','u','t',' '                      ; Second filename.
-    DB 'c','o','n','f','l','i','c','t',13,10,'$'       ; Conflict suffix.
+    DB 13,10,'S','o','u','r','c','e','/'  ; First filename.
+    DB 'o','u','t','p','u','t',' '  ; Second filename.
+    DB 'c','o','n','f','l','i','c','t',13,10,'$'  ; Conflict suffix.
 CP_AUXILIARY_EXISTS_TEXT:
-    DB 13,10,'T','e','m','p','/'                     ; Temporary file.
-    DB 'b','a','c','k','u','p',' '                    ; Backup file.
+    DB 13,10,'T','e','m','p','/'  ; Temporary file.
+    DB 'b','a','c','k','u','p',' '  ; Backup file.
     DB 'f','i','l','e',' ','e','x','i','s','t','s',13,10,'$'
 CP_INVALID_INCLUDE_TEXT:
-    DB 13,10,'I','n','v','a','l','i','d',' '           ; Error prefix.
-    DB '%','I','N','C','L','U','D','E',13,10,'$'      ; Directive name.
+    DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
+    DB '%','I','N','C','L','U','D','E',13,10,'$'  ; Directive name.
 CP_INCLUDE_CYCLE_TEXT:
-    DB 13,10,'I','n','c','l','u','d','e',' '           ; Include prefix.
-    DB 'c','y','c','l','e',13,10,'$'                 ; Cycle suffix.
+    DB 13,10,'I','n','c','l','u','d','e',' '  ; Include prefix.
+    DB 'c','y','c','l','e',13,10,'$'  ; Cycle suffix.
 CP_SOURCE_CAPACITY_TEXT:
-    DB 13,10,'T','o','o',' ','m','a','n','y',' '       ; Error prefix.
-    DB 's','o','u','r','c','e','s',13,10,'$'          ; Source count.
+    DB 13,10,'T','o','o',' ','m','a','n','y',' '  ; Error prefix.
+    DB 's','o','u','r','c','e','s',13,10,'$'  ; Source count.
 CP_INCLUDE_WORD: DB 'I','N','C','L','U','D','E'
 CP_ASM_EXTENSION: DB 'A','S','M'
 CP_COM_EXTENSION: DB 'C','O','M'

@@ -6,7 +6,7 @@ assembler. Changes must preserve that explanation as well as the executable.
 ## Assembly source style
 
 Begin each module with its purpose, public calling convention, errors, memory
-ownership and reentrancy limits. Give every public entry a compact contract box.
+ownership and reentrancy limits. Give every public entry a brief summary.
 Routine contracts use `;@ROUTINE` and call-site expectations use
 `;@EXPECTOUT` because the proof tools read those annotations.
 
@@ -32,6 +32,10 @@ Use these layout rules throughout `src/z80/`:
 - a blank line separates routines and distinct instruction groups
 - source lines should normally fit within 78 columns
 - filenames should be short, concrete and readily usable on small systems
+
+Align inline comments within a module. In the CP/M adapter the semicolon starts
+at column 29 when the instruction fits. Allow two spaces after a longer operand
+instead of forcing its comment into the next column group.
 
 Inline comments should explain the program state, not restate the opcode.
 Document the value loaded into a register, the condition behind a branch, the
