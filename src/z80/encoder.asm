@@ -1,9 +1,9 @@
-;==============================================================================
+;=============================================================================
 ;  RADIX-40 names and mnemonic recognition
-;==============================================================================
+;=============================================================================
 ;
 ;  Pack case-insensitive names and recognise Z80 mnemonics. The packed values
-;  feed the symbol and mnemonic tables; the recogniser returns a compact ordinal.
+;  feed symbol and mnemonic tables; recognition returns a compact ordinal.
 ;
 ;  Principal entries:
 ;    EN_R40PK  pack one name into three RADIX-40 words
@@ -80,7 +80,7 @@ EN_IM2 EQU 90
 EN_NONE EQU 255
 
 ; Mnemonic ordinals are generated in compact-table order. Ordinals 1..34 are
-; singleton core instructions; 35..69 form the dispatched instruction families.
+; core singletons; 35..69 form the dispatched instruction families.
 
 AT_MNOP EQU 1
 AT_MRET EQU 35
@@ -117,9 +117,9 @@ EN_CODEB:
 EN_R4CBE:
 
 ;@ROUTINE IN B,HL,DE OUT DE,CARRY MAYBE-OUT ZERO CLOBBERS A,BC,HL,IX,SIGN,PARITY,HALFCARRY,ZERO
-; Pack B source characters at HL into the caller's six bytes at DE. Names are
-; one to eight characters, ASCII case-insensitive, and are committed only after
-; every character is proved representable.
+; Pack B source characters at HL into the caller's six bytes at DE. Names
+; are one to eight ASCII characters, without case distinction. Commit only
+; after every character is proved representable.
 
 EN_R40PK:
     LD   A,B                 ; Copy the character count for the bounds checks.
@@ -216,7 +216,7 @@ EN_PGROU:
     RET                      ; Return the packed word in DE.
 
 ;@ROUTINE IN DE,A OUT DE CLOBBERS A,F
-; DE = DE*40 + A. Five doublings and one add are smaller than a general multiply.
+; DE = DE*40 + A. Five doublings and one add avoid a general multiply.
 
 AT_MA40:
     PUSH HL                  ; Preserve the caller's source or table pointer.
@@ -277,8 +277,8 @@ EN_R4CEN:
 EN_RCBEG:
 
 ;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
-; Recognise a one-to-four-character mnemonic. The compact table stores the first
-; packed word and the significant high byte of the padded second word. Its table
+; Recognise a mnemonic of up to four characters. The table stores the first
+; packed word and the high byte of the padded second word. Its row
 ; position plus one is the public mnemonic ordinal.
 
 EN_RECOG:
@@ -320,7 +320,7 @@ EN_VCBEG:
 ;@ROUTINE IN A,DE CLOBBERS B,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,CARRY
 ; Dispatch mnemonic A through a family table based at DE. Core ordinals 1..34
 ; share family zero. Later dense ordinal ranges are mapped by EN_CENDS to the
-; RET, EX, IM, RST, INC/DEC, stack, LD, I/O, bit, rotate, ALU and branch families.
+; RET, EX, IM, RST, INC/DEC, stack, LD, I/O, bit, rotate, ALU and branches.
 
 AT_DMNEM:
     LD   B,A                 ; Preserve the mnemonic for the selected handler.

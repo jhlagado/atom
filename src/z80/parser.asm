@@ -1,12 +1,12 @@
-;==============================================================================
+;=============================================================================
 ;  Instruction and operand parser
-;==============================================================================
+;=============================================================================
 ;
 ;  PURPOSE
 ;  -------
 ;  Recognise one mnemonic, parse up to three operands and build the encoder's
-;  ten-byte instruction record. The form layer completes validation and commits
-;  the record only after the entire source instruction is valid.
+;  ten-byte instruction record. Form validation commits it only after the
+;  entire source instruction is valid.
 ;
 ;  PUBLIC ENTRY POINTS
 ;  -------------------
@@ -39,15 +39,15 @@
 ;
 ;  Operand classes occupy bytes 1..3 of the record and their little-endian
 ;  values occupy bytes 4..9. A missing symbol is retained initially as a
-;  six-byte packed key, signed-byte addend, operand index, transform and source
-;  position. Validation and patch-field location happen before the symbol arena
-;  changes. The successful parser then publishes at most two nine-byte reference
+;  six-byte packed key, signed addend, operand index, transform and source
+;  position. Form and patch-field checks precede symbol-arena changes.
+;  The successful parser publishes at most two nine-byte reference
 ;  descriptions. Two are sufficient for `LD (IX+DISP),IMMEDIATE`, the only Z80
 ;  shape with two independently patchable fields.
 ;
 ;  The caller's instruction record is a commit destination: syntax, form,
-;  range, symbol and reference failures leave it unchanged. Missing symbols are
-;  inserted only after the whole form and the exact shared-arena capacity have
+;  range, symbol and reference failures leave it unchanged. Missing symbols
+;  are inserted only after the form and shared-arena capacity checks have
 ;  passed. Pending records are still deferred until PR_QREFE, after output has
 ;  accepted the encoded IMAGE bytes.
 ;
@@ -55,13 +55,13 @@
 ;  -----------------
 ;
 ;  Both entries preserve the caller's stack balance and may clobber every main
-;  register except SP. They use fixed state declared in forms.asm and therefore
-;  are not reentrant. The destination is caller-owned; symbol and pending arenas
+;  register except SP. They use fixed state in forms.asm and are not
+;  reentrant. The destination is caller-owned; symbol and pending arenas
 ;  belong to the build descriptor managed by the driver.
 
 PR_CBEG:
 
-; Public parser statuses returned in A. PR_SPCAP is retained in the ABI but the
+; Parser statuses returned in A. PR_SPCAP remains in the ABI, but the
 ; current eight-bit source-part ordinal needs no parser-side capacity check.
 
 PR_SOK EQU 0
@@ -84,7 +84,7 @@ PR_SRCAP EQU 16
 PR_SPCAP EQU 17
 
 ; Reference and record geometry. The build form contains a packed key; the
-; public form replaces it with a symbol-record pointer and omits build-only data.
+; public form uses a symbol-record pointer and omits build-only data.
 
 PR_RCAP EQU 2
 PR_BRB EQU 13
@@ -115,9 +115,9 @@ PR_GC EQU 242
 ; is its ordinal and TK_REC already contains the first operand or EOL.
 
 PR_PUB:
-    PUSH AF                         ; Preserve the recognised mnemonic ordinal.
+    PUSH AF                         ; Save the mnemonic ordinal.
     LD   (PR_IADR),BC               ; Retain the logical address used by `$`.
-    LD   (PR_DST),DE                ; Remember the caller's commit destination.
+    LD   (PR_DST),DE                ; Save the commit destination.
     XOR  A                          ; Start with no published references.
     LD   (PR_RCNT),A                ; Clear the public-reference count.
     CALL PR_ISCRA                   ; Reset the private instruction record.
@@ -131,7 +131,7 @@ PR_PUB:
 
 PR_PARSE:
     LD   (PR_IADR),BC               ; Retain the logical instruction address.
-    LD   (PR_DST),DE                ; Retain the caller's output record address.
+    LD   (PR_DST),DE                ; Save the output record address.
     XOR  A                          ; Start with no published references.
     LD   (PR_RCNT),A                ; Clear the public-reference count.
     CALL PR_ISCRA                   ; Reset all private instruction state.
@@ -157,7 +157,7 @@ PR_PARSE:
     RET  C                          ; Preserve any tokenizer failure.
 PR_POPER:
 
-; Zero operands are valid candidates; the encoder validator decides whether the
+; Zero operands may be valid; form validation decides whether the
 ; selected mnemonic permits them.
 
     LD   A,(TK_REC+TK_KOFF)         ; Inspect the first unconsumed token.
@@ -177,7 +177,7 @@ PR_OLOOP:
     LD   HL,PR_OPCNT                ; Address the operand count.
     INC  (HL)                       ; Publish one more private operand.
 
-; Each parsed operand must be followed by EOL or a comma. A trailing comma is a
+; Each operand ends at EOL or a comma. A trailing comma is a
 ; distinct expected-operand error.
 
     LD   A,(TK_REC+TK_KOFF)         ; Inspect the delimiter after the operand.
@@ -185,7 +185,7 @@ PR_OLOOP:
     JR   Z,PR_POPE1                 ; Begin whole-record normalisation.
     CP   TK_COMMA                   ; Otherwise require a comma.
     JP   NZ,PR_EDELI                ; Diagnose the unexpected delimiter.
-    CALL PR_NTOK                    ; Consume the comma and fetch the next token.
+    CALL PR_NTOK                    ; Read the token after the comma.
     RET  C                          ; Preserve any tokenizer failure.
     LD   A,(TK_REC+TK_KOFF)         ; Inspect the token after the comma.
     CP   TK_EOL                     ; A comma cannot terminate the line.
@@ -202,12 +202,12 @@ PR_POPE1:
     CALL PR_NNUMB                   ; Assign provisional numeric classes.
     RET  C                          ; Stop on a numeric range error.
     CALL PR_VCAND                   ; Validate the completed instruction form.
-    RET  C                          ; Return the parser's invalid-form diagnostic.
+    RET  C                          ; Return the form diagnostic.
     LD   (PR_ILEN),A                ; Retain the validated encoded length.
     CALL PR_CCVAL                   ; Check every resolved operand value.
     RET  C                          ; Stop before publishing invalid state.
     CALL PR_FREFE                   ; Resolve and preflight deferred symbols.
-    RET  C                          ; Leave the destination untouched on failure.
+    RET  C                          ; Leave destination untouched.
     JP   PR_CMT                     ; Commit the complete instruction record.
 PR_EOF:
 
@@ -250,7 +250,7 @@ PR_ISCRA:
 ; preserving the tokenizer's exact source part and offset.
 
 PR_NTOK:
-    CALL TK_NEXT                    ; Ask the tokenizer for one complete token.
+    CALL TK_NEXT                    ; Read one complete token.
     RET  NC                         ; Return its successful token unchanged.
     LD   A,(TK_EPART)               ; Copy the tokenizer's source part.
     LD   (PR_EPART),A               ; Publish it as the parser error part.
@@ -266,7 +266,7 @@ PR_NTOK:
 
 PR_SOP:
     LD   E,A                        ; Use the operand index as a byte offset.
-    LD   D,0                        ; Widen it for sixteen-bit address arithmetic.
+    LD   D,0                        ; Extend it to 16 bits.
     LD   HL,PR_SCRAT+EN_OP0         ; Begin at operand class zero.
     ADD  HL,DE                      ; Select this operand's class byte.
     LD   (PR_CPTR),HL               ; Retain the selected class pointer.
@@ -311,10 +311,10 @@ PR_POP:
     JP   Z,PR_PMEMO                 ; Parse the indirect operand form.
     JP   PR_EXPOP                   ; Nothing else can begin an operand.
 .OPNAME:
-    CALL PR_LOW                     ; Try registers, conditions and special words.
+    CALL PR_LOW                     ; Try fixed operand words.
     JR   C,.OPEXPR                  ; Treat an unrecognised name as a symbol.
 
-; A recognised word supplies a provisional operand class. Most are final, but C
+; A recognised word supplies a provisional class. Most are final, but C
 ; remains ambiguous with condition C until form validation.
 
     LD   HL,(PR_CPTR)               ; Address the selected class slot.
@@ -346,12 +346,12 @@ PR_POP:
     RET  C                          ; Preserve its exact diagnostic.
     LD   A,PR_GNUMB                 ; Mark it as a generic numeric operand.
     LD   HL,(PR_CPTR)               ; Address the selected class slot.
-    LD   (HL),A                     ; Store the generic class for normalisation.
+    LD   (HL),A                     ; Store the generic class.
     XOR  A                          ; Return success with carry clear.
     RET                             ; Leave the following token in TK_REC.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Evaluate with caller-managed symbol publication. BC gives '$' its instruction
+; Evaluate before publishing symbols. BC gives '$' its instruction
 ; address. Resolved values go directly to the selected value slot; unresolved
 ; values first become private build-reference records.
 
@@ -359,7 +359,7 @@ PR_PEXPR:
     LD   BC,(PR_IADR)               ; Supply `$` with the instruction address.
     CALL EX_PDEFR                   ; Parse with deferred symbol publication.
     JR   C,PR_EFAIL                 ; Translate an expression diagnostic.
-    CP   EX_UNRES                   ; Did evaluation depend on a missing symbol?
+    CP   EX_UNRES                   ; Did a symbol remain unresolved?
     JR   Z,PR_AREF                  ; Build a private deferred reference.
 
 ;@ROUTINE IN HL OUT CARRY,ZERO CLOBBERS DE,SIGN,PARITY,HALFCARRY,A
@@ -376,8 +376,8 @@ PR_SHVAL:
     RET                             ; Preserve the selected class slot.
 
 ;@ROUTINE IN IX,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX
-; Append one thirteen-byte build reference. IX points at the expression key and
-; HL carries its signed addend. The entry also captures operand index, transform
+; Append a thirteen-byte build reference. IX points at the packed key; HL
+; carries its signed addend. Record operand index, transform
 ; and the evaluator's retained symbol position. The unresolved mask prevents
 ; concrete range checks from inspecting the placeholder zero value.
 
@@ -398,11 +398,11 @@ PR_AREF:
     LD   A,(PR_OPCNT)               ; Identify the current operand slot.
     LD   (DE),A                     ; Append that operand index.
     INC  DE                         ; Advance to the transform kind.
-    LD   A,(EX_RUNRE)               ; Read the unresolved expression transform.
-    LD   (DE),A                     ; Append the transform for later resolution.
+    LD   A,(EX_RUNRE)               ; Read the deferred transform.
+    LD   (DE),A                     ; Save it for resolution.
     INC  DE                         ; Advance to the provisional patch offset.
 
-; The expression transform is retained as the provisional kind. The byte offset
+; Retain the expression transform as provisional kind. The byte offset
 ; remains zero until validation and PT_LOCAT identify the encoded field.
 
     XOR  A                          ; The patch field is not known yet.
@@ -429,7 +429,7 @@ PR_AREF:
 ; the final value exists and the pending patch will replace its field later.
 
     LD   HL,0                       ; Use zero until the symbol resolves.
-    JR   PR_SHVAL                   ; Store the placeholder and return success.
+    JR   PR_SHVAL                   ; Store zero placeholder.
 PR_RCFAI:
 
 ; The Z80 form census proves that no valid instruction needs more than two
@@ -439,8 +439,8 @@ PR_RCFAI:
     JP   PR_FESYM                   ; Fail at the unresolved symbol position.
 
 ;@ROUTINE IN A OUT DE CLOBBERS HL,A,F
-; Return the address of build-reference A. Each record is thirteen bytes and the
-; capacity is two, so a single conditional add selects the second record.
+; Return the address of build-reference A in DE. Each record is thirteen
+; bytes. Capacity two needs only one conditional add.
 
 PR_BRADR:
     LD   DE,PR_RBLD                 ; Begin at build-reference record zero.
@@ -466,18 +466,18 @@ PR_EFAIL:
     RET                             ; Return both category and nested detail.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Recognise short operand words such as registers and conditions. The tokenizer
-; lexeme is packed case-insensitively and scanned against exact RADIX-40 values.
+; Recognise short operand words such as registers and conditions. Pack
+; the token case-insensitively and compare exact RADIX-40 values.
 ; Names of four or more characters cannot be operand words and fall through to
 ; expression parsing as symbols.
 
 PR_LOW:
     CALL TK_LLEXE                   ; Load the current name text and length.
-    CP   4                          ; Operand words contain at most three chars.
+    CP   4                          ; Operand words have at most three chars.
     JR   NC,.UOP                    ; Longer names can only be symbols.
     LD   DE,PR_NKEY                 ; Select the temporary packed-key buffer.
     CALL EN_R40PK                   ; Pack the name case-insensitively.
-    JR   C,.UOP                     ; Treat an unrepresentable name as a symbol.
+    JR   C,.UOP                     ; Treat other names as symbols.
     LD   DE,(PR_NKEY)               ; Load the packed operand word.
     LD   HL,PR_OWTAB                ; Begin the exact operand-word table.
     LD   B,PR_OWCNT                 ; Scan every table entry at most once.
@@ -488,7 +488,7 @@ PR_LOW:
     LD   A,(HL)                     ; Read the packed low byte.
     CP   E                          ; Compare it with the source key.
     INC  HL                         ; Advance to the packed high byte.
-    JR   NZ,.LOSHI                  ; Skip its comparison after a low mismatch.
+    JR   NZ,.LOSHI                  ; Skip after a low-byte mismatch.
     LD   A,(HL)                     ; Read the packed high byte.
     CP   D                          ; Compare it with the source key.
     JR   Z,.LOFOUND                 ; Both bytes identify the operand word.
@@ -513,7 +513,7 @@ PR_LOW:
 PR_PMEMO:
     CALL PR_NTOK                    ; Consume '(' and fetch its first token.
     RET  C                          ; Preserve any tokenizer failure.
-    LD   A,(TK_REC+TK_KOFF)         ; Inspect the first token inside parentheses.
+    LD   A,(TK_REC+TK_KOFF)         ; Inspect the first inner token.
     CALL PR_IESTA                   ; Does it begin a numeric expression?
     JR   NC,.MEXPR                  ; Parse the parenthesised expression.
     CP   TK_LPARE                   ; Expressions may start with another '('.
@@ -581,7 +581,7 @@ PR_PMEMO:
     JR   PR_RRPAR                   ; Require and consume the closing ')'.
 .MEMORYIX:
 
-; B retains the dedicated JP (IX) memory class. PR_ICLAS is the ordinary indexed
+; B holds the JP (IX) memory class. PR_ICLAS is the ordinary indexed
 ; class used for displacement-bearing forms and the zero-displacement alias.
 
     LD   B,EN_MEMIX                 ; Retain the dedicated JP (IX) class.
@@ -621,13 +621,13 @@ PR_PMEMO:
     CP   AT_MJP                     ; Does JP require its dedicated class?
     LD   A,B                        ; Prepare the JP (IX/IY) class.
     JR   Z,.MIPSTORE                ; Keep it only for JP.
-    LD   A,(PR_ICLAS)               ; Other mnemonics use indexed displacement 0.
+    LD   A,(PR_ICLAS)               ; Other forms use index offset zero.
 .MIPSTORE:
     LD   (HL),A                     ; Publish the final indirect class.
     JP   PR_NTOK                    ; Consume ')' and fetch the next token.
 
 ;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Require and consume the closing ')' for an expression or fixed indirect form.
+; Consume the closing ')' after an expression or fixed indirect form.
 
 PR_RRPAR:
     LD   A,(TK_REC+TK_KOFF)         ; Inspect the unconsumed delimiter.

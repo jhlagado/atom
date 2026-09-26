@@ -1,6 +1,6 @@
-;==============================================================================
+;=============================================================================
 ;  Z80 instruction byte emission
-;==============================================================================
+;=============================================================================
 ;
 ;  Validate the record at IX, stage its encoding, then publish the complete
 ;  one-to-four-byte result to the caller's destination.
@@ -599,7 +599,7 @@ EN_LEBEG EQU $              ; Begin the LD-form encoder handlers.
 EN_LEEND EQU $              ; End the LD-form encoder handlers.
 .IN:
 
-; ED input forms encode the register field in bits 3..5. Immediate-port input is
+; ED input forms put the register in bits 3..5. Immediate-port input is
 ; the singleton DB followed by the port byte.
 
     LD   A,(IX+EN_OP0)       ; Read the destination or bare-port class.
@@ -643,13 +643,13 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
 .OIMMEDIA:
     LD   A,$D3               ; Select OUT (n),A.
 .SS0V0E2:
-    LD   (EN_SCRAT+0),A      ; Stage the opcode that precedes the immediate byte.
+    LD   (EN_SCRAT+0),A      ; Stage the opcode before the immediate.
     LD   A,(IX+EN_VAL0)      ; Load operand zero's immediate byte.
-    JP   .SS1E2              ; Append the immediate byte and return length two.
+    JP   .SS1E2              ; Append immediate; return length two.
 .BIT:
 
 ; CB bit families are operation<<6 | bit<<3 | register. Indexed memory emits
-; DD/FD CB displacement opcode, with field 6 when no destination register exists.
+; DD/FD CB displacement opcode, with field 6 when no register is given.
 
     LD   A,(IX+EN_MNEM)      ; Read BIT, RES or SET's ordinal.
     SUB  AT_MBIT-1           ; Map the family to the operation field.
@@ -683,11 +683,11 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
     ADD  A,B                 ; Add the target register field to prior fields.
     LD   B,A                 ; Save the completed second opcode byte.
     LD   A,(IX+EN_OP1)       ; Reload the indexed memory operand class.
-    LD   E,(IX+EN_VAL1)      ; Keep its displacement for the indexed byte order.
+    LD   E,(IX+EN_VAL1)      ; Save its indexed displacement.
     JR   .CITAIL             ; Emit prefix, CB, displacement, and opcode.
 .ROTATE:
 
-; Rotate/shift bases advance in steps of eight. SLS shares SLL's hardware base,
+; Rotate/shift bases advance by eight. SLS shares SLL's hardware base,
 ; so the alias slot is removed before looking up either SLS or SRL.
 
     LD   A,(IX+EN_MNEM)      ; Read the rotate/shift mnemonic ordinal.
@@ -709,7 +709,7 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
 ; Plain register and (HL) forms are CB followed by base | register field.
 
     AND  7                   ; Extract the target's three-bit register field.
-    ADD  A,B                 ; Combine the target-register and operation fields.
+    ADD  A,B                 ; Add target and operation fields.
     LD   B,A                 ; Keep the second CB opcode byte.
     LD   A,$CB               ; Select the CB prefix.
     JP   .SPBE2              ; Store CB and the operation byte.
@@ -725,7 +725,7 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
     LD   A,(IX+EN_OP1)       ; Otherwise read the copy-target register class.
     AND  7                   ; Extract its three-bit register number.
 .RIC:
-    ADD  A,B                 ; Add the destination field to the operation base.
+    ADD  A,B                 ; Add destination to operation base.
     LD   B,A                 ; Save the indexed CB opcode byte.
     LD   A,(IX+EN_OP0)       ; Reload the indexed memory class for its prefix.
     LD   E,(IX+EN_VAL0)      ; Preserve the signed displacement byte.
@@ -763,7 +763,7 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
     JR   C,.ALUHALF           ; Index halves need DD/FD before the ALU opcode.
     LD   A,(IX+EN_OP0)       ; Reload the operand class for indexed memory.
     CALL EN_IINDE            ; Check for (IX/IY+d).
-    JR   C,.AINDEXED          ; Indexed memory also needs prefix and displacement.
+    JR   C,.AINDEXED          ; Indexed memory needs prefix and offset.
     LD   A,(IX+EN_OP0)       ; Reload the register or (HL) class.
     AND  7                   ; Extract the three-bit register field.
     ADD  A,B                 ; Combine register and operation fields.
@@ -835,7 +835,7 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
     ADD  A,A                 ; Continue the four-bit shift.
     ADD  A,A                 ; Finish pair<<4.
     ADD  A,$09               ; Add the 16-bit ADD opcode base.
-    LD   B,A                 ; Preserve the computed opcode while checking dest.
+    LD   B,A                 ; Save opcode while checking destination.
     LD   A,(IX+EN_OP0)       ; Read the destination pair class.
     CP   EN_HL               ; HL needs no index prefix.
     LD   A,B                 ; Restore the computed ADD opcode.
@@ -861,7 +861,7 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
     CP   EN_MEMIY            ; JP (IY) follows the same form with FD.
     JR   Z,.JPINDEX           ; Share the indexed indirect encoding.
     LD   A,$C3               ; Select the absolute JP opcode.
-    JP   .SAV0E3              ; Append the target word and return length three.
+    JP   .SAV0E3              ; Append target word; return length three.
 .JCONDITI:
 
 ; JP cc,nn = C2 | cc<<3 followed by operand one's word.
@@ -886,7 +886,7 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
     CP   EN_NONE             ; No second operand selects unconditional CALL.
     JR   NZ,.CCONDITI         ; Otherwise encode CALL cc,nn.
     LD   A,$CD               ; Select the unconditional CALL opcode.
-    JP   .SAV0E3              ; Append the target word and return length three.
+    JP   .SAV0E3              ; Append target word; return length three.
 .CCONDITI:
     LD   B,$C4               ; Conditional CALL base is C4.
     CALL EN_COPCO            ; Insert condition code in bits 3..5.
@@ -924,16 +924,16 @@ EN_LEEND EQU $              ; End the LD-form encoder handlers.
 ; Encoder family table selected by AT_DMNEM.
 
     DW .COPCODE,.RET,.EX       ; Core, return, and exchange handlers.
-    DW .IM,.RST,.INCDEC        ; Interrupt mode, restart, and byte/pair inc/dec.
+    DW .IM,.RST,.INCDEC        ; IM, RST, and byte/pair INC/DEC.
     DW .STACK,.LD,.IN          ; Stack pairs, load, and port input.
     DW .OUT,.BIT,.ROTATE       ; Port output, bit operations, and shifts.
     DW .ALU,.JP,.CALL          ; Arithmetic and absolute control flow.
     DW .JR,.DJNZ               ; Relative branches and decrement-and-branch.
 .SE1:
 
-; Common successful length returns. Carry is clear and A is the encoded length.
+; Successful returns: carry clear, A = encoded length.
 
-    LD   (EN_SCRAT+0),A      ; Store the single-byte opcode in the commit buffer.
+    LD   (EN_SCRAT+0),A      ; Stage the one-byte opcode.
 
 ;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
 ; Return successful encoding length one.
@@ -982,7 +982,7 @@ AT_CV0TS:
 AT_CV0T1:
     LD   L,(IX+EN_VAL0)      ; Load operand zero's address low byte.
     LD   H,(IX+EN_VAL0+1)    ; Load its address high byte.
-    LD   (EN_SCRAT+2),HL     ; Store the address after a two-byte prefix/opcode.
+    LD   (EN_SCRAT+2),HL     ; Store address after prefix/opcode.
     JR   EN_D4               ; Return the four-byte instruction length.
 
 ;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
@@ -1000,27 +1000,27 @@ AT_CV1TS:
 AT_CV1T1:
     LD   L,(IX+EN_VAL1)      ; Load operand one's address low byte.
     LD   H,(IX+EN_VAL1+1)    ; Load its address high byte.
-    LD   (EN_SCRAT+2),HL     ; Store the address after a two-byte prefix/opcode.
+    LD   (EN_SCRAT+2),HL     ; Store address after prefix/opcode.
     JR   EN_D4               ; Return the four-byte instruction length.
 
 ;@ROUTINE IN A
-; Store the prefix chosen from operand class A while preserving A for field math.
+; Store the prefix chosen by operand class A. Preserve A for field math.
 
 EN_SPPAF:
-    PUSH AF                  ; Preserve the operand class across prefix selection.
+    PUSH AF                  ; Save the operand class.
 ;@EXPECTOUT A
     CALL EN_PFOP             ; Convert the operand class to DD or FD.
     LD   (EN_SCRAT+0),A      ; Stage the selected index prefix.
-    POP  AF                  ; Restore the class for register-field arithmetic.
+    POP  AF                  ; Restore class for register-field math.
     RET                      ; Return with the original class in A.
 
 ;@ROUTINE IN A OUT A CLOBBERS F
-; Map IX-family classes and even indexed-memory classes to DD; IY-family classes
+; Map IX classes and even indexed-memory classes to DD; IY classes
 ; and odd indexed-memory classes to FD. Validation guarantees A is prefixable.
 
 EN_PFOP:
     CP   EN_IXH              ; Index-half classes begin at IXH.
-    JR   C,.PORDINAR         ; Pair/memory classes use their low-bit family tag.
+    JR   C,.PORDINAR         ; Pair/memory classes use their family bit.
     CP   EN_IXL+1            ; Check the end of IXH/IXL's class range.
     JR   C,.PREFIXIX         ; IX halves always select DD.
     CP   EN_IYH              ; Check whether this is below the IY-half range.
@@ -1028,7 +1028,7 @@ EN_PFOP:
     CP   EN_IYL+1            ; Check the end of IYH/IYL's class range.
     JR   C,.PREFIXIY         ; IY halves always select FD.
 .PORDINAR:
-    AND  1                   ; Even classes identify IX; odd classes identify IY.
+    AND  1                   ; Even means IX; odd means IY.
     JR   NZ,.PREFIXIY        ; Select FD for an odd IY-family class.
 .PREFIXIX:
     LD   A,$DD               ; Return the IX prefix byte.
@@ -1046,9 +1046,9 @@ EN_CTBEG:
 
 EN_COPC1:
     DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F ; NOP through RRA.
-    DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2 ; NEG through INI suffixes.
-    DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45             ; INIR through RETN suffixes.
-EN_IOPCO: DB $46,$56,$5E                                  ; ED suffixes for IM 0, 1, 2.
+    DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2 ; NEG..INI suffixes.
+    DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45             ; INIR..RETN suffixes.
+EN_IOPCO: DB $46,$56,$5E                                  ; IM suffixes.
 EN_CTEND:
 EN_CNT EQU 69                ; Number of mnemonic ordinals in the table.
 
@@ -1199,7 +1199,7 @@ EN_IEND:
 EN_COREE:
 EN_WBEG:
 
-; Shared private commit area: six bytes for packed names, first four for opcodes.
+; Scratch: six bytes for packed names; first four also stage opcodes.
 
-EN_SCRAT: DS 6                ; Six-byte packer scratch, reused for four output bytes.
+EN_SCRAT: DS 6                ; Packer scratch and opcode staging.
 EN_WEND:

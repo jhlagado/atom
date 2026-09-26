@@ -1,14 +1,14 @@
-;==============================================================================
+;=============================================================================
 ;  Instruction form validation
-;==============================================================================
+;=============================================================================
 ;
 ;  Check operand classes and arity, then return the exact instruction length.
 ;  This pass does not read operand values, so forward references can reserve
 ;  their final fields before their target addresses are known.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,B,DE,HL
-; Validate only mnemonic and operand classes. No EN_VAL byte is read here, which
-; lets unresolved records obtain an exact field layout and instruction length.
+; Validate mnemonic and operand classes only. No EN_VAL byte is read;
+; unresolved records still obtain an exact field layout and length.
 
 EN_LEN:
 EN_VFORM:
@@ -21,7 +21,7 @@ EN_VFORM:
     JR   AT_DMNEM             ; Dispatch with the record's original ordinal.
 .VCORE:
 
-; The first thirteen core opcodes are one byte; the remaining core group carries
+; The first thirteen core opcodes are one byte; the rest carry
 ; an ED prefix. All core instructions reject operands.
 
     CALL AT_RNOPE            ; Require all three operand slots to be empty.
@@ -149,10 +149,10 @@ EN_VFORM:
 EN_LVBEG EQU $              ; Begin the LD-form validation handlers.
 .VLD:
 
-; LD is the broadest family. Dispatch first by destination class, then prove the
-; exact source pairing and its length. Index-half rules are intentionally strict:
+; LD is the broadest family. Dispatch by destination, then check the source
+; pairing and length. Index-half rules are strict:
 ; two half registers must belong to the same IX or IY family, and ordinary H/L
-; cannot mix with an index half. Indexed memory uses the real H/L register field.
+; cannot mix with an index half. Indexed memory uses the real H/L field.
 
     CALL AT_RTOPE            ; Reject a third operand before class dispatch.
     RET  C                   ; Propagate an operand-count failure.
@@ -187,8 +187,8 @@ EN_LVBEG EQU $              ; Begin the LD-form validation handlers.
     JP   AT_INVAL            ; Reject every other destination class.
 .VLR8:
 
-; Ordinary eight-bit destination: r, n, (HL), absolute/BC/DE memory when A, the
-; special I/R transfers when A, indexed memory, or an index-half source.
+; Byte registers load from r, n, (HL), indexed memory, or an index half.
+; Only A loads from (nn), (BC), (DE), I, or R.
 
     LD   A,(IX+EN_OP1)       ; Load the source class for this byte register.
     CALL EN_IR8              ; Test for an ordinary byte-register source.
@@ -237,7 +237,7 @@ EN_LVBEG EQU $              ; Begin the LD-form validation handlers.
     JP   EN_D2               ; Return the shared two-byte form length.
 .VLHALF:
 
-; Half-register forms require an index prefix and reject H/L collisions. XOR bit
+; Half-register forms need an index prefix and reject H/L collisions. XOR bit
 ; 3 below proves that source and destination belong to the same IX/IY family.
 
     LD   A,(IX+EN_OP1)       ; Load source class for the half-register test.
@@ -256,8 +256,8 @@ EN_LVBEG EQU $              ; Begin the LD-form validation handlers.
     JR   .VNL2               ; Require the index families to match.
 .VLR16:
 
-; Ordinary pair destinations accept immediate and absolute loads, LD SP,HL, and
-; Atom's two pair-copy expansions from DE. IX/IY destinations branch separately.
+; Ordinary pairs accept immediate and absolute loads, LD SP,HL, and
+; two pair-copy expansions from DE. IX/IY destinations branch separately.
 
     LD   A,(IX+EN_OP1)       ; Load the source class for an ordinary pair.
     CP   EN_IMM16            ; Check for a 16-bit immediate value.
@@ -336,7 +336,7 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     LD   A,(IX+EN_OP0)       ; Read the port marker or destination register.
     CP   EN_PORTC            ; Bare IN (C) stores the port class in slot zero.
     JR   Z,.VIONE            ; Route that one-operand form separately.
-    CALL EN_IR8              ; Otherwise slot zero must be an eight-bit register.
+    CALL EN_IR8              ; Slot zero must be a byte register.
     JP   NC,AT_INVAL         ; Reject a non-register destination.
     CALL AT_RTOPE            ; Require the third operand slot to be empty.
     RET  C                   ; Propagate excess-operand failure.
@@ -349,7 +349,7 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     CP   EN_A                ; IN A,(n) is the only immediate-port input.
     JP   .VNL2               ; Return two bytes only when the test matched.
 .VIONE:
-    CALL AT_ROOP             ; Require one operand and reject any extra operands.
+    CALL AT_ROOP             ; Require one operand only.
     RET  C                   ; Propagate the one-operand count failure.
     JP   EN_D2               ; These plain one-operand forms occupy two bytes.
 .VOUT:
@@ -376,7 +376,7 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     JP   AT_INVAL            ; Reject a class outside the accepted set.
 .VBIT:
 
-; BIT/RES/SET use an enumerated bit class followed by register, (HL), or indexed
+; BIT/RES/SET use a bit class followed by register, (HL), or indexed
 ; memory. Indexed RES/SET may carry a third destination register; BIT may not.
 
     LD   A,(IX+EN_OP0)       ; Read the enumerated bit-number class.
@@ -393,18 +393,18 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     CP   AT_MBIT             ; BIT cannot copy its result to another register.
     JR   Z,.VBINDST          ; Validate BIT's two-operand indexed form.
     LD   A,(IX+EN_OP2)       ; Read the optional RES/SET result register.
-    JR   .VOR8L4             ; Accept no register or a byte register, length 4.
+    JR   .VOR8L4             ; Optional byte register; length four.
 .VBINDST:
     CALL AT_RTOPE            ; Require BIT's third operand slot to be empty.
     RET  C                   ; Propagate the arity failure.
     JP   EN_D4               ; Indexed CB operations occupy four bytes.
 .VBPLAIN:
-    CALL AT_RTOPE            ; Plain register and (HL) forms take two operands.
+    CALL AT_RTOPE            ; Plain forms take two operands.
     RET  C                   ; Reject a supplied third operand.
     JP   EN_D2               ; CB prefix and operation byte make two bytes.
 .VROTATE:
 
-; Rotate/shift takes an ordinary register, (HL), or indexed memory. Indexed forms
+; Rotate/shift takes a register, (HL), or indexed memory. Indexed forms
 ; may optionally copy the result to an ordinary register.
 
     LD   A,(IX+EN_OP0)       ; Read the register or memory target class.
@@ -427,7 +427,7 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     JP   .VIONE              ; Reuse the one-target arity and length check.
 .VALU:
 
-; One-operand ALU forms cover byte register/memory/immediate operands. The parser
+; One-operand ALU forms cover byte register, memory, or immediate. The parser
 ; has already removed an explicit A alias. Two-operand records are the 16-bit
 ; ADD/ADC/SBC families and retain their explicit destination.
 
@@ -491,7 +491,7 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     JP   AT_INVAL            ; Reject non-pair sources.
 .VJP:
 
-; JP accepts an absolute word, (HL), (IX), (IY), or condition plus absolute word.
+; JP accepts nn, (HL), (IX), (IY), or a condition followed by nn.
 
     LD   A,(IX+EN_OP1)       ; An empty second slot selects unconditional JP.
     CP   EN_NONE             ; Distinguish it from JP cc,nn.
@@ -508,18 +508,18 @@ EN_LVEND EQU $              ; End the LD-form validation handlers.
     CP   EN_MEMIY             ; Check for JP (IY).
     JP   .VZL2                ; Return two bytes only for that final match.
 .VJCONDIT:
-    CALL AT_RTOPE            ; Allow condition and target, not a third operand.
+    CALL AT_RTOPE            ; Allow condition and target only.
     RET  C                   ; Propagate the arity failure.
     LD   A,(IX+EN_OP0)       ; Read the condition class.
     CALL EN_ICOND            ; Carry accepts one of the eight JP conditions.
-    JR   NC,AT_INVAL         ; Reject an invalid condition before target check.
+    JR   NC,AT_INVAL         ; Reject an invalid condition first.
     LD   A,(IX+EN_OP1)       ; Read the conditional target class.
 .VAL3:
     CP   EN_IMM16            ; Conditional JP/CALL requires an absolute word.
     JP   Z,EN_D3             ; Opcode plus target address takes three bytes.
     JR   AT_INVAL            ; Reject any other conditional target class.
 .VCALL:
-    LD   A,(IX+EN_OP1)       ; An empty second slot selects unconditional CALL.
+    LD   A,(IX+EN_OP1)       ; Empty slot selects unconditional CALL.
     CP   EN_NONE             ; Distinguish it from CALL cc,nn.
     JR   NZ,.VCCONDIT        ; Route a supplied condition to shared checks.
     CALL AT_ROOP             ; Require one target and no trailing operands.
@@ -611,7 +611,7 @@ AT_RBAD:
     RET                      ; Return the shared invalid-form result.
 
 ;@ROUTINE IN A OUT CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Carry set means ordinary eight-bit register B..L or A; class 6 is (HL), so it
+; Carry means byte register B..L or A. Class 6 is (HL), so it
 ; is excluded from this predicate despite sharing the hardware field range.
 
 EN_IR8:
@@ -632,7 +632,7 @@ EN_IR16:
     RET                      ; Carry accepts BC, DE, HL and SP.
 
 ;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Preserve A while recognising IXH/IXL/IYH/IYL through their shared bit pattern.
+; Preserve A while testing IXH/IXL/IYH/IYL through their shared bit pattern.
 
 EN_IHIND:
     PUSH BC                  ; Preserve BC while C holds the original class.
