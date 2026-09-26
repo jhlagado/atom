@@ -1,6 +1,6 @@
 {
   "name": "atom-z80",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "atom: a streaming Z80 assembler that runs on a Z80",
   "license": "GPL-3.0-only",
   "repository": {

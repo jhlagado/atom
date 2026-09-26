@@ -16,7 +16,7 @@ test("the GitHub release contains the checked CP/M executable and provenance", a
   t.after(() => fs.rm(temporary, { recursive: true, force: true }));
   const output = path.join(temporary, "release");
 
-  await execute(process.execPath, [script, "--tag", "v0.3.0", "--commit", commit, "--output", output]);
+  await execute(process.execPath, [script, "--tag", "v0.3.1", "--commit", commit, "--output", output]);
 
   const executable = await fs.readFile(path.join(output, "ATOM.COM"));
   const checkedExecutable = await fs.readFile("assets/atom-cpm22.com");
@@ -28,8 +28,8 @@ test("the GitHub release contains the checked CP/M executable and provenance", a
   assert.deepEqual(manifest, {
     format: "atom-cpm22-release",
     version: 2,
-    release: "0.3.0",
-    tag: "v0.3.0",
+    release: "0.3.1",
+    tag: "v0.3.1",
     platform: "CP/M 2.2",
     artifact: {
       file: "ATOM.COM",
@@ -67,6 +67,6 @@ test("release preparation rejects a tag which differs from the package version",
       "--commit", commit,
       "--output", path.join(temporary, "release"),
     ]),
-    /release tag must be v0\.3\.0/,
+    /release tag must be v0\.3\.1/,
   );
 });
