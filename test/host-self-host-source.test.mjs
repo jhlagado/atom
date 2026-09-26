@@ -96,14 +96,16 @@ test("maintained Z80 source follows the readable layout convention", async () =>
       }
       if (line === "" || line.startsWith(";")) continue;
       assertInstructionExplanation(line, `${name}:${index + 1}`);
-      if (name === "cpm22.asm") {
-        const column = inlineCommentColumn(line);
-        if (column >= 0) {
-          const codeEnd = line.slice(0, column).trimEnd().length;
+      const column = inlineCommentColumn(line);
+      if (column >= 0) {
+        const codeEnd = line.slice(0, column).trimEnd().length;
+        assert.ok(column >= codeEnd + 2,
+          `${name}:${index + 1} needs two spaces before its comment`);
+        assert.match(line.slice(column), /^;\s+\S/,
+          `${name}:${index + 1} needs space after its semicolon`);
+        if (name === "cpm22.asm") {
           assert.equal(column, Math.max(28, codeEnd + 2),
             `${name}:${index + 1} has an unaligned inline comment`);
-          assert.match(line.slice(column), /^;\s+\S/,
-            `${name}:${index + 1} needs space after its semicolon`);
         }
       }
       if (/^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*:(?:\s|$)/.test(line)) continue;

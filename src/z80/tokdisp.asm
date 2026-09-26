@@ -353,13 +353,13 @@ TK_PTABL:                      ; Begin character/kind punctuation pairs.
     DB $7E,TK_TILDE                ; Map tilde to bitwise complement.
     DB $27,TK_APOST                ; Apostrophe context handled above.
 TK_PEND:                       ; Mark the end of punctuation pairs.
-TK_PCNT EQU (TK_PEND-TK_PTABL)/2 ; Count two-byte table entries.
+TK_PCNT EQU (TK_PEND-TK_PTABL)/2  ; Count two-byte table entries.
 TK_ETABL:                      ; Begin source-byte/decoded-byte escape pairs.
 
 ; Escape table pairs source byte with decoded value: 0, n, r, t, quotes and
 ; backslash.
 
-    DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C ; Escape pairs.
+    DB $30,0,$6E,$0A,$72,$0D,$74,$09,$27,$27,$22,$22,$5C,$5C  ; Escapes.
 TK_ECNT EQU 7                  ; Number of fixed escape pairs.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS C,HL,ZERO,SIGN,PARITY,HALFCARRY

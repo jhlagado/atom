@@ -54,8 +54,8 @@ EX_AOK:
     RET                       ; Complete arithmetic successfully.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,SIGN,PARITY,HALFCARRY,DE,ZERO,IX,IY
-; Subtract EX_RVAL from EX_LVAL into EX_RVAL. Opposite signs may
-; only if the result sign differs from the left operand.
+; Subtract EX_RVAL from EX_LVAL into EX_RVAL. Opposite-sign inputs may
+; overflow only if the result sign differs from the left operand.
 
 EX_SUBTR:
     CALL EX_LARIT             ; Load low byte, both signs and result pointer.
@@ -758,6 +758,6 @@ EX_QUOTI EQU EX_LKEY+3    ; Division quotient overlay.
 ; Sixteen ten-byte values followed by sixteen four-byte operators.
 ; The complete fixed expression workspace is 263 bytes.
 
-EX_VSTAC: DS EX_VALB*EX_VCAP ; Sixteen complete value records.
-EX_OSTAC: DS EX_OPERB*EX_OCAP ; Sixteen positioned operator records.
+EX_VSTAC: DS EX_VALB*EX_VCAP  ; Sixteen complete value records.
+EX_OSTAC: DS EX_OPERB*EX_OCAP  ; Sixteen positioned operator records.
 EX_WEND:                   ; End fixed expression workspace.

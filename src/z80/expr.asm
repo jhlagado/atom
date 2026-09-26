@@ -531,7 +531,7 @@ EX_COPER:
 ; zero.
 
 EX_OTABL:                   ; Map token kinds to precedence and reduction.
-    DB $55,$56,$67,$68,$69,$32,$21,$10,0,0,$43,$44 ; + - * / % & ^ | ~ ' << >>
+    DB $55,$56,$67,$68,$69,$32,$21,$10,0,0,$43,$44  ; Operator fields.
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 ; Store the source position of the current operator beside its encoded byte.

@@ -92,6 +92,6 @@ PT_OKIND:
 ; EN_IIX, EN_IIY, EN_MABS, EN_IMM8, EN_IMM16, EN_PORTC, EN_REL8.
 
     DB PT_KDISP,PT_KDISP    ; IX/IY memory operands patch their displacement.
-    DB PT_KINDW,PT_KINDB,PT_KINDW ; Memory field; byte/word immediates.
+    DB PT_KINDW,PT_KINDB,PT_KINDW  ; Memory; byte and word immediates.
     DB 0,PT_KRELA           ; Port C has no field; REL8 patches relatively.
 PT_CEND:

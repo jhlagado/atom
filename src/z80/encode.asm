@@ -1045,8 +1045,8 @@ EN_CTBEG:
 ; the remaining entries are suffixes emitted after ED.
 
 EN_COPC1:
-    DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F ; NOP through RRA.
-    DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2 ; NEG..INI suffixes.
+    DB $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F  ; Core opcodes.
+    DB $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2  ; ED suffixes.
     DB $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45             ; INIR..RETN suffixes.
 EN_IOPCO: DB $46,$56,$5E                                  ; IM suffixes.
 EN_CTEND:
