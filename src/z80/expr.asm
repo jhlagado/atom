@@ -1,6 +1,6 @@
-;==============================================================================
+;==========================================================================
 ;  Expression evaluator
-;==============================================================================
+;==========================================================================
 ;
 ;  Parse one expression from the tokenizer stream with bounded value and
 ;  operator stacks. The parser alternates between a primary and an operator,
@@ -13,7 +13,7 @@
 ;    EX_QUEUE  append a previously published unresolved result to the pending
 ;              arena
 ;
-;  BC supplies the logical address used by '$'. On success carry is clear and A
+;  BC supplies the address used by '$'. On success carry is clear and A
 ;  is EX_RESOL or EX_UNRES. A resolved result is the final word in HL. An
 ;  unresolved result is one exact symbol plus a signed-byte addend in HL;
 ;  EX_RUNRE records whether the later patch uses the plain word, LOW byte or
@@ -21,9 +21,9 @@
 ;  IX pointing at the six-byte key in EX_RKEY.
 ;
 ;  Concrete operations use signed 24-bit working values before the final
-;  -32768..65535 word check. Addition, subtraction and left shift detect signed
-;  overflow. Multiplication detects carry beyond 24 bits, but currently permits
-;  a positive magnitude whose bit 23 becomes set. A later right shift can expose
+;  -32768..65535 word check. Addition, subtraction and left shift detect
+;  signed overflow. Multiplication detects carry beyond 24 bits, but permits
+;  a positive magnitude with bit 23 set. A later right shift can expose
 ;  that wrapped negative intermediate. Deferred expressions are deliberately
 ;  smaller: one symbol, an addend from -128 through 127 and an optional LOW or
 ;  HIGH transform. Operations that need an expression tree are rejected with
@@ -32,7 +32,7 @@
 ;  Value entries are ten bytes: three value or addend bytes, one resolution or
 ;  transform byte and a six-byte packed key. Operator entries are four bytes:
 ;  one encoded operator, source-part ordinal and source offset. Both stacks
-;  have sixteen entries. Every parse resets their depths, so a failed call does
+;  have sixteen entries. Every parse resets their depths, so failure does
 ;  not poison the next expression.
 
 EX_CBEG:                    ; Begin expression code, constants and tables.
@@ -45,7 +45,7 @@ EX_SLEXI EQU 2             ; Tokenizer rejected source within the expression.
 EX_SEPRI EQU 3             ; A primary value or prefix was expected.
 EX_SERIG EQU 4             ; A closing parenthesis was expected.
 EX_SDZER EQU 5             ; Division or remainder used a zero divisor.
-EX_SRANG EQU 6             ; Arithmetic, shift, word or deferred-addend range failed.
+EX_SRANG EQU 6             ; Arithmetic, shift, word or addend out of range.
 EX_SFFOR EQU 7             ; Deferred expression cannot fit one patch record.
 EX_SCAP EQU 8              ; A bounded value or operator stack is full.
 EX_SSYM EQU 9              ; Symbol packing, lookup or scope failed.
@@ -81,7 +81,7 @@ EX_UTILD EQU $72           ; Unary bitwise-complement marker.
 EX_ULO EQU $7D             ; LOW(...) transform marker.
 EX_UHI EQU $7E             ; HIGH(...) transform marker.
 
-; Non-zero deferred-state values distinguish an ordinary affine symbol from its
+; Nonzero deferred states distinguish a plain affine symbol from its
 ; LOW and HIGH byte transforms.
 
 EX_FPLAI EQU 1             ; Plain deferred symbol plus signed addend.
@@ -89,23 +89,23 @@ EX_FLO EQU 2               ; LOW byte of a deferred symbol expression.
 EX_FHI EQU 3               ; HIGH byte of a deferred symbol expression.
 
 ;@ROUTINE IN BC OUT A,HL,IX,CARRY CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Parse and publish an unresolved symbol only after the complete expression has
+; Publish an unresolved symbol only after the full expression has
 ; passed syntax, forward-form and addend checks. This is the direct evaluator
-; entry used by the proof harness and other callers that can commit immediately.
+; entry for callers that can commit immediately, including proofs.
 
 EX_PARSE:
-    LD   A,1                   ; Select symbol publication on successful parsing.
+    LD   A,1                   ; Publish symbols after successful parsing.
     LD   (EX_PSYM),A           ; Record the direct-entry policy.
     JR   EX_PCOMM              ; Join common parser initialization.
 
 ;@ROUTINE IN BC OUT A,HL,IX,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO,BC,DE,IY
 ; Parse without changing the symbol arena. The parser and statement layers use
-; this entry so they can validate and reserve all later work before publication.
+; this entry to validate and reserve work before publication.
 
 EX_PDEFR:
     XOR  A                     ; Select deferred symbol publication.
     LD   (EX_PSYM),A           ; Leave symbol creation to the caller.
-EX_PCOMM:                   ; Initialize the state shared by both public entries.
+EX_PCOMM:                   ; Initialise state for both public entries.
 
 ; Save '$', clear all bounded-stack state and begin in primary position.
 
@@ -116,9 +116,9 @@ EX_PCOMM:                   ; Initialize the state shared by both public entries
     LD   (EX_PDEPT),A          ; Reset parenthesis nesting depth.
     INC  A                     ; Form true for “expect a primary”.
     LD   (EX_EOP),A            ; Begin in the primary half of the grammar.
-.PLOOP:                     ; Alternate between the primary and operator grammar halves.
+.PLOOP:                     ; Alternate primary and operator grammar.
 
-; EX_EOP selects the grammar half. Primaries clear it after publishing a value;
+; EX_EOP selects the grammar half. Primaries clear it after publication;
 ; binary operators set it after consuming themselves.
 
     LD   A,(EX_EOP)            ; Read the current grammar half.
@@ -127,8 +127,8 @@ EX_PCOMM:                   ; Initialize the state shared by both public entries
     CALL EX_POP                ; Parse and publish one primary expression.
     RET  C                     ; Return its positioned failure unchanged.
     JR   .PLOOP                ; Continue with an operator or delimiter.
-.POPER:                     ; Parse what follows the most recently completed value.
-    CALL EX_POPER              ; Parse an operator, right parenthesis or delimiter.
+.POPER:                     ; Parse after a completed value.
+    CALL EX_POPER              ; Parse operator, ')' or delimiter.
     RET  C                     ; Return its positioned failure unchanged.
     JR   NZ,.PLOOP             ; Nonzero means an operator/group was consumed.
 
@@ -140,39 +140,39 @@ EX_PCOMM:                   ; Initialize the state shared by both public entries
     LD   A,(EX_RUNRE)          ; Inspect the final value's resolution state.
     OR   A                     ; Z identifies a concrete 24-bit result.
     JR   NZ,.FUNRESOL          ; Complete one deferred symbol expression.
-    CALL EX_REQW               ; Require the public −32768..65535 word domain.
-    RET  C                     ; Return a range failure at the current delimiter.
+    CALL EX_REQW               ; Check public −32768..65535 word range.
+    RET  C                     ; Return range failure at the delimiter.
     LD   HL,(EX_RVAL)          ; Return the concrete low sixteen bits.
     XOR  A                     ; Return EX_RESOL with carry clear.
     RET                        ; Complete the concrete expression.
-.FUNRESOL:                  ; Finish a reduced expression that still contains one symbol.
+.FUNRESOL:                  ; Finish one-symbol deferred expression.
 
-; Only a signed-byte addend can be stored in a pending reference. The parser has
+; Pending references store only signed-byte addends. Parsing has
 ; already reduced the full expression before this range check.
 
-    CALL EX_RADDE              ; Require the pending record's signed-byte addend.
+    CALL EX_RADDE              ; Check signed-byte pending addend.
     RET  C                     ; Preserve a forward-form range failure.
     LD   A,(EX_PSYM)           ; Read the selected publication policy.
     OR   A                     ; Z means the caller owns publication.
     JR   Z,.FINDEFR            ; Return the packed key directly in that mode.
 
-; The publishing entry creates or reuses the undefined symbol record here, after
+; The publishing entry creates or reuses an undefined symbol here, after
 ; every expression check has succeeded. Invalid source cannot leak a symbol.
 
     LD   HL,EX_RKEY            ; Supply the validated six-byte packed key.
     CALL SY_REF                ; Find or create its undefined symbol record.
     JR   C,EX_SFAIL            ; Wrap scope or symbol-capacity failure.
-.RUNRESOL:                  ; Return the common unresolved-symbol result carriers.
+.RUNRESOL:                  ; Return unresolved symbol and addend.
     LD   HL,(EX_RVAL)          ; Return the signed addend in HL.
     LD   A,EX_UNRES            ; Report a deferred expression result.
     OR   A                     ; Clear carry while keeping A nonzero.
     RET                        ; Return symbol/addend carriers to the caller.
-.FINDEFR:                   ; Return the unpublished packed key to a transactional caller.
+.FINDEFR:                   ; Return unpublished key to caller.
 
 ; The deferred entry returns a pointer into expression workspace. Its caller
 ; must copy the key before another expression operation reuses this storage.
 
-    LD   IX,EX_RKEY            ; Return the unpublished packed key in workspace.
+    LD   IX,EX_RKEY            ; Point IX at the unpublished key.
     JR   .RUNRESOL             ; Share unresolved result completion.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
@@ -185,12 +185,12 @@ EX_SFAIL:
     JP   EX_FSYM               ; Fail at the original symbol-name position.
 
 ;@ROUTINE IN A,IX,HL,DE,B OUT A,CARRY CLOBBERS C,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Adapt the expression result to the pending-reference ABI. The caller supplies
+; Adapt the result to the pending-reference ABI. The caller supplies
 ; A=source part, DE=patch address and B=patch kind; parsing supplies IX=symbol
 ; and HL=signed addend. SY_ADD expects that addend in C.
 
 EX_QUEUE:
-    LD   C,L                   ; Place the checked signed addend in the ABI register.
+    LD   C,L                   ; Put checked signed addend in C.
     JP   SY_ADD                ; Tail-call pending-record publication.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
@@ -211,12 +211,12 @@ EX_CFUNC:
     LD   C,EX_UHI              ; Select the HIGH unary marker.
     LD   DE,$336F              ; Select the packed first word for HIG*.
     JR   .CFPACK               ; Pack and compare the candidate.
-.CLSLO:                     ; Select the packed LOW signature and unary marker.
+.CLSLO:                     ; Select LOW signature and marker.
     LD   C,EX_ULO              ; Select the LOW unary marker.
     LD   DE,$4D6F              ; Select the packed LOW signature.
 .CFPACK:                    ; Pack and compare the prospective function name.
 
-; Pack the tokenizer lexeme into EX_RKEY and compare its first packed word with
+; Pack the lexeme into EX_RKEY and compare its first word with
 ; LOW or the HIG prefix selected above.
 
     PUSH DE                    ; Preserve the selected packed signature.
@@ -229,7 +229,7 @@ EX_CFUNC:
     POP  DE                    ; Restore the selected signature.
     JR   C,.NFUNCTIO           ; Invalid packed text is not a function name.
     LD   HL,(EX_RKEY)          ; Load the candidate's first packed word.
-    OR   A                     ; Clear carry before the comparison subtraction.
+    OR   A                     ; Clear carry before subtraction.
     SBC  HL,DE                 ; Compare it with LOW or HIG*.
     JR   NZ,.NFUNCTIO          ; A mismatch leaves it as an ordinary name.
 
@@ -238,7 +238,7 @@ EX_CFUNC:
 
     LD   HL,(TK_SCURS)         ; Start lookahead immediately after the name.
     LD   DE,(TK_SEND)          ; Load the source part's exclusive end offset.
-.FLOOKAHE:                  ; Scan horizontally for the required opening parenthesis.
+.FLOOKAHE:                  ; Scan for opening parenthesis.
     LD   A,H                   ; Compare cursor and end high bytes first.
     CP   D                     ; Are they in the same 256-byte page?
     JR   NZ,.FLB               ; No: the cursor has not reached the exact end.
@@ -246,10 +246,10 @@ EX_CFUNC:
     CP   E                     ; Has lookahead reached the exclusive end?
     JR   Z,.NFUNCTIO           ; Yes: no opening parenthesis follows.
 .FLB:                       ; Read the next function-lookahead source byte.
-    PUSH DE                    ; Preserve the exclusive end across host access.
-    PUSH HL                    ; Preserve the lookahead cursor across host access.
+    PUSH DE                    ; Preserve source end across host access.
+    PUSH HL                    ; Preserve cursor across host access.
     LD   A,(TK_SPART)          ; Supply the active source-part ordinal.
-    CALL TK_SREAD              ; Read one byte without advancing tokenizer state.
+    CALL TK_SREAD              ; Read without advancing tokenizer.
     POP  HL                    ; Restore the lookahead cursor.
     POP  DE                    ; Restore the source end.
     CP   $20                   ; Is this an ASCII space?
@@ -264,13 +264,13 @@ EX_CFUNC:
 .FLSPACE:                   ; Skip one space or tab during function lookahead.
     INC  HL                    ; Advance past one horizontal-space byte.
     JR   .FLOOKAHE             ; Inspect the next source byte.
-.NFUNCTIO:                  ; Return that the current name is not a byte function.
+.NFUNCTIO:                  ; Treat name as an ordinary symbol.
     SCF                        ; Report that the name is not a byte function.
-    RET                        ; Leave A unspecified for the ordinary-name path.
+    RET                        ; Leave A unspecified for ordinary name.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Push the unary or function marker in A with the current token position. These
-; markers occupy the highest precedence band and are reduced after their value.
+; Push unary or function marker A with the token position. These markers
+; have highest precedence and reduce after their value.
 
 EX_PHOPE:
     LD   (EX_OPER),A           ; Store the encoded unary/function operator.
@@ -278,8 +278,8 @@ EX_PHOPE:
     JP   EX_POPE1              ; Tail-call bounded operator-stack push.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE,IX,IY
-; Parse a token that may begin a value. EX_EOP is set on entry. Prefix '+', '-'
-; and '~' are converted to unary markers, while '(' is an operator-stack marker
+; Parse a value-starting token with EX_EOP set. '+', '-' and '~' become
+; unary markers, while '(' is an operator-stack marker
 ; and increments the independent nesting depth.
 
 EX_POP:
@@ -296,7 +296,7 @@ EX_POP:
     JR   Z,.PCUR               ; Publish the saved current address.
     CP   TK_NAME               ; Is it a symbol or LOW/HIGH function name?
     JR   Z,.PNAME              ; Classify and resolve it.
-.RLPAREN:                   ; Check ordinary grouping or a byte function's required '('.
+.RLPAREN:                   ; Check for required opening '('.
 
 ; LOW or HIGH classification rejoins here after consuming the function name.
 ; The next token must begin its parenthesised argument.
@@ -310,10 +310,10 @@ EX_POP:
 ; Token ordinals for '+', '-' and '~' become their $7x unary forms by setting
 ; the precedence nibble.
 
-    OR   $70                   ; Add the unary precedence nibble to the token kind.
+    OR   $70                   ; Add unary precedence to token kind.
     CALL EX_PHOPE              ; Push it with its source position.
     RET  C                     ; Preserve operator-stack capacity failure.
-    JP   EX_NTOK               ; Consume the prefix and expect another primary.
+    JP   EX_NTOK               ; Consume prefix and expect a primary.
 .PPAREN:                    ; Open a parenthesized expression group.
     LD   A,EX_MLPAR            ; Select the non-reducing group marker.
     LD   (EX_OPER),A           ; Store it in the current operator record.
@@ -329,37 +329,37 @@ EX_POP:
 ; to a resolved, positive 24-bit working value.
 
     LD   HL,(TK_REC+TK_VOFF)   ; Load the tokenizer's checked literal value.
-    CALL EX_SRW                ; Store it as resolved zero-extended 24-bit state.
+    CALL EX_SRW                ; Store resolved 24-bit value.
     JR   .PFIN                 ; Consume the token and publish the value.
 .PCUR:                      ; Publish the saved current output address.
     LD   HL,(EX_CADR)          ; Load the expression's saved current address.
-    CALL EX_SRW                ; Store it as resolved zero-extended 24-bit state.
+    CALL EX_SRW                ; Store resolved 24-bit value.
     JR   .PFIN                 ; Consume '$' and publish the value.
 .PNAME:                     ; Distinguish a byte function from a symbol name.
 
-; LOW and HIGH are identified before symbol packing. A normal name flows to the
+; LOW and HIGH are identified before symbol packing. Other names use the
 ; symbol resolver, which may produce a concrete value or a deferred key.
 
     CALL EX_CFUNC              ; Recognize LOW/HIGH only when followed by '('.
     JR   NC,.PFUNCTIO          ; Stack the function marker when recognized.
     CALL EX_PNAME              ; Resolve or defer an ordinary symbol name.
     RET  C                     ; Preserve packing, scope or tokenizer failure.
-    JR   .PPUBLISH             ; Symbol parsing already consumed its name token.
-.PFIN:                      ; Advance beyond a literal before stack publication.
+    JR   .PPUBLISH             ; Symbol parsing consumed the name.
+.PFIN:                      ; Advance before value publication.
 
 ; Numbers and '$' consume the next token before publishing the value stack
 ; entry. Symbol parsing performs its own token advance.
 
     CALL EX_NTOK               ; Advance beyond the literal or '$'.
     RET  C                     ; Preserve a lexical failure in the next token.
-.PPUBLISH:                  ; Push the completed primary and apply pending prefixes.
+.PPUBLISH:                  ; Push primary and apply prefixes.
     CALL EX_PVAL               ; Push the complete ten-byte working value.
     RET  C                     ; Preserve value-stack capacity failure.
 
-; Prefix operators are applied as soon as their primary is complete. This keeps
+; Apply prefixes as soon as their primary is complete. This keeps
 ; the operator stack iterative rather than using Z80 recursion.
 
-    CALL EX_AUNAR              ; Reduce consecutive prefixes above this primary.
+    CALL EX_AUNAR              ; Reduce prefixes above this primary.
     RET  C                     ; Preserve unary or forward-form failure.
     XOR  A                     ; Switch to the operator grammar half.
     LD   (EX_EOP),A            ; Record that one value is now available.
@@ -369,7 +369,7 @@ EX_POP:
 ; Retain the LOW or HIGH marker, consume the name and feed the following '('
 ; back through the same parenthesis path used for ordinary grouping.
 
-    CALL EX_PHOPE              ; Push the LOW/HIGH marker at the function name.
+    CALL EX_PHOPE              ; Push LOW/HIGH at function name.
     RET  C                     ; Preserve operator-stack capacity failure.
     CALL EX_NTOK               ; Consume the function name.
     RET  C                     ; Preserve lexical failure before its argument.
@@ -400,13 +400,13 @@ EX_POPER:
     LD   A,1                   ; Switch back to primary grammar.
     LD   (EX_EOP),A            ; Record that a right operand is required.
     CALL EX_NTOK               ; Consume the binary operator.
-    RET  C                     ; Preserve lexical failure in the right operand.
+    RET  C                     ; Preserve right-operand lexical failure.
     XOR  A                     ; Form carry-clear success flags.
     INC  A                     ; Return nonzero: parsing must continue.
     RET                        ; Return to the main parse loop.
 .RPAREN:                    ; Reduce and close one parenthesized group.
 
-; A ')' can close only an active group. Reduce to the marker, remove it, consume
+; A ')' closes only an active group. Reduce to its marker, remove it, consume
 ; the token and then apply a preceding LOW, HIGH or other unary operator.
 
     LD   A,(EX_PDEPT)          ; Read the number of open groups.
@@ -425,7 +425,7 @@ EX_POPER:
     XOR  A                     ; Form carry-clear success flags.
     INC  A                     ; Return nonzero: parsing must continue.
     RET                        ; Return to the main parse loop.
-.DELIMITE:                  ; Validate a non-operator as the caller's delimiter.
+.DELIMITE:                  ; Validate caller delimiter.
 
 ; A delimiter is valid only outside parentheses. Leave TK_REC unchanged so the
 ; statement or operand parser can interpret it.
@@ -433,21 +433,21 @@ EX_POPER:
     LD   A,(EX_PDEPT)          ; Check for an unclosed parenthesis group.
     OR   A                     ; Z means the expression is at outer depth.
     JR   Z,.DDONE              ; Accept the current token as caller delimiter.
-    LD   A,EX_SERIG            ; Report the missing-right-parenthesis category.
+    LD   A,EX_SERIG            ; Report missing right parenthesis.
     JP   EX_FHERE              ; Anchor it at the encountered delimiter.
-.DDONE:                     ; Return expression completion without consuming the delimiter.
+.DDONE:                     ; Leave delimiter for caller.
     XOR  A                     ; Return zero to signal expression completion.
     RET                        ; Leave TK_REC on the caller's delimiter.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE,IY
-; Resolve the current name while retaining its exact source position for symbol
+; Resolve the name while retaining its exact source position for symbol
 ; diagnostics. The packed key stays in EX_RKEY for a possible deferred result.
 
 EX_PNAME:
     LD   A,(TK_REC+TK_POFF)    ; Capture the name token's source-part ordinal.
     LD   (EX_SPART),A          ; Preserve it for errors and pending records.
     LD   HL,(TK_REC+TK_SOFF)   ; Capture the name token's source-byte offset.
-    LD   (EX_SOFF),HL          ; Preserve the exact symbol diagnostic position.
+    LD   (EX_SOFF),HL          ; Save symbol diagnostic position.
     CALL TK_LLEXE              ; Expose the current name text as HL/B.
     LD   DE,EX_RKEY            ; Select the six-byte packed-key workspace.
     CALL EN_PSYM               ; Pack and validate the symbol name.
@@ -475,9 +475,9 @@ EX_PNAME:
     XOR  A                     ; Mark the result concrete.
     JR   .SUNRESOL             ; Store resolution state and consume the name.
 .PPSYM:                     ; Publish a defined non-negative symbol value.
-    CALL EX_SRW                ; Store the word as concrete zero-extended state.
+    CALL EX_SRW                ; Store concrete zero-extended word.
     JP   EX_NTOK               ; Consume the symbol token and return.
-.PMISSING:                  ; Distinguish an absent symbol from another lookup failure.
+.PMISSING:                  ; Check why lookup failed.
 
 ; SY_FIND errors other than not-found, such as a private name outside a global
 ; scope, retain their symbol status and fail immediately.
@@ -485,7 +485,7 @@ EX_PNAME:
     CP   SY_SNFOU              ; Was the only problem an absent record?
     JR   Z,.PUNRESOL           ; Yes: create a deferred value in workspace.
     JP   EX_SFAIL              ; Otherwise preserve the nested symbol failure.
-.PUNRESOL:                  ; Initialize a plain deferred symbol with zero addend.
+.PUNRESOL:                  ; Initialise deferred symbol at zero.
 
 ; A missing or already-undefined symbol starts with addend zero and the plain
 ; deferred transform. A later reduction may adjust the addend or transform.
@@ -495,18 +495,18 @@ EX_PNAME:
     LD   (EX_RVAL+1),A         ; Clear addend middle byte.
     LD   (EX_RVAL+2),A         ; Clear addend sign byte.
     INC  A                     ; Select EX_FPLAI deferred state.
-.SUNRESOL:                  ; Store symbol resolution state and consume its token.
+.SUNRESOL:                  ; Store resolution state and consume token.
     LD   (EX_RUNRE),A          ; Record concrete/plain/LOW/HIGH result state.
     JP   EX_NTOK               ; Consume the name and return.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,C,HL
-; Map the contiguous tokenizer operator range to a packed byte. The high nibble
-; is precedence and the low nibble is the reduction-table ordinal. Zero entries
+; Map contiguous operator tokens to a packed byte. Its high nibble is
+; precedence and its low nibble is the reduction ordinal. Zero entries
 ; cover token kinds that are not binary expression operators.
 
 EX_COPER:
     LD   A,(TK_REC+TK_KOFF)    ; Load the prospective operator token kind.
-    SUB  TK_PLUS               ; Normalize the contiguous operator-token range.
+    SUB  TK_PLUS               ; Normalise operator token range.
     CP   12                    ; Does it lie within the twelve-entry table?
     JR   NC,.ODELIMIT          ; No: it is an expression delimiter.
     PUSH DE                    ; Preserve caller DE during table addressing.
@@ -516,13 +516,13 @@ EX_COPER:
     ADD  HL,DE                 ; Address the current token's classification.
     LD   A,(HL)                ; Load precedence and reduction ordinal.
     POP  DE                    ; Restore caller DE.
-    OR   A                     ; Zero entries deliberately mean “not binary”.
+    OR   A                     ; Zero means “not binary”.
     JR   Z,.ODELIMIT           ; Treat unary-only tokens as delimiters here.
     LD   (EX_OPER),A           ; Start the current operator record.
     CALL EX_COPOS              ; Attach its exact source position.
     OR   A                     ; Clear carry to report recognition.
-    RET                        ; Return success; EX_OPER retains the packed operator.
-.ODELIMIT:                  ; Report that the current token is not a binary operator.
+    RET                        ; Return packed operator in EX_OPER.
+.ODELIMIT:                  ; Report a non-binary token.
     SCF                        ; Report that no binary operator matched.
     RET                        ; Leave the tokenizer record unchanged.
 
@@ -530,7 +530,7 @@ EX_COPER:
 ; Tilde is unary-only and apostrophe is a delimiter, so both table entries are
 ; zero.
 
-EX_OTABL:                   ; Map tokenizer operator kinds to precedence and reduction.
+EX_OTABL:                   ; Map token kinds to precedence and reduction.
     DB $55,$56,$67,$68,$69,$32,$21,$10,0,0,$43,$44 ; + - * / % & ^ | ~ ' << >>
 
 ;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
@@ -538,7 +538,7 @@ EX_OTABL:                   ; Map tokenizer operator kinds to precedence and red
 ; Arithmetic and forward-form failures later report this position.
 
 EX_COPOS:
-    LD   A,(TK_REC+TK_POFF)    ; Load the operator token's source-part ordinal.
+    LD   A,(TK_REC+TK_POFF)    ; Load operator source part.
     LD   (EX_OPART),A          ; Store it in the current operator record.
     LD   HL,(TK_REC+TK_SOFF)   ; Load the operator token's source-byte offset.
     LD   (EX_OOFF),HL          ; Complete the positioned operator record.
@@ -546,7 +546,7 @@ EX_COPOS:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE
 ; Push the complete ten-byte working value after proving stack capacity. The
-; entry includes the packed key even for a concrete value, which keeps all stack
+; entry includes a packed key even for concrete values, keeping stack
 ; movement uniform.
 
 EX_PVAL:
@@ -558,7 +558,7 @@ EX_PVAL:
     LD   E,L                   ; Complete the destination pointer in DE.
     LD   HL,EX_RVAL            ; Point at the current ten-byte value record.
     LD   BC,EX_VALB            ; Select the complete fixed record size.
-    LDIR                       ; Copy value, state and packed key onto the stack.
+    LDIR                       ; Copy value, state and key to stack.
     LD   HL,EX_VDEPT           ; Address the live-depth counter.
     INC  (HL)                  ; Publish the newly copied record.
     XOR  A                     ; Return success with carry clear.
@@ -578,8 +578,8 @@ EX_PLVAL:
     LD   DE,EX_LVAL            ; Select the left-value working record.
 
 ;@ROUTINE IN DE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE
-; Decrement the value depth, locate the last live entry and copy its ten bytes to
-; the destination in DE. Empty-stack access indicates an internal parser fault.
+; Decrement value depth, locate the last entry and copy its ten bytes to
+; destination DE. Empty-stack access is an internal parser fault.
 
 EX_PVTO:
     PUSH DE                    ; Preserve the caller's selected destination.
@@ -594,7 +594,7 @@ EX_PVTO:
     LDIR                       ; Copy it out of the stack.
     XOR  A                     ; Return success with carry clear.
     RET                        ; Leave the decremented depth published.
-EX_PVEMP:                   ; Restore the stack after a defensive value underflow.
+EX_PVEMP:                   ; Restore stack after value underflow.
     POP  DE                    ; Restore stack balance on the failure path.
     JR   EX_IFAIL              ; Report defensive value-stack underflow.
 
@@ -614,7 +614,7 @@ EX_VADR:
     ADD  HL,DE                 ; Combine them into index*10.
     LD   DE,EX_VSTAC           ; Load the value-stack base address.
     ADD  HL,DE                 ; Return the selected record address.
-    RET                        ; Return the selected value-record address in HL.
+    RET                        ; Return record address in HL.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY,BC,DE
 ; Push the current four-byte operator record after proving stack capacity.
@@ -626,7 +626,7 @@ EX_POPE1:
     CALL EX_OADR               ; Locate the first unused operator record.
     LD   D,H                   ; Copy its destination address high byte.
     LD   E,L                   ; Complete the destination pointer in DE.
-    LD   HL,EX_OPER            ; Point at the current four-byte operator record.
+    LD   HL,EX_OPER            ; Point at current operator record.
     LD   BC,EX_OPERB           ; Select the complete fixed record size.
     LDIR                       ; Copy operator and position onto the stack.
     LD   HL,EX_ODEPT           ; Address the live-depth counter.
@@ -661,10 +661,10 @@ EX_OADR:
     ADD  HL,HL                 ; Form index times four.
     LD   DE,EX_OSTAC           ; Load the operator-stack base.
     ADD  HL,DE                 ; Return the selected record address.
-    RET                        ; Return the selected operator-record address in HL.
+    RET                        ; Return operator address in HL.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,DE,HL
-; Peek at the encoded byte of the newest operator without changing stack depth.
+; Peek at newest operator byte without changing stack depth.
 ; Carry set reports an empty stack; otherwise A contains the encoded operator.
 
 EX_POPE3:
@@ -718,12 +718,12 @@ EX_CINCO:
     RET                        ; Return after the fixed-size transfer.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC,IX,IY
-; Reduce stacked binary operators before accepting the saved incoming operator.
+; Reduce stacked binary operators before accepting incoming operator.
 ; High nibbles hold precedence. A stacked operator reduces when its precedence
 ; is higher, or equal for the left-associative operator set used here.
 
 EX_RINC1:
-.RILOOP:                    ; Compare each stacked operator with incoming precedence.
+.RILOOP:                    ; Compare stacked and incoming precedence.
     CALL EX_POPE3              ; Peek at the newest stacked operator.
     JR   C,.RIDONE             ; Empty stack leaves nothing to reduce.
     CP   EX_MLPAR              ; Is the group marker on top?
@@ -736,13 +736,13 @@ EX_RINC1:
     LD   A,(EX_INCOM)          ; Load the incoming packed operator.
     AND  $F0                   ; Keep only its precedence nibble.
     CP   B                     ; Compare incoming against stacked precedence.
-    JR   C,.RINOW              ; Lower numeric incoming precedence reduces now.
+    JR   C,.RINOW              ; Lower incoming precedence reduces now.
     RET  NZ                    ; Higher incoming precedence delays reduction.
 .RINOW:                     ; Reduce the currently exposed older operator.
     CALL EX_REDUC              ; Equal or older-higher precedence reduces now.
     RET  C                     ; Preserve arithmetic or forward-form failure.
     JR   .RILOOP               ; Compare the next stacked operator.
-.RIDONE:                    ; Finish incoming-precedence reduction successfully.
+.RIDONE:                    ; Finish incoming-precedence reduction.
     XOR  A                     ; Return success with carry clear.
     RET                        ; Leave the saved incoming operator untouched.
 
@@ -751,7 +751,7 @@ EX_RINC1:
 ; pops the marker itself. Reaching the bottom first is an internal mismatch.
 
 EX_RTPAR:
-.RTPLOOP:                   ; Expose the left-parenthesis marker one reduction at a time.
+.RTPLOOP:                   ; Reduce up to left parenthesis.
     CALL EX_POPE3              ; Peek at the newest stacked operator.
     JR   C,EX_IFAIL            ; No marker means inconsistent nesting state.
     CP   EX_MLPAR              ; Has the nearest group boundary been exposed?
@@ -762,7 +762,7 @@ EX_RTPAR:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
 ; Apply every consecutive unary marker above the newly published primary. A
-; concrete value supports all five markers. A deferred value supports unary '+'
+; concrete value supports all five. A deferred value supports unary '+'
 ; and one LOW or HIGH transform only because the pending ABI stores no tree.
 
 EX_AUNAR:
@@ -772,7 +772,7 @@ EX_AUNAR:
     AND  $F0                   ; Isolate the operator's precedence band.
     CP   $70                   ; Does it belong to the unary/function band?
     JR   NZ,.AUDONE            ; No: leave it for binary precedence handling.
-    CALL EX_POPE2              ; Pop the unary operator and its source position.
+    CALL EX_POPE2              ; Pop unary operator and position.
     RET  C                     ; Preserve defensive underflow failure.
     CALL EX_PVAL1              ; Pop the operand into EX_RVAL.
     RET  C                     ; Preserve defensive value underflow.
@@ -780,7 +780,7 @@ EX_AUNAR:
     OR   A                     ; Z identifies a concrete operand.
     JR   Z,.AUCONCRE           ; Dispatch full concrete unary semantics.
 
-; Deferred unary minus and complement cannot be represented. LOW or HIGH can be
+; Deferred minus and complement cannot be represented. LOW or HIGH can be
 ; applied only to a plain deferred symbol and become its patch transform.
 
     LD   A,(EX_OPER)           ; Load the deferred operand's unary marker.
@@ -790,7 +790,7 @@ EX_AUNAR:
     JR   Z,.AUFLO              ; Select the low-byte deferred transform.
     CP   EX_UHI                ; Is this HIGH(...) projection?
     JR   Z,.AUFHI              ; Select the high-byte deferred transform.
-.AUFFAIL:                   ; Reject a deferred unary form that needs an expression tree.
+.AUFFAIL:                   ; Reject deferred form needing a tree.
     LD   A,EX_SFFOR            ; Report a form that needs an expression tree.
     JP   EX_FOPER              ; Anchor failure at the unary operator.
 .AUFLO:                     ; Select the deferred LOW transform.
@@ -799,13 +799,13 @@ EX_AUNAR:
 .AUFHI:                     ; Select the deferred HIGH transform.
     LD   B,EX_FHI              ; Select the deferred HIGH transform state.
 .AUFFUNCT:                  ; Validate and attach one deferred byte transform.
-    LD   A,(EX_RUNRE)          ; Read the operand's existing deferred transform.
+    LD   A,(EX_RUNRE)          ; Read existing deferred transform.
     CP   EX_FPLAI              ; Is it still the plain symbol form?
-    JR   NZ,.AUFFAIL           ; Reject nested/repeated LOW or HIGH transforms.
+    JR   NZ,.AUFFAIL           ; Reject nested LOW or HIGH.
     LD   A,B                   ; Recover the newly selected transform.
     LD   (EX_RUNRE),A          ; Attach it to the deferred result.
     JR   .AUPUBLIS             ; Republish the transformed operand.
-.AUCONCRE:                  ; Dispatch the full unary set for a concrete value.
+.AUCONCRE:                  ; Dispatch concrete unary operation.
 
 ; Dispatch concrete unary operations. LOW clears the upper bytes; HIGH moves
 ; the middle byte down and clears the rest.
@@ -814,14 +814,14 @@ EX_AUNAR:
     CP   EX_UPLUS              ; Is it the identity operation?
     JR   Z,.AUPUBLIS           ; Yes: republish without arithmetic.
     CP   EX_UMINU              ; Is it arithmetic negation?
-    JR   Z,.AUNEGATE           ; Compute modulo-24-bit two's-complement negation.
+    JR   Z,.AUNEGATE           ; Negate modulo 24 bits.
     CP   EX_UTILD              ; Is it bitwise complement?
     JR   Z,.AUCOMPLE           ; Complement all three working bytes.
     CP   EX_ULO                ; Is it LOW(...) projection?
     JR   Z,.AULO               ; Keep only the low byte.
     CP   EX_UHI                ; Is it HIGH(...) projection?
     JR   Z,.AUHI               ; Move the middle byte down.
-    JP   EX_IFAIL              ; Any other unary marker is an invariant failure.
+    JP   EX_IFAIL              ; Other marker is an invariant failure.
 .AUNEGATE:                  ; Negate the concrete 24-bit operand.
     CALL EX_NRES               ; Negate the concrete 24-bit result.
     JR   .AUCDONE              ; Check arithmetic status before republishing.
@@ -833,35 +833,35 @@ EX_AUNAR:
     LD   (EX_RVAL+1),A         ; Clear the middle byte.
     LD   (EX_RVAL+2),A         ; Clear the high/sign byte.
     JR   .AUCDONE              ; Republish the projected low byte.
-.AUHI:                      ; Move the concrete high word byte into the result byte.
+.AUHI:                      ; Select concrete word's high byte.
     LD   A,(EX_RVAL+1)         ; Load the original value's middle byte.
     LD   (EX_RVAL),A           ; Move it into the result low byte.
     XOR  A                     ; Form zero for discarded upper bytes.
     LD   (EX_RVAL+1),A         ; Clear the result middle byte.
     LD   (EX_RVAL+2),A         ; Clear the result high/sign byte.
-.AUCDONE:                   ; Check concrete-unary status before republication.
-    RET  C                     ; Return if the selected arithmetic helper reports failure.
-.AUPUBLIS:                  ; Republish the unary result for another outer prefix.
+.AUCDONE:                   ; Check concrete unary result.
+    RET  C                     ; Preserve arithmetic failure.
+.AUPUBLIS:                  ; Publish result for outer prefix.
 
 ; Publish the transformed value again so another outer unary marker can apply.
 
-    CALL EX_PVAL               ; Push the transformed value back onto the stack.
+    CALL EX_PVAL               ; Push transformed value to stack.
     RET  C                     ; Preserve value-stack capacity failure.
     JP   .AULOOP               ; Apply any next outer unary marker.
-.AUDONE:                    ; Return after all consecutive unary markers are applied.
+.AUDONE:                    ; Return after all unary markers.
     XOR  A                     ; Return success with carry clear.
     RET                        ; Leave the next binary/group marker stacked.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY,BC,IX,IY
-; Finish an expression at its delimiter. Reduce every remaining binary operator,
+; Finish at the delimiter. Reduce remaining binary operators,
 ; reject an unmatched left parenthesis and require exactly one final value.
 
 EX_FSTAC:
-.FREDUCE:                   ; Reduce each binary operator remaining at the delimiter.
+.FREDUCE:                   ; Reduce remaining binary operators.
     CALL EX_POPE3              ; Peek at the newest remaining operator.
     JR   C,.FINVAL             ; Empty operator stack ends reduction.
-    CP   EX_MLPAR              ; Is an unmatched left parenthesis still present?
-    JP   Z,EX_IFAIL            ; Yes: parser nesting state is inconsistent here.
+    CP   EX_MLPAR              ; Is a left parenthesis unmatched?
+    JP   Z,EX_IFAIL            ; Yes: nesting state is inconsistent.
     CALL EX_REDUC              ; Reduce one remaining binary operator.
     RET  C                     ; Preserve arithmetic or forward-form failure.
     JR   .FREDUCE              ; Drain the rest of the operator stack.
@@ -870,22 +870,22 @@ EX_FSTAC:
     RET  C                     ; Preserve defensive value underflow.
     LD   A,(EX_VDEPT)          ; Read the depth after removing that result.
     OR   A                     ; Must no other value remain?
-    JP   NZ,EX_IFAIL           ; Extra values indicate an internal grammar fault.
+    JP   NZ,EX_IFAIL           ; Extra values are an internal fault.
     RET                        ; Return success with final value in workspace.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
-; Pop one operator and its right and left values, reduce into EX_RVAL then push
+; Pop operator, right and left values, reduce into EX_RVAL then push
 ; the result. Right-before-left stack order preserves the source operand order
 ; for subtraction, division, remainder and shifts.
 
 EX_REDUC:
-    CALL EX_POPE2              ; Pop the binary operator and its source position.
+    CALL EX_POPE2              ; Pop binary operator and position.
     RET  C                     ; Preserve defensive operator underflow.
     CALL EX_PVAL1              ; Pop the source-right operand into EX_RVAL.
     RET  C                     ; Preserve defensive value underflow.
     CALL EX_PLVAL              ; Pop the source-left operand into EX_LVAL.
     RET  C                     ; Preserve defensive value underflow.
-    CALL EX_RLOAD              ; Reduce concrete or deferred operands in place.
+    CALL EX_RLOAD              ; Reduce concrete or deferred operands.
     RET  C                     ; Preserve arithmetic or forward-form failure.
     JP   EX_PVAL               ; Push the result for later reductions.
 
@@ -911,12 +911,12 @@ EX_RLOAD:
     LD   E,(HL)                ; Load the handler address low byte.
     INC  HL                    ; Advance to the high byte.
     LD   D,(HL)                ; Complete the handler address in DE.
-    EX   DE,HL                 ; Move the target into indirect-jump register HL.
+    EX   DE,HL                 ; Put target in indirect-jump HL.
     JP   (HL)                  ; Dispatch to the concrete arithmetic kernel.
 
 ; Order matches EX_OPOR through EX_OREMA in the operator byte's low nibble.
 
-EX_RTABL:                   ; Dispatch concrete binary ordinals to arithmetic kernels.
+EX_RTABL:                   ; Dispatch concrete binary operations.
     DW EX_OR,EX_XOR,EX_AND     ; Bitwise kernels for ordinals 0 through 2.
     DW EX_SLEFT,EX_SRIGH       ; Left and right shift kernels.
     DW EX_ADD,EX_SUBTR         ; Signed addition and subtraction kernels.
@@ -929,16 +929,16 @@ EX_RTABL:                   ; Dispatch concrete binary ordinals to arithmetic ke
 ; constant+symbol and symbol-constant only.
 
 EX_RFORW:
-; A transform value of EX_FLO or EX_FHI means LOW/HIGH has already consumed the
+; EX_FLO or EX_FHI means LOW/HIGH has already consumed the
 ; symbol form. Any binary operator outside that function is unsupported.
 
     LD   A,(EX_LUNRE)          ; Read the left deferred-transform state.
-    CP   EX_FLO                ; Has LOW/HIGH already projected the left symbol?
-    JR   NC,.FFAIL             ; Yes: no later binary operation is representable.
+    CP   EX_FLO                ; Was the left symbol projected?
+    JR   NC,.FFAIL             ; No later binary operation fits.
     LD   A,(EX_RUNRE)          ; Read the right deferred-transform state.
-    CP   EX_FLO                ; Has LOW/HIGH already projected the right symbol?
+    CP   EX_FLO                ; Was the right symbol projected?
     JR   NC,.FFAIL             ; Yes: reject further binary arithmetic.
-    LD   A,(EX_LUNRE)          ; Re-read whether the left side carries the symbol.
+    LD   A,(EX_LUNRE)          ; Recheck for a left-side symbol.
     OR   A                     ; Z means the symbol, if any, is on the right.
     JR   Z,.FRIGHT             ; Validate the constant-plus-symbol case.
 
@@ -947,7 +947,7 @@ EX_RFORW:
 
     LD   A,(EX_RUNRE)          ; Is the right operand concrete?
     OR   A                     ; Nonzero would mean two unresolved symbols.
-    JR   NZ,.FFAIL             ; Two-symbol expressions need an expression tree.
+    JR   NZ,.FFAIL             ; Two symbols need an expression tree.
     LD   A,(EX_OPER)           ; Load the packed binary operator.
     AND  $0F                   ; Keep its reduction ordinal.
     CP   EX_OPADD              ; Is this symbol plus constant?
@@ -957,31 +957,31 @@ EX_RFORW:
     CALL EX_SUBTR              ; Compute left addend minus right constant.
     JR   C,.FRETURN            ; Preserve signed overflow failure.
     JR   .FULKEY               ; Restore the symbol key from the left operand.
-.FLADD:                     ; Add a concrete right operand to a left-side symbol addend.
+.FLADD:                     ; Add constant to left-symbol addend.
     CALL EX_ADD                ; Compute left addend plus right constant.
     JR   C,.FRETURN            ; Preserve signed overflow failure.
-.FULKEY:                    ; Restore the packed key carried by the left operand.
+.FULKEY:                    ; Restore left operand's packed key.
 
 ; The left operand carried the symbol, so replace the right operand's concrete
 ; key bytes with the left packed key.
 
-    LD   HL,EX_LKEY            ; Point at the left operand's packed symbol key.
+    LD   HL,EX_LKEY            ; Point at left packed symbol key.
     LD   DE,EX_RKEY            ; Select the result key destination.
     LD   BC,6                  ; Copy all three packed RADIX-40 words.
-    LDIR                       ; Replace the concrete right operand's unused key.
+    LDIR                       ; Replace unused concrete key.
     JR   .FFIN                 ; Canonicalize and range-check the result.
-.FRIGHT:                    ; Validate and reduce concrete-plus-symbol ordering.
+.FRIGHT:                    ; Reduce constant plus symbol.
 
-; A symbol on the right is valid only for constant+symbol. constant-symbol would
+; A right-side symbol permits only constant+symbol. constant-symbol would
 ; require a negated symbol coefficient and cannot fit the pending record.
 
     LD   A,(EX_OPER)           ; Load the packed binary operator.
     AND  $0F                   ; Keep its reduction ordinal.
     CP   EX_OPADD              ; Is this constant plus symbol?
-    JR   NZ,.FFAIL             ; Subtraction or other operators are unsupported.
-    CALL EX_ADD                ; Add the concrete constant to the symbol addend.
+    JR   NZ,.FFAIL             ; Other operations are unsupported.
+    CALL EX_ADD                ; Add constant to symbol addend.
     JR   C,.FRETURN            ; Preserve signed overflow failure.
-.FFIN:                      ; Canonicalize and range-check the surviving deferred result.
+.FFIN:                      ; Check final deferred result.
 
 ; Canonicalise the surviving result as a plain deferred symbol and prove that
 ; its computed addend fits the signed byte stored by the pending record.
@@ -989,7 +989,7 @@ EX_RFORW:
     LD   A,EX_FPLAI            ; Select canonical plain deferred state.
     LD   (EX_RUNRE),A          ; Attach it to the surviving symbol/addend.
     CALL EX_RADDE              ; Require the addend to fit signed eight bits.
-.FRETURN:                   ; Return status from deferred arithmetic or addend checking.
+.FRETURN:                   ; Return deferred arithmetic status.
     RET                        ; Return range status from arithmetic/checking.
 .FFAIL:                     ; Report an unsupported binary forward form.
     LD   A,EX_SFFOR            ; Select unsupported-forward-form status.
