@@ -14,13 +14,13 @@
 ;   4. materialize IMAGE/PATCH operations in a fixed TPA output window; and
 ;   5. publish that image transactionally through temporary/backup filenames.
 ;
-; Atom itself remains filesystem-blind. Its ordinary five-byte part descriptors
-; use the half-open logical range [0,length); CP_SOURCE_READ_BYTE maps the ordinal
-; through the derived order, opens the corresponding FCB and supplies the byte.
+; Atom itself has no filesystem calls. Its five-byte part descriptors use the
+; half-open logical range [0,length). CP_SOURCE_READ_BYTE maps the ordinal
+; through the derived order, opens the matching FCB and supplies the byte.
 
 ; Fixed transient memory plan. Code/immutable data ends below CP_SOURCE_CACHE;
 ; retained include identities and generated part descriptors occupy the gap up
-; to the symbol arena. Symbols, pending records, output image and private stack
+; to the symbol arena. Symbols, pending records, output and private stack
 ; then occupy disjoint high-memory intervals.
 
 CP_BDOS_ENTRY       EQU $0005
@@ -71,7 +71,7 @@ CP_ADAPTER_CODE_START:
 ; registers promised by Atom's private tool-service client adapter.
 
 CP_BDOS:
-    PUSH IX                    ; Protect Atom's first index register from BDOS.
+    PUSH IX                    ; Preserve IX across BDOS.
     PUSH IY                    ; Protect the second index register as well.
     CALL CP_BDOS_ENTRY         ; Enter the CP/M dispatcher with function in C.
     POP  IY                    ; Restore IY before returning to the caller.
@@ -79,31 +79,30 @@ CP_BDOS:
     RET                        ; Return the BDOS result and flags unchanged.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Move off the CCP stack, parse the command, resolve the source graph, clear the
-; tentative RAM image and invoke the unchanged native driver. Only a successful
-; sink commit prints the selected output name. Return 0 for success or help, 1
-; for resolution/assembly failure, and 2 for command parsing/preflight failure.
+; Leave the CCP stack, parse arguments and includes, clear the tentative image
+; and call the native driver. Only a committed image gets a success message.
+; Return 0 for success or help, 1 for build failure or 2 for command failure.
 
 CP_ENTRY:
     LD   (CP_SAVED_SP),SP      ; Retain the CCP stack for the final return.
-    LD   SP,CP_STACK_TOP       ; Move calls and local pushes to private stack RAM.
-    CALL CP_PARSE_COMMAND     ; Validate arguments and prepare input/output names.
+    LD   SP,CP_STACK_TOP       ; Use private RAM for calls and pushes.
+    CALL CP_PARSE_COMMAND     ; Parse source and output names.
     JR   C,CP_COMMAND_FAILED  ; Report a usage or filename error before I/O.
     OR   A                    ; Test whether parsing selected help-only mode.
-    JR   NZ,CP_SUCCESS        ; Help was printed; return success without assembly.
-    CALL CP_RESOLVE_SOURCE    ; Validate includes and measure each source part.
-    JR   C,CP_BUILD_FAILED    ; Stop before assembly if the source graph is invalid.
-    LD   HL,CP_OUTPUT_START   ; Point HL at the first byte of the tentative image.
+    JR   NZ,CP_SUCCESS        ; Help returns success without assembly.
+    CALL CP_RESOLVE_SOURCE    ; Resolve includes and measure all parts.
+    JR   C,CP_BUILD_FAILED    ; Report an invalid source graph.
+    LD   HL,CP_OUTPUT_START   ; Point at the tentative image's first byte.
     LD   DE,CP_OUTPUT_START+1 ; Point DE at the next byte to initialise.
     LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1 ; Count the remaining image bytes.
     LD   (HL),0               ; Initialise the first image byte to zero.
-    LDIR                     ; Clear the rest so gaps and reservations are zero.
-    LD   IX,CP_DESCRIPTOR     ; Supply the measured source and arena descriptor.
+    LDIR                     ; Zero gaps and reservations.
+    LD   IX,CP_DESCRIPTOR     ; Pass the measured source descriptor.
     CALL DR_ASM               ; Assemble all parts into the private RAM image.
-    JR   C,CP_ASSEMBLY_FAILED ; Keep the old output untouched after a source error.
-    LD   DE,CP_NEWLINE_TEXT   ; Select a leading line break for the success message.
+    JR   C,CP_ASSEMBLY_FAILED ; Leave the old output intact on failure.
+    LD   DE,CP_NEWLINE_TEXT   ; Lead the success message with a newline.
     CALL CP_PRINT             ; Separate the result from any command echo.
-    LD   HL,CP_OUTPUT_NAME    ; Point at the selected output's normalized name.
+    LD   HL,CP_OUTPUT_NAME    ; Point at the selected output name.
     CALL CP_PRINT_NAME        ; Print the basename and any nonblank extension.
     LD   DE,CP_WRITTEN_TEXT   ; Select the completion suffix.
     CALL CP_PRINT             ; Report success after the sink has committed.
@@ -111,13 +110,13 @@ CP_SUCCESS:
     XOR  A                    ; Return status zero for success or help.
     JR   CP_RETURN            ; Restore the CCP stack through the common exit.
 CP_COMMAND_FAILED:
-    CALL CP_PRINT             ; DE still points at the parser's diagnostic text.
-    LD   A,2                  ; Distinguish argument errors from build failures.
+    CALL CP_PRINT             ; DE holds the parser's diagnostic text.
+    LD   A,2                  ; Use status two for argument errors.
     JR   CP_RETURN            ; Restore the CCP stack and return status two.
 CP_ASSEMBLY_FAILED:
-    PUSH AF                   ; Preserve Atom's status while printing the label.
+    PUSH AF                   ; Save Atom's status while printing.
     LD   DE,CP_ASSEMBLY_TEXT  ; Point at the diagnostic prefix.
-    CALL CP_PRINT             ; Print `Atom error ` before the hexadecimal status.
+    CALL CP_PRINT             ; Print the assembly-error prefix.
     POP  AF                   ; Recover the original assembler status.
     CALL CP_PRINT_HEX         ; Print the status as two hexadecimal digits.
     LD   A,' '                ; Separate status from the source-part ordinal.
@@ -127,7 +126,7 @@ CP_ASSEMBLY_FAILED:
     LD   A,' '                ; Separate the part from the byte offset.
     CALL CP_PUTC              ; Emit the second field separator.
     LD   HL,(ST_EOFF)         ; Load the source's zero-based byte offset.
-    PUSH HL                   ; Preserve its low byte while printing the high byte.
+    PUSH HL                   ; Save the offset while printing its high byte.
     LD   A,H                  ; Select the high byte of the offset.
     CALL CP_PRINT_HEX         ; Print the high byte first.
     POP  HL                   ; Restore the offset and recover its low byte.
@@ -136,7 +135,7 @@ CP_ASSEMBLY_FAILED:
     LD   DE,CP_NEWLINE_TEXT   ; Point at the terminating line break.
     CALL CP_PRINT             ; Finish the diagnostic line.
 CP_BUILD_FAILED:
-    LD   A,1                  ; Return status one for resolution or assembly failure.
+    LD   A,1                  ; Return status one for build failure.
 CP_RETURN:
 
 ; Restore the CCP's original stack before returning its conventional status.
@@ -148,17 +147,17 @@ CP_COMMAND_CODE_START:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Accept no arguments, one source name, two explicit names, or `?`. With no
-; names the checked defaults are INPUT.ASM and OUTPUT.COM. One source derives an
+; names the defaults are INPUT.ASM and OUTPUT.COM. One source derives an
 ; output name with COM extension. All names are current-drive CP/M 8.3 names.
 
 CP_PARSE_COMMAND:
-    XOR  A                    ; Start command parsing with a clear part-state value.
-    LD   (CP_ACTIVE_PART),A   ; Discard the previous command's cached part ordinal.
+    XOR  A                    ; Clear command state.
+    LD   (CP_ACTIVE_PART),A   ; Drop any cached source-part ordinal.
     LD   A,(CP_COMMAND_LENGTH) ; Read the CCP's command-tail byte count.
     LD   B,A                  ; Keep the remaining count beside the HL cursor.
     LD   HL,CP_COMMAND_START  ; Start at the first command-tail character.
-    CALL CP_SKIP_SPACES       ; Ignore leading spaces before counting arguments.
-    JP   Z,CP_CHECK_AUXILIARY_NAMES ; Empty tail uses the two checked defaults.
+    CALL CP_SKIP_SPACES       ; Skip leading spaces.
+    JP   Z,CP_CHECK_AUXILIARY_NAMES ; Use the two default names.
     LD   A,B                  ; Inspect the non-space argument length.
     CP   1                    ; A lone question mark is the only help form.
     JR   NZ,CP_COMMAND_SOURCE ; Longer input must begin with a source name.
@@ -166,29 +165,29 @@ CP_PARSE_COMMAND:
     CP   '?'                  ; Select help only for the exact `?` argument.
     JR   NZ,CP_COMMAND_SOURCE ; Otherwise validate it as a filename.
     LD   DE,CP_USAGE_TEXT     ; Point at the compact command syntax.
-    CALL CP_PRINT             ; Print help without opening files or assembling.
-    XOR  A                    ; Start with success status for the help request.
-    INC  A                    ; Return nonzero to tell CP_ENTRY to skip assembly.
+    CALL CP_PRINT             ; Print help without file I/O.
+    XOR  A                    ; Begin the help-only success marker.
+    INC  A                    ; Skip assembly after showing help.
     RET                       ; Preserve that help marker in A.
 CP_COMMAND_SOURCE:
-    CALL CP_PARSE_FILENAME    ; Validate the first argument as an 8.3 source name.
-    JP   C,CP_BAD_SOURCE_NAME ; Keep source-name errors distinct from output ones.
-    CALL CP_SKIP_SPACES       ; Check whether a second name follows the source.
-    JR   Z,CP_SINGLE_NAME     ; With one name, derive the output name and type.
+    CALL CP_PARSE_FILENAME    ; Parse the source argument as 8.3.
+    JP   C,CP_BAD_SOURCE_NAME ; Distinguish a bad source name.
+    CALL CP_SKIP_SPACES       ; Look for a second name.
+    JR   Z,CP_SINGLE_NAME     ; Derive the output name and type.
     CALL CP_PARSE_FILENAME    ; Validate the explicit output name.
     JP   C,CP_BAD_OUTPUT_NAME ; Report malformed output fields separately.
-    CALL CP_SKIP_SPACES       ; Consume separator spaces and test for extra text.
+    CALL CP_SKIP_SPACES       ; Check for trailing text.
     JP   NZ,CP_BAD_USAGE      ; Reject a third argument or trailing junk.
     JR   CP_COMMAND_NAMES_READY ; Continue with the CCP's normalized FCBs.
 CP_SINGLE_NAME:
 
-; The CCP populated default FCB 1 from the sole argument. Copy it to default FCB
-; 2 and replace only the extension, retaining the same normalized basename.
+; The CCP populated default FCB 1 from the sole argument. Copy it to FCB 2 and
+; replace only the extension, retaining the same normalized basename.
 
     LD   HL,$005C             ; Address the CCP's default source FCB.
     LD   DE,$006C             ; Address the second FCB used for output.
     LD   BC,12                ; Copy drive, basename and extension bytes.
-    LDIR                     ; Derive output basename from the source argument.
+    LDIR                     ; Copy the source basename to output.
     LD   HL,CP_COM_EXTENSION  ; Select the conventional `.COM` output type.
     LD   DE,$006C+9           ; Point at the output FCB's three-byte type.
     LD   BC,3                 ; Copy exactly the extension bytes.
@@ -207,7 +206,7 @@ CP_COMMAND_NAMES_READY:
     LDIR                     ; Complete the input FCB with its default type.
 CP_INPUT_TYPE_READY:
     LD   HL,$006C             ; Read the CCP-normalized output FCB.
-    LD   DE,CP_OUTPUT_NAME    ; Store its drive-plus-name form for publication.
+    LD   DE,CP_OUTPUT_NAME    ; Store the selected output name.
     LD   BC,12                ; Copy drive, basename and three-byte type.
     LDIR                     ; Retain the caller's requested output name.
     LD   HL,CP_OUTPUT_NAME+9 ; Point at the output extension.
@@ -223,7 +222,7 @@ CP_INPUT_TYPE_READY:
     CALL CP_OUTPUT_TYPE_EQUAL ; Check for an exact HEX extension.
     JR   NZ,CP_BAD_OUTPUT_NAME ; Reject any other output type.
     LD   A,2                  ; Assign format code two to Intel HEX.
-    JR   CP_OUTPUT_TYPE_READY ; Save the selected type and preflight filenames.
+    JR   CP_OUTPUT_TYPE_READY ; Save the format and check names.
 CP_OUTPUT_TYPE_BIN:
     LD   A,1                  ; Assign format code one to raw BIN.
     JR   CP_OUTPUT_TYPE_READY ; Save the type and continue filename checks.
@@ -236,13 +235,13 @@ CP_OUTPUT_TYPE_READY:
 ; 1=BIN or 2=HEX.
 
     LD   (CP_OUTPUT_FORMAT),A ; Retain the format selected from the extension.
-    LD   HL,CP_INPUT_FCB      ; Compare the source identity with the output name.
-    LD   DE,CP_OUTPUT_NAME    ; Compare complete twelve-byte drive-plus-name identities.
+    LD   HL,CP_INPUT_FCB      ; Compare source and output identities.
+    LD   DE,CP_OUTPUT_NAME    ; Address the output's twelve-byte identity.
     CALL CP_NAMES_EQUAL       ; Reject overwriting the file being assembled.
     JR   Z,CP_BAD_NAME_CONFLICT ; Source and output must be distinct files.
     CALL CP_SET_TEMP_FCB      ; Build the transaction's temporary filename.
-    CALL CP_CHECK_WORK_NAME   ; Prove it cannot collide with source or existing work.
-    RET  C                    ; Stop if temporary-file preflight found a conflict.
+    CALL CP_CHECK_WORK_NAME   ; Check for source collision or existing file.
+    RET  C                    ; Stop on a temp-name conflict.
     CALL CP_SET_BACKUP_FCB    ; Build the transaction's backup filename.
     CALL CP_CHECK_WORK_NAME   ; Apply the same collision and existence checks.
     RET                       ; Return the final preflight status in carry.
@@ -258,18 +257,18 @@ CP_OUTPUT_TYPE_BYTE:
     RET  NZ                   ; Stop on the first mismatch, preserving NZ.
     INC  DE                   ; Advance to the next byte in the candidate.
     INC  HL                   ; Advance to the corresponding expected byte.
-    DJNZ CP_OUTPUT_TYPE_BYTE  ; Check all three bytes before reporting equality.
-    RET                       ; Return with Z from the final matching comparison.
+    DJNZ CP_OUTPUT_TYPE_BYTE  ; Compare all three type bytes.
+    RET                       ; Return Z when every byte matched.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Prove the temporary name differs from the source and is not already present.
 
 CP_CHECK_WORK_NAME:
-    LD   HL,CP_INPUT_FCB      ; Compare the source with the temporary or backup.
-    LD   DE,CP_WORK_FCB       ; CP_WORK_FCB holds the auxiliary candidate name.
+    LD   HL,CP_INPUT_FCB      ; Address the source name.
+    LD   DE,CP_WORK_FCB       ; Address the temporary or backup name.
     CALL CP_NAMES_EQUAL       ; Test all drive, basename and type bytes.
     JR   Z,CP_BAD_NAME_CONFLICT ; Never let publication replace the source.
-    JP   CP_AUXILIARY_MUST_NOT_EXIST ; Also require the candidate file to be absent.
+    JP   CP_AUXILIARY_MUST_NOT_EXIST ; Require an unused work name.
 CP_BAD_USAGE:
     LD   DE,CP_USAGE_TEXT     ; Select the command syntax diagnostic.
     SCF                      ; Return parser failure to CP_ENTRY.
@@ -283,7 +282,7 @@ CP_BAD_OUTPUT_NAME:
     SCF                      ; Mark the invalid output argument.
     RET                       ; Return its message address in DE.
 CP_BAD_NAME_CONFLICT:
-    LD   DE,CP_NAME_CONFLICT_TEXT ; Select the source/output conflict diagnostic.
+    LD   DE,CP_NAME_CONFLICT_TEXT ; Select the name-conflict message.
     SCF                      ; Refuse a colliding output or work filename.
     RET                       ; Return the diagnostic address in DE.
 
@@ -294,8 +293,8 @@ CP_BAD_NAME_CONFLICT:
 CP_CHECK_AUXILIARY_NAMES:
     CALL CP_SET_TEMP_FCB      ; Build the temporary name for the first check.
     CALL CP_AUXILIARY_MUST_NOT_EXIST ; Reject a pre-existing temporary file.
-    RET  C                    ; Do not continue after a collision or I/O error.
-    CALL CP_SET_BACKUP_FCB    ; Prepare the backup name for the fall-through check.
+    RET  C                    ; Stop after a collision or I/O error.
+    CALL CP_SET_BACKUP_FCB    ; Prepare the backup name for the next check.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Require the auxiliary file named by CP_WORK_FCB not to exist.
@@ -303,12 +302,12 @@ CP_CHECK_AUXILIARY_NAMES:
 CP_AUXILIARY_MUST_NOT_EXIST:
     LD   DE,CP_WORK_FCB      ; Address the candidate temporary or backup FCB.
     LD   C,CP_OPEN_FUNCTION  ; Ask BDOS whether the named file already exists.
-    CALL CP_BDOS             ; A=FF means no matching directory entry was found.
+    CALL CP_BDOS             ; FF means the file was not found.
     INC  A                   ; Convert the not-found result into zero.
-    JR   Z,CP_AUXILIARY_AVAILABLE ; Permit publication when the name is unused.
+    JR   Z,CP_AUXILIARY_AVAILABLE ; The name is free.
     LD   DE,CP_WORK_FCB      ; Reuse the opened candidate FCB for closing it.
     LD   C,CP_CLOSE_FUNCTION ; Select the matching CP/M close operation.
-    CALL CP_BDOS             ; Close the existing candidate file before reporting it.
+    CALL CP_BDOS             ; Close the existing file.
     LD   DE,CP_AUXILIARY_EXISTS_TEXT ; Select the collision diagnostic.
     SCF                      ; Report that the auxiliary file is occupied.
     RET                       ; Preserve its message pointer in DE.
@@ -321,11 +320,11 @@ CP_AUXILIARY_AVAILABLE:
 
 CP_SKIP_SPACES:
     LD   A,B                  ; Check whether any command-tail bytes remain.
-    OR   A                    ; Set Z when the cursor has reached the tail end.
+    OR   A                    ; Z marks the end of the tail.
     RET  Z                    ; Leave HL at the end when no bytes remain.
     LD   A,(HL)               ; Inspect the next unconsumed character.
     CP   ' '                  ; CP/M command separators are ordinary spaces.
-    RET  NZ                   ; Stop at the first non-space argument character.
+    RET  NZ                   ; Stop at the first non-space byte.
     INC  HL                   ; Consume one leading or separating space.
     DEC  B                    ; Keep the remaining-byte count in step with HL.
     JR   CP_SKIP_SPACES       ; Skip a run of spaces before returning.
@@ -339,41 +338,41 @@ CP_PARSE_FILENAME:
     LD   D,8                  ; Start with the eight-character basename limit.
     LD   C,0                  ; Count characters in the current name field.
 CP_PARSE_FILENAME_BYTE:
-    LD   A,B                  ; Check whether another tail character is available.
-    OR   A                    ; Set Z only when the bounded command field ends.
+    LD   A,B                  ; Check the remaining tail length.
+    OR   A                    ; Z marks the end of the tail.
     JR   Z,CP_FILENAME_DONE   ; Validate the final name or extension length.
     LD   A,(HL)               ; Read the next unquoted filename character.
-    CP   ' '                  ; A space ends this filename without consuming it.
+    CP   ' '                  ; Space terminates this name.
     JR   Z,CP_FILENAME_DONE   ; Leave the separator for CP_SKIP_SPACES.
     CP   '.'                  ; A dot switches from basename to extension.
-    JR   NZ,CP_FILENAME_DATA  ; Otherwise validate a character in the current field.
-    LD   A,D                  ; D is 8 for the basename or 3 for the extension.
+    JR   NZ,CP_FILENAME_DATA  ; Validate an ordinary name byte.
+    LD   A,D                  ; D holds the current field limit.
     CP   8                    ; Accept a dot only after the basename field.
     JR   NZ,CP_FILENAME_FAILURE ; Reject a second dot in the extension.
     LD   A,C                  ; Require at least one basename character.
     OR   A                    ; Test the current field's character count.
     JR   Z,CP_FILENAME_FAILURE ; Reject a leading dot and empty basename.
-    LD   D,3                  ; Apply the CP/M three-character extension limit.
+    LD   D,3                  ; Limit the extension to three bytes.
     LD   C,0                  ; Start counting extension characters.
     JR   CP_FILENAME_CONSUME  ; Consume the separator dot without counting it.
 CP_FILENAME_DATA:
-    CALL CP_FILENAME_CHAR    ; Reject characters outside the permitted CP/M set.
-    RET  C                    ; Propagate an invalid-character result immediately.
+    CALL CP_FILENAME_CHAR    ; Validate the name byte.
+    RET  C                    ; Propagate an invalid byte.
     INC  C                    ; Count this character in the current field.
     LD   A,D                  ; Load the basename or extension capacity.
-    CP   C                    ; Compare capacity against the new character count.
-    JR   C,CP_FILENAME_FAILURE ; Reject the first character beyond that capacity.
+    CP   C                    ; Compare limit and new length.
+    JR   C,CP_FILENAME_FAILURE ; Reject an overlong field.
 CP_FILENAME_CONSUME:
     INC  HL                   ; Advance past a validated character or the dot.
     DEC  B                    ; Reduce the remaining command-tail byte count.
     JR   CP_PARSE_FILENAME_BYTE ; Continue until a separator or end of tail.
 CP_FILENAME_DONE:
-    LD   A,C                  ; Inspect the final basename or extension length.
+    LD   A,C                  ; Check the final field length.
     OR   A                    ; Set Z for an empty final field.
     JR   Z,CP_FILENAME_FAILURE ; Reject an empty name or a trailing dot.
     RET                       ; Leave any separating space unconsumed.
 CP_FILENAME_FAILURE:
-    SCF                      ; Report the empty, invalid or overlong name field.
+    SCF                      ; Report an invalid name.
     RET                       ; Return carry to the command parser.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
@@ -381,28 +380,28 @@ CP_FILENAME_FAILURE:
 
 CP_FILENAME_CHAR:
     CP   '!'                  ; Reject control characters and space below '!'.
-    RET  C                    ; Carry identifies a character below the allowed set.
-    CP   $7F                  ; Exclude DEL and all bytes above the 7-bit range.
-    JR   NC,CP_FILENAME_CHAR_BAD ; Reject those non-printable or extended bytes.
+    RET  C                    ; Reject bytes below '!'.
+    CP   $7F                  ; Reject DEL and high-bit bytes.
+    JR   NC,CP_FILENAME_CHAR_BAD ; Not printable ASCII.
     CP   '*'                  ; Punctuation before '*' is allowed after '!'.
-    JR   C,CP_FILENAME_CHAR_HIGH ; Continue checking printable letters and symbols.
+    JR   C,CP_FILENAME_CHAR_HIGH ; Accept this punctuation range.
     CP   '-'                  ; Exclude '*', '+' and ',' before the hyphen.
-    JR   C,CP_FILENAME_CHAR_BAD ; CP/M treats these as wildcard or field syntax.
-    CP   '/'                  ; The slash is not a current-drive filename character.
+    JR   C,CP_FILENAME_CHAR_BAD ; Exclude '*', '+' and ','.
+    CP   '/'                  ; Reject the path separator.
     JR   Z,CP_FILENAME_CHAR_BAD ; Reject a path separator explicitly.
-    CP   ':'                  ; Characters below ':' pass this punctuation range.
-    JR   C,CP_FILENAME_CHAR_HIGH ; Skip reserved punctuation when the byte is below ':'.
+    CP   ':'                  ; Test the next punctuation range.
+    JR   C,CP_FILENAME_CHAR_HIGH ; Permit bytes below ':'.
     CP   '@'                  ; Exclude ':', ';', '<', '=', '>' and '?'.
     JR   C,CP_FILENAME_CHAR_BAD ; These include drive and wildcard syntax.
 CP_FILENAME_CHAR_HIGH:
     CP   '['                  ; Uppercase letters below '[' are accepted.
     JR   C,CP_FILENAME_CHAR_OK ; Permit digits, punctuation and A through Z.
     CP   '^'                  ; Set the boundary after '[', backslash and ']'.
-    JR   C,CP_FILENAME_CHAR_BAD ; Those bytes conflict with CP/M name conventions.
+    JR   C,CP_FILENAME_CHAR_BAD ; Exclude '[', '\\' and ']'.
     CP   '_'                  ; Check the underscore boundary explicitly.
     JR   Z,CP_FILENAME_CHAR_BAD ; Do not admit underscore into an 8.3 field.
 CP_FILENAME_CHAR_OK:
-    OR   A                    ; Clear carry while retaining the validated byte.
+    OR   A                    ; Clear carry; keep the valid byte.
     RET                       ; Return the accepted character in A.
 CP_FILENAME_CHAR_BAD:
     SCF                      ; Mark this character as invalid for a filename.
@@ -412,9 +411,9 @@ CP_FILENAME_CHAR_BAD:
 ; Compare two drive-plus-8.3-name records for exact equality.
 
 CP_NAMES_EQUAL:
-    LD   B,12                 ; Compare the drive byte and eleven name/type bytes.
+    LD   B,12                 ; Compare drive and eleven name/type bytes.
 CP_NAMES_EQUAL_BYTE:
-    LD   A,(DE)               ; Read one byte from the first normalized FCB name.
+    LD   A,(DE)               ; Read the first FCB's name byte.
     CP   (HL)                 ; Compare it with the corresponding second byte.
     RET  NZ                   ; Return immediately when the identities differ.
     INC  DE                   ; Advance the first name cursor.
@@ -466,7 +465,7 @@ CP_SOURCE_NAME_CONFLICT:
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; Read one logical source byte through a 128-byte random-record cache. The
-; pre-scan proves every requested record exists for the life of this transient.
+; pre-scan proves each requested record exists until this command returns.
 
 CP_SOURCE_READ_BYTE:
     JP   CP_RESOLVED_READ_BYTE ; Expose the resolved source-byte reader.
@@ -505,9 +504,9 @@ CP_DISCOVER_PART:
     CP   (HL) ; Compare the next ordinal with the live count.
     JR   NZ,CP_DISCOVER_PART ; Scan every discovered source part.
 
-; Repeatedly emit a part whose dependencies have all been emitted. Bit 7 of the
-; first retained-name byte records that state; comparisons and FCB reconstruction
-; mask it away. Failure to make progress proves a cycle without recursion.
+; Emit parts after their dependencies. Bit 7 of the first retained-name byte
+; marks an emitted part. Name comparisons and FCB reconstruction mask it away.
+; A pass with no progress proves a cycle without recursion.
 
 CP_TOPO_PASS:
     XOR  A ; Begin another pass over all discovered files.
@@ -553,7 +552,7 @@ CP_TOPO_NEXT:
     JR   CP_RESOLVE_FAILURE ; Report it through the shared failure path.
 
 ; Measure the already validated parts in final order and build the ordinary
-; native five-byte descriptors. Their start is logical zero and their end is the
+; native five-byte descriptors. Each starts at logical zero and ends at the
 ; measured 16-bit byte length; source storage itself remains in CP/M files.
 
 CP_BUILD_DESCRIPTORS:
@@ -570,7 +569,7 @@ CP_BUILD_DESCRIPTOR:
     JP   C,CP_RESOLVE_FAILURE ; Abort if the part cannot be reopened.
     LD   HL,0 ; Count source bytes from logical offset zero.
 CP_MEASURE_BYTE:
-    CALL CP_NEXT_SOURCE_BYTE ; Read one source byte and advance logical offset HL.
+    CALL CP_NEXT_SOURCE_BYTE ; Read a byte and advance logical offset HL.
     JR   NC,CP_MEASURE_BYTE ; Carry clear means more source bytes remain.
     OR   A ; A=0 is EOF or a failed read; A=2 is offset overflow.
     JP   NZ,CP_RESOLVE_IO ; Report a source length beyond the 16-bit range.
@@ -1108,8 +1107,8 @@ CP_PERCENT_YES:
     RET ; Carry is clear for the recognized line-start result.
 CP_SOURCE_CODE_END:
 
-; Atom sink entries supplied directly in place of the fail-closed host stubs. The
-; fixed RAM image makes IMAGE and PATCH constant-time memory writes; filesystem
+; These Atom sink entries replace the fail-closed host stubs. The fixed RAM
+; image makes IMAGE and PATCH constant-time writes; filesystem
 ; publication is delayed until COMMIT.
 
 CP_OUTPUT_CODE_START:
@@ -1153,7 +1152,7 @@ HS_PW:
     RET ; Finish the word-PATCH operation.
 
 ;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Convert the final logical cursor to image length, create the temporary file and
+; Convert the final cursor to image length, create a temporary file and
 ; serialize the selected format. COM and BIN write CP/M records from the RAM
 ; image; HEX streams records through the shared final-image helper below.
 
@@ -1257,8 +1256,8 @@ CP_COMMIT_FAILURE:
     RET ; Let the driver call HS_ABORT to restore the prior output.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Close/delete any temporary output and restore the backup if commit had already
-; moved the previous final file aside. Cleanup is idempotent for early failures.
+; Close temporary output if open, then delete it. If commit moved the old
+; final file aside, restore the backup. Cleanup tolerates early failure.
 
 HS_ABORT:
     LD   A,(CP_OUTPUT_OPEN) ; Check whether the temporary file is open.
@@ -1464,7 +1463,7 @@ CP_PRINT_NIBBLE:
 CP_ADAPTER_CODE_END:
 
 ; Descriptor and FCB workspace retained for the complete command. The 36-byte
-; rename FCB overlays the complete input FCB after all source reads are finished.
+; rename FCB overlays the input FCB after all source reads finish.
 
 CP_ADAPTER_WORKSPACE1_START:
 CP_DESCRIPTOR:
@@ -1506,8 +1505,8 @@ CP_HEX_EXTENSION: DB 'H','E','X'
 CP_ADAPTER_IMMUTABLE_END:
 CP_ADAPTER_WORKSPACE2_START:
 
-; Small execution state. CP_OUTPUT_CURSOR overlays the source-cache key because
-; all assembler source reads and patching finish before COMMIT publishes output.
+; Small execution state. CP_OUTPUT_CURSOR overlays the source-cache key;
+; source reads and patches finish before COMMIT publishes the output.
 
 CP_SAVED_SP: DW 0
 CP_OUTPUT_CURSOR: DW 0
