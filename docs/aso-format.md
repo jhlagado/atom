@@ -1,263 +1,205 @@
 # ASO: ATOM Serialized Operations
 
-Status: design specification / implementation roadmap
+Status: ASO v1 format specification. No implementation is implied by this document.
 
-ASO is a compact, chronological serialization of the output operations produced by ATOM. It is intended to preserve ATOM's single-pass character on small systems, especially CP/M, without requiring the complete assembled image to coexist in RAM with the assembler.
+ASO records the output operations of a successful ATOM assembly in their original order. A host can apply those operations to RAM, apply them to a random-access file or write them sequentially to an `.aso` file. The same operation contract applies on Node and CP/M. Neither platform has to create an intermediate ASO file when it can materialise the output directly.
 
-ASO means **ATOM Serialized Operations**. The conventional filename suffix is `.aso`.
+This format is for one flat 16-bit Z80 address space. It is not a relocatable object format. A PATCH contains final replacement bytes, not a symbol name or an expression for a later linker. Source filenames, diagnostics, listings and D8 mappings are outside ASO v1.
 
-This document deliberately separates two ideas:
+## 1. Operation contract
 
-1. the ATOM core produces logical output operations (`IMAGE`, `PATCH`, reservation/cursor movement and final metadata); and
-2. a host chooses how those operations are consumed.
-
-ASO is one host policy: serialize the operations to a sequential file. It is not the only bounded-memory policy. A CP/M host may instead materialize the same operations directly into a random-access `.COM` file on disk.
-
-## 1. Motivation
-
-The current CP/M implementation materializes the output image in RAM. This is simple and fast, but the assembler and the assembled program compete for the same transient memory. A small-system assembler should not impose that restriction when the output medium itself can hold the image.
-
-Classic CP/M `ASM` avoided this problem by writing Intel HEX and leaving final materialization to `LOAD`. ATOM can retain the same useful separation while remaining single-pass: forward references become later `PATCH` operations rather than requiring a second pass over source.
-
-The design goals are therefore:
-
-- single-pass source processing;
-- chronological output;
-- bounded working memory;
-- no requirement for garbage collection or dynamic allocation;
-- no global sorting or regrouping of records;
-- no requirement to retain the complete output image;
-- straightforward implementation in Z80 assembly, C, Rust, JavaScript or similar languages;
-- efficient sequential writing on floppy-based systems;
-- efficient materialization either later or directly during assembly.
-
-## 2. Non-goals
-
-ASO v1 is not a relocatable linker object format. It does not provide public/external symbols, sections, libraries, linker relocation expressions or separate compilation.
-
-A `PATCH` is a final correction already computed by ATOM. It carries replacement bytes, not a symbol name or an unresolved relocation expression.
-
-ASO is also not intended to preserve source-level diagnostics. Undefined symbols remain an assembler error; a successful ASO file contains only resolved output operations.
-
-## 3. Fundamental streaming invariant
-
-A conforming ASO writer MUST be implementable without retaining the complete output image and without retaining previously emitted ASO records.
-
-A conforming ASO reader/materializer MUST be implementable with bounded working memory. It MAY use random access to the destination medium when applying patches.
-
-Records MUST preserve the semantic order of ATOM output operations. A writer MUST NOT collect all IMAGE operations and all PATCH operations and then emit them in separate groups.
-
-Local buffering is permitted. In particular, adjacent IMAGE bytes MAY be combined into a single IMAGE record, provided that doing so does not move an IMAGE operation across an intervening PATCH or other semantically significant operation.
-
-This is the principal distinction between ASO and the existing Atom NOBJ 0.2 renderer, whose artifact construction groups IMAGE and PATCH records.
-
-## 4. Conceptual operation stream
-
-A typical assembly may produce:
+The required ATOM host boundary has four observable stages:
 
 ```text
-BEGIN
-IMAGE  $0100  3E 01 CA 00 00
-IMAGE  $0105  21 00 00
-PATCH  $0103  37 01
-IMAGE  $0108  ...
-PATCH  $0106  52 01
-END
+BEGIN(target origin, fill)
+IMAGE(address, bytes)       zero or more, in output order
+PATCH(address, bytes)       zero or more, interleaved with IMAGE
+COMMIT(final cursor, high-water mark)  or ABORT
 ```
 
-The stream should be understood as instructions to an output host:
+ATOM currently publishes IMAGE and PATCH during assembly. `ORG` and uninitialised `DS` change the logical cursor but do not publish separate host operations. The current native COMMIT call passes the final cursor and remaining target capacity, not an explicit high-water mark. Node derives high-water by observing internal `ORG` and `DS` routine entries. CP/M currently uses the final cursor as file length. Neither method is the shared contract required here.
 
-- `IMAGE address, bytes`: establish these bytes in the output image;
-- `PATCH address, bytes`: replace bytes at an address established earlier;
-- reservations/cursor movement: advance the logical image without necessarily supplying initialized bytes;
-- `END`: assembly completed successfully and the stream is complete.
+Before an ASO or direct-disk writer replaces the current output path, the native boundary must supply both `finalCursor` and `highWater` explicitly at COMMIT. Both are 17-bit mathematical endpoints so `$10000` remains distinct from zero. The core may track high-water in fixed workspace or publish layout changes through a host operation, but the host must not infer it by watching program-counter addresses or by equating it with the final cursor. This is an ABI change to prove and measure separately. ASO v1 records explicit IMAGE addresses and the final geometry. It does not require `ORG`, `DS` or SEEK records in the file.
 
-The exact treatment of reservations, holes and fill bytes is part of the v1 binary-format work below.
+The host MUST preserve the order of IMAGE and PATCH calls. For canonical ASO bytes, the writer combines consecutive IMAGE bytes into the longest contiguous run of at most 128 bytes. It flushes the run when it reaches 128 bytes, the next IMAGE address is not contiguous or any other operation occurs. An IMAGE call longer than the remaining run space is split at that boundary. A writer holds at most one pending run. It MUST NOT collect all IMAGE calls and then all PATCH calls.
 
-## 5. Output policies
+ABORT produces no successful ASO artifact. An unresolved symbol, range error or failed output service prevents COMMIT and hence prevents the END record. An implementation MUST publish a new artifact only after the whole operation succeeds. Temporary output is removed after failure and an existing destination is preserved.
 
-The ATOM core should not depend on a particular materialization policy. At least three useful host policies exist.
+The operation stream is canonical. The `.aso` bytes below are its portable persistent form. Platform-specific materialisers use the same ordering and final geometry even when no `.aso` file is written.
 
-### 5.1 RAM materialization
+## 2. Address and image rules
+
+All addresses are absolute Z80 addresses. `origin` lies in `0..$FFFF`. A byte can be written at `$FFFF`; the exclusive end of an image may therefore be `$10000`. `finalCursor` and `highWater` are mathematical values in `origin..$10000`, not wrapping 16-bit counters.
+
+The logical flat image covers `[origin, highWater)`. Every byte in that interval not supplied by IMAGE or changed by PATCH has the header's `fill` value. The first byte of a BIN file corresponds to `origin`. A COM materialiser requires `origin = $0100`, so address `A` maps to file offset `A - $0100`. Intel HEX uses the absolute addresses. An ASO file is not itself an executable COM file.
+
+IMAGE ranges are nonempty, ascend and do not overlap. Gaps between them are permitted. A PATCH applies to an address below the end of an IMAGE already encountered. It may replace a byte in an intervening fill gap. This slightly wider reader rule avoids an image-sized initialisation bitmap; ATOM's own output path only patches bytes for which it emitted IMAGE. A later PATCH to the same byte replaces the earlier value. A PATCH may not address a future byte.
+
+`highWater` is the maximum of `origin`, every IMAGE end, every reservation end and every `ORG` destination reached during assembly. It can exceed the last IMAGE end. `finalCursor` is the position after the final source statement and may be below `highWater` after a backward `ORG`. Neither value may be below `origin`. No IMAGE may end beyond `highWater`.
+
+For a CP/M BIN or COM file, BDOS stores complete 128-byte records. Bytes after the logical end in the last physical record are padding, not part of the logical image. Exact cross-platform comparisons use `[origin, highWater)`. A materialiser MUST make its own padding policy explicit; it MUST NOT report record padding as assembled bytes.
+
+## 3. ASO v1 bytes
+
+An ASO v1 file has a seven-byte header, zero or more IMAGE and PATCH records and one END record. Multi-byte integers are little-endian. No field has an implicit alignment requirement.
+
+| Item | Bytes | Meaning |
+| --- | --- | --- |
+| Header | `41 53 4F 01 origin:u16 fill:u8` | ASCII `ASO`, version 1, target origin and gap fill |
+| IMAGE | `01 address:u16 length:u8 data:length` | Establish 1..128 consecutive bytes |
+| PATCH | `02 address:u16 length:u8 data:length` | Replace 1 or 2 consecutive bytes |
+| END | `00 highWater:u24 finalCursor:u24` | Successful completion and final geometry |
+
+An `u24` endpoint has a value in `0..$10000`. Values with a nonzero top byte are valid only when the three bytes are `00 00 01`, meaning exactly `$10000`. IMAGE and PATCH addresses remain `u16` because their first byte cannot be at `$10000`.
+
+Version 1 has no flags, entry-address field, source map, symbol table, record count or checksum. A COM entry is `$0100` by platform convention. Other entry addresses are supplied outside ASO.
+
+Assign a new version byte to any later revision. Decoding v1 MUST reject unknown versions and record kinds. A v1 file contains no checksum, so byte changes can survive parsing when the altered file remains syntactically valid. Adding a checksum requires a new version and a separate measurement of CP/M code and I/O costs.
+
+IMAGE addresses are explicit. Omitting them would require a cursor-change record for gaps and `ORG`, adding another parser state and record kind. The two address bytes keep v1 simple and make output ordering locally checkable. The 128-byte IMAGE maximum bounds the writer's pending run to one CP/M logical record's worth of data, though an unaligned run can cross a physical record boundary. PATCH length is limited to the one- and two-byte corrections ATOM currently publishes.
+
+There is no encoded record for a reservation. Its effect appears in END's `highWater` and in the fill bytes between IMAGE ranges. This preserves the final flat image, not a transcript of every source-level cursor movement.
+
+## 4. Writer and reader rules
+
+A writer MUST:
+
+1. write the header before accepting output records;
+2. emit each IMAGE or PATCH in call order using the canonical adjacent-IMAGE rule above;
+3. reject an IMAGE outside the 16-bit target, below `origin`, descending or overlapping an earlier IMAGE;
+4. reject a PATCH below `origin`, beyond the greatest preceding IMAGE end or across `$10000`;
+5. write END only after ATOM reports a successful COMMIT with no unresolved references;
+6. check `origin <= finalCursor <= highWater <= $10000` and that `highWater` includes every IMAGE byte;
+7. discard a tentative artifact on ABORT or write failure.
+
+A reader MUST perform the same range, ordering and endpoint checks while reading. Two consecutive contiguous IMAGE records are non-canonical unless the first is 128 bytes long; the reader MUST reject them. It MUST also reject a missing END, truncated header or record, zero or excessive length, unknown kind, wrong version, invalid endpoint and malformed post-END padding. It MUST NOT treat physical end-of-file as a successful END.
+
+END terminates the logical ASO file. Node writers write no bytes after it. On a CP/M record-oriented file, a writer MAY pad the last 128-byte record with `$1A`. A reader accepts either no trailing bytes or exactly the number of `$1A` bytes needed to finish that one record. All other trailing content is invalid. `$1A` inside an IMAGE or PATCH payload is ordinary data because the record length determines its boundary.
+
+An ASO reader need not track which individual earlier bytes came from IMAGE. The bounded rule is that PATCH lies below the greatest preceding IMAGE end. The reader stores that endpoint rather than an output-sized bitmap. A direct materialiser must fill gaps before applying a patch into them.
+
+An ASO writer needs fixed state for the header, one pending IMAGE run, the previous IMAGE end and record I/O. It does not need earlier records or the complete target image. A reader needs fixed record buffers and a small amount of geometry state. The destination medium may be random access for PATCH.
+
+## 5. Byte-exact examples
+
+Spaces and line breaks in these examples separate bytes for reading; they are not part of a file.
+
+### Interleaved patch and later image
 
 ```text
-ATOM -> IMAGE/PATCH -> RAM image -> output file
+41 53 4F 01 00 01 00             header: origin $0100, fill $00
+01 00 01 03 3E 00 00             IMAGE $0100: 3E 00 00
+02 01 01 01 01                   PATCH $0101: 01
+01 05 01 01 C9                   IMAGE $0105: C9
+00 06 01 00 06 01 00             END: highWater $0106, cursor $0106
 ```
 
-This is the simplest and usually fastest policy. It remains valuable where the complete output comfortably fits alongside ATOM. It should not be removed merely because bounded-memory alternatives exist.
+The logical BIN bytes are `3E 01 00 00 00 C9`. The two-byte gap before the last IMAGE uses the fill value. Moving PATCH after the later IMAGE would produce the same final bytes here but a different ASO file and would violate operation order.
 
-### 5.2 Direct disk materialization
+### Reservation, backward cursor and no IMAGE
 
 ```text
-ATOM -> IMAGE/PATCH -> random-access COM file
+41 53 4F 01 00 01 FF             header: origin $0100, fill $FF
+00 04 01 00 02 01 00             END: highWater $0104, cursor $0102
 ```
 
-The destination file is the materialized image. IMAGE operations normally extend/write the file sequentially. PATCH operations seek to an earlier destination record and overwrite the affected bytes.
+The logical BIN bytes are `FF FF FF FF`. The final cursor does not shorten the image already reserved.
 
-The final file size need not be known in advance. The file grows as the logical high-water mark advances.
-
-For a CP/M `.COM` file loaded at `$0100`, target address `A` maps to file offset:
+### PATCH across a CP/M record boundary
 
 ```text
-offset = A - $0100
+41 53 4F 01 00 01 00             header: origin $0100, fill $00
+01 7F 01 02 00 00                IMAGE $017F: 00 00
+02 7F 01 02 34 12                PATCH $017F: 34 12
+00 81 01 00 81 01 00             END: highWater $0181, cursor $0181
 ```
 
-A direct materializer therefore does not require an image-sized RAM allocation. A minimal implementation can operate with approximately one CP/M logical record (128 bytes) plus parser/state storage.
+The logical image contains 129 bytes. Bytes 0..126 are zero, byte 127 is `$34` and byte 128 is `$12`. A CP/M materialiser must update two distinct output records.
 
-A practical implementation SHOULD use a larger cache when memory permits. A 1K-4K recent-output cache can absorb many short-range forward-reference patches without causing floppy seeks. The cache is an optimization only; correctness MUST NOT depend on its size.
-
-### 5.3 ASO serialization
+### Last address in Z80 memory
 
 ```text
-ATOM -> IMAGE/PATCH -> program.ASO
-program.ASO -> LOAD -> program.COM
+41 53 4F 01 FE FF 00             header: origin $FFFE, fill $00
+01 FE FF 02 AA BB                IMAGE $FFFE: AA BB
+00 00 00 01 00 00 01             END: highWater $10000, cursor $10000
 ```
 
-This preserves the operation stream as an artifact. The ASO writer performs sequential output only. A later small materializer replays the stream.
+The logical BIN bytes are `AA BB`. A 16-bit wrapped END value of zero is invalid.
 
-ASO is useful for slow media, staging, transport, debugging and systems where assembly and final materialization should be separate operations. It is not required merely to obtain bounded-memory assembly: direct disk materialization provides that property too.
-
-## 6. Bounded-memory ASO materialization on CP/M
-
-An ASO-to-COM utility can keep the ASO input strictly sequential while treating the COM output as random access.
-
-For IMAGE, it writes the corresponding output bytes. For PATCH, it computes the COM file offset, selects the relevant CP/M random record, reads that record into a small buffer, modifies the affected byte(s), writes the record back and resumes sequential ASO input.
-
-A patch crossing a 128-byte record boundary touches two output records. No complete program image is required in memory.
-
-A one-record cache is sufficient for correctness. Larger caches improve performance by retaining recently written output and reducing physical disk repositioning.
-
-This distinction is important:
+### PATCH into a filled gap
 
 ```text
-ASO input   : sequential access only
-COM output  : mostly sequential writes plus occasional random patch writes
+41 53 4F 01 00 01 FF             header: origin $0100, fill $FF
+01 03 01 01 00                   IMAGE $0103: 00
+02 01 01 01 55                   PATCH $0101: 55
+00 04 01 00 04 01 00             END: highWater $0104, cursor $0104
 ```
 
-## 7. ASO v1 binary-format direction
+The logical BIN bytes are `FF 55 FF 00`. This is valid ASO even though the current ATOM core would not issue that PATCH. It tests the bounded reader rule independently of the producer.
 
-The v1 encoding should be intentionally smaller and less general than NOBJ. The implementation target includes Z80 assembly under CP/M, so every field must justify its cost in code, RAM and file size.
+### Malformed-file vectors
 
-The proposed file identity is:
+In the table, `H` means the exact seven bytes `41 53 4F 01 00 01 00`. Concatenating `H` and the listed suffix gives the complete file unless the row supplies a complete file directly. The parser rejects each file. It need not use the wording in the last column for a user-facing diagnostic.
 
-```text
-41 53 4F 01
- A  S  O v1
-```
+| File bytes | Reason |
+| --- | --- |
+| `41 53 58 01 00 01 00` | Wrong magic |
+| `41 53 4F 02 00 01 00` | Unknown version |
+| `H` | Missing END |
+| `H 03` | Unknown record kind |
+| `H 01 00 01 00` | Zero-length IMAGE |
+| `H 02 00 01 01 7F` | PATCH before any IMAGE |
+| `H 01 00 01 02 AA BB 01 01 01 01 CC` | Overlapping IMAGE |
+| `H 01 00 01 01 AA 01 01 01 01 BB` | Non-canonical adjacent IMAGE |
+| `H 01 00 01 01 AA 02 00 01 02 12` | Truncated two-byte PATCH |
+| `41 53 4F 01 FE FF 00 01 FF FF 02 AA BB` | IMAGE crosses `$10000` |
+| `H 01 00 01 01 AA 00 00 01 00 00 01 00` | END below last IMAGE |
+| `H 01 00 01 01 AA 00 01 01 00 02 01 00` | Final cursor exceeds high-water mark |
+| `H 00 01 00 01 00 01 00` | High-water mark exceeds `$10000` |
+| `H 00 00 01 00 00 01 00 00` | Unexpected byte after END |
 
-All multi-byte integers are little-endian.
+The last vector has an otherwise valid empty image followed by `$00`. A single `$1A` in that position is also invalid: CP/M padding must complete precisely one 128-byte record and contain only `$1A`.
 
-The minimum required semantic record kinds are:
+## 6. Materialisation policies
 
-```text
-END
-IMAGE
-PATCH
-```
+### Node
 
-The final numeric encoding of these record kinds and the precise record framing MUST be settled before implementation is declared conforming.
+The normal Node path should consume the live ordered operation stream. It must not reconstruct ASO from separate, globally collected IMAGE and PATCH arrays. A Node materialiser may use RAM for the final image and a Node ASO writer may write a file, but both implement the same geometry and operation rules. RAM is a destination policy, not an alternate assembly model.
 
-A candidate framing is:
+Listings and D8 maps need source-position data that ASO v1 intentionally omits. A host may observe provenance alongside the operation stream for those optional outputs. It must not change ASO ordering or turn source metadata into a dependency of BIN, COM or HEX generation.
 
-```text
-HEADER:  41 53 4F 01
-IMAGE:   kind length address data...
-PATCH:   kind length address data...
-END:     kind
-```
+### CP/M direct BIN or COM
 
-However, the implementation should not freeze this framing until the following question has been evaluated: whether sequential IMAGE records need to carry an address at all. If the reader maintains the logical cursor, omitting redundant IMAGE addresses may make both the file and the Z80 decoder smaller. Explicit addresses may instead be desirable for recovery, validation and ORG handling.
+The direct policy writes to a tentative disk file. IMAGE advances the physical output and fills skipped addresses. PATCH uses CP/M random-record access to read, alter and rewrite the affected output record. Before reading a PATCH target, the materialiser must flush any pending sequential writes that contain it or update the resident dirty cache instead. It then restores the sequential output position. A two-byte PATCH may cross a record boundary. COM requires origin `$0100`; BIN can use another origin with byte zero corresponding to that origin.
 
-The same review must settle:
+The materialiser needs bounded buffers, not an image-sized TPA window. One 128-byte output record is sufficient for correctness, with separate source or ASO input buffering as needed. A larger output cache is optional and must not change bytes or acceptance. On failure, the tentative file is removed and the previous destination is preserved. A successful rename or equivalent publication occurs only after COMMIT.
 
-- representation of `ORG`/cursor changes;
-- representation of uninitialized `DS`/reserved regions;
-- fill-byte semantics when materializing a flat BIN/COM image;
-- maximum IMAGE run length;
-- maximum PATCH length (likely naturally small, but the format should not depend on that assumption without saying so);
-- whether END carries final cursor/high-water metadata;
-- whether v1 needs an integrity check, and whether its implementation cost is justified on CP/M;
-- behavior on malformed, truncated or out-of-range records.
+### CP/M ASO and replay
 
-These are format decisions, not reasons to abandon the streaming model.
+The CP/M writer appends ASO records sequentially to a tentative file. A later `ASOLOAD`-style utility reads that input sequentially and builds a tentative BIN or COM using random access only on the destination. The exact utility name and command syntax are separate CLI decisions. This avoids conflicting with CP/M's established Intel HEX `LOAD` utility.
 
-## 8. Ordering rules
+The ASO input needs its own record buffer while the materialiser updates an output record. A claim of one-record total RAM would omit that input buffer. The loader publishes the destination only after validating END and any permitted padding.
 
-The following rules are normative for ASO regardless of the final compact framing:
+### Intel HEX
 
-1. The header occurs first.
-2. Output records occur in ATOM host-operation order.
-3. A PATCH MUST NOT be moved earlier or later merely to group it with other patches.
-4. IMAGE operations MAY be coalesced only across adjacent IMAGE operations whose combination is semantically identical to replaying them separately.
-5. A PATCH may target output produced earlier in the stream. ASO v1 need not support a patch to output that has not yet logically been established.
-6. END occurs exactly once after successful assembly.
-7. A writer MUST NOT emit a successful END while unresolved references remain.
+A materialiser may render the logical image as Intel HEX with addresses taken from ASO and fill gaps expanded according to the header. HEX record width, line endings and optional start-address records are output-policy decisions; they do not alter ASO bytes.
 
-## 9. Relationship to the existing NOBJ profile
+## 7. Relationship to NOBJ
 
-The repository currently documents and implements an Atom-specific NOBJ 0.2 flat profile. That format uses the Nucleus-derived record envelope and metadata and emits grouped IMAGE records followed by grouped PATCH records.
+Atom's current NOBJ 0.2 renderer collects IMAGE and PATCH records in separate groups. ASO v1 is the canonical persistent form of the chronological operation stream. It is not a renamed NOBJ profile and must not inherit grouping, NOBJ metadata or the existing Node renderer's full-generation allocation.
 
-ASO should supersede NOBJ as ATOM's small-system streaming artifact rather than simply renaming the existing format. The existing NOBJ implementation may remain during migration for compatibility, but new small-system work should target ASO's chronological bounded-memory model.
+NOBJ may remain as an explicit compatibility export while consumers migrate. Removing it is a separate decision after its users are identified. New bounded-memory output work targets the ASO contract.
 
-Node should not use JavaScript's dynamic-memory facilities as a requirement of artifact generation. A Node ASO writer should follow the same streaming discipline expected of Z80, C and Rust implementations.
+## 8. Implementation order and acceptance
 
-## 10. CP/M command-line direction
+No production output path should be changed merely because this document has been merged. Implementation proceeds in independently proved steps:
 
-The exact switch spelling is an implementation decision, but the intended user workflows are:
+1. Write executable byte-exact valid and invalid vectors for section 5 and the record rules. Node and CP/M must consume the same vector files.
+2. Introduce one ordered host-operation interface and a Node ASO writer and reader. Keep current outputs available while proving the new writer preserves live call order and the reader materialises exactly the same logical bytes.
+3. Give Node and CP/M an explicit native high-water result at COMMIT, with tests for forward reservations and backward `ORG`. Then add a bounded CP/M direct-disk BIN/COM policy behind the existing transactional publication boundary. Measure the code, buffers, stack, random-record traffic and cache options separately.
+4. Add the CP/M ASO writer and loader, checking its bytes against Node and its final image against RAM and direct-disk materialisation.
+5. Move Node's normal BIN, COM and HEX generation to the ordered-stream materialisation path. Treat NOBJ as an optional compatibility export until its fate is decided explicitly.
 
-```text
-; convenient materialized output
-ATOM FOO.ASM -> FOO.COM
+The completed system must assemble and publish a logical image larger than Atom's current 18,304-byte CP/M RAM window without allocating an output-sized buffer. Its target descriptor capacity must reflect the selected target address range rather than the size of that former RAM window. Test an image that crosses the old boundary, a patch straddling a 128-byte record, a reservation-only extent, a backward final cursor, the `$10000` exclusive endpoint and failure after tentative output has begun. Compare logical output bytes, not CP/M record padding. Verify that the old destination survives every failed build and that an unresolved reference cannot produce a published ASO or materialised image.
 
-; persistent serialized operations
-ATOM FOO.ASM -> FOO.ASO
-LOAD FOO.ASO -> FOO.COM
-```
-
-The CP/M host should be able to choose RAM materialization or cached direct-disk materialization without changing assembler semantics.
-
-The desktop/Node CLI should ultimately expose `.aso` as an output suffix and should generate it from the chronological operation stream rather than from a globally reorganized artifact model.
-
-## 11. Implementation roadmap
-
-### Phase 1 - freeze ASO v1 framing
-
-Choose the smallest record encoding that correctly represents IMAGE, PATCH, cursor/ORG/reservation behavior and successful completion. Write byte-exact examples and malformed-input cases.
-
-### Phase 2 - Node reference implementation
-
-Implement an ASO writer and parser/materializer. The writer should consume operations chronologically and avoid global sorting/regrouping. Use this as the executable reference for the binary specification.
-
-### Phase 3 - CP/M direct COM materializer
-
-Replace or supplement the image-sized RAM output policy with a disk-backed output policy using CP/M random-record I/O and a bounded cache. Measure 128-byte, 1K, 2K and 4K cache choices against representative assemblies where practical.
-
-### Phase 4 - CP/M ASO writer
-
-Add sequential `.ASO` emission. The writer should require only bounded record buffering.
-
-### Phase 5 - CP/M LOAD utility
-
-Implement a small `LOAD`-style ASO materializer. It should read ASO sequentially and construct a `.COM` using bounded RAM and random access only on the output file.
-
-### Phase 6 - retire or retain NOBJ deliberately
-
-Once ASO covers the required Atom workflows, decide whether `.nobj` remains as a compatibility/export format or is deprecated in favor of `.aso`.
-
-## 12. Acceptance criteria
-
-The architecture is successful when all of the following are true:
-
-- ATOM can assemble an output image larger than the RAM left after ATOM itself is resident, subject to target address-space and filesystem limits rather than an image-sized buffer;
-- the CP/M direct materializer uses bounded memory;
-- the ASO writer uses bounded memory and sequential output;
-- ASO IMAGE and PATCH records retain semantic operation order;
-- a small ASO loader can reproduce the same final image as RAM materialization;
-- Node, CP/M and any future C/Rust implementation agree on byte-exact ASO test vectors;
-- unresolved references prevent successful completion rather than leaking unresolved relocation state into ASO.
-
-## 13. Design principle
-
-ATOM's output abstraction should make the destination policy independent of assembly semantics.
-
-The assembler produces operations. A host may apply them to RAM, apply them to a random-access file, or serialize them as ASO. The most constrained implementation should define the baseline architecture; richer hosts may optimize it, but should not make the format depend on facilities unavailable to small systems.
+This removes the assembler's present RAM-output limit. It does not promise that a resulting COM file will run on every CP/M machine: the destination machine's TPA remains a separate load-time limit. Source-part limits, filesystem capacity, disk space and the Z80 target address space remain separate constraints too.
