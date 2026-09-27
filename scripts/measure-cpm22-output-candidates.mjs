@@ -252,7 +252,7 @@ const result = {
   inTpaComplete: {
     classification: "Measured complete retained adapter",
     outputCodeBytes: census.outputAdapterCodeBytes,
-    outputImageWorkspaceBytes: census.outputBytes,
+    outputWindowBytes: census.materializerWindowBytes,
   },
   randomRecord: {
     classification: "Measured lower-bound kernel",

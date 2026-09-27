@@ -14,7 +14,11 @@ import {
   representativeSource,
   runCpm22Atom,
 } from "./cpm22-support.mjs";
-import { writeIntelHex } from "../src/host/index.mjs";
+import {
+  assembleResolvedAtomProject,
+  materializeAtomGeneration,
+  writeIntelHex,
+} from "../src/host/index.mjs";
 import { createAsoWriter, readAsoOperations } from "../src/host/artifacts/aso-stream.mjs";
 
 const multipartParts = [
@@ -25,6 +29,20 @@ const cpmCensus = JSON.parse(await readFile(
   new URL("../proofs/cpm22-census.json", import.meta.url),
   "utf8",
 ));
+
+async function expectedImageForSource(source, identity) {
+  const sourceBytes = Uint8Array.from(source);
+  const assembly = await assembleResolvedAtomProject({
+    parts: [{
+      ordinal: 0,
+      bank: 0,
+      originalBytes: sourceBytes,
+      compilerBytes: sourceBytes,
+      logicalIdentity: identity,
+    }],
+  }, { target: { start: 0x100, capacity: 0xff00 } });
+  return materializeAtomGeneration(assembly.generation);
+}
 
 function referenceAsoFile(events) {
   const chunks = [];
@@ -181,19 +199,63 @@ test("native Atom publishes a selected raw BIN", async () => {
   assert.equal(result.returnA, 0);
 });
 
-test("native Atom publishes checksummed Intel HEX", async () => {
-  const expected = await expectedRepresentativeProgram();
-  const result = await runCpm22Atom(representativeSource, undefined, {
-    sourceName: "HELLO.ASM",
-    outputName: "HELLO.HEX",
+test("CP/M materializes large Intel HEX through bounded ASO replay windows", async () => {
+  const source = Buffer.from("ORG $100\r\nDS $5000,$A5\r\n", "ascii");
+  const expectedImage = await expectedImageForSource(source, "LARGE.ASM");
+  const expectedHex = writeIntelHex(expectedImage, { lineEnding: "\r\n" });
+  let spoolWrites = 0;
+  let spoolReads = 0;
+  let outputWrites = 0;
+  let randomOutputOperations = 0;
+  const result = await runCpm22Atom(source, undefined, {
+    sourceName: "LARGE.ASM",
+    outputName: "LARGE.HEX",
+    beforeBdos({ call, fcb, memory }) {
+      const extension = String.fromCharCode(
+        memory[fcb + 9] & 0x7f,
+        memory[fcb + 10] & 0x7f,
+        memory[fcb + 11] & 0x7f,
+      );
+      if (extension === "BAK" && call === 21) spoolWrites += 1;
+      if (extension === "BAK" && call === 20) spoolReads += 1;
+      if (extension === "$$$" && call === 21) outputWrites += 1;
+      if (extension === "$$$" && (call === 33 || call === 34))
+        randomOutputOperations += 1;
+    },
   });
   const physical = result.outputFile?.bytes ?? new Uint8Array();
   const padding = physical.indexOf(0x1a);
   const text = Buffer.from(physical.slice(0, padding < 0 ? physical.length : padding)).toString("ascii");
 
-  assert.match(result.atomTranscript, /HELLO\.HEX written/);
-  assert.equal(text, writeIntelHex(expected, { lineEnding: "\r\n" }));
+  assert.match(result.atomTranscript, /LARGE\.HEX written/);
+  assert.equal(expectedImage.bytes.length, 0x5000);
+  assert.equal(text, expectedHex);
+  assert.ok(spoolWrites > 0, "HEX assembly did not spool ordered operations");
+  assert.ok(spoolReads >= 3, "HEX materialization did not replay across windows");
+  assert.ok(outputWrites > 1, "HEX output did not flush sequential records");
+  assert.equal(randomOutputOperations, 0);
   assert.equal(result.returnA, 0);
+});
+
+test("CP/M HEX handles empty, one-byte, exact-window, and short-tail images", async () => {
+  const lengths = [0, 1, cpmCensus.materializerWindowBytes, cpmCensus.materializerWindowBytes + 1];
+  for (const length of lengths) {
+    const source = Buffer.from(
+      length === 0 ? "ORG $100\r\n" : `ORG $100\r\nDS ${length},$A5\r\n`,
+      "ascii",
+    );
+    const expected = await expectedImageForSource(source, "BOUNDARY.ASM");
+    const result = await runCpm22Atom(source, undefined, {
+      sourceName: "BOUNDARY.ASM",
+      outputName: "BOUNDARY.HEX",
+    });
+    const physical = result.outputFile?.bytes ?? new Uint8Array();
+    const padding = physical.indexOf(0x1a);
+    const text = Buffer.from(physical.slice(0, padding < 0 ? physical.length : padding)).toString("ascii");
+    assert.equal(expected.bytes.length, length);
+    assert.equal(text, writeIntelHex(expected, { lineEnding: "\r\n" }), `length ${length}`);
+    assert.equal(result.returnA, 0, `length ${length}`);
+  }
 });
 
 test("CP/M writes canonical ASO with a forward patch beyond the former image window", async () => {
@@ -481,6 +543,30 @@ test("a malformed internal ASO spool never replaces an existing COM", async () =
     Buffer.from("ORG $100\r\nDB $3E,$2A,$C9\r\n", "ascii"),
     prior,
     {
+      beforeBdos({ call, fcb, memory }) {
+        if (corrupted || call !== 21) return;
+        if (String.fromCharCode(memory[fcb + 9], memory[fcb + 10], memory[fcb + 11]) !== "BAK") return;
+        memory[cpmCensus.asoRecordAddress] ^= 1;
+        corrupted = true;
+      },
+    },
+  );
+
+  assert.equal(corrupted, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("a malformed internal ASO spool never replaces an existing HEX file", async () => {
+  const prior = Uint8Array.of(0x3a, 0x30, 0x30, 0x30, 0x30);
+  let corrupted = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDB $3E,$2A,$C9\r\n", "ascii"),
+    prior,
+    {
+      outputName: "OUTPUT.HEX",
       beforeBdos({ call, fcb, memory }) {
         if (corrupted || call !== 21) return;
         if (String.fromCharCode(memory[fcb + 9], memory[fcb + 10], memory[fcb + 11]) !== "BAK") return;

@@ -6,7 +6,7 @@
 ; sequentially; no floppy seek is needed to apply a PATCH.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Convert the internal ASO spool into COM or BIN, then publish the temp file.
+; Convert the internal ASO spool into COM, BIN or HEX, then publish the temp.
 
 CP_MAT_ASO_OUTPUT:
     LD   A,(CP_ASO_FLAGS)   ; Read the committed high-water endpoint form.
@@ -20,17 +20,21 @@ CP_MAT_HIGH_WORD:
     OR   A                  ; Clear borrow before the subtraction.
     SBC  HL,DE              ; Convert the absolute endpoint to a file length.
 CP_MAT_LENGTH_READY:
+    LD   A,(CP_OUTPUT_FORMAT)  ; Check whether this output is textual HEX.
+    CP   2                  ; HEX stores exact bytes rather than CP/M records.
+    JR   Z,CP_MAT_LENGTH_EXACT  ; Keep the exact unpadded length.
     LD   DE,127             ; Round the last logical record up to 128 bytes.
     ADD  HL,DE              ; The extra bytes use the ASO fill value.
     LD   A,L                ; Keep only bit seven of the rounded low byte.
     AND  $80                ; Clear the seven bits below a record boundary.
     LD   L,A                ; Retain the rounded low byte.
-    LD   (CP_MAT_OUTPUT_LEFT),HL  ; Count physical records still to write.
+CP_MAT_LENGTH_EXACT:
+    LD   (CP_MAT_OUTPUT_LEFT),HL  ; Count HEX or padded binary bytes.
     XOR  A                  ; Begin writing the first output window.
     LD   (CP_MAT_FILL),A    ; The native BEGIN hook declares zero fill.
     LD   (CP_MAT_WINDOW_START),A  ; Its image-relative offset is zero.
     LD   (CP_MAT_WINDOW_START+1),A  ; Clear the offset's high byte as well.
-    CALL CP_SET_TEMP_FCB    ; Name the tentative COM or BIN file.
+    CALL CP_SET_TEMP_FCB    ; Name the tentative output file.
     LD   DE,CP_WORK_FCB+12  ; Reset all mutable FCB state before MAKE.
     XOR  A                  ; CP/M expects cleared record and extent fields.
     LD   B,24               ; Count the remaining FCB bytes.
@@ -42,6 +46,10 @@ CP_MAT_LENGTH_READY:
     JP   Z,CP_MAT_FAILURE   ; Keep the old destination untouched.
     LD   A,1                ; The abort path now owns the open temp file.
     LD   (CP_OUTPUT_OPEN),A  ; Retain its cleanup state.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Select the representation's output encoder.
+    CP   2                  ; Format two is Intel HEX.
+    JR   NZ,CP_MAT_WINDOW_LOOP  ; Binary outputs need no HEX buffer setup.
+    CALL ZTS_CPM_HEX_BEGIN  ; Start one HEX stream before its replay windows.
 CP_MAT_WINDOW_LOOP:
     LD   HL,(CP_MAT_OUTPUT_LEFT)  ; Read the rounded output bytes remaining.
     LD   A,H                ; Check the high byte.
@@ -50,10 +58,16 @@ CP_MAT_WINDOW_LOOP:
     LD   HL,(CP_MAT_WINDOW_START)  ; Did any nonempty output window complete?
     LD   A,H                ; Check its high byte.
     OR   L                  ; Zero distinguishes a genuinely empty image.
-    JP   NZ,CP_MAT_OUTPUT_CLOSE  ; Nonempty output already passed validation.
+    JR   NZ,CP_MAT_OUTPUT_DATA_DONE  ; Nonempty output passed validation.
     CALL CP_MAT_REPLAY      ; Validate an empty stream through physical EOF.
     RET  C                  ; Do not publish a malformed empty stream.
-    JP   CP_MAT_OUTPUT_CLOSE  ; Close only after the empty stream is verified.
+CP_MAT_OUTPUT_DATA_DONE:
+    LD   A,(CP_OUTPUT_FORMAT)  ; Select the format's finalization path.
+    CP   2                  ; Intel HEX needs EOF and final record padding.
+    JP   NZ,CP_MAT_OUTPUT_CLOSE  ; Binary output is already complete.
+    CALL ZTS_CPM_HEX_END    ; Finish the HEX stream through sequential BDOS.
+    RET  C                  ; Preserve the old output after a write failure.
+    JP   CP_MAT_OUTPUT_CLOSE  ; Close only after HEX is complete.
 CP_MAT_WINDOW_NONEMPTY:
     LD   HL,CP_OUTPUT_END   ; Load the inclusive address-space ceiling.
     LD   DE,CP_MAT_WINDOW   ; Subtract the aligned start after overlay code.
@@ -77,8 +91,23 @@ CP_MAT_WINDOW_SIZE_READY:
     CALL CP_MAT_FILL_WINDOW  ; Restore untouched gaps and reservations.
     CALL CP_MAT_REPLAY      ; Reopen and validate the complete ASO stream.
     RET  C                  ; HS_ABORT removes tentative data.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Choose raw records or Intel HEX conversion.
+    CP   2                  ; Only HEX consumes the replay window as text.
+    JR   NZ,CP_MAT_WRITE_BINARY  ; COM and BIN append this window unchanged.
+    LD   HL,CP_MAT_WINDOW   ; Set the HEX input cursor.
+    LD   (ZTS_CPM_FINAL_SOURCE_CURSOR),HL  ; Reset its window source cursor.
+    LD   HL,(CP_MAT_WINDOW_LENGTH)  ; Read the exact logical segment length.
+    LD   (ZTS_CPM_FINAL_REMAINING),HL  ; Do not render binary record padding.
+    LD   HL,(CP_ASO_ORIGIN)  ; Start with the image's absolute base address.
+    LD   DE,(CP_MAT_WINDOW_START)  ; Add this replay window's relative offset.
+    ADD  HL,DE              ; Form this window's first target address.
+    LD   (ZTS_CPM_FINAL_ADDRESS),HL  ; Reset the helper for this segment.
+    CALL ZTS_CPM_HEX_SEGMENT  ; Emit checksummed HEX records.
+    JR   CP_MAT_WINDOW_WRITTEN  ; Advance to the next output window.
+CP_MAT_WRITE_BINARY:
     CALL CP_MAT_WRITE_WINDOW  ; Append this window as sequential CP/M records.
     RET  C                  ; Preserve the old destination on write failure.
+CP_MAT_WINDOW_WRITTEN:
     LD   HL,(CP_MAT_OUTPUT_LEFT)  ; Reload total output bytes still unwritten.
     LD   DE,(CP_MAT_WINDOW_LENGTH)  ; Read the completed window's length.
     OR   A                  ; Clear borrow before reducing the remaining size.
@@ -87,7 +116,7 @@ CP_MAT_WINDOW_SIZE_READY:
     LD   HL,(CP_MAT_WINDOW_START)  ; Read the next relative window start.
     ADD  HL,DE              ; Advance by the length just materialized.
     LD   (CP_MAT_WINDOW_START),HL  ; Keep the next pass aligned with records.
-    JR   CP_MAT_WINDOW_LOOP  ; Continue or close after the final window.
+    JP   CP_MAT_WINDOW_LOOP  ; Continue or close after the final window.
 
 ; Fill the selected window before applying any IMAGE and PATCH operations.
 
@@ -98,6 +127,9 @@ CP_MAT_FILL_WINDOW:
     LD   DE,CP_MAT_WINDOW+1  ; Point one byte beyond the seed value.
     LD   BC,(CP_MAT_WINDOW_LENGTH)  ; Load the complete window length.
     DEC  BC                 ; The seed byte is already initialized.
+    LD   A,B                ; Does any byte remain after the seed?
+    OR   C                  ; A one-byte window needs no LDIR operation.
+    RET  Z                  ; Avoid treating BC=0 as 65,536 copies.
     LD   HL,CP_MAT_WINDOW   ; Point LDIR at that first initialized byte.
     LDIR                    ; Fill only the bytes that will be written.
     XOR  A                  ; Return success with carry clear.
@@ -498,7 +530,7 @@ CP_MAT_WRITE_BAD:
 ; Finalize the temp file, discard the spool, and publish only after success.
 
 CP_MAT_OUTPUT_CLOSE:
-    LD   DE,CP_WORK_FCB     ; Close the completed COM or BIN temporary file.
+    LD   DE,CP_WORK_FCB     ; Close the completed output temporary file.
     LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function 16.
     CALL CP_BDOS            ; Flush its last full record to disk.
     INC  A                  ; Convert BDOS's $FF close failure to zero.
@@ -513,7 +545,7 @@ CP_MAT_OUTPUT_CLOSE:
     JR   NZ,CP_MAT_FAILURE  ; Do not publish if internal cleanup failed.
     XOR  A                  ; BAK is free for the output transaction now.
     LD   (CP_MAT_SPOOL_OWNED),A  ; Keep output backup separate from the spool.
-    CALL CP_PUBLISH_TEMP    ; Atomically replace the selected COM or BIN.
+    CALL CP_PUBLISH_TEMP    ; Atomically replace the selected output file.
     RET                     ; Preserve publication's carry result.
 
 ; Common fail-closed result; HS_ABORT removes temp/spool and restores backup.

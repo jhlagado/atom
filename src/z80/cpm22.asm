@@ -9,8 +9,8 @@
 ;   1. parse a compact CP/M command tail and choose COM, BIN or Intel HEX;
 ;   2. discover leading %INCLUDE directives and derive dependency-first parts;
 ;   3. serve random source bytes from CP/M files through a 128-byte cache;
-;   4. materialize COM/BIN/HEX through a fixed TPA output window or spool
-;      explicit ASO output as ordered records; and
+;   4. spool ordered operations, then materialize COM/BIN/HEX through a fixed
+;      TPA output window or retain explicit ASO output; and
 ;   5. publish completed output through temporary/backup filenames.
 ;
 ; Atom itself has no filesystem calls. Its five-byte part descriptors use the
@@ -72,7 +72,6 @@ CP_HEADER_OPEN      EQU $4FF8
 CP_RAW_OFFSET       EQU $4FF9
 CP_NEXT_VALUE       EQU $4FFB
 CP_TARGET_START     EQU $0100
-CP_TARGET_CAPACITY  EQU $4780
 CP_ASO_TARGET_CAPACITY EQU $FF00
 CP_STACK_TOP        EQU $E400
 CP_DMA_FUNCTION     EQU 26
@@ -127,21 +126,7 @@ CP_MEMORY_OK:
     JR   NZ,CP_SUCCESS      ; Help returns success without assembly.
     CALL CP_RESOLVE_SOURCE  ; Resolve includes and measure all parts.
     JR   C,CP_BUILD_FAILED  ; Report an invalid source graph.
-    LD   A,(CP_OUTPUT_FORMAT)  ; Read the output mode before clearing RAM.
-    CP   2                  ; Only Intel HEX still needs the RAM image.
-    JR   NZ,CP_ASO_IMAGE_READY  ; COM, BIN and ASO stream operations to disk.
-    LD   HL,CP_OUTPUT_START  ; Point at the tentative image's first byte.
-    LD   DE,CP_OUTPUT_START+1  ; Point DE at the next byte to initialise.
-    LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1  ; Count remaining bytes.
-    LD   (HL),0             ; Initialise the first image byte to zero.
-    LDIR                    ; Zero gaps and reservations.
-CP_ASO_IMAGE_READY:
-    LD   HL,CP_TARGET_CAPACITY  ; HEX retains the legacy bounded image window.
-    LD   A,(CP_OUTPUT_FORMAT)  ; Select the full target range for disk output.
-    CP   2                  ; HEX alone still writes from the RAM image.
-    JR   Z,CP_TARGET_CAPACITY_READY  ; Keep its historical 18,304-byte bound.
-    LD   HL,CP_ASO_TARGET_CAPACITY  ; COM, BIN and ASO reach exactly $10000.
-CP_TARGET_CAPACITY_READY:
+    LD   HL,CP_ASO_TARGET_CAPACITY  ; All output modes cover $0100..$10000.
     LD   (CP_DESCRIPTOR+13),HL  ; Install the selected target extent.
     LD   IX,CP_DESCRIPTOR   ; Pass the measured source descriptor.
     CALL DR_ASM             ; Assemble all parts into the private RAM image.
@@ -1254,9 +1239,8 @@ CP_PERCENT_YES:
     RET                     ; Return with carry clear.
 CP_SOURCE_CODE_END:
 
-; These Atom sink entries replace the fail-closed host stubs. The fixed RAM
-; image makes IMAGE and PATCH constant-time writes; filesystem
-; publication is delayed until COMMIT.
+; These Atom sink entries replace the fail-closed host stubs. IMAGE and PATCH
+; are appended to a private ASO spool; output publication waits until COMMIT.
 
 CP_OUTPUT_CODE_START:
 ;@@ATOM_CPM_ASO_WRITER@@
@@ -1266,73 +1250,27 @@ HS_SCBEG:
 ; Begin a fresh tentative generation. No file is created until COMMIT.
 
 HS_BEG:
-    LD   A,(CP_OUTPUT_FORMAT)  ; Read the requested output representation.
-    CP   2                  ; HEX alone retains the legacy RAM output sink.
-    JP   NZ,CP_ASO_BEGIN    ; COM, BIN and ASO use the ordered stream writer.
-    XOR  A                  ; Clear both transaction flags.
-    LD   (CP_OUTPUT_OPEN),A  ; No temporary output file is open yet.
-    LD   (CP_BACKED_UP),A   ; No previous output has been moved aside.
-    LD   (CP_ASO_ACTIVE),A  ; The legacy output path cannot inherit ASO state.
-    LD   (CP_ASO_OPEN),A    ; No ASO FCB remains open between invocations.
-    RET                     ; Return success with carry clear.
+    JP   CP_ASO_BEGIN       ; Start the ordered-operation writer.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Store one IMAGE or byte-PATCH value in the private CP/M target image.
-; IMAGE and byte PATCH share this translation into the tentative RAM image.
-; The core has already checked target capacity and patch order.
+; Serialize one IMAGE or byte-PATCH value in the private CP/M operation spool.
 
 HS_IB:
-    PUSH AF                 ; Preserve the IMAGE byte during mode selection.
-    LD   A,(CP_ASO_ACTIVE)  ; Check whether this generation writes ASO.
-    OR   A                  ; Zero keeps the ordinary RAM-image path.
-    JR   Z,CP_STORE_OUTPUT_BYTE  ; Restore A before the legacy RAM store.
-    POP  AF                 ; Restore the byte expected by the ASO writer.
-    JP   CP_ASO_IMAGE       ; Serialize this IMAGE byte when selected.
+    JP   CP_ASO_IMAGE       ; Append the IMAGE byte to the operation spool.
 HS_PB:
-    PUSH AF                 ; Preserve the PATCH byte during mode selection.
-    LD   A,(CP_ASO_ACTIVE)  ; Check whether this generation writes ASO.
-    OR   A                  ; Zero keeps the ordinary RAM-image path.
-    JR   Z,CP_STORE_OUTPUT_BYTE  ; Restore A before the legacy RAM store.
-    POP  AF                 ; Restore the byte expected by the ASO writer.
-    JP   CP_ASO_PATCH_BYTE  ; Serialize a one-byte PATCH when selected.
-CP_STORE_OUTPUT_BYTE:
-    POP  AF                 ; Restore the legacy IMAGE or PATCH byte.
-    PUSH AF                 ; Save the byte during translation.
-    LD   DE,CP_OUTPUT_START-CP_TARGET_START  ; Form target-to-image offset.
-    ADD  HL,DE              ; Address the byte in private RAM.
-    POP  AF                 ; Recover the byte supplied by the core.
-    LD   (HL),A             ; Store it without publishing a file yet.
-    XOR  A                  ; Return success with carry clear.
-    RET                     ; Finish the IMAGE or byte-PATCH operation.
+    JP   CP_ASO_PATCH_BYTE  ; Append the replacement byte to the spool.
 
 ;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Store one little-endian word at its translated logical address.
 
 HS_PW:
-    LD   A,(CP_ASO_ACTIVE)  ; Check whether this generation writes ASO.
-    OR   A                  ; Zero keeps the ordinary RAM-image path.
-    JP   NZ,CP_ASO_PATCH_WORD  ; Serialize a two-byte PATCH when selected.
-    EX   DE,HL              ; Exchange address and word.
-    LD   BC,CP_OUTPUT_START-CP_TARGET_START  ; Form the image translation.
-    ADD  HL,BC              ; Address the word in private RAM.
-    LD   (HL),E             ; Store the low byte at the lower address.
-    INC  HL                 ; Advance to the word's high-byte position.
-    LD   (HL),D             ; Store the high byte in little-endian order.
-    XOR  A                  ; Return success with carry clear.
-    RET                     ; Finish the word-PATCH operation.
+    JP   CP_ASO_PATCH_WORD  ; Append both replacement bytes to the spool.
 
 ;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Convert explicit high water to image length, create a temporary file and
-; serialize the selected format. COM and BIN write CP/M records from the RAM
-; image; HEX streams records through the shared final-image helper below.
+; COMMIT seals the operation stream and publishes its selected representation.
 
 HS_CMT:
-    PUSH AF                 ; Preserve COMMIT's endpoint bits during dispatch.
-    LD   A,(CP_ASO_ACTIVE)  ; Check whether the generation is an ASO spool.
-    OR   A                  ; Zero selects the legacy image finalizer.
-    JR   Z,CP_COMMIT_RAM    ; Restore A before legacy geometry handling.
-    POP  AF                 ; Restore high-water and cursor endpoint bits.
-    JP   CP_ASO_COMMIT      ; Seal and publish the ASO stream.
+    JP   CP_ASO_COMMIT      ; Seal, materialize if needed, and publish.
 CP_COMMIT_RAM:
     POP  AF                 ; Restore flags expected by the RAM finalizer.
     BIT  1,A                ; Is high water the mathematical endpoint $10000?
@@ -1490,10 +1428,9 @@ CP_ABORT_DONE:
     LD   (CP_MAT_SPOOL_OWNED),A  ; No private spool survives abort cleanup.
     RET                     ; Finish cleanup with the flags cleared.
 
+; Obsolete RAM-image fallback. All active output formats commit through ASO.
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Convert the tentative binary image to Intel HEX while streaming 128-byte
-; CP/M records from the source cache. The binary image remains in place for
-; PATCH application until Atom calls this routine.
+; Write one already-materialized image through the former HEX path.
 
 CP_WRITE_HEX:
     CALL ZTS_CPM_HEX_BEGIN  ; Reset the helper's buffer and status flags.
@@ -1726,7 +1663,7 @@ CP_DESCRIPTOR:
     DW   CP_PART_DESCRIPTORS
     DW   CP_SYMBOL_START,CP_SYMBOL_END
     DW   CP_PENDING_START,CP_PENDING_END
-    DW   CP_TARGET_START,CP_TARGET_CAPACITY
+    DW   CP_TARGET_START,CP_ASO_TARGET_CAPACITY
 
 CP_RENAME_FCB:
 CP_INPUT_FCB:

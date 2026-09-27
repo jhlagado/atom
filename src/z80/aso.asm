@@ -342,14 +342,14 @@ CP_ASO_COMMIT_APPEND:
     LD   (CP_ASO_OPEN),A    ; The spool can now be renamed transactionally.
     LD   A,(CP_OUTPUT_FORMAT)  ; Is the spool the requested file?
     CP   3                  ; Explicit ASO needs no final-image conversion.
-    JR   NZ,CP_ASO_COMMIT_MATERIALIZE  ; COM and BIN replay into a temp file.
+    JR   NZ,CP_ASO_COMMIT_MATERIALIZE  ; COM, BIN and HEX replay to a temp.
     CALL CP_PUBLISH_TEMP    ; Replace the requested destination on success.
     RET  C                  ; Let HS_ABORT restore any moved backup.
     XOR  A                  ; Disable the ASO hook path for the next command.
     LD   (CP_ASO_ACTIVE),A  ; The completed file is now owned by its caller.
     RET                     ; Return successful COMMIT to the native driver.
 CP_ASO_COMMIT_MATERIALIZE:
-    CALL CP_MAT_ASO_OUTPUT  ; Replay ASO into the selected flat binary format.
+    CALL CP_MAT_ASO_OUTPUT  ; Replay ASO into the selected flat output format.
     RET  C                  ; Leave HS_ABORT to clean all tentative files.
     XOR  A                  ; Disable operation dispatch after publication.
     LD   (CP_ASO_ACTIVE),A  ; The completed output now belongs to the caller.
