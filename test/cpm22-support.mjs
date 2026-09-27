@@ -145,13 +145,14 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   const atomOutputStart = output.length;
   platform.terminal.enqueueInput(Buffer.from(`${command}\r`, "ascii"));
   stepUntil(() => runtime.getPC() === census.entryAddress, "Atom entry");
+  options.beforeAtomEntry?.(runtimeMemory, runtime.getRegisters());
   const entrySp = runtime.getRegisters().sp;
   const programInstructions = instructions;
   const programCycles = cycles;
   measureAtom = true;
   stepUntil(() => runtime.getPC() === census.returnAddress, "Atom return tail");
-  stepUntil(() => runtime.getPC() !== census.returnAddress, "Atom stack restoration");
-  stepUntil(() => true, "Atom return instruction");
+  stepUntil(() => runtime.getPC() !== census.returnAddress, "Atom warm-boot transfer");
+  assert.equal(runtime.getPC(), 0, "Atom must exit through CP/M warm boot");
   const returnSp = runtime.getRegisters().sp;
   const returnA = runtime.getRegisters().a;
   measureAtom = false;
@@ -159,7 +160,11 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   const atomCycles = cycles - programCycles;
   const commandInstructions = instructions - beforeAtomInstructions;
   const commandCycles = cycles - beforeAtomCycles;
+  const beforeWarmBootInstructions = instructions;
+  const beforeWarmBootCycles = cycles;
   stepUntil(() => transcript(atomOutputStart).endsWith("\r\nA>"), "Atom completion prompt");
+  const warmBootInstructions = instructions - beforeWarmBootInstructions;
+  const warmBootCycles = cycles - beforeWarmBootCycles;
   const finalDisk = platform.disk.exportImage();
   const outputFile = readCpm22File(finalDisk, outputName);
   return {
@@ -170,6 +175,8 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     atomCycles,
     commandInstructions,
     commandCycles,
+    warmBootInstructions,
+    warmBootCycles,
     atomMinimumSp: minimumSp,
     atomBdosCalls: Object.freeze(bdosCalls.slice()),
     atomRandomReadRecords: Object.freeze(randomReadRecords.slice()),

@@ -77,12 +77,22 @@ CP_BDOS:
     RET                     ; Return the BDOS result and flags unchanged.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Leave the CCP stack, parse arguments and includes, clear the tentative image
-; and call the native driver. Only a committed image gets a success message.
-; Return 0 for success or help, 1 for build failure or 2 for command failure.
+; Check available transient memory before leaving the CCP stack. The accepted
+; layout may overlay CCP, so every exit uses warm boot rather than RET.
+; A at the exit records 0 for success, 1 for failure or 2 for bad arguments.
 
 CP_ENTRY:
-    LD   (CP_SAVED_SP),SP   ; Retain the CCP stack for the final return.
+    LD   HL,($0006)         ; Read CP/M's advertised BDOS memory boundary.
+    LD   DE,CP_STACK_TOP    ; Require the fixed workspace and stack.
+    OR   A                  ; Clear borrow before the unsigned comparison.
+    SBC  HL,DE              ; Is the private region entirely below BDOS?
+    JR   NC,CP_MEMORY_OK    ; Equality accepts the exclusive stack top.
+    LD   DE,CP_MEMORY_TEXT  ; Explain rejection before opening any files.
+    LD   C,9                ; Select string output on the original CCP stack.
+    CALL CP_BDOS_ENTRY      ; Use BDOS before installing the private stack.
+    LD   A,1                ; Record the rejection for diagnostic probes.
+    JP   CP_RETURN          ; Warm boot without touching private arenas.
+CP_MEMORY_OK:
     LD   SP,CP_STACK_TOP    ; Use private RAM for calls and pushes.
     CALL CP_PARSE_COMMAND   ; Parse source and output names.
     JR   C,CP_COMMAND_FAILED  ; Report a usage or filename error before I/O.
@@ -105,12 +115,12 @@ CP_ENTRY:
     LD   DE,CP_WRITTEN_TEXT  ; Select the completion suffix.
     CALL CP_PRINT           ; Report success after the sink has committed.
 CP_SUCCESS:
-    XOR  A                  ; Return status zero for success or help.
-    JR   CP_RETURN          ; Restore the CCP stack through the common exit.
+    XOR  A                  ; Record status zero for success or help.
+    JR   CP_RETURN          ; Reload CCP through the common warm-boot exit.
 CP_COMMAND_FAILED:
     CALL CP_PRINT           ; DE holds the parser's diagnostic text.
     LD   A,2                ; Use status two for argument errors.
-    JR   CP_RETURN          ; Restore the CCP stack and return status two.
+    JR   CP_RETURN          ; Finish through the common warm-boot exit.
 CP_ASSEMBLY_FAILED:
     PUSH AF                 ; Save Atom's status while printing.
     LD   DE,CP_ASSEMBLY_TEXT  ; Point at the diagnostic prefix.
@@ -123,13 +133,13 @@ CP_ASSEMBLY_FAILED:
     LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
     CALL CP_PRINT           ; Finish the diagnostic line.
 CP_BUILD_FAILED:
-    LD   A,1                ; Return status one for build failure.
+    LD   A,1                ; Record status one for build failure.
 CP_RETURN:
 
-; Restore the CCP's original stack before returning its conventional status.
+; The private regions may have overwritten CCP and its original return stack.
+; Warm boot reloads the command processor; never return through those bytes.
 
-    LD   SP,(CP_SAVED_SP)   ; Restore the caller's command-processor stack.
-    RET                     ; Return the status in A to the CCP.
+    JP   $0000              ; Reload CP/M's command processor through BIOS.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Map Atom's source ordinal to the retained CP/M filename, then reread only
@@ -1672,6 +1682,10 @@ CP_INCLUDE_CYCLE_TEXT:
 CP_SOURCE_CAPACITY_TEXT:
     DB 13,10,'T','o','o',' ','m','a','n','y',' '  ; Error prefix.
     DB 's','o','u','r','c','e','s',13,10,'$'  ; Source count.
+CP_MEMORY_TEXT:
+    DB 13,10                ; Start the diagnostic on a new line.
+    DB "Insufficient transient memory"  ; Explain the fixed-layout failure.
+    DB 13,10,'$'            ; End the line and BDOS string.
 CP_INCLUDE_WORD: DB 'I','N','C','L','U','D','E'
 CP_ASM_EXTENSION: DB 'A','S','M'
 CP_COM_EXTENSION: DB 'C','O','M'
@@ -1683,7 +1697,6 @@ CP_ADAPTER_WORKSPACE2_START:
 ; Small execution state. CP_OUTPUT_CURSOR overlays the source-cache key;
 ; source reads and patches finish before COMMIT publishes the output.
 
-CP_SAVED_SP: DW 0
 CP_OUTPUT_CURSOR: DW 0
 CP_SOURCE_CACHE_KEY EQU CP_OUTPUT_CURSOR
 CP_OUTPUT_REMAINING: DW 0

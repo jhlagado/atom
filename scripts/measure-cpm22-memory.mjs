@@ -27,7 +27,7 @@ for (const [name, source, status] of cases) {
   const prior = Uint8Array.from({ length: 128 }, (_, index) => index ^ 0xa5);
   const result = await runCpm22Atom(Buffer.from(source, "ascii"), prior);
   assert.equal(result.returnA, status, `${name}: unexpected result`);
-  assert.equal(result.returnSp, (result.entrySp + 2) & 0xffff, `${name}: stack return`);
+  assert.equal(result.returnSp, 0xe400, `${name}: private stack balance at warm boot`);
   assert.ok(result.atomMinimumSp >= 0xd800, `${name}: stack reservation exceeded`);
   assert.ok(result.outputFile, `${name}: output file disappeared`);
   if (status !== 0) {
@@ -45,6 +45,8 @@ for (const [name, source, status] of cases) {
     observedStackBytes: 0xe400 - result.atomMinimumSp,
     instructions: result.atomInstructions,
     tStates: result.atomCycles,
+    warmBootInstructions: result.warmBootInstructions,
+    warmBootTStates: result.warmBootCycles,
     sequentialWrites: result.atomBdosCalls.filter((call) => call === 21).length,
     randomReads: result.atomBdosCalls.filter((call) => call === 33).length,
   });

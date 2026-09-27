@@ -20,6 +20,49 @@ const multipartParts = [
   Buffer.from("START:\r\nRET\r\n", "ascii"),
 ];
 
+test("CP/M rejects an insufficient transient area before touching private arenas", async () => {
+  for (const boundary of [0x8000, 0xe3ff]) {
+    let bdos;
+    const prior = new Uint8Array(128).fill(0xa5);
+    const result = await runCpm22Atom(representativeSource, prior, {
+      beforeAtomEntry(memory) {
+        bdos = memory.slice(6, 8);
+        memory[6] = boundary & 0xff;
+        memory[7] = boundary >>> 8;
+        memory.fill(0x69, 0x5000, 0xe400);
+      },
+      beforeBdos({ memory }) {
+        memory.set(bdos, 6); // Keep real BDOS callable after the admission check.
+      },
+    });
+    assert.equal(result.returnA, 1);
+    assert.equal(result.returnSp, result.entrySp);
+    assert.match(result.atomTranscript, /Insufficient transient memory/);
+    assert.deepEqual(result.outputFile.bytes, prior);
+    assert.deepEqual(result.memory.slice(0x5000, 0xe400), new Uint8Array(0x9400).fill(0x69));
+    assert.deepEqual(result.atomBdosCalls, [9]);
+  }
+});
+
+test("CP/M admits the exact boundary and warm boots with the old CCP return address destroyed", async () => {
+  for (const boundary of [0xe400, 0xe401]) {
+    let bdos;
+    const result = await runCpm22Atom(representativeSource, undefined, {
+      beforeAtomEntry(memory, registers) {
+        bdos = memory.slice(6, 8);
+        memory[6] = boundary & 0xff;
+        memory[7] = boundary >>> 8;
+        memory[registers.sp] = 0xff;
+        memory[registers.sp + 1] = 0xff;
+      },
+      beforeBdos({ memory }) { memory.set(bdos, 6); },
+    });
+    assert.equal(result.returnA, 0);
+    assert.equal(result.returnSp, 0xe400);
+    assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
+  }
+});
+
 async function runMultipart(parts = multipartParts, options = {}) {
   const names = options.names ?? parts.map((_, index) => `P${index}.ASM`);
   const source = options.source ?? Buffer.from(
@@ -51,7 +94,7 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
   assert.equal(expected.base, 0x100);
   assert.deepEqual(result.outputFile.bytes.slice(0, expected.bytes.length), expected.bytes);
   assert.ok(result.atomMinimumSp >= 0xd800, "Atom crossed its $D800 stack floor");
-  assert.equal(result.returnSp, (result.entrySp + 2) & 0xffff, "Atom returned with an unbalanced stack");
+  assert.equal(result.returnSp, 0xe400, "Atom reached warm boot with an unbalanced private stack");
   assert.equal(result.returnA, 0);
   assert.equal(result.atomInstructions, result.census.representativeInstructions);
   assert.equal(result.atomCycles, result.census.representativeTStates);
@@ -200,7 +243,7 @@ test("CP/M diagnostics retain the raw offset when the source cannot be reopened"
   assert.equal(changed, true);
   assert.match(result.atomTranscript, /Atom error 02 ZNPUT\.ASM:byte 000A/);
   assert.equal(result.returnA, 1);
-  assert.equal(result.returnSp, (result.entrySp + 2) & 0xffff);
+  assert.equal(result.returnSp, 0xe400);
 });
 
 test("command-tail filenames select a different source and output COM", async () => {

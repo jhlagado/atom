@@ -9,6 +9,8 @@ console.log(JSON.stringify({
   tStates: result.atomCycles,
   commandLoadAndProgramInstructions: result.commandInstructions,
   commandLoadAndProgramTStates: result.commandCycles,
+  warmBootInstructions: result.warmBootInstructions,
+  warmBootTStates: result.warmBootCycles,
   minimumSp: result.atomMinimumSp,
   stackHighWaterBytes: 0xe400 - result.atomMinimumSp,
   entrySp: result.entrySp,
