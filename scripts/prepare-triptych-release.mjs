@@ -116,7 +116,12 @@ try {
     ["run", "--locked", "-p", "triptych-cpm-cli", "--", "list", imagePath],
     triptychRoot,
   );
-  assert.match(listing, /ATOM\.COM\s+120\s+15360/);
+  const expectedRecords = Math.ceil(sourceCom.length / 128);
+  const expectedRecordBytes = expectedRecords * 128;
+  assert.match(
+    listing,
+    new RegExp(`ATOM\\.COM\\s+${expectedRecords}\\s+${expectedRecordBytes}`),
+  );
 
   run(
     "cargo",

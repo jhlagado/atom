@@ -139,6 +139,12 @@ Before tagging a release:
 5. Run the release gate.
 6. Tag the exact commit as `v<version>`.
 
+Pushing the tag creates a GitHub release with the CP/M executable, manifest
+and checksums, then deploys the matching Triptych image and download page to
+GitHub Pages. This workflow does not publish the npm package. The package
+version is prepared in the release commit; `npm publish` remains a separate
+manual step.
+
 If the packaged files changed deliberately, refresh the census only after the
 file set is final:
 
