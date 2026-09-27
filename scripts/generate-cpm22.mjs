@@ -38,7 +38,10 @@ async function linkedSource() {
 async function build() {
   const nativeCore = await loadNativeAtomCore();
   const { bytes, symbols } = await assembleCpmAtomSource(await linkedSource(), { base: 0x100 });
-  assert.ok(symbols.CP_RESIDENT_END <= 0x4000, "CP/M Atom resident exceeds its 16 KiB partition");
+  assert.ok(
+    symbols.CP_RESIDENT_END <= symbols.CP_SOURCE_CACHE,
+    "CP/M Atom resident overlaps its source record cache",
+  );
   assert.equal(bytes.length, symbols.CP_RESIDENT_END - 0x100);
   const adapterCodeBytes = symbols.CP_ADAPTER_CODE_END - symbols.CP_ADAPTER_CODE_START;
   const adapterImmutableBytes = symbols.CP_ADAPTER_IMMUTABLE_END - symbols.CP_ADAPTER_IMMUTABLE_START;
