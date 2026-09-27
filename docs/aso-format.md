@@ -1,6 +1,14 @@
 # ASO: ATOM Serialized Operations
 
-Status: ASO v1 format specification. No implementation is implied by this document.
+Status: ASO v1 format specification with a tested streaming reference codec.
+The CP/M writer and materialiser are not yet implemented. Normal Atom output
+does not yet use ASO.
+
+The shared valid and invalid vectors are in `test/fixtures/aso-v1.json`.
+`test/aso-stream.test.mjs` checks the reference codec in
+`src/host/artifacts/aso-stream.mjs`, including chunk boundaries, failed writes
+and exact optional CP/M padding. These tests do not establish native CP/M
+execution or disk performance.
 
 ASO records the output operations of a successful ATOM assembly in their original order. A host can apply those operations to RAM, apply them to a random-access file or write them sequentially to an `.aso` file. The same operation contract applies on Node and CP/M. Neither platform has to create an intermediate ASO file when it can materialise the output directly.
 

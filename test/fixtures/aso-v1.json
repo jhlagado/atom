@@ -1,0 +1,80 @@
+{
+  "valid": [
+    {
+      "name": "full IMAGE run followed by contiguous tail",
+      "hex": "41534f01000100 010001800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 01800101aa 00810100810100",
+      "origin": 256,
+      "zeroPrefix": 128,
+      "image": "aa",
+      "highWater": 385,
+      "finalCursor": 385
+    },
+    {
+      "name": "END exactly on physical record boundary",
+      "hex": "41534f01000100 0100016e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 006e01006e0100",
+      "origin": 256,
+      "zeroPrefix": 110,
+      "image": "",
+      "highWater": 366,
+      "finalCursor": 366
+    },
+    {
+      "name": "interleaved patch and later image",
+      "hex": "41534f01000100 010001033e0000 0201010101 01050101c9 00060100060100",
+      "origin": 256,
+      "image": "3e01000000c9",
+      "highWater": 262,
+      "finalCursor": 262
+    },
+    {
+      "name": "reservation and backward cursor without IMAGE",
+      "hex": "41534f010001ff 00040100020100",
+      "origin": 256,
+      "image": "ffffffff",
+      "highWater": 260,
+      "finalCursor": 258
+    },
+    {
+      "name": "cross-record word patch",
+      "hex": "41534f01000100 017f01020000 027f01023412 00810100810100",
+      "origin": 256,
+      "zeroPrefix": 127,
+      "image": "3412",
+      "highWater": 385,
+      "finalCursor": 385
+    },
+    {
+      "name": "last Z80 address",
+      "hex": "41534f01feff00 01feff02aabb 00000001000001",
+      "origin": 65534,
+      "image": "aabb",
+      "highWater": 65536,
+      "finalCursor": 65536
+    },
+    {
+      "name": "patch into filled gap",
+      "hex": "41534f010001ff 0103010100 0201010155 00040100040100",
+      "origin": 256,
+      "image": "ff55ff00",
+      "highWater": 260,
+      "finalCursor": 260
+    }
+  ],
+  "invalid": [
+    ["wrong magic", "41535801000100"],
+    ["wrong version", "41534f02000100"],
+    ["missing END", "41534f01000100"],
+    ["unknown kind", "41534f01000100 03"],
+    ["empty IMAGE", "41534f01000100 01000100"],
+    ["PATCH before IMAGE", "41534f01000100 020001017f"],
+    ["overlapping IMAGE", "41534f01000100 01000102aabb 01010101cc"],
+    ["short adjacent IMAGE", "41534f01000100 01000101aa 01010101bb"],
+    ["truncated PATCH", "41534f01000100 01000101aa 0200010212"],
+    ["IMAGE address overflow", "41534f01feff00 01ffff02aabb"],
+    ["END below IMAGE", "41534f01000100 01000101aa 00000100000100"],
+    ["cursor above high water", "41534f01000100 00010100020100"],
+    ["invalid 17-bit endpoint", "41534f01000100 00010001000100"],
+    ["trailing zero", "41534f01000100 00000100000100 00"],
+    ["incomplete padding", "41534f01000100 00000100000100 1a"]
+  ]
+}
