@@ -15,11 +15,21 @@ CP_ASO_BEGIN:
     LD   (CP_ASO_IMAGE_TOP),A  ; The initial image end is an ordinary word.
     LD   (CP_OUTPUT_OPEN),A  ; The old RAM-output temp is not open.
     LD   (CP_BACKED_UP),A   ; Publication has not moved the old output.
+    LD   (CP_MAT_SPOOL_OWNED),A  ; No internal spool name is owned yet.
     LD   L,(IX+11)          ; Read the descriptor's target origin.
     LD   H,(IX+12)          ; Complete the origin address.
     LD   (CP_ASO_ORIGIN),HL  ; Retain the ASO header's image origin.
     LD   (CP_ASO_IMAGE_END),HL  ; No IMAGE bytes precede the origin.
-    CALL CP_SET_TEMP_FCB    ; Build the protected temporary output name.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Distinguish ASO from an internal spool.
+    CP   3                  ; Explicit ASO is already the requested file.
+    JR   Z,CP_ASO_BEGIN_NAME  ; Keep its ordinary transaction temporary name.
+    CALL CP_SET_BACKUP_FCB  ; Use the reserved name for the private spool.
+    LD   A,1                ; Mark that abort must remove this internal spool.
+    LD   (CP_MAT_SPOOL_OWNED),A  ; BAK belongs to ASO until replay ends.
+    JR   CP_ASO_BEGIN_COPY  ; Copy the selected name into the spool FCB.
+CP_ASO_BEGIN_NAME:
+    CALL CP_SET_TEMP_FCB    ; Build the explicit ASO transaction name.
+CP_ASO_BEGIN_COPY:
     LD   DE,CP_WORK_FCB+12  ; Address the FCB's mutable tail fields.
     XOR  A                  ; Select zero for every unused FCB field.
     LD   B,24               ; Count the remaining FCB bytes.
@@ -330,11 +340,20 @@ CP_ASO_COMMIT_APPEND:
     JR   Z,CP_ASO_COMMIT_CLOSE_BAD  ; Let abort retry after close fails.
     XOR  A                  ; Clear the open flag after a successful close.
     LD   (CP_ASO_OPEN),A    ; The spool can now be renamed transactionally.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Is the spool the requested file?
+    CP   3                  ; Explicit ASO needs no final-image conversion.
+    JR   NZ,CP_ASO_COMMIT_MATERIALIZE  ; COM and BIN replay into a temp file.
     CALL CP_PUBLISH_TEMP    ; Replace the requested destination on success.
     RET  C                  ; Let HS_ABORT restore any moved backup.
     XOR  A                  ; Disable the ASO hook path for the next command.
     LD   (CP_ASO_ACTIVE),A  ; The completed file is now owned by its caller.
     RET                     ; Return successful COMMIT to the native driver.
+CP_ASO_COMMIT_MATERIALIZE:
+    CALL CP_MAT_ASO_OUTPUT  ; Replay ASO into the selected flat binary format.
+    RET  C                  ; Leave HS_ABORT to clean all tentative files.
+    XOR  A                  ; Disable operation dispatch after publication.
+    LD   (CP_ASO_ACTIVE),A  ; The completed output now belongs to the caller.
+    RET                     ; Report the assembled COM or BIN as committed.
 CP_ASO_COMMIT_CLOSE_BAD:
     LD   A,1                ; Report a closed-file service failure.
     LD   (CP_ASO_STATUS),A  ; Retain the failure for the common error return.

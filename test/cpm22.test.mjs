@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -20,6 +21,10 @@ const multipartParts = [
   Buffer.from("ORG $100\r\nJP START", "ascii"),
   Buffer.from("START:\r\nRET\r\n", "ascii"),
 ];
+const cpmCensus = JSON.parse(await readFile(
+  new URL("../proofs/cpm22-census.json", import.meta.url),
+  "utf8",
+));
 
 function referenceAsoFile(events) {
   const chunks = [];
@@ -125,9 +130,9 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
     15, 15, 15, 26, 33, 26, 33,
     15, 26, 33, 26, 33,
     15, 26, 33, 26, 33,
-    15, 26, 33, 26, 33,
-    19, 22, 26, 21, 16,
-    19, 23, 23, 19, 9,
+    22, 15, 26, 33, 26, 33, 26, 21, 16,
+    22, 15, 26, 20, 26, 20, 16, 26, 21, 16,
+    19, 19, 23, 23, 19, 9,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9,
   ]);
   assert.deepEqual(result.atomRandomReadRecords, [0, 1, 0, 1, 0, 1, 0, 1]);
@@ -218,6 +223,418 @@ test("CP/M writes canonical ASO with a forward patch beyond the former image win
   assert.deepEqual(result.outputFile?.bytes, referenceAsoFile(expectedEvents));
 });
 
+test("CP/M automatically materializes a COM larger than the old RAM window", async () => {
+  const imageLength = 0x5000;
+  const source = Buffer.from(`ORG $100\r\nDS $${imageLength.toString(16)}\r\n`, "ascii");
+  const fileCalls = new Map();
+  const result = await runCpm22Atom(source, Uint8Array.of(0xc9), {
+    sourceName: "LARGE.ASM",
+    outputName: "LARGE.COM",
+    beforeBdos({ call, fcb, memory }) {
+      if (![20, 21, 33, 34].includes(call)) return;
+      const extension = String.fromCharCode(
+        memory[fcb + 9] & 0x7f,
+        memory[fcb + 10] & 0x7f,
+        memory[fcb + 11] & 0x7f,
+      );
+      const key = `${call}:${extension}`;
+      fileCalls.set(key, (fileCalls.get(key) ?? 0) + 1);
+    },
+  });
+
+  assert.match(result.atomTranscript, /LARGE\.COM written/);
+  assert.equal(result.returnA, 0);
+  assert.equal(result.outputFile?.bytes.length, imageLength);
+  assert.deepEqual(result.outputFile?.bytes, new Uint8Array(imageLength));
+  assert.equal(readCpm22File(result.finalDisk, "LARGE.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "LARGE.BAK"), undefined);
+  const outputRecords = Math.ceil(imageLength / 128);
+  const passes = Math.ceil(outputRecords / (result.census.materializerWindowBytes / 128));
+  const spoolWrites = fileCalls.get("21:BAK");
+  assert.ok(spoolWrites > 0);
+  assert.equal(fileCalls.get("20:BAK"), (spoolWrites + 1) * passes);
+  assert.equal(fileCalls.get("21:$$$"), outputRecords);
+  assert.equal(fileCalls.get("34:$$$"), undefined);
+  assert.equal(result.atomBdosCalls.includes(34), false);
+});
+
+test("CP/M materializes a large BIN and applies a PATCH across replay windows", async () => {
+  const windowBytes = cpmCensus.materializerWindowBytes;
+  const patchAddress = 0x100 + windowBytes - 1;
+  const targetAddress = patchAddress + 2;
+  const source = Buffer.from([
+    "ORG $100",
+    "DB 0",
+    `ORG $${patchAddress.toString(16)}`,
+    "DW DEST",
+    "DEST:",
+    "DB $A5",
+    "",
+  ].join("\r\n"), "ascii");
+  const result = await runCpm22Atom(source, undefined, {
+    sourceName: "WINDOW.ASM",
+    outputName: "WINDOW.BIN",
+  });
+
+  assert.match(result.atomTranscript, /WINDOW\.BIN written/);
+  assert.equal(result.returnA, 0);
+  assert.equal(result.outputFile?.bytes.length, windowBytes + 128);
+  assert.equal(result.outputFile?.bytes[0], 0);
+  assert.deepEqual(
+    result.outputFile?.bytes.slice(windowBytes - 1, windowBytes + 2),
+    Uint8Array.of(targetAddress & 0xff, targetAddress >>> 8, 0xa5),
+  );
+  assert.equal(result.atomBdosCalls.includes(34), false);
+});
+
+test("the CP/M reader applies a PATCH whose payload crosses an ASO record boundary", async () => {
+  const prefix = new Uint8Array(110).fill(0xaa);
+  const source = Buffer.from([
+    "ORG $100",
+    `DB ${Array.from(prefix, (byte) => `$${byte.toString(16)}`).join(",")}`,
+    "DW TARGET",
+    "ORG $200",
+    "TARGET: DB $C9",
+    "",
+  ].join("\r\n"), "ascii");
+  const spoolRecords = [];
+  const result = await runCpm22Atom(source, undefined, {
+    outputName: "PATCH.BIN",
+    beforeBdos({ call, fcb, memory }) {
+      if (call !== 21) return;
+      const extension = String.fromCharCode(
+        memory[fcb + 9] & 0x7f,
+        memory[fcb + 10] & 0x7f,
+        memory[fcb + 11] & 0x7f,
+      );
+      if (extension === "BAK") {
+        const recordAddress = cpmCensus.asoRecordAddress;
+        spoolRecords.push(memory.slice(recordAddress, recordAddress + 128));
+      }
+    },
+  });
+
+  assert.match(result.atomTranscript, /PATCH\.BIN written/);
+  assert.equal(result.returnA, 0);
+  const spool = Buffer.concat(spoolRecords.map((record) => Buffer.from(record)));
+  let cursor = 7;
+  let patchDataOffset;
+  while (cursor < spool.length) {
+    const kind = spool[cursor];
+    if (kind === 0) break;
+    const length = spool[cursor + 3];
+    if (kind === 2) patchDataOffset = cursor + 4;
+    cursor += 4 + length;
+  }
+  assert.equal(patchDataOffset, 127);
+  assert.equal(patchDataOffset % 128, 127);
+  const events = [...readAsoOperations([spool])];
+  assert.deepEqual(events.find((event) => event.kind === "patch"), {
+    kind: "patch", address: 0x16e, bytes: Uint8Array.of(0x00, 0x02),
+  });
+  assert.equal(result.outputFile?.bytes.length, 384);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 112),
+    Uint8Array.from([...prefix, 0x00, 0x02]));
+  assert.equal(result.outputFile?.bytes[255], 0);
+  assert.equal(result.outputFile?.bytes[256], 0xc9);
+});
+
+test("CP/M rejects an IMAGE endpoint beyond ASO high water", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let corrupted = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDB $AA\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        if (corrupted || call !== 21) return;
+        if (String.fromCharCode(memory[fcb + 9], memory[fcb + 10], memory[fcb + 11]) !== "BAK") return;
+        memory[cpmCensus.asoRecordAddress + 8] = 0x10;
+        corrupted = true;
+      },
+    },
+  );
+
+  assert.equal(corrupted, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("CP/M validates an empty ASO stream before publishing an empty image", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let corrupted = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        if (corrupted || call !== 21) return;
+        if (String.fromCharCode(memory[fcb + 9], memory[fcb + 10], memory[fcb + 11]) !== "BAK") return;
+        memory[cpmCensus.asoRecordAddress] ^= 1;
+        corrupted = true;
+      },
+    },
+  );
+
+  assert.equal(corrupted, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("CP/M rejects malformed ASO versions, records, geometry, padding, and EOF", async () => {
+  const header = [0x41, 0x53, 0x4f, 1, 0, 1, 0];
+  const image = [1, 0, 1, 1, 0xaa];
+  const end = [0, 1, 1, 0, 1, 1, 0];
+  const endAt181 = [0, 0x81, 0x01, 0, 0x81, 0x01, 0];
+  const endAt103 = [0, 3, 1, 0, 3, 1, 0];
+  const endAt1c8 = [0, 0xc8, 1, 0, 0xc8, 1, 0];
+  const valid = [...header, ...image, ...end];
+  const adjacentImageEnd = [0, 2, 1, 0, 2, 1, 0];
+  const beyondEndpoint = [0, 1, 1, 1, 1, 1, 0];
+  const repeatedPatch = [2, 0, 1, 1, 0xbb];
+  const extraRecordStream = [
+    ...header,
+    ...image,
+    ...Array.from({ length: 21 }, () => repeatedPatch).flat(),
+    ...endAt1c8,
+  ];
+  const afterEnd = new Uint8Array(129).fill(0x1a);
+  afterEnd.set(extraRecordStream);
+  afterEnd[128] = 0;
+  const vectors = [
+    { name: "version", bytes: [0x41, 0x53, 0x4f, 2, 0, 1, 0, ...image, ...end] },
+    { name: "kind", bytes: [...header, 3, ...end] },
+    { name: "zero IMAGE", bytes: [...header, 1, 0, 1, 0, ...end] },
+    {
+      name: "oversized IMAGE with all payload bytes present",
+      bytes: [...header, 1, 0, 1, 129, ...new Array(129).fill(0xaa), ...endAt181],
+      sourceBytes: Buffer.from(`ORG $100\r\nDB ${new Array(129).fill("$AA").join(",")}\r\n`, "ascii"),
+      recordCount: 2,
+    },
+    { name: "IMAGE below origin", bytes: [...header, 1, 0xff, 0, 1, 0xaa, ...end] },
+    { name: "overlapping IMAGE", bytes: [...header, ...image, ...image, ...end] },
+    {
+      name: "non-canonical adjacent IMAGE",
+      bytes: [...header, ...image, 1, 1, 1, 1, 0xbb, ...adjacentImageEnd],
+      sourceBytes: Buffer.from("ORG $100\r\nDB $AA,$BB\r\n", "ascii"),
+    },
+    { name: "PATCH before IMAGE", bytes: [...header, 2, 0, 1, 1, 0xbb, ...image, ...end] },
+    {
+      name: "PATCH length above two",
+      bytes: [...header, 1, 0, 1, 3, 0xaa, 0xaa, 0xaa, 2, 0, 1, 3, 0, 0, 0, ...endAt103],
+      sourceBytes: Buffer.from("ORG $100\r\nDB $AA,$AA,$AA\r\n", "ascii"),
+    },
+    { name: "high-water above $10000", bytes: [...header, ...image, ...beyondEndpoint] },
+    { name: "final cursor above high-water", bytes: [...header, ...image, 0, 1, 1, 0, 2, 1, 0] },
+    { name: "IMAGE end above committed high-water", bytes: [...header, 1, 1, 1, 1, 0xaa, ...end] },
+    { name: "non-padding byte after END", bytes: [...valid, 0] },
+    {
+      name: "non-EOF second physical record after END",
+      bytes: afterEnd,
+      sourceBytes: Buffer.from(`ORG $100\r\nDB ${new Array(200).fill("$AA").join(",")}\r\n`, "ascii"),
+      recordCount: 2,
+    },
+  ];
+  const prior = Uint8Array.of(0xc9, 0x76);
+  const priorRecord = new Uint8Array(128).fill(0x1a);
+  priorRecord.set(prior);
+
+  for (const vector of vectors) {
+    let spoolRecords = 0;
+    const result = await runCpm22Atom(
+      vector.sourceBytes ?? Buffer.from("ORG $100\r\nDB $AA\r\n", "ascii"),
+      prior,
+      {
+        beforeBdos({ call, fcb, memory }) {
+          if (call !== 21) return;
+          const extension = String.fromCharCode(
+            memory[fcb + 9] & 0x7f,
+            memory[fcb + 10] & 0x7f,
+            memory[fcb + 11] & 0x7f,
+          );
+          if (extension !== "BAK") return;
+          const recordAddress = cpmCensus.asoRecordAddress;
+          const vectorOffset = spoolRecords * 128;
+          memory.fill(0x1a, recordAddress, recordAddress + 128);
+          memory.set(vector.bytes.slice(vectorOffset, vectorOffset + 128), recordAddress);
+          spoolRecords += 1;
+        },
+      },
+    );
+
+    assert.equal(spoolRecords, vector.recordCount ?? 1, vector.name);
+    assert.equal(result.returnA, 1, vector.name);
+    assert.deepEqual(result.outputFile?.bytes, priorRecord, vector.name);
+    assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined, vector.name);
+    assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined, vector.name);
+  }
+});
+
+test("a malformed internal ASO spool never replaces an existing COM", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let corrupted = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDB $3E,$2A,$C9\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        if (corrupted || call !== 21) return;
+        if (String.fromCharCode(memory[fcb + 9], memory[fcb + 10], memory[fcb + 11]) !== "BAK") return;
+        memory[cpmCensus.asoRecordAddress] ^= 1;
+        corrupted = true;
+      },
+    },
+  );
+
+  assert.equal(corrupted, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("a failed internal spool read preserves the existing COM and removes both temps", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let originalBdosEntry;
+  let injectedReadFailure = false;
+  let restoredBdosEntry = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDS $5000,0\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        const extension = String.fromCharCode(
+          memory[fcb + 9] & 0x7f,
+          memory[fcb + 10] & 0x7f,
+          memory[fcb + 11] & 0x7f,
+        );
+        if (call === 20 && extension === "BAK" && !injectedReadFailure) {
+          originalBdosEntry = memory.slice(5, 8);
+          memory.set([0x3e, 0x01, 0xc9], 5); // Return a sequential-read failure.
+          injectedReadFailure = true;
+        } else if (injectedReadFailure && !restoredBdosEntry) {
+          memory.set(originalBdosEntry, 5);
+          restoredBdosEntry = true;
+        }
+      },
+    },
+  );
+
+  assert.equal(injectedReadFailure, true);
+  assert.equal(restoredBdosEntry, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("a failed materialized-output write preserves the old COM and removes the spool", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let originalBdosEntry;
+  let injectedWriteFailure = false;
+  let restoredBdosEntry = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDS $5000,0\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        const extension = String.fromCharCode(
+          memory[fcb + 9] & 0x7f,
+          memory[fcb + 10] & 0x7f,
+          memory[fcb + 11] & 0x7f,
+        );
+        if (call === 21 && extension === "$$$" && !injectedWriteFailure) {
+          originalBdosEntry = memory.slice(5, 8);
+          memory.set([0x3e, 0x01, 0xc9], 5); // Fail the first output-temp record.
+          injectedWriteFailure = true;
+        } else if (injectedWriteFailure && !restoredBdosEntry) {
+          memory.set(originalBdosEntry, 5);
+          restoredBdosEntry = true;
+        }
+      },
+    },
+  );
+
+  assert.equal(injectedWriteFailure, true);
+  assert.equal(restoredBdosEntry, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("a failed materialized-output close preserves the old COM and removes both temps", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let originalBdosEntry;
+  let injectedCloseFailure = false;
+  let restoredBdosEntry = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDS $5000,0\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        const extension = String.fromCharCode(
+          memory[fcb + 9] & 0x7f,
+          memory[fcb + 10] & 0x7f,
+          memory[fcb + 11] & 0x7f,
+        );
+        if (call === 16 && extension === "$$$" && !injectedCloseFailure) {
+          originalBdosEntry = memory.slice(5, 8);
+          memory.set([0x3e, 0xff, 0xc9], 5);
+          injectedCloseFailure = true;
+        } else if (injectedCloseFailure && !restoredBdosEntry) {
+          memory.set(originalBdosEntry, 5);
+          restoredBdosEntry = true;
+        }
+      },
+    },
+  );
+
+  assert.equal(injectedCloseFailure, true);
+  assert.equal(restoredBdosEntry, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
+test("a failed output rename restores the prior COM and removes the materialized temp", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  let originalBdosEntry;
+  let injectedRenameFailure = false;
+  let restoredBdosEntry = false;
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDS $5000,0\r\n", "ascii"),
+    prior,
+    {
+      beforeBdos({ call, fcb, memory }) {
+        const targetName = String.fromCharCode(
+          ...memory.slice(fcb + 17, fcb + 28).map((byte) => byte & 0x7f),
+        );
+        if (call === 23 && targetName === "OUTPUT  COM" && !injectedRenameFailure) {
+          originalBdosEntry = memory.slice(5, 8);
+          memory.set([0x3e, 0xff, 0xc9], 5);
+          injectedRenameFailure = true;
+        } else if (injectedRenameFailure && !restoredBdosEntry) {
+          memory.set(originalBdosEntry, 5);
+          restoredBdosEntry = true;
+        }
+      },
+    },
+  );
+
+  assert.equal(injectedRenameFailure, true);
+  assert.equal(restoredBdosEntry, true);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
+});
+
 test("CP/M pads an ASO stream with exactly one complete final record", async () => {
   const bytes = Uint8Array.from({ length: 110 }, (_, index) => index);
   const source = Buffer.from(
@@ -254,6 +671,20 @@ test("failed CP/M ASO assembly preserves the old file and removes its written sp
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(readCpm22File(result.finalDisk, "BROKEN.$$$"), undefined);
   assert.equal(readCpm22File(result.finalDisk, "BROKEN.BAK"), undefined);
+});
+
+test("an internal spool ownership flag survives reuse of its assembly run buffer", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  const result = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDB 0\r\nNOT_AN_INSTRUCTION\r\n", "ascii"),
+    prior,
+  );
+
+  assert.match(result.atomTranscript, /Atom error 02 INPUT\.ASM:3:1/);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
 });
 
 test("a failed full ASO IMAGE flush stops before the next byte can overrun its run buffer", async () => {
@@ -801,17 +1232,55 @@ test("two Atom commands in one CP/M session reset their source and output state"
   );
 });
 
-test("the CP/M target accepts 18,304 bytes and rejects the next byte atomically", async () => {
-  const exact = Buffer.from("ORG $100\r\nDS $4780,0\r\n", "ascii");
-  const accepted = await runCpm22Atom(exact);
+test("the CP/M target accepts the full $FF00-byte COM and rejects its next byte", async () => {
+  const exact = Buffer.from("ORG $100\r\nDS $FF00,0\r\n", "ascii");
+  const fileCalls = new Map();
+  const accepted = await runCpm22Atom(exact, undefined, {
+    freshDisk: true,
+    beforeBdos({ call, fcb, memory }) {
+      if (![20, 21, 33, 34].includes(call)) return;
+      const extension = String.fromCharCode(
+        memory[fcb + 9] & 0x7f,
+        memory[fcb + 10] & 0x7f,
+        memory[fcb + 11] & 0x7f,
+      );
+      const key = `${call}:${extension}`;
+      fileCalls.set(key, (fileCalls.get(key) ?? 0) + 1);
+    },
+  });
   assert.match(accepted.atomTranscript, /OUTPUT\.COM written/);
   assert.ok(accepted.outputFile);
-  assert.equal(accepted.outputFile.records, 143);
+  assert.equal(accepted.outputFile.records, 510);
+  assert.equal(accepted.outputFile.bytes.length, 0xff00);
+  assert.equal(accepted.atomInstructions, accepted.census.measuredFullTargetInstructions);
+  assert.equal(accepted.atomCycles, accepted.census.measuredFullTargetTStates);
+  assert.equal(
+    0xe400 - accepted.atomMinimumSp,
+    accepted.census.measuredFullTargetStackHighWaterBytes,
+  );
+  assert.equal(fileCalls.get("21:BAK"), accepted.census.measuredFullTargetAsoSpoolRecordsWritten);
+  assert.equal(fileCalls.get("20:BAK"), accepted.census.measuredFullTargetAsoReadCallsIncludingEof);
+  assert.equal(fileCalls.get("21:$$$"), accepted.census.measuredFullTargetSequentialOutputWrites);
+  assert.equal(fileCalls.get("33:$$$"), undefined);
+  assert.equal(fileCalls.get("34:$$$"), undefined);
+  assert.equal(accepted.atomBdosCalls.includes(34), false);
   const prior = Uint8Array.from([0xc9]);
   const rejected = await runCpm22Atom(
-    Buffer.from("ORG $100\r\nDS $4781,0\r\n", "ascii"),
+    Buffer.from("ORG $100\r\nDS $FF01,0\r\n", "ascii"),
     prior,
   );
   assert.match(rejected.atomTranscript, /Atom error 02 INPUT\.ASM:2:1/);
   assert.deepEqual(rejected.outputFile?.bytes.slice(0, prior.length), prior);
+});
+
+test("disk full during large COM materialization preserves the prior destination", async () => {
+  const prior = Uint8Array.of(0xc9, 0x76);
+  const source = Buffer.from("ORG $100\r\nDS $FF00,0\r\n", "ascii");
+  const result = await runCpm22Atom(source, prior);
+
+  assert.match(result.atomTranscript, /Atom error 04 INPUT\.ASM:2:1/);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "OUTPUT.BAK"), undefined);
 });

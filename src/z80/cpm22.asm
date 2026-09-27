@@ -33,6 +33,26 @@ CP_ASO_FCB          EQU CP_OUTPUT_START
 CP_ASO_RUN          EQU CP_ASO_FCB+36
 CP_ASO_RECORD       EQU CP_ASO_RUN+128
 CP_ASO_OVERLAY_START EQU CP_ASO_RECORD+128
+CP_MAT_READ_PTR     EQU CP_ASO_RUN+1
+CP_MAT_READ_LEFT    EQU CP_ASO_RUN+3
+CP_MAT_BYTE         EQU CP_ASO_RUN+4
+CP_MAT_FILL         EQU CP_ASO_RUN+5
+CP_MAT_WINDOW_START EQU CP_ASO_RUN+6
+CP_MAT_WINDOW_LENGTH EQU CP_ASO_RUN+8
+CP_MAT_WINDOW_LEFT  EQU CP_ASO_RUN+10
+CP_MAT_WINDOW_CURSOR EQU CP_ASO_RUN+12
+CP_MAT_OUTPUT_LEFT  EQU CP_ASO_RUN+14
+CP_MAT_RECORD_KIND  EQU CP_ASO_RUN+16
+CP_MAT_RECORD_LENGTH EQU CP_ASO_RUN+17
+CP_MAT_RECORD_LEFT  EQU CP_ASO_RUN+18
+CP_MAT_RECORD_ADDRESS EQU CP_ASO_RUN+19
+CP_MAT_RECORD_OFFSET EQU CP_ASO_RUN+21
+CP_MAT_RECORD_END   EQU CP_ASO_RUN+23
+CP_MAT_IMAGE_END    EQU CP_ASO_RUN+25
+CP_MAT_IMAGE_TOP    EQU CP_ASO_RUN+27
+CP_MAT_PREVIOUS_KIND EQU CP_ASO_RUN+28
+CP_MAT_PREVIOUS_LENGTH EQU CP_ASO_RUN+29
+CP_MAT_ENDPOINT_TOP EQU CP_ASO_RUN+30
 CP_SOURCE_CACHE     EQU $3E80
 CP_SOURCE_CACHE_END EQU $3F00
 CP_PART_ORDER       EQU $3F00
@@ -62,6 +82,7 @@ CP_DELETE_FUNCTION  EQU 19
 CP_READ_FUNCTION    EQU 20
 CP_RANDOM_READ_FUNCTION EQU 33
 CP_WRITE_FUNCTION   EQU 21
+CP_RANDOM_WRITE_FUNCTION EQU 34
 CP_MAKE_FUNCTION    EQU 22
 CP_RENAME_FUNCTION  EQU 23
 CP_PRINT_FUNCTION   EQU 9
@@ -107,19 +128,19 @@ CP_MEMORY_OK:
     CALL CP_RESOLVE_SOURCE  ; Resolve includes and measure all parts.
     JR   C,CP_BUILD_FAILED  ; Report an invalid source graph.
     LD   A,(CP_OUTPUT_FORMAT)  ; Read the output mode before clearing RAM.
-    CP   3                  ; ASO's writer is overlaid on the image window.
-    JR   Z,CP_ASO_IMAGE_READY  ; Preserve its code and private record buffers.
+    CP   2                  ; Only Intel HEX still needs the RAM image.
+    JR   NZ,CP_ASO_IMAGE_READY  ; COM, BIN and ASO stream operations to disk.
     LD   HL,CP_OUTPUT_START  ; Point at the tentative image's first byte.
     LD   DE,CP_OUTPUT_START+1  ; Point DE at the next byte to initialise.
     LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1  ; Count remaining bytes.
     LD   (HL),0             ; Initialise the first image byte to zero.
     LDIR                    ; Zero gaps and reservations.
 CP_ASO_IMAGE_READY:
-    LD   HL,CP_TARGET_CAPACITY  ; Keep ordinary outputs within the RAM window.
-    LD   A,(CP_OUTPUT_FORMAT)  ; Select the full target range for ASO.
-    CP   3                  ; Only the operation stream avoids image RAM.
-    JR   NZ,CP_TARGET_CAPACITY_READY  ; Preserve COM, BIN and HEX limits.
-    LD   HL,CP_ASO_TARGET_CAPACITY  ; $0100 plus $FF00 ends exactly at $10000.
+    LD   HL,CP_TARGET_CAPACITY  ; HEX retains the legacy bounded image window.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Select the full target range for disk output.
+    CP   2                  ; HEX alone still writes from the RAM image.
+    JR   Z,CP_TARGET_CAPACITY_READY  ; Keep its historical 18,304-byte bound.
+    LD   HL,CP_ASO_TARGET_CAPACITY  ; COM, BIN and ASO reach exactly $10000.
 CP_TARGET_CAPACITY_READY:
     LD   (CP_DESCRIPTOR+13),HL  ; Install the selected target extent.
     LD   IX,CP_DESCRIPTOR   ; Pass the measured source descriptor.
@@ -1246,8 +1267,8 @@ HS_SCBEG:
 
 HS_BEG:
     LD   A,(CP_OUTPUT_FORMAT)  ; Read the requested output representation.
-    CP   3                  ; Format three writes an ASO operation stream.
-    JP   Z,CP_ASO_BEGIN     ; Create its sequential spool before assembly.
+    CP   2                  ; HEX alone retains the legacy RAM output sink.
+    JP   NZ,CP_ASO_BEGIN    ; COM, BIN and ASO use the ordered stream writer.
     XOR  A                  ; Clear both transaction flags.
     LD   (CP_OUTPUT_OPEN),A  ; No temporary output file is open yet.
     LD   (CP_BACKED_UP),A   ; No previous output has been moved aside.
@@ -1446,6 +1467,10 @@ CP_ABORT_DELETE:
     LD   DE,CP_WORK_FCB     ; Pass the temporary FCB to CP/M.
     LD   C,CP_DELETE_FUNCTION  ; Select CP/M delete-file function 19.
     CALL CP_BDOS            ; Delete uncommitted temp output.
+    LD   A,(CP_MAT_SPOOL_OWNED)  ; Is BAK still the spool?
+    OR   A                  ; A clear flag means BAK may be a real old output.
+    CALL NZ,CP_MAT_DELETE_SPOOL  ; Let overlay remove only a private spool.
+CP_ABORT_RESTORE:
     LD   A,(CP_BACKED_UP)   ; Check whether commit moved an old output aside.
     OR   A                  ; No backup means no restore.
     JR   Z,CP_ABORT_DONE    ; Finish after attempting temporary-file deletion.
@@ -1462,6 +1487,7 @@ CP_ABORT_DONE:
     LD   (CP_BACKED_UP),A   ; Clear backup state after all cleanup attempts.
     LD   (CP_ASO_ACTIVE),A  ; Disable ASO dispatch after abort cleanup.
     LD   (CP_ASO_OPEN),A    ; No ASO temporary FCB remains owned.
+    LD   (CP_MAT_SPOOL_OWNED),A  ; No private spool survives abort cleanup.
     RET                     ; Finish cleanup with the flags cleared.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
@@ -1791,6 +1817,7 @@ CP_ASO_HIGH_WATER: DW 0
 CP_ASO_FINAL_CURSOR: DW 0
 CP_ASO_PATCH_END: DW 0
 CP_ASO_PATCH_TOP: DB 0
+CP_MAT_SPOOL_OWNED: DB 0
 CP_HEX_ADDRESS: DW 0
 CP_HEX_CURSOR: DW 0
 CP_HEX_COUNT: DB 0

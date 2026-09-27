@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  CPM22_FILESYSTEM_SYSTEM_BYTES,
   installCpm22File,
   readCpm22File,
 } from "@jhlagado/debug80-runtime/platforms/cpm22/filesystem";
@@ -58,7 +59,11 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     readFile(join(repositoryRoot, "assets", "atom-cpm22.com")),
     readFile(join(repositoryRoot, "proofs", "cpm22-census.json"), "utf8").then(JSON.parse),
   ]);
-  let diskImage = installCpm22File(new Uint8Array(baseDiskBytes), "ATOM.COM", atomBytes);
+  const initialDisk = new Uint8Array(baseDiskBytes);
+  if (options.freshDisk) {
+    initialDisk.fill(0xe5, CPM22_FILESYSTEM_SYSTEM_BYTES);
+  }
+  let diskImage = installCpm22File(initialDisk, "ATOM.COM", atomBytes);
   if (options.installSource !== false) {
     diskImage = installCpm22File(diskImage, sourceName, source);
   }
