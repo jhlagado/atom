@@ -55,6 +55,13 @@ d8Text     string
 The fill byte supplies gaps and uninitialised reservations in flat BIN and HEX
 output. It does not change Atom's IMAGE and PATCH records.
 
+The command-line program has a separate internal path for builds requesting
+only BIN, COM or HEX: it applies IMAGE and PATCH callbacks to a flat image as
+assembly runs. Calls to `assembleAtomProject()` and `renderAtomArtifacts()` keep
+the generation-based API shown here. Requests that include NOBJ, listing or D8
+also use that full generation so those formats retain their operation and
+source metadata.
+
 COM is the same flat byte image under CP/M's `$0100` load convention. Use
 `writeAtomCom()` to validate the base and entry address and return its bytes.
 

@@ -87,6 +87,20 @@ test("CLI v1 validates positive output selection and rejects removed switches", 
   }
 });
 
+test("a failed flat-output assembly preserves the prior BIN", async (t) => {
+  const root = await workspace(t);
+  await fs.mkdir(path.join(root, "build"));
+  const previous = Buffer.from([0x3e, 0x2a, 0xc9]);
+  await fs.writeFile(path.join(root, "build", "main.bin"), previous);
+  await fs.writeFile(path.join(root, "main.asm"), "LD BC,A\n");
+
+  const result = await run(["main.asm"], root);
+
+  assert.notEqual(result.status, 0);
+  assert.deepEqual(await fs.readFile(path.join(root, "build", "main.bin")), previous);
+  assert.deepEqual(await fs.readdir(path.join(root, "build")), ["main.bin"]);
+});
+
 test("CLI v1 project files are Node-only defaults overridden by command outputs and definitions", async (t) => {
   const root = await workspace(t);
   await fs.mkdir(path.join(root, "src"));

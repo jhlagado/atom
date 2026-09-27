@@ -65,10 +65,11 @@ A>ATOM LARGE.ASM LARGE.ASO
 LARGE.ASO written
 ```
 
-COM and BIN are built in one command. Atom first writes an internal ASO spool,
-then reads it sequentially to materialise the output in bounded memory windows.
-The spool is removed before the completed temporary output is published. An
-explicit `.ASO` output keeps the operation stream as the requested file.
+COM, BIN and HEX are built in one command. Atom first writes an internal ASO
+spool, then reads it sequentially to materialise the output in bounded memory
+windows. The spool is removed before the completed temporary output is
+published. An explicit `.ASO` output keeps the operation stream as the
+requested file.
 
 ## Multiple source files
 
@@ -113,7 +114,7 @@ forward references continue across the ordered source files.
 
 For an output named `NAME.EXT`, Atom writes `NAME.$$$`, moves an existing output
 to `NAME.BAK`, renames the completed temporary file and then removes the
-backup. COM and BIN temporarily use `NAME.BAK` for their ASO spool during
+backup. COM, BIN and HEX temporarily use `NAME.BAK` for their ASO spool during
 assembly; the spool is deleted before the publication step uses that name for
 the previous destination. A failed assembly or materialisation removes its
 temporary files and preserves the previous output. No source part may use the
@@ -122,11 +123,10 @@ output, temporary or backup name.
 The output is a flat image beginning at `$0100`. Gaps created by `ORG` or
 uninitialised `DS` contain zero bytes. BIN and COM contain the same raw bytes.
 COM selects the CP/M load-and-entry convention but adds no header. HEX contains
-16-byte addressed data records, checksums and an end-of-file record. COM and
-BIN are materialised in 16,128-byte windows. HEX still uses its separate
-18,304-byte RAM image and has not yet moved to the ASO materialiser. CP/M files
-occupy complete 128-byte records, so BIN and COM may contain zero padding after
-the logical image and HEX may contain `$1A` padding after its end record.
+16-byte addressed data records, checksums and an end-of-file record. All three
+formats are materialised from ASO in 16,000-byte windows. CP/M files occupy
+complete 128-byte records, so BIN and COM may contain zero padding after the
+logical image and HEX may contain `$1A` padding after its end record.
 
 ## Limits
 
@@ -135,21 +135,21 @@ the logical image and HEX may contain `$1A` padding after its end record.
 | Source files | 255 |
 | One source file | 65,535 bytes |
 | COM or BIN image span | 65,280 bytes, from `$0100` to `$10000` |
-| HEX image | 18,304 bytes |
+| HEX logical image span | 65,280 bytes, from `$0100` to `$10000` |
 | ASO image span | 65,280 bytes, from `$0100` to `$10000` |
-| Materialiser output window | 16,128 bytes |
+| Materialiser output window | 16,000 bytes |
 | Minimum TPA | 58,112 bytes, with BDOS at `$E400` or higher |
 | Global or current-scope private symbol | 8 significant characters |
 
 The CP/M filesystem may impose a lower practical source or output limit. An
-automatic COM/BIN build temporarily stores both the ASO spool and the new file,
-so it needs enough free disk space for both; a disk-full error leaves the old
-destination intact. The adapter checks the BDOS boundary before using its
-private memory and rejects a smaller TPA. This minimum is emulator-verified; it
-is not a claim of support for every CP/M configuration or physical floppy
-drive.
+automatic COM/BIN/HEX build temporarily stores both the ASO spool and the new
+file, so it needs enough free disk space for both; HEX text can require several
+times the binary image's space. A disk-full error leaves the old destination
+intact. The adapter checks the BDOS boundary before using its private memory
+and rejects a smaller TPA. This minimum is emulator-verified; it is not a claim
+of support for every CP/M configuration or physical floppy drive.
 
-The materialiser's measured window is 16,128 bytes (126 CP/M records). On the
+The materialiser's measured window is 16,000 bytes (125 CP/M records). On the
 bundled emulator, a dense COM spanning the complete `$FF00` target range used
 five sequential spool scans: 527 spool records written, 2,635
 spool records read, five EOF probes, and 510 sequential output-record writes.

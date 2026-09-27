@@ -6,20 +6,13 @@ assembler. Changes must preserve that explanation as well as the executable.
 ## ASO output work
 
 The [ASO format and implementation status](aso-format.md) describe Atom's
-ordered IMAGE/PATCH stream. The Node codec, native high-water contract and
-explicit CP/M `.ASO` writer are implemented and tested. CP/M's ordinary
-COM/BIN/HEX path still uses its 18,304-byte RAM image window; a CP/M ASO reader
-and bounded-memory materialiser are the next native steps. Preserve the
-one-command workflow by replaying a temporary ASO spool automatically when
-the user requests COM or BIN. Node's normal output integration follows after
-the CP/M materialiser has established and tested final-image semantics.
-
-The current CP/M executable is 37,737 bytes because it contains an 837-byte
-ASO writer overlay in the old output window. The existing memory map already
-requires BDOS at `$E400` for its fixed workspace and stack, so the overlay does
-not raise the measured minimum TPA. These figures are emulator measurements,
-not evidence of physical floppy performance. Refresh them with
-`npm run measure:cpm22` after any native change.
+ordered IMAGE/PATCH stream. Node provides the streaming codec and the CP/M
+program spools every selected output format before materialising COM, BIN or
+HEX in sequential 16,000-byte windows. The current CP/M executable is 38,912
+bytes; its low resident extent is 15,647 bytes and the measured minimum TPA is
+58,112 bytes with BDOS at `$E400`. These emulator measurements do not establish
+physical floppy performance. Refresh them with `npm run measure:cpm22` after
+any native change.
 
 ## Assembly source style
 

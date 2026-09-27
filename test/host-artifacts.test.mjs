@@ -5,16 +5,20 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  ATOM_HOST_SINK_STATUS,
   ATOM_VERSION,
   assembleAtomProject,
   assembleResolvedAtomProject,
+  materializeAtomGeneration,
   materializeAtomNobj,
   parseAtomNobj,
   publishAtomArtifacts,
   publishAtomOutputFiles,
   renderAtomArtifacts,
   writeAtomCom,
+  writeIntelHex,
 } from "../src/host/index.mjs";
+import { createFlatImageAtomSink } from "../src/host/harness/flat-image-atom-sink.mjs";
 
 const encoder = new TextEncoder();
 
@@ -150,6 +154,80 @@ test("selected flat outputs may begin at the first emitted address and COM valid
   assert.throws(
     () => writeAtomCom({ base: 0, end: 3, bytes: artifacts.bin }, { entryAddress: 0x100 }),
     /load and entry address/,
+  );
+});
+
+test("flat-image sink applies forward patches and gaps without retaining IMAGE/PATCH arrays", async () => {
+  const input = project([
+    "ORG 4000H",
+    "START: JP LATER",
+    "DS 3",
+    "ORG 4010H",
+    "LATER: DB 7",
+    "",
+  ].join("\n"));
+  const target = { start: 0x4000, capacity: 0x100 };
+  const fill = 0xa5;
+  const reference = await assembleResolvedAtomProject(input, { target });
+  const expected = materializeAtomGeneration(reference.generation, { fill });
+  const sink = createFlatImageAtomSink({ fill });
+  const direct = await assembleResolvedAtomProject(input, { target, sink });
+  const snapshot = sink.snapshot();
+  const base = Math.min(
+    direct.generation.firstImageAddress,
+    ...direct.generation.layout
+      .filter(({ kind, count }) => kind === "reserve" && count !== 0)
+      .map(({ address }) => address),
+  );
+  const end = Math.max(direct.generation.finalCursor, direct.generation.highWater);
+  const offset = base - snapshot.materialized.base;
+  const actual = snapshot.materialized.bytes.subarray(offset, end - snapshot.materialized.base);
+
+  assert.equal(snapshot.open, false);
+  assert.equal(snapshot.materialized.bytes.buffer.byteLength, target.capacity);
+  assert.equal(direct.generation.images, undefined);
+  assert.equal(direct.generation.patches, undefined);
+  assert.deepEqual(actual, expected.bytes);
+  assert.equal(
+    writeIntelHex({ base, end, bytes: actual }),
+    writeIntelHex(expected),
+  );
+  assert.equal(actual[3], fill, "reserved bytes retain the selected fill value");
+  assert.equal(actual[0], 0xc3, "the forward JP opcode is present");
+  assert.deepEqual(Array.from(actual.slice(1, 3)), [0x10, 0x40], "the forward word patch is applied");
+});
+
+test("flat-image sink rejects a repeated PATCH and discards the tentative image on abort", () => {
+  const sink = createFlatImageAtomSink();
+  const descriptor = {};
+  const target = { start: 0x4000, capacity: 0x20 };
+
+  assert.equal(sink.begin({ target, descriptor }), 0);
+  assert.equal(sink.image({ bank: 0, address: 0x4000, bytes: Uint8Array.of(0) }), 0);
+  assert.equal(sink.patch({ bank: 0, address: 0x4000, bytes: Uint8Array.of(1) }), 0);
+  assert.equal(
+    sink.patch({ bank: 0, address: 0x4000, bytes: Uint8Array.of(2) }),
+    ATOM_HOST_SINK_STATUS.PATCH_TARGET,
+  );
+  assert.equal(sink.snapshot().failure.code, "patch-target");
+  assert.equal(sink.abort(), 0);
+  assert.equal(sink.snapshot().materialized, undefined);
+  assert.equal(sink.snapshot().open, false);
+});
+
+test("flat-image sink retains the exclusive $10000 endpoint", async () => {
+  const input = project("ORG 0FFFFH\nDB 5AH\n");
+  const target = { start: 0xffff, capacity: 1 };
+  const expected = await assembleResolvedAtomProject(input, { target });
+  const sink = createFlatImageAtomSink();
+  const actual = await assembleResolvedAtomProject(input, { target, sink });
+
+  assert.equal(actual.generation.finalCursor, 0x10000);
+  assert.equal(actual.generation.highWater, 0x10000);
+  assert.equal(sink.snapshot().materialized.end, 0x10000);
+  assert.deepEqual(
+    sink.snapshot().materialized.bytes,
+    materializeAtomGeneration(expected.generation).bytes,
   );
 });
 

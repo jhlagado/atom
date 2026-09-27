@@ -15,7 +15,9 @@ import {
   publishAtomOutputFiles,
   renderAtomArtifacts,
   writeAtomCom,
+  writeIntelHex,
 } from "../src/host/index.mjs";
+import { createFlatImageAtomSink } from "../src/host/harness/flat-image-atom-sink.mjs";
 import { parseAtomPreprocessorValue } from "../src/host/atom/literals.mjs";
 import { ATOM_VERSION } from "../src/host/package-metadata.mjs";
 
@@ -103,7 +105,9 @@ function validateOutputs(filenames, baseDirectory) {
 }
 
 function contentBase(generation) {
-  const addresses = generation.images.map(({ address }) => address);
+  const addresses = (generation.images ?? []).map(({ address }) => address);
+  if (generation.firstImageAddress !== undefined)
+    addresses.push(generation.firstImageAddress);
   for (const event of generation.layout ?? []) {
     if (event.kind === "reserve" && event.count !== 0) addresses.push(event.address);
   }
@@ -219,18 +223,48 @@ async function main() {
       return 0;
     }
     const build = await loadBuild(options);
+    const flatOnly = build.outputs.every(({ format }) =>
+      ["bin", "com", "hex"].includes(format),
+    );
+    const outputSink = flatOnly ? createFlatImageAtomSink() : undefined;
     const result = await assembleAtomProject({
       root: build.root,
       entry: build.entry,
       assembler: build.assembler,
       definitions: build.definitions,
       target: { start: build.target.start, capacity: build.target.capacity },
+      ...(outputSink === undefined ? {} : { sink: outputSink }),
     });
     const base = contentBase(result.generation);
     const requestsCom = build.outputs.some(({ format }) => format === "com");
     const entryAddress = build.target.entryAddress ?? (requestsCom ? 0x100 : base);
-    const artifacts = renderAtomArtifacts(result, { base, entryAddress });
-    const materialized = Object.freeze({ base, end: base + artifacts.bin.length, bytes: artifacts.bin });
+    let artifacts;
+    let materialized;
+    if (flatOnly) {
+      const output = outputSink.snapshot().materialized;
+      if (output === undefined)
+        throw new Error("flat Atom output sink did not commit an image");
+      const offset = base - output.base;
+      const length = output.end - base;
+      if (offset < 0 || length < 0 || offset + length > output.bytes.length)
+        throw new Error("flat Atom output extent is outside its materialized image");
+      materialized = Object.freeze({
+        base,
+        end: base + length,
+        bytes: output.bytes.subarray(offset, offset + length),
+      });
+      artifacts = Object.freeze({
+        bin: materialized.bytes,
+        hex: writeIntelHex(materialized),
+      });
+    } else {
+      artifacts = renderAtomArtifacts(result, { base, entryAddress });
+      materialized = Object.freeze({
+        base,
+        end: base + artifacts.bin.length,
+        bytes: artifacts.bin,
+      });
+    }
     const committed = await publishAtomOutputFiles(build.outputs.map((selection) => ({
       path: selection.path,
       bytes: selectedBytes(selection, artifacts, materialized, entryAddress),

@@ -20,6 +20,7 @@ import {
   writeIntelHex,
 } from "../src/host/index.mjs";
 import { createAsoWriter, readAsoOperations } from "../src/host/artifacts/aso-stream.mjs";
+import { createFlatImageAtomSink } from "../src/host/harness/flat-image-atom-sink.mjs";
 
 const multipartParts = [
   Buffer.from("ORG $100\r\nJP START", "ascii"),
@@ -197,6 +198,56 @@ test("native Atom publishes a selected raw BIN", async () => {
     expected.bytes,
   );
   assert.equal(result.returnA, 0);
+});
+
+test("CP/M COM, BIN and HEX materialize the same Node image and addresses", async () => {
+  const source = Buffer.from([
+    "ORG 100H",
+    "START: JP TARGET",
+    "DS 3",
+    "ORG 110H",
+    "TARGET: DB 7",
+    "",
+  ].join("\r\n"), "ascii");
+  const expected = await expectedImageForSource(source, "CROSS.ASM");
+  const directSink = createFlatImageAtomSink();
+  const directAssembly = await assembleResolvedAtomProject({
+    parts: [{
+      ordinal: 0,
+      bank: 0,
+      originalBytes: source,
+      compilerBytes: source,
+      logicalIdentity: "CROSS.ASM",
+    }],
+  }, { target: { start: 0x100, capacity: 0xff00 }, sink: directSink });
+  const directImage = directSink.snapshot().materialized;
+  const directBytes = directImage.bytes.subarray(0, directImage.end - 0x100);
+  assert.equal(directAssembly.generation.highWater, directImage.end);
+  assert.deepEqual(directBytes, expected.bytes, "Node flat sink differs from the generation renderer");
+
+  for (const extension of ["COM", "BIN", "HEX"]) {
+    const result = await runCpm22Atom(source, undefined, {
+      sourceName: "CROSS.ASM",
+      outputName: `CROSS.${extension}`,
+    });
+    const physical = result.outputFile?.bytes ?? new Uint8Array();
+    const padding = physical.indexOf(0x1a);
+    const logical = extension === "HEX"
+      ? Buffer.from(physical.slice(0, padding < 0 ? physical.length : padding)).toString("ascii")
+      : physical.subarray(0, expected.bytes.length);
+
+    if (extension === "HEX") {
+      assert.equal(logical, writeIntelHex({
+        base: 0x100,
+        end: directImage.end,
+        bytes: directBytes,
+      }, { lineEnding: "\r\n" }));
+    } else {
+      assert.deepEqual(logical, directBytes, extension);
+      assert.ok(physical.length >= directBytes.length, `${extension} image was truncated`);
+    }
+    assert.equal(result.returnA, 0, extension);
+  }
 });
 
 test("CP/M materializes large Intel HEX through bounded ASO replay windows", async () => {

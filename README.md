@@ -39,9 +39,9 @@ This reads `HELLO.ASM` and writes `HELLO.COM`. An explicit output name may end
 in `.COM`, `.BIN` or `.HEX`.
 
 The current CP/M build requires transient memory through address `$E3FF` and
-can produce up to 18,304 bytes of output. It checks the BDOS boundary before
-assembling and reports insufficient memory when this layout cannot fit.
-On exit it uses CP/M warm boot to reload the command processor.
+supports a 65,280-byte logical image span. It checks the BDOS boundary before
+assembling; available disk space limits the larger HEX text output. On exit it
+uses CP/M warm boot to reload the command processor.
 
 ## Documentation
 

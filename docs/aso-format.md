@@ -2,10 +2,15 @@
 
 Status: ASO v1 specification and the Node streaming codec are implemented.
 CP/M Atom writes `.ASO` sequentially and uses an internal ASO spool to build
-COM and BIN in one command. Its bounded reader replays the spool through
-16,128-byte output windows and appends complete output records sequentially.
-CP/M HEX and Node's normal BIN/COM/HEX pipeline still need integration with the
-ordered operation contract.
+COM, BIN or HEX in one command. Its bounded reader replays the spool through
+16,000-byte output windows; binary windows are appended as records and HEX
+windows are converted by the shared checksum writer. The Node CLI applies
+ordered operations directly for BIN/COM/HEX-only builds. Its flat sink keeps a
+target-sized byte array and a two-bit-per-address validation map; at the
+65,535-byte Node target limit those typed arrays total 81,919 bytes, before
+JavaScript object overhead and the final HEX string. The native CP/M
+materialiser and Node flat-image sink now produce matching COM, BIN and HEX
+logical outputs for a forward-patched image with a sparse gap.
 
 The shared valid and invalid vectors are in `test/fixtures/aso-v1.json`.
 `test/aso-stream.test.mjs` checks the Node codec in
@@ -32,7 +37,7 @@ PATCH(address, bytes)       zero or more, interleaved with IMAGE
 COMMIT(final cursor, high-water mark)  or ABORT
 ```
 
-ATOM publishes IMAGE and PATCH during assembly. `ORG` and uninitialised `DS` change the logical cursor but do not publish separate host operations. The native output layer tracks the target interval, current cursor and greatest reached endpoint. At COMMIT, the Z80 ABI passes the descriptor in `IX`, the final cursor in `HL`, remaining capacity in `DE`, and the low word of high water in `BC`. Bits 0 and 1 of `A` distinguish a final cursor or high-water endpoint of `$10000` from address zero. CP/M COM, BIN and ASO use the `$FF00`-byte target capacity from origin `$0100`; HEX still uses its historical 18,304-byte RAM image.
+ATOM publishes IMAGE and PATCH during assembly. `ORG` and uninitialised `DS` change the logical cursor but do not publish separate host operations. The native output layer tracks the target interval, current cursor and greatest reached endpoint. At COMMIT, the Z80 ABI passes the descriptor in `IX`, the final cursor in `HL`, remaining capacity in `DE`, and the low word of high water in `BC`. Bits 0 and 1 of `A` distinguish a final cursor or high-water endpoint of `$10000` from address zero. CP/M COM, BIN, HEX and ASO use the `$FF00`-byte target capacity from origin `$0100`.
 
 The explicit geometry contract is now implemented and measured. Both values are mathematical endpoints so `$10000` remains distinct from zero. Hosts do not infer high water from IMAGE, `ORG` or `DS` callbacks and do not equate it with the final cursor. ASO v1 records explicit IMAGE addresses and the final geometry. It does not require `ORG`, `DS` or SEEK records in the file.
 
@@ -195,9 +200,9 @@ is therefore applied in both passes at its respective byte positions; a PATCH
 crossing an ASO physical-record boundary is parsed by the sequential byte
 reader. No random output-record operations are used.
 
-The measured window is 16,128 bytes (126 CP/M records). A full `$FF00` logical
-image uses five spool scans, followed by 510 sequential output writes. For a
-dense full-range ASO stream, the bundled emulator measures 527 spool record
+The measured window is 16,000 bytes (125 CP/M records). A full `$FF00` logical
+COM or BIN image uses five spool scans, followed by 510 sequential output
+writes. For a dense full-range ASO stream, the bundled emulator measures 527 spool record
 writes, 2,635 successful spool reads plus five EOF probes, and 510 output
 writes. These are logical BDOS operations, not physical floppy seeks or sector
 latency. The spool and output temporary file coexist, so free disk space can
@@ -206,22 +211,24 @@ temporaries where possible and preserves the old destination.
 
 COM and BIN use the same flat image bytes, gap fill and `$0100..$10000` target
 range; COM adds no file header. CP/M records are 128 bytes and the final record
-is padded with zeroes. This padding is not part of the logical ASO image.
+is padded with zeroes. This padding is not part of the logical ASO image. HEX
+uses absolute target addresses and writes its records and EOF marker
+sequentially, with CP/M `$1A` padding outside the logical HEX text.
 
 ### CP/M ASO and replay
 
 The CP/M `.ASO` output path is implemented. It appends canonical records to a tentative file using sequential BDOS record writes. It keeps a 128-byte IMAGE run, one 128-byte physical-record buffer and a 36-byte FCB, for 292 bytes of fixed writer buffers. It pads the last physical record with `$1A`, writes END only after successful COMMIT, and replaces the destination only after the spool has closed successfully. A failed assembly removes the temporary spool and preserves the prior destination.
 
-COM and BIN now use an internal `NAME.BAK` ASO spool and replay it into
+COM, BIN and HEX now use an internal `NAME.BAK` ASO spool and replay it into
 `NAME.$$$` before publication. The reader validates the header, records,
 geometry, END, padding and physical EOF on every pass. Empty output still gets
 a validation pass. A malformed spool or failed disk operation removes the
 temporary files where possible and leaves the previous destination in place.
 An explicit `.ASO` output retains the operation stream instead of replaying it.
 
-Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 38,784 bytes.
-Its low resident extent is 15,744 bytes and its ASO/materialiser overlay is
-1,884 bytes. The replay window is 16,128 bytes. BDOS at `$E400` leaves a
+Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 38,912 bytes.
+Its low resident extent is 15,647 bytes and its ASO/materialiser overlay is
+2,012 bytes. The replay window is 16,000 bytes. BDOS at `$E400` leaves a
 58,112-byte transient program area from `$0100`; the current check rejects a
 smaller area. A dense `$FF00` image takes five spool scans, 527 sequential
 spool writes, 2,635 successful spool reads plus five EOF probes and 510
@@ -233,12 +240,18 @@ the output.
 
 ### Intel HEX
 
-The CP/M HEX command still uses its 18,304-byte RAM image. Moving it onto the
-ASO replay path is a remaining integration step. It should emit addressed
-records from the same final logical image, including fill gaps, and preserve
-the existing checksum and line-ending format. HEX record width, line endings
-and optional start-address records are output-policy decisions; they do not
-alter ASO bytes.
+CP/M HEX now uses the same ASO spool and bounded replay windows as COM and BIN.
+Each window is converted to addressed records with the shared checksum writer;
+the final partial window is kept at its exact logical length. The output keeps
+the established record width, CRLF endings and EOF record, then receives CP/M
+record padding. Empty, one-byte, exact-window and short-tail images are tested,
+as is a 20 KiB image whose bytes match the Node HEX renderer. A malformed spool
+leaves an existing destination untouched.
+
+The output is still subject to available disk space: unlike the compact ASO
+spool, Intel HEX text is several times larger than the binary image. The
+emulator's sequential BDOS-call measurements do not establish physical floppy
+latency.
 
 ## 7. Relationship to NOBJ
 
@@ -254,8 +267,8 @@ Output changes are implemented in independently proved steps. Current status:
 2. **Complete:** the ordered native output contract and explicit high-water result at COMMIT, including forward reservations, backward `ORG` and the `$10000` endpoint.
 3. **Complete:** an explicit CP/M `.ASO` writer that emits canonical operations sequentially, pads CP/M records, and publishes transactionally. It is checked byte-for-byte against the Node codec and tested with a logical image beyond the old RAM window.
 4. **Complete:** CP/M COM/BIN automatically spool and materialise through bounded sequential windows. Tests cover the `$FF00` range, PATCHes across spool and replay boundaries, empty and malformed streams, injected read/write/close/rename failures, disk-full rollback and prior-output preservation. The memory extent, stack observation and record traffic are measured.
-5. **Next:** route CP/M HEX through ASO so all native file formats use the same final-image semantics; preserve exact output bytes, addresses and checksums.
-6. Integrate the ordered operation contract with Node's normal BIN, COM and HEX outputs while retaining current outputs and NOBJ compatibility until separately decided. Compare exact logical bytes across platforms.
+5. **Complete:** CP/M HEX replays ASO windows through the shared HEX writer. Tests cover empty and window boundaries, multi-window output, checksums, spool validation and preservation of an earlier destination.
+6. **Complete:** Node CLI BIN/COM/HEX-only builds apply ordered IMAGE/PATCH callbacks directly to one flat target buffer. Builds requesting NOBJ, listing or D8, and existing programming-API calls, retain the full generation path and its metadata. A shared forward-patch/gap fixture matches across the Node flat sink, Node generation renderer and CP/M COM/BIN/HEX outputs.
 
 The measured CP/M implementation uses sequential window replay. The lower-bound
 random-record candidate remains a separate size estimate, not a complete
