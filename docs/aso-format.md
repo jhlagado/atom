@@ -1,14 +1,19 @@
 # ASO: ATOM Serialized Operations
 
-Status: ASO v1 format specification with a tested streaming reference codec.
-The CP/M writer and materialiser are not yet implemented. Normal Atom output
-does not yet use ASO.
+Status: ASO v1 specification and the Node streaming codec are implemented.
+The CP/M assembler can now write an explicit `.ASO` output sequentially and
+publish it transactionally. A CP/M ASO reader/materialiser and automatic
+spool-to-COM/BIN/HEX finalisation are not implemented. Ordinary CP/M COM, BIN
+and HEX output still uses the 18,304-byte RAM image window.
 
 The shared valid and invalid vectors are in `test/fixtures/aso-v1.json`.
-`test/aso-stream.test.mjs` checks the reference codec in
+`test/aso-stream.test.mjs` checks the Node codec in
 `src/host/artifacts/aso-stream.mjs`, including chunk boundaries, failed writes
-and exact optional CP/M padding. These tests do not establish native CP/M
-execution or disk performance.
+and exact optional CP/M padding. CP/M tests compare emitted valid streams
+byte-for-byte with that codec, including record boundaries, forward patches,
+failure cleanup and the `$10000` endpoint. The CP/M writer does not yet read
+malformed ASO files. Emulator tests do not establish physical floppy
+performance.
 
 ASO records the output operations of a successful ATOM assembly in their original order. A host can apply those operations to RAM, apply them to a random-access file or write them sequentially to an `.aso` file. The same operation contract applies on Node and CP/M. Neither platform has to create an intermediate ASO file when it can materialise the output directly.
 
@@ -25,7 +30,7 @@ PATCH(address, bytes)       zero or more, interleaved with IMAGE
 COMMIT(final cursor, high-water mark)  or ABORT
 ```
 
-ATOM publishes IMAGE and PATCH during assembly. `ORG` and uninitialised `DS` change the logical cursor but do not publish separate host operations. The native output layer tracks the target interval, current cursor and greatest reached endpoint. At COMMIT, the Z80 ABI passes the descriptor in `IX`, the final cursor in `HL`, remaining capacity in `DE`, and the low word of high water in `BC`. Bits 0 and 1 of `A` distinguish a final cursor or high-water endpoint of `$10000` from address zero. Node and named-object adapters use these explicit values. The CP/M path uses high water for the image length, though it still materialises the image in its existing 18,304-byte RAM window.
+ATOM publishes IMAGE and PATCH during assembly. `ORG` and uninitialised `DS` change the logical cursor but do not publish separate host operations. The native output layer tracks the target interval, current cursor and greatest reached endpoint. At COMMIT, the Z80 ABI passes the descriptor in `IX`, the final cursor in `HL`, remaining capacity in `DE`, and the low word of high water in `BC`. Bits 0 and 1 of `A` distinguish a final cursor or high-water endpoint of `$10000` from address zero. Node and named-object adapters use these explicit values. For CP/M, ordinary COM/BIN/HEX still materialise in the 18,304-byte RAM window. The explicit ASO path instead gives Atom a `$FF00`-byte target capacity from origin `$0100` and writes operations to disk as they arrive.
 
 The explicit geometry contract is now implemented and measured. Both values are mathematical endpoints so `$10000` remains distinct from zero. Hosts do not infer high water from IMAGE, `ORG` or `DS` callbacks and do not equate it with the final cursor. ASO v1 records explicit IMAGE addresses and the final geometry. It does not require `ORG`, `DS` or SEEK records in the file.
 
@@ -184,9 +189,13 @@ The materialiser needs bounded buffers, not an image-sized TPA window. One 128-b
 
 ### CP/M ASO and replay
 
-The CP/M writer appends ASO records sequentially to a tentative file. A later `ASOLOAD`-style utility reads that input sequentially and builds a tentative BIN or COM using random access only on the destination. The exact utility name and command syntax are separate CLI decisions. This avoids conflicting with CP/M's established Intel HEX `LOAD` utility.
+The CP/M `.ASO` output path is implemented. It appends canonical records to a tentative file using sequential BDOS record writes. It keeps a 128-byte IMAGE run, one 128-byte physical-record buffer and a 36-byte FCB, for 292 bytes of fixed writer buffers. It pads the last physical record with `$1A`, writes END only after successful COMMIT, and replaces the destination only after the spool has closed successfully. A failed assembly removes the temporary spool and preserves the prior destination.
 
-The ASO input needs its own record buffer while the materialiser updates an output record. A claim of one-record total RAM would omit that input buffer. The loader publishes the destination only after validating END and any permitted padding.
+The CP/M writer is tested under the emulator against the Node reference codec. A source that emits a logical image beyond the old 18,304-byte window now produces the exact expected ASO operations without allocating an image-sized buffer. This does not yet produce a large COM file: a CP/M reader/materialiser must replay ASO into a tentative output before this removes the COM/BIN size limit.
+
+The added writer code is overlaid in the old output window, which is unused by the ASO path. Measured: the generated `ATOM.COM` file is 37,737 bytes, including an 837-byte overlay; the low resident code is 15,733 bytes. The existing adapter requires BDOS at or above `$E400` for its fixed workspace and stack, leaving a 58,112-byte TPA from `$0100`. The overlay is below that boundary, so it does not raise the current minimum-memory check. This has been verified in the emulator only; it does not establish compatibility with every CP/M configuration or physical disk performance.
+
+The ASO input needs its own record buffer while a future materialiser updates an output record. A claim of one-record total RAM would omit that input buffer. The loader must publish the destination only after validating END and any permitted padding. Automatic spool replay as part of the ordinary one-command COM/BIN workflow remains future work; `.ASO` is currently an explicit output choice.
 
 ### Intel HEX
 
@@ -200,13 +209,15 @@ NOBJ may remain as an explicit compatibility export while consumers migrate. Rem
 
 ## 8. Implementation order and acceptance
 
-No production output path should be changed merely because this document has been merged. Implementation proceeds in independently proved steps:
+Output changes are implemented in independently proved steps. Current status:
 
-1. Write executable byte-exact valid and invalid vectors for section 5 and the record rules. Node and CP/M must consume the same vector files.
-2. Introduce one ordered host-operation interface and a Node ASO writer and reader. Keep current outputs available while proving the new writer preserves live call order and the reader materialises exactly the same logical bytes.
-3. **Complete:** give Node and CP/M an explicit native high-water result at COMMIT, with tests for forward reservations, backward `ORG` and the `$10000` endpoint. Next, add a bounded CP/M direct-disk BIN/COM policy behind the existing transactional publication boundary. Measure code, buffers, stack, random-record traffic and cache options separately.
-4. Add the CP/M ASO writer and loader, checking its bytes against Node and its final image against RAM and direct-disk materialisation.
-5. Move Node's normal BIN, COM and HEX generation to the ordered-stream materialisation path. Treat NOBJ as an optional compatibility export until its fate is decided explicitly.
+1. **Complete:** executable byte-exact valid and invalid vectors and the Node streaming writer/reader.
+2. **Complete:** the ordered native output contract and explicit high-water result at COMMIT, including forward reservations, backward `ORG` and the `$10000` endpoint.
+3. **Complete:** an explicit CP/M `.ASO` writer that emits canonical operations sequentially, pads CP/M records, and publishes transactionally. It is checked byte-for-byte against the Node codec and tested with a logical image beyond the old RAM window.
+4. **Next:** build the bounded CP/M reader/materialiser and automatic spool finalisation for ordinary COM/BIN output. Verify patches across record boundaries, fill gaps, reservations, `$10000`, invalid/truncated streams, disk errors and preservation of an existing destination. Measure code, buffers, stack and sequential/random disk traffic.
+5. Integrate the ordered operation contract with Node's normal BIN, COM and HEX outputs while retaining current outputs and NOBJ compatibility until separately decided. Compare exact logical bytes across platforms.
+
+This checkpoint does not compare disk caching against sequential window replay; that measurement belongs with the materialiser, which will determine the actual record-access pattern.
 
 The completed system must assemble and publish a logical image larger than Atom's current 18,304-byte CP/M RAM window without allocating an output-sized buffer. Its target descriptor capacity must reflect the selected target address range rather than the size of that former RAM window. Test an image that crosses the old boundary, a patch straddling a 128-byte record, a reservation-only extent, a backward final cursor, the `$10000` exclusive endpoint and failure after tentative output has begun. Compare logical output bytes, not CP/M record padding. Verify that the old destination survives every failed build and that an unresolved reference cannot produce a published ASO or materialised image.
 

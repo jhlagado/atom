@@ -28,9 +28,17 @@ async function linkedSource() {
   modules = replaceNativeSourceRead(modules, "CP_SOURCE_READ_BYTE");
   const core = joinNativeCoreModules(modules, { includeHostServices: false });
   const adapter = await readFile(join(nativeRoot, "cpm22.asm"), "utf8");
+  const asoMarker = ";@@ATOM_CPM_ASO_WRITER@@";
+  assert.equal(adapter.split(asoMarker).length, 2, "CP/M adapter must contain one ASO writer module marker");
+  const asoOverlayMarker = ";@@ATOM_CPM_ASO_OVERLAY@@";
+  assert.equal(adapter.split(asoOverlayMarker).length, 2, "CP/M adapter must contain one ASO overlay marker");
   const marker = ";@@Z80_TOOL_SERVICES_CPM22_FINAL_IMAGE@@";
   assert.equal(adapter.split(marker).length, 2, "CP/M adapter must contain one final-image module marker");
-  const linkedAdapter = adapter.replace(marker, await readFile(finalImageModulePath, "utf8"));
+  const asoModule = await readFile(join(nativeRoot, "aso.asm"), "utf8");
+  const withHooks = adapter.replace(asoMarker, "");
+  const withFinalImage = withHooks.replace(marker, await readFile(finalImageModulePath, "utf8"));
+  const overlay = `ORG CP_ASO_OVERLAY_START\nCP_ASO_OVERLAY_BEGIN:\n${asoModule}\nCP_ASO_OVERLAY_END:\n`;
+  const linkedAdapter = withFinalImage.replace(asoOverlayMarker, overlay);
   const atomSource = `${core}\n${linkedAdapter}`;
   return atomSource;
 }
@@ -42,7 +50,15 @@ async function build() {
     symbols.CP_RESIDENT_END <= symbols.CP_SOURCE_CACHE,
     "CP/M Atom resident overlaps its source record cache",
   );
-  assert.equal(bytes.length, symbols.CP_RESIDENT_END - 0x100);
+  assert.ok(
+    symbols.CP_ASO_OVERLAY_BEGIN >= symbols.CP_ASO_RECORD + 128,
+    "CP/M ASO code overlaps its sequential record buffers",
+  );
+  assert.ok(
+    symbols.CP_ASO_OVERLAY_END <= symbols.CP_OUTPUT_END,
+    "CP/M ASO code exceeds the shared output-memory window",
+  );
+  assert.equal(bytes.length, symbols.CP_ASO_OVERLAY_END - 0x100);
   const adapterCodeBytes = symbols.CP_ADAPTER_CODE_END - symbols.CP_ADAPTER_CODE_START;
   const adapterImmutableBytes = symbols.CP_ADAPTER_IMMUTABLE_END - symbols.CP_ADAPTER_IMMUTABLE_START;
   const outputAdapterCodeBytes = symbols.CP_OUTPUT_CODE_END - symbols.CP_OUTPUT_CODE_START;
@@ -55,7 +71,7 @@ async function build() {
     bytes,
     report: {
       format: "atom-cpm22-census",
-      version: 7,
+      version: 9,
       loadAddress: 0x100,
       entryAddress: symbols.CP_ENTRY,
       returnAddress: symbols.CP_RETURN,
@@ -74,15 +90,24 @@ async function build() {
       sourceCacheMissAddress: symbols.CP_RAW_CACHE_MISS,
       residentEnd: symbols.CP_RESIDENT_END,
       residentBytes: bytes.length,
+      lowResidentBytes: symbols.CP_RESIDENT_END - 0x100,
+      minimumBdosAddress: 0xe400,
+      minimumTransientProgramBytes: 0xe300,
+      asoOverlayStart: symbols.CP_ASO_OVERLAY_BEGIN,
+      asoOverlayEnd: symbols.CP_ASO_OVERLAY_END,
+      asoOverlayBytes: symbols.CP_ASO_OVERLAY_END - symbols.CP_ASO_OVERLAY_BEGIN,
+      asoRunAddress: symbols.CP_ASO_RUN,
+      asoRecordAddress: symbols.CP_ASO_RECORD,
+      loadedImageEnd: symbols.CP_ASO_OVERLAY_END,
       residentCapacityBytes: symbols.CP_SOURCE_CACHE - 0x100,
       residentHeadroomBytes: symbols.CP_SOURCE_CACHE - symbols.CP_RESIDENT_END,
       singleSourceBaselineResidentBytes: 13681,
-      multipartResidentDeltaBytes: bytes.length - 13681,
+      multipartResidentDeltaBytes: symbols.CP_RESIDENT_END - 0x100 - 13681,
       nativeCoreResidentBytes: nativeCore.residentExtentBytes,
       relocationHeaderBytes: 16,
       replacedHostStubBytes: 8,
       replacedSourceFallbackBytes: 5,
-      adapterResidentBytes: bytes.length - 16 - (nativeCore.residentExtentBytes - 8 - 5),
+      adapterResidentBytes: symbols.CP_RESIDENT_END - 0x100 - 16 - (nativeCore.residentExtentBytes - 8 - 5),
       adapterCodeBytes,
       adapterImmutableBytes,
       adapterWorkspaceBytes,
@@ -101,35 +126,41 @@ async function build() {
       sourceExecutionWorkspaceBytes: 0x80 + 0x100 + 0xff * 11 + 0xff * 5 + 12,
       symbolBytes: 0x3000,
       pendingBytes: 0x1000,
+      legacyRamOutputCapacityBytes: 0x4780,
+      asoTargetCapacityBytes: 0xff00,
+      asoFcbBytes: 36,
+      asoImageRunBytes: 128,
+      asoRecordBufferBytes: 128,
+      asoFixedBufferBytes: 36 + 128 + 128,
       outputBytes: 0x4780,
       stackBytes: 0x0c00,
       representativeGeneratedBytes: 34,
-      representativeInstructions: 148730,
-      representativeTStates: 1832650,
-      representativeCommandInstructions: 199996,
-      representativeCommandTStates: 2625044,
+      representativeInstructions: 159201,
+      representativeTStates: 1934351,
+      representativeCommandInstructions: 294312,
+      representativeCommandTStates: 3958304,
       representativeStackHighWaterBytes: 32,
       representativeBdosCalls: 43,
       representativeSourceRandomReads: 8,
-      namedRepresentativeInstructions: 152507,
-      namedRepresentativeTStates: 1871293,
-      namedRepresentativeCommandInstructions: 206779,
-      namedRepresentativeCommandTStates: 2688867,
+      namedRepresentativeInstructions: 162197,
+      namedRepresentativeTStates: 1966867,
+      namedRepresentativeCommandInstructions: 296988,
+      namedRepresentativeCommandTStates: 3988146,
       namedRepresentativeBdosCalls: 41,
       namedRepresentativeSourceRandomReads: 8,
       includeRepresentativePartCount: 3,
-      includeRepresentativeInstructions: 198880,
-      includeRepresentativeTStates: 2327415,
-      includeRepresentativeCommandInstructions: 253152,
-      includeRepresentativeCommandTStates: 3144989,
+      includeRepresentativeInstructions: 210109,
+      includeRepresentativeTStates: 2433125,
+      includeRepresentativeCommandInstructions: 344900,
+      includeRepresentativeCommandTStates: 4454404,
       includeRepresentativeStackHighWaterBytes: 32,
       includeRepresentativeBdosCalls: 60,
       includeRepresentativeSourceRandomReads: 13,
       largeRepresentativeSourceBytes: 16535,
-      largeRepresentativeInstructions: 4229238,
-      largeRepresentativeTStates: 41181638,
-      largeRepresentativeCommandInstructions: 4283670,
-      largeRepresentativeCommandTStates: 42000549,
+      largeRepresentativeInstructions: 4238928,
+      largeRepresentativeTStates: 41277212,
+      largeRepresentativeCommandInstructions: 4373879,
+      largeRepresentativeCommandTStates: 43299828,
       largeRepresentativeBdosCalls: 1066,
       largeRepresentativeSourceRandomReads: 520,
       sha256: createHash("sha256").update(bytes).digest("hex"),

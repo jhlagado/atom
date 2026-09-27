@@ -12,23 +12,26 @@ same release. Switch to `B:` before running Atom.
 
 ## Command line
 
-With no arguments, Atom reads `INPUT.ASM` and writes `OUTPUT.COM`:
+Run Atom without arguments to see its command forms. This returns to CP/M
+without opening a source or output file:
 
 ```text
 A>ATOM
 
-OUTPUT.COM written
+Usage: ATOM [SOURCE [OUTPUT]]
+A>
 ```
 
-Two arguments select another root source and output:
+Give a source name to create a `.COM` with the same basename. If the extension
+is omitted, `.ASM` is used for the source:
 
 ```text
-A>ATOM HELLO.ASM MADE.COM
+A>ATOM HELLO.ASM
 
-MADE.COM written
+HELLO.COM written
 ```
 
-One source argument supplies conventional extensions:
+The shorter form without `.ASM` remains available:
 
 ```text
 A>ATOM HELLO
@@ -36,20 +39,36 @@ A>ATOM HELLO
 HELLO.COM written
 ```
 
-The compact native command accepts these forms:
+Two names select a specific output file:
 
 ```text
-ATOM
-ATOM SOURCE
-ATOM SOURCE OUTPUT
-ATOM ?
+A>ATOM HELLO.ASM MADE.COM
+
+MADE.COM written
 ```
 
+The native command accepts `ATOM`, `ATOM SOURCE`, and `ATOM SOURCE OUTPUT`.
+`ATOM ?` remains a compatibility alias for the help shown by bare `ATOM`.
+Malformed arguments print usage and return the command-error status.
+
 Names must be current-drive CP/M 8.3 names. An explicit output extension must
-be `.COM`, `.BIN` or `.HEX`. Drive prefixes, wildcards, incomplete argument
-pairs, extra arguments and invalid filename characters are rejected. CP/M
-canonicalises lowercase command input, so `atom hello.asm made.com` is
-equivalent to the uppercase form.
+be `.COM`, `.BIN`, `.HEX` or `.ASO`. Drive prefixes, wildcards, extra arguments
+and invalid filename characters are rejected. CP/M canonicalises lowercase
+command input, so `atom hello.asm made.com` is equivalent to the uppercase
+form.
+
+`.ASO` writes Atom's ordered image-and-patch stream instead of an executable:
+
+```text
+A>ATOM LARGE.ASM LARGE.ASO
+
+LARGE.ASO written
+```
+
+The CP/M writer can describe an image spanning `$0100` through `$FFFF`, but
+Atom does not yet read that stream back to create a correspondingly large
+`.COM` or `.BIN`. Those formats still use the bounded RAM image described
+below.
 
 ## Multiple source files
 
@@ -110,11 +129,17 @@ after the logical image and HEX may contain `$1A` padding after its end record.
 | --- | ---: |
 | Source files | 255 |
 | One source file | 65,535 bytes |
-| Output image | 18,304 bytes |
+| COM, BIN or HEX image | 18,304 bytes |
+| ASO image span | 65,280 bytes, from `$0100` to `$10000` |
+| Minimum TPA | 58,112 bytes, with BDOS at `$E400` or higher |
 | Global or current-scope private symbol | 8 significant characters |
 
 The CP/M filesystem may impose a lower practical source limit. The output
-starts at `$0100` and ends no later than `$487F`.
+starts at `$0100`; COM, BIN and HEX end no later than `$487F`. ASO records the
+larger address span without materialising it in the output RAM window. The
+adapter checks the BDOS boundary before using its private memory and rejects a
+smaller TPA. This minimum is emulator-verified; it is not a claim of support
+for every CP/M configuration or physical floppy drive.
 
 ## Diagnostics
 

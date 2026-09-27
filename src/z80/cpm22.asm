@@ -9,8 +9,9 @@
 ;   1. parse a compact CP/M command tail and choose COM, BIN or Intel HEX;
 ;   2. discover leading %INCLUDE directives and derive dependency-first parts;
 ;   3. serve random source bytes from CP/M files through a 128-byte cache;
-;   4. materialize IMAGE/PATCH operations in a fixed TPA output window; and
-;   5. publish that image transactionally through temporary/backup filenames.
+;   4. materialize COM/BIN/HEX through a fixed TPA output window or spool
+;      explicit ASO output as ordered records; and
+;   5. publish completed output through temporary/backup filenames.
 ;
 ; Atom itself has no filesystem calls. Its five-byte part descriptors use the
 ; half-open logical range [0,length). CP_SOURCE_READ_BYTE maps the ordinal
@@ -28,6 +29,10 @@ CP_PENDING_START    EQU $8000
 CP_PENDING_END      EQU $9000
 CP_OUTPUT_START     EQU $9000
 CP_OUTPUT_END       EQU $D780
+CP_ASO_FCB          EQU CP_OUTPUT_START
+CP_ASO_RUN          EQU CP_ASO_FCB+36
+CP_ASO_RECORD       EQU CP_ASO_RUN+128
+CP_ASO_OVERLAY_START EQU CP_ASO_RECORD+128
 CP_SOURCE_CACHE     EQU $3E80
 CP_SOURCE_CACHE_END EQU $3F00
 CP_PART_ORDER       EQU $3F00
@@ -48,6 +53,7 @@ CP_RAW_OFFSET       EQU $4FF9
 CP_NEXT_VALUE       EQU $4FFB
 CP_TARGET_START     EQU $0100
 CP_TARGET_CAPACITY  EQU $4780
+CP_ASO_TARGET_CAPACITY EQU $FF00
 CP_STACK_TOP        EQU $E400
 CP_DMA_FUNCTION     EQU 26
 CP_OPEN_FUNCTION    EQU 15
@@ -100,11 +106,22 @@ CP_MEMORY_OK:
     JR   NZ,CP_SUCCESS      ; Help returns success without assembly.
     CALL CP_RESOLVE_SOURCE  ; Resolve includes and measure all parts.
     JR   C,CP_BUILD_FAILED  ; Report an invalid source graph.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Read the output mode before clearing RAM.
+    CP   3                  ; ASO's writer is overlaid on the image window.
+    JR   Z,CP_ASO_IMAGE_READY  ; Preserve its code and private record buffers.
     LD   HL,CP_OUTPUT_START  ; Point at the tentative image's first byte.
     LD   DE,CP_OUTPUT_START+1  ; Point DE at the next byte to initialise.
     LD   BC,CP_OUTPUT_END-CP_OUTPUT_START-1  ; Count remaining bytes.
     LD   (HL),0             ; Initialise the first image byte to zero.
     LDIR                    ; Zero gaps and reservations.
+CP_ASO_IMAGE_READY:
+    LD   HL,CP_TARGET_CAPACITY  ; Keep ordinary outputs within the RAM window.
+    LD   A,(CP_OUTPUT_FORMAT)  ; Select the full target range for ASO.
+    CP   3                  ; Only the operation stream avoids image RAM.
+    JR   NZ,CP_TARGET_CAPACITY_READY  ; Preserve COM, BIN and HEX limits.
+    LD   HL,CP_ASO_TARGET_CAPACITY  ; $0100 plus $FF00 ends exactly at $10000.
+CP_TARGET_CAPACITY_READY:
+    LD   (CP_DESCRIPTOR+13),HL  ; Install the selected target extent.
     LD   IX,CP_DESCRIPTOR   ; Pass the measured source descriptor.
     CALL DR_ASM             ; Assemble all parts into the private RAM image.
     JR   C,CP_ASSEMBLY_FAILED  ; Leave the old output intact on failure.
@@ -256,9 +273,8 @@ CP_DIAG_NEWLINE:
 CP_COMMAND_CODE_START:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Accept no arguments, one source name, two explicit names, or `?`. With no
-; names the defaults are INPUT.ASM and OUTPUT.COM. One source derives an
-; output name with COM extension. All names are current-drive CP/M 8.3 names.
+; Accept no arguments for help, one source name or two explicit names. A lone
+; `?` remains a help alias. One source derives a COM name. Names use CP/M 8.3.
 
 CP_PARSE_COMMAND:
     XOR  A                  ; Clear command state.
@@ -267,18 +283,21 @@ CP_PARSE_COMMAND:
     LD   B,A                ; Keep the remaining count beside the HL cursor.
     LD   HL,CP_COMMAND_START  ; Start at the first command-tail character.
     CALL CP_SKIP_SPACES     ; Skip leading spaces.
-    JP   Z,CP_CHECK_AUXILIARY_NAMES  ; Use the two default names.
+    JR   NZ,CP_COMMAND_HAS_ARGUMENTS  ; Parse a non-empty command tail.
+CP_COMMAND_HELP:
+    LD   DE,CP_USAGE_TEXT   ; Show the compact command syntax.
+    CALL CP_PRINT           ; Help performs no source or output file calls.
+    LD   A,1                ; Mark help-only success for CP_ENTRY.
+    OR   A                  ; Clear carry without losing the help marker.
+    RET                     ; Skip source discovery and assembly.
+CP_COMMAND_HAS_ARGUMENTS:
     LD   A,B                ; Inspect the non-space argument length.
     CP   1                  ; A lone question mark is the only help form.
     JR   NZ,CP_COMMAND_SOURCE  ; Longer input must begin with a source name.
     LD   A,(HL)             ; Read the sole non-space character.
     CP   '?'                ; Select help only for the exact `?` argument.
     JR   NZ,CP_COMMAND_SOURCE  ; Otherwise validate it as a filename.
-    LD   DE,CP_USAGE_TEXT   ; Point at the compact command syntax.
-    CALL CP_PRINT           ; Print help without file I/O.
-    XOR  A                  ; Begin the help-only success marker.
-    INC  A                  ; Skip assembly after showing help.
-    RET                     ; Preserve that help marker in A.
+    JR   CP_COMMAND_HELP    ; Keep `?` as a successful compatibility alias.
 CP_COMMAND_SOURCE:
     CALL CP_PARSE_FILENAME  ; Parse the source argument as 8.3.
     JP   C,CP_BAD_SOURCE_NAME  ; Distinguish a bad source name.
@@ -330,7 +349,14 @@ CP_INPUT_TYPE_READY:
     LD   HL,CP_OUTPUT_NAME+9  ; Test the last supported output extension.
     LD   DE,CP_HEX_EXTENSION  ; Compare with the Intel HEX format.
     CALL CP_OUTPUT_TYPE_EQUAL  ; Check for an exact HEX extension.
+    JR   Z,CP_OUTPUT_TYPE_HEX  ; Select Intel HEX when the type matches.
+    LD   HL,CP_OUTPUT_NAME+9  ; Reuse HL to test the ASO extension.
+    LD   DE,CP_ASO_EXTENSION  ; Compare with the serialized operation format.
+    CALL CP_OUTPUT_TYPE_EQUAL  ; Check all three ASO extension bytes.
     JR   NZ,CP_BAD_OUTPUT_NAME  ; Reject any other output type.
+    LD   A,3                ; Assign format code three to ASO.
+    JR   CP_OUTPUT_TYPE_READY  ; Save the format and check names.
+CP_OUTPUT_TYPE_HEX:
     LD   A,2                ; Assign format code two to Intel HEX.
     JR   CP_OUTPUT_TYPE_READY  ; Save the format and check names.
 CP_OUTPUT_TYPE_BIN:
@@ -342,7 +368,7 @@ CP_OUTPUT_TYPE_READY:
 
 ; Preserve the normalized input and output names in adapter-owned FCB storage.
 ; Input defaults to ASM when no type was supplied; output type selects 0=COM,
-; 1=BIN or 2=HEX.
+; 1=BIN, 2=HEX or 3=ASO.
 
     LD   (CP_OUTPUT_FORMAT),A  ; Save the selected output format.
     LD   HL,CP_INPUT_FCB    ; Compare source and output identities.
@@ -395,16 +421,6 @@ CP_BAD_NAME_CONFLICT:
     LD   DE,CP_NAME_CONFLICT_TEXT  ; Select the name-conflict message.
     SCF                     ; Refuse a colliding output or work filename.
     RET                     ; Return the diagnostic address in DE.
-
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Refuse to claim pre-existing temporary or backup files. CP/M is
-; single-tasking, so successful preflight reserves both names until return.
-
-CP_CHECK_AUXILIARY_NAMES:
-    CALL CP_SET_TEMP_FCB    ; Build the temporary name for the first check.
-    CALL CP_AUXILIARY_MUST_NOT_EXIST  ; Reject a pre-existing temporary file.
-    RET  C                  ; Stop after a collision or I/O error.
-    CALL CP_SET_BACKUP_FCB  ; Prepare the backup name for the next check.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Require the auxiliary file named by CP_WORK_FCB not to exist.
@@ -1222,15 +1238,21 @@ CP_SOURCE_CODE_END:
 ; publication is delayed until COMMIT.
 
 CP_OUTPUT_CODE_START:
+;@@ATOM_CPM_ASO_WRITER@@
 HS_SCBEG:
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Begin a fresh tentative generation. No file is created until COMMIT.
 
 HS_BEG:
+    LD   A,(CP_OUTPUT_FORMAT)  ; Read the requested output representation.
+    CP   3                  ; Format three writes an ASO operation stream.
+    JP   Z,CP_ASO_BEGIN     ; Create its sequential spool before assembly.
     XOR  A                  ; Clear both transaction flags.
     LD   (CP_OUTPUT_OPEN),A  ; No temporary output file is open yet.
     LD   (CP_BACKED_UP),A   ; No previous output has been moved aside.
+    LD   (CP_ASO_ACTIVE),A  ; The legacy output path cannot inherit ASO state.
+    LD   (CP_ASO_OPEN),A    ; No ASO FCB remains open between invocations.
     RET                     ; Return success with carry clear.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
@@ -1239,7 +1261,21 @@ HS_BEG:
 ; The core has already checked target capacity and patch order.
 
 HS_IB:
+    PUSH AF                 ; Preserve the IMAGE byte during mode selection.
+    LD   A,(CP_ASO_ACTIVE)  ; Check whether this generation writes ASO.
+    OR   A                  ; Zero keeps the ordinary RAM-image path.
+    JR   Z,CP_STORE_OUTPUT_BYTE  ; Restore A before the legacy RAM store.
+    POP  AF                 ; Restore the byte expected by the ASO writer.
+    JP   CP_ASO_IMAGE       ; Serialize this IMAGE byte when selected.
 HS_PB:
+    PUSH AF                 ; Preserve the PATCH byte during mode selection.
+    LD   A,(CP_ASO_ACTIVE)  ; Check whether this generation writes ASO.
+    OR   A                  ; Zero keeps the ordinary RAM-image path.
+    JR   Z,CP_STORE_OUTPUT_BYTE  ; Restore A before the legacy RAM store.
+    POP  AF                 ; Restore the byte expected by the ASO writer.
+    JP   CP_ASO_PATCH_BYTE  ; Serialize a one-byte PATCH when selected.
+CP_STORE_OUTPUT_BYTE:
+    POP  AF                 ; Restore the legacy IMAGE or PATCH byte.
     PUSH AF                 ; Save the byte during translation.
     LD   DE,CP_OUTPUT_START-CP_TARGET_START  ; Form target-to-image offset.
     ADD  HL,DE              ; Address the byte in private RAM.
@@ -1252,6 +1288,9 @@ HS_PB:
 ; Store one little-endian word at its translated logical address.
 
 HS_PW:
+    LD   A,(CP_ASO_ACTIVE)  ; Check whether this generation writes ASO.
+    OR   A                  ; Zero keeps the ordinary RAM-image path.
+    JP   NZ,CP_ASO_PATCH_WORD  ; Serialize a two-byte PATCH when selected.
     EX   DE,HL              ; Exchange address and word.
     LD   BC,CP_OUTPUT_START-CP_TARGET_START  ; Form the image translation.
     ADD  HL,BC              ; Address the word in private RAM.
@@ -1267,6 +1306,14 @@ HS_PW:
 ; image; HEX streams records through the shared final-image helper below.
 
 HS_CMT:
+    PUSH AF                 ; Preserve COMMIT's endpoint bits during dispatch.
+    LD   A,(CP_ASO_ACTIVE)  ; Check whether the generation is an ASO spool.
+    OR   A                  ; Zero selects the legacy image finalizer.
+    JR   Z,CP_COMMIT_RAM    ; Restore A before legacy geometry handling.
+    POP  AF                 ; Restore high-water and cursor endpoint bits.
+    JP   CP_ASO_COMMIT      ; Seal and publish the ASO stream.
+CP_COMMIT_RAM:
+    POP  AF                 ; Restore flags expected by the RAM finalizer.
     BIT  1,A                ; Is high water the mathematical endpoint $10000?
     JR   NZ,.ENDPOINT       ; Use the explicit endpoint form.
     LD   H,B                ; Load the high-water word's high byte.
@@ -1337,6 +1384,7 @@ CP_WRITE_CLOSE:
     JP   Z,CP_COMMIT_FAILURE  ; Keep the previous final file on close failure.
     XOR  A                  ; Prepare the closed-file state.
     LD   (CP_OUTPUT_OPEN),A  ; Prevent abort from closing the file again.
+CP_PUBLISH_TEMP:
     CALL CP_SET_BACKUP_FCB  ; Name the backup file for the selected output.
     LD   DE,CP_WORK_FCB     ; Pass its FCB to the delete service.
     LD   C,CP_DELETE_FUNCTION  ; Select CP/M delete-file function 19.
@@ -1378,6 +1426,15 @@ CP_COMMIT_FAILURE:
 ; final file aside, restore the backup. Cleanup tolerates early failure.
 
 HS_ABORT:
+    LD   A,(CP_ASO_OPEN)    ; Check whether an ASO temporary file is open.
+    OR   A                  ; A clear flag needs no ASO close operation.
+    JR   Z,CP_ABORT_IMAGE   ; Continue with the ordinary temporary file.
+    LD   DE,CP_ASO_FCB      ; Pass the ASO spool FCB to the close service.
+    LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function 16.
+    CALL CP_BDOS            ; Close the spool before deleting its name.
+    XOR  A                  ; Mark the spool FCB closed for repeated cleanup.
+    LD   (CP_ASO_OPEN),A    ; Mark the spool closed for this abort.
+CP_ABORT_IMAGE:
     LD   A,(CP_OUTPUT_OPEN)  ; Check whether the temporary file is open.
     OR   A                  ; Set zero when no close operation is required.
     JR   Z,CP_ABORT_DELETE  ; Continue directly to removing the temp name.
@@ -1403,6 +1460,8 @@ CP_ABORT_DONE:
     XOR  A                  ; Clear the temporary-file and backup state.
     LD   (CP_OUTPUT_OPEN),A  ; Clear the open flag after cleanup attempts.
     LD   (CP_BACKED_UP),A   ; Clear backup state after all cleanup attempts.
+    LD   (CP_ASO_ACTIVE),A  ; Disable ASO dispatch after abort cleanup.
+    LD   (CP_ASO_OPEN),A    ; No ASO temporary FCB remains owned.
     RET                     ; Finish cleanup with the flags cleared.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
@@ -1699,6 +1758,7 @@ CP_ASM_EXTENSION: DB 'A','S','M'
 CP_COM_EXTENSION: DB 'C','O','M'
 CP_BIN_EXTENSION: DB 'B','I','N'
 CP_HEX_EXTENSION: DB 'H','E','X'
+CP_ASO_EXTENSION: DB 'A','S','O'
 CP_ADAPTER_IMMUTABLE_END:
 CP_ADAPTER_WORKSPACE2_START:
 
@@ -1711,6 +1771,26 @@ CP_OUTPUT_REMAINING: DW 0
 CP_OUTPUT_OPEN: DB 0
 CP_BACKED_UP: DB 0
 CP_OUTPUT_FORMAT: DB 0
+CP_ASO_ACTIVE: DB 0
+CP_ASO_OPEN: DB 0
+CP_ASO_ERROR: DB 0
+CP_ASO_STATUS: DB 0
+CP_ASO_CLASS: DB 0
+CP_ASO_PUT_BYTE: DB 0
+CP_ASO_RECORD_COUNT: DB 0
+CP_ASO_RUN_COUNT: DB 0
+CP_ASO_RUN_ADDRESS: DW 0
+CP_ASO_IMAGE_END: DW 0
+CP_ASO_IMAGE_TOP: DB 0
+CP_ASO_ORIGIN: DW 0
+CP_ASO_ADDRESS: DW 0
+CP_ASO_VALUE: DW 0
+CP_ASO_LENGTH: DB 0
+CP_ASO_FLAGS: DB 0
+CP_ASO_HIGH_WATER: DW 0
+CP_ASO_FINAL_CURSOR: DW 0
+CP_ASO_PATCH_END: DW 0
+CP_ASO_PATCH_TOP: DB 0
 CP_HEX_ADDRESS: DW 0
 CP_HEX_CURSOR: DW 0
 CP_HEX_COUNT: DB 0
@@ -1727,3 +1807,4 @@ CP_ADAPTER_WORKSPACE2_END:
 HS_SCEND:
 HS_REND:
 CP_RESIDENT_END:
+;@@ATOM_CPM_ASO_OVERLAY@@

@@ -14,11 +14,29 @@ import {
   runCpm22Atom,
 } from "./cpm22-support.mjs";
 import { writeIntelHex } from "../src/host/index.mjs";
+import { createAsoWriter, readAsoOperations } from "../src/host/artifacts/aso-stream.mjs";
 
 const multipartParts = [
   Buffer.from("ORG $100\r\nJP START", "ascii"),
   Buffer.from("START:\r\nRET\r\n", "ascii"),
 ];
+
+function referenceAsoFile(events) {
+  const chunks = [];
+  const begin = events[0];
+  const writer = createAsoWriter({
+    origin: begin.origin,
+    fill: begin.fill,
+    write: (chunk) => chunks.push(chunk.slice()),
+  });
+  for (const event of events.slice(1)) {
+    if (event.kind === "commit") writer.commit(event);
+    else writer[event.kind](event.address, event.bytes);
+  }
+  const logical = Buffer.concat(chunks);
+  const padding = (128 - logical.length % 128) % 128;
+  return Uint8Array.from(Buffer.concat([logical, Buffer.alloc(padding, 0x1a)]));
+}
 
 test("CP/M rejects an insufficient transient area before touching private arenas", async () => {
   for (const boundary of [0x8000, 0xe3ff]) {
@@ -173,6 +191,131 @@ test("native Atom publishes checksummed Intel HEX", async () => {
   assert.equal(result.returnA, 0);
 });
 
+test("CP/M writes canonical ASO with a forward patch beyond the former image window", async () => {
+  const laterImage = new Uint8Array(128).fill(0x5a);
+  const source = Buffer.from(
+    `ORG $100\r\nJP DEST\r\nDS $5000\r\nDB ${Array.from(laterImage, () => "$5A").join(",")}\r\nDEST:\r\nRET\r\n`,
+    "ascii",
+  );
+  const result = await runCpm22Atom(source, undefined, {
+    sourceName: "LARGE.ASM",
+    outputName: "LARGE.ASO",
+  });
+  const expectedEvents = [
+    { kind: "begin", origin: 0x100, fill: 0 },
+    { kind: "image", address: 0x100, bytes: Uint8Array.of(0xc3, 0, 0) },
+    { kind: "image", address: 0x5103, bytes: laterImage },
+    { kind: "patch", address: 0x101, bytes: Uint8Array.of(0x83, 0x51) },
+    { kind: "image", address: 0x5183, bytes: Uint8Array.of(0xc9) },
+    { kind: "commit", highWater: 0x5184, finalCursor: 0x5184 },
+  ];
+
+  assert.match(result.atomTranscript, /LARGE\.ASO written/);
+  assert.equal(result.returnA, 0);
+  assert.ok(expectedEvents.at(-1).highWater - 0x100 > 0x4780);
+  assert.equal(result.outputFile?.records, 2);
+  assert.deepEqual([...readAsoOperations([result.outputFile.bytes])], expectedEvents);
+  assert.deepEqual(result.outputFile?.bytes, referenceAsoFile(expectedEvents));
+});
+
+test("CP/M pads an ASO stream with exactly one complete final record", async () => {
+  const bytes = Uint8Array.from({ length: 110 }, (_, index) => index);
+  const source = Buffer.from(
+    `ORG $100\r\nDB ${Array.from(bytes, (byte) => `$${byte.toString(16)}`).join(",")}\r\n`,
+    "ascii",
+  );
+  const result = await runCpm22Atom(source, undefined, {
+    sourceName: "BOUNDARY.ASM",
+    outputName: "BOUNDARY.ASO",
+  });
+  const events = [
+    { kind: "begin", origin: 0x100, fill: 0 },
+    { kind: "image", address: 0x100, bytes },
+    { kind: "commit", highWater: 0x16e, finalCursor: 0x16e },
+  ];
+
+  assert.match(result.atomTranscript, /BOUNDARY\.ASO written/);
+  assert.equal(result.outputFile?.records, 1);
+  assert.equal(readAsoOperations([result.outputFile.bytes]).next().value.kind, "begin");
+  assert.deepEqual([...readAsoOperations([result.outputFile.bytes])], events);
+  assert.deepEqual(result.outputFile?.bytes, referenceAsoFile(events));
+});
+
+test("failed CP/M ASO assembly preserves the old file and removes its written spool", async () => {
+  const prior = Uint8Array.of(0x41, 0x53, 0x4f, 0x01, 0x55);
+  const lines = ["ORG $100", ...Array(260).fill("DB $5A"), "NOT_AN_INSTRUCTION"];
+  const result = await runCpm22Atom(Buffer.from(`${lines.join("\r\n")}\r\n`, "ascii"), prior, {
+    sourceName: "BROKEN.ASM",
+    outputName: "BROKEN.ASO",
+  });
+
+  assert.match(result.atomTranscript, /Atom error 02 BROKEN\.ASM:262:1/);
+  assert.equal(result.returnA, 1);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "BROKEN.$$$"), undefined);
+  assert.equal(readCpm22File(result.finalDisk, "BROKEN.BAK"), undefined);
+});
+
+test("a failed full ASO IMAGE flush stops before the next byte can overrun its run buffer", async () => {
+  const prior = Uint8Array.of(0x41, 0x53, 0x4f, 0x01, 0x55);
+  const lines = ["ORG $100", ...Array(129).fill("DB $5A"), "NOT_AN_INSTRUCTION"];
+  let originalBdosEntry;
+  let injectedWriteFailure = false;
+  let restoredBdosEntry = false;
+  const result = await runCpm22Atom(Buffer.from(`${lines.join("\r\n")}\r\n`, "ascii"), prior, {
+    sourceName: "BROKEN.ASM",
+    outputName: "BROKEN.ASO",
+    beforeBdos({ call, memory }) {
+      if (call === 21 && !injectedWriteFailure) {
+        originalBdosEntry = memory.slice(5, 8);
+        memory.set([0x3e, 0x01, 0xc9], 5); // Return a write error from BDOS.
+        injectedWriteFailure = true;
+      } else if (injectedWriteFailure && !restoredBdosEntry) {
+        memory.set(originalBdosEntry, 5);
+        restoredBdosEntry = true;
+      }
+    },
+  });
+
+  assert.equal(injectedWriteFailure, true);
+  assert.equal(restoredBdosEntry, true);
+  assert.equal(result.returnA, 1);
+  assert.doesNotMatch(result.atomTranscript, /Atom error 02 BROKEN\.ASM:131:1/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
+  assert.equal(readCpm22File(result.finalDisk, "BROKEN.$$$"), undefined);
+  assert.deepEqual(
+    result.memory.slice(result.census.asoRecordAddress, result.census.asoRecordAddress + 8),
+    Uint8Array.of(0x41, 0x53, 0x4f, 0x01, 0x00, 0x01, 0x00, 0x01),
+  );
+});
+
+test("CP/M ASO preserves the $10000 endpoint and a backward final cursor", async () => {
+  const endpoint = await runCpm22Atom(
+    Buffer.from("ORG $FFFE\r\nDB $AA,$BB\r\n", "ascii"),
+    undefined,
+    { sourceName: "EDGE.ASM", outputName: "EDGE.ASO" },
+  );
+  const endpointEvents = [
+    { kind: "begin", origin: 0x100, fill: 0 },
+    { kind: "image", address: 0xfffe, bytes: Uint8Array.of(0xaa, 0xbb) },
+    { kind: "commit", highWater: 0x10000, finalCursor: 0x10000 },
+  ];
+  assert.match(endpoint.atomTranscript, /EDGE\.ASO written/);
+  assert.deepEqual([...readAsoOperations([endpoint.outputFile.bytes])], endpointEvents);
+  assert.deepEqual(endpoint.outputFile?.bytes, referenceAsoFile(endpointEvents));
+
+  const backward = await runCpm22Atom(
+    Buffer.from("ORG $100\r\nDB $11\r\nDS $1000\r\nORG $110\r\nDB $22\r\n", "ascii"),
+    undefined,
+    { sourceName: "BACK.ASM", outputName: "BACK.ASO" },
+  );
+  const backwardEvents = [...readAsoOperations([backward.outputFile.bytes])];
+  assert.deepEqual(backwardEvents.at(-1), {
+    kind: "commit", highWater: 0x1101, finalCursor: 0x111,
+  });
+  assert.deepEqual(backward.outputFile?.bytes, referenceAsoFile(backwardEvents));
+});
+
 test("a rejected assembly preserves an earlier OUTPUT.COM and removes its temp", async () => {
   const prior = Uint8Array.from([0xc9]);
   const result = await runCpm22Atom(Buffer.from("ORG $100\r\nNOT_AN_INSTRUCTION\r\n", "ascii"), prior);
@@ -283,15 +426,17 @@ test("command-tail filenames select a different source and output COM", async ()
   assert.equal(result.runOutput(), "MADE\r\r\nHello from native Atom\r\n\r\nA>");
 });
 
-test("one native source argument derives ASM input and COM output names", async () => {
-  const result = await runCpm22Atom(representativeSource, undefined, {
-    sourceName: "HELLO.ASM",
-    outputName: "HELLO.COM",
-    command: "ATOM HELLO",
-  });
-  assert.match(result.atomTranscript, /HELLO\.COM written/);
-  assert.ok(result.outputFile);
-  assert.equal(result.returnA, 0);
+test("one native source argument with or without ASM derives a COM output", async () => {
+  for (const command of ["ATOM HELLO.ASM", "ATOM HELLO"]) {
+    const result = await runCpm22Atom(representativeSource, undefined, {
+      sourceName: "HELLO.ASM",
+      outputName: "HELLO.COM",
+      command,
+    });
+    assert.match(result.atomTranscript, /HELLO\.COM written/);
+    assert.ok(result.outputFile);
+    assert.equal(result.returnA, 0);
+  }
 });
 
 test("native question-mark help returns success without assembling", async () => {
@@ -299,6 +444,37 @@ test("native question-mark help returns success without assembling", async () =>
   assert.match(result.atomTranscript, /Usage: ATOM \[SOURCE \[OUTPUT\]\]/);
   assert.equal(result.outputFile, undefined);
   assert.equal(result.returnA, 0);
+});
+
+test("bare and question-mark help clear carry left set by BDOS output", async () => {
+  for (const command of ["ATOM", "ATOM ?"]) {
+    let originalBdos;
+    let injected = false;
+    let restored = false;
+    const result = await runCpm22Atom(representativeSource, undefined, {
+      command,
+      installSource: false,
+      beforeBdos({ call, memory }) {
+        if (call === 9 && !injected) {
+          originalBdos = memory.slice(5, 8);
+          memory.set([0x37, 0xc9, 0x00], 5); // Return carry set from console output.
+          injected = true;
+        }
+      },
+      afterAtomReturn(memory) {
+        if (injected) {
+          memory.set(originalBdos, 5);
+          restored = true;
+        }
+      },
+    });
+
+    assert.equal(injected, true);
+    assert.equal(restored, true);
+    assert.deepEqual(result.atomBdosCalls, [9]);
+    assert.equal(result.outputFile, undefined);
+    assert.equal(result.returnA, 0);
+  }
 });
 
 test("command-tail parsing accepts maximum 8.3 names, lowercase, and extra spaces", async () => {
@@ -329,12 +505,17 @@ test("command-tail parsing rejects every reserved punctuation class", async () =
   }
 });
 
-test("a blank command tail retains INPUT.ASM and OUTPUT.COM defaults", async () => {
-  const result = await runCpm22Atom(representativeSource, undefined, {
-    command: "ATOM     ",
-  });
-  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
-  assert.ok(result.outputFile);
+test("bare Atom and a blank command tail show successful help without file I/O", async () => {
+  for (const command of ["ATOM", "ATOM     "]) {
+    const result = await runCpm22Atom(representativeSource, undefined, {
+      command,
+      installSource: false,
+    });
+    assert.match(result.atomTranscript, /Usage: ATOM \[SOURCE \[OUTPUT\]\]/);
+    assert.equal(result.outputFile, undefined);
+    assert.equal(result.returnA, 0);
+    assert.deepEqual(result.atomBdosCalls, [9]);
+  }
 });
 
 test("command-tail parsing reports exact usage and filename diagnostics", async () => {

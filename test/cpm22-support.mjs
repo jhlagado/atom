@@ -50,7 +50,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   const outputName = options.outputName ?? "OUTPUT.COM";
   const command = options.command ??
     (sourceName === "INPUT.ASM" && outputName === "OUTPUT.COM"
-      ? "ATOM"
+      ? "ATOM INPUT.ASM OUTPUT.COM"
       : `ATOM ${sourceName} ${outputName}`);
   const [bootstrapBytes, baseDiskBytes, atomBytes, census] = await Promise.all([
     readFile(join(cpmRoot, "bootstrap.bin")),
@@ -151,6 +151,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   const programCycles = cycles;
   measureAtom = true;
   stepUntil(() => runtime.getPC() === census.returnAddress, "Atom return tail");
+  options.afterAtomReturn?.(runtimeMemory, runtime.getRegisters());
   stepUntil(() => runtime.getPC() !== census.returnAddress, "Atom warm-boot transfer");
   assert.equal(runtime.getPC(), 0, "Atom must exit through CP/M warm boot");
   const returnSp = runtime.getRegisters().sp;
