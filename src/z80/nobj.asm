@@ -698,22 +698,26 @@ HS_PW:
     POP  IX                   ; Restore the caller's IX descriptor pointer.
     RET                       ; Return patch or provider status.
 
-;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
-; Commit the greater of final cursor and highest IMAGE extent. First
-; materialize trailing DS/ORG reservations, close the source object, then
-; ask the provider to publish the tentative output atomically.
+;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,IX,IY
+; Materialize to the core's explicit high-water endpoint, close the source
+; object, then publish the tentative output atomically.
 
 HS_CMT:
-    CALL NA_REL               ; Form the final relative cursor.
-    JR   C,.DONE              ; Reject a cursor below image base.
-    LD   DE,(NA_OHIGH)        ; Load the exclusive end established by IMAGE.
-    PUSH HL                   ; Save final cursor for the fill.
-    OR   A                    ; Clear carry before comparing unsigned offsets.
-    SBC  HL,DE                ; Compare cursor with high water.
-    POP  HL                   ; Restore the final cursor.
-    JR   NC,.LIMIT             ; Use cursor if it reaches high water.
-    EX   DE,HL                ; Otherwise fill to high water.
-.LIMIT:
+    BIT  1,A                  ; Is high water mathematical $10000?
+    JR   NZ,.ENDPOINT         ; Convert that endpoint modulo the image base.
+    LD   H,B                  ; Load the high-water address's high byte.
+    LD   L,C                  ; Complete the high-water address.
+    LD   DE,(NA_TBASE)        ; Load the absolute target origin.
+    OR   A                    ; Clear carry before unsigned subtraction.
+    SBC  HL,DE                ; Convert absolute high water to image offset.
+    JR   C,.DONE              ; Reject an impossible mark below the origin.
+    JR   .FILL                ; Materialize ordinary high-water extent.
+.ENDPOINT:
+    LD   HL,0                 ; Store $10000's low word as zero.
+    LD   DE,(NA_TBASE)        ; Load the absolute target origin.
+    OR   A                    ; Clear carry before modulo subtraction.
+    SBC  HL,DE                ; Obtain $10000 minus origin in sixteen bits.
+.FILL:
     CALL NA_FILL              ; Zero-fill the trailing reservation.
     JR   C,.DONE              ; Do not publish incomplete output.
     CALL NA_SCLOS             ; Close source before commit.

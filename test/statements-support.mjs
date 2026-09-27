@@ -12,6 +12,17 @@ const RETURN_SENTINEL = 0x80fe;
 const word = (memory, address) => memory[address] | (memory[address + 1] << 8);
 const manifest = JSON.parse(fs.readFileSync("proofs/statements.json", "utf8"));
 
+function leadingOrigin(source) {
+  const match = /^[\t ]*ORG[\t ]+(\$[0-9A-F]+|0X[0-9A-F]+|[0-9A-F]+H|%[01]+|[0-9]+)(?=[\t ;,]|$)/im.exec(source);
+  if (!match) return undefined;
+  const value = match[1].toUpperCase();
+  if (value.startsWith("$")) return Number.parseInt(value.slice(1), 16);
+  if (value.startsWith("0X")) return Number.parseInt(value.slice(2), 16);
+  if (value.startsWith("%")) return Number.parseInt(value.slice(1), 2);
+  if (value.endsWith("H")) return Number.parseInt(value.slice(0, -1), 16);
+  return Number.parseInt(value, 10);
+}
+
 const PROOF_SYMBOLS = Object.freeze({
   AtomStatementProofAdapterWorkspaceStart: 0x6000,
   AtomStatementProofLogNext: 0x6000,
@@ -342,7 +353,8 @@ export async function createStatementsHarness() {
       return execute("AtomAssemblePart", () => {}, `AtomAssemblePart ${JSON.stringify(source)}`);
     },
     assemble(source, options = {}) {
-      this.resetAssembly(options);
+      const address = options.address ?? leadingOrigin(source);
+      this.resetAssembly(address === undefined ? options : { ...options, address });
       return this.assemblePart(source, options);
     },
     operations() {

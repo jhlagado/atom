@@ -49,7 +49,38 @@ test("native driver assembles ordered parts and commits one generation", () => {
     commitDescriptor: h.symbols.AtomDriverBuildDescriptor,
     cursor: 0x4004,
     remaining: 0xfc,
+    highWater: 0x4004,
+    geometryFlags: 0,
   });
+});
+
+test("COMMIT carries explicit 17-bit cursor and high-water endpoints", () => {
+  let result = h.assemble(["DB 42H\n"], { address: 0xffff, capacity: 1 });
+  assert.equal(result.status, STATUS.OK);
+  assert.deepEqual(
+    {
+      cursor: h.lifecycle().cursor,
+      highWater: h.lifecycle().highWater,
+      remaining: h.lifecycle().remaining,
+      geometryFlags: h.lifecycle().geometryFlags,
+    },
+    { cursor: 0, highWater: 0, remaining: 0, geometryFlags: 3 },
+  );
+
+  result = h.assemble(
+    ["ORG 0FFFFH\nDS 1\nORG 1\n"],
+    { address: 1, capacity: 0xffff },
+  );
+  assert.equal(result.status, STATUS.OK);
+  assert.deepEqual(
+    {
+      cursor: h.lifecycle().cursor,
+      highWater: h.lifecycle().highWater,
+      remaining: h.lifecycle().remaining,
+      geometryFlags: h.lifecycle().geometryFlags,
+    },
+    { cursor: 1, highWater: 0, remaining: 0xfffe, geometryFlags: 2 },
+  );
 });
 
 test("private scope crosses a source-part boundary and closes only at a global label", () => {
@@ -90,6 +121,8 @@ test("undefined global reports its exact source part, offset, and packed name", 
     commitDescriptor: 0,
     cursor: 0,
     remaining: 0,
+    highWater: 0,
+    geometryFlags: 0,
   });
 });
 
@@ -143,6 +176,8 @@ test("descriptor failures are preflighted before sink begin", () => {
       commitDescriptor: 0,
       cursor: 0,
       remaining: 0,
+      highWater: 0,
+      geometryFlags: 0,
     });
     assert.deepEqual(h.operations(), []);
   }
@@ -195,6 +230,8 @@ test("begin failure does not abort a generation that never opened", () => {
     commitDescriptor: 0,
     cursor: 0,
     remaining: 0,
+    highWater: 0,
+    geometryFlags: 0,
   });
 });
 
@@ -230,6 +267,8 @@ test("commit failure is followed by one abort and retains the adapter status", (
     commitDescriptor: 0,
     cursor: 0,
     remaining: 0,
+    highWater: 0,
+    geometryFlags: 0,
   });
 });
 

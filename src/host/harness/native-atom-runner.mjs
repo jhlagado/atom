@@ -77,7 +77,9 @@ const RUNNER_SYMBOL_NAMES = Object.freeze([
   "AtomDriverUndefinedSymbol",
   "AtomHostResidentEnd",
   "AtomOutputCursor",
+  "AtomOutputFlags",
   "AtomOutputReserve",
+  "AtomOutputStatusCapacity",
   "AtomOutputSetOrigin",
   "AtomSinkAbort",
   "AtomSinkBegin",
@@ -119,6 +121,7 @@ const RUNNER_STATE_SYMBOL_WIDTHS = Object.freeze([
   ["AtomDriverDetail", 1],
   ["AtomDriverUndefinedSymbol", 2],
   ["AtomOutputCursor", 2],
+  ["AtomOutputFlags", 1],
   ["AtomStatementDetail", 1],
   ["AtomStatementErrorOffset", 2],
   ["AtomStatementErrorPart", 1],
@@ -833,12 +836,16 @@ function nativeFailure(
     (result.status === symbols.AtomDriverStatusSource &&
       result.driverDetail === symbols.AtomStatementStatusOutput)
   ) {
+    const message =
+      bridgeFailure?.message ??
+      sinkState.failure?.message ??
+      (result.statementDetail === symbols.AtomOutputStatusCapacity
+        ? "Atom output exceeds its target extent or remaining capacity"
+        : "Atom output sink failed");
     return new AtomAssemblyError(
       "output",
       "sink",
-      bridgeFailure?.message ??
-        sinkState.failure?.message ??
-        "Atom output sink failed",
+      message,
       common,
     );
   }
@@ -1034,7 +1041,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let bridgeFailure;
   let instructions = 0;
   let cycles = 0;
-  let logicalHighWater = target.start;
   const layout = [];
   const declaredSymbols = [];
   const defaultSourceProvider = new MemorySourceByteProvider(
@@ -1061,25 +1067,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       ? undefined
       : sourcePosition(part, word(memory, symbols.AtomStatementErrorOffset));
   };
-  const recordExtent = (end, message) => {
-    logicalHighWater = Math.max(logicalHighWater, end);
-    if (
-      bridgeFailure === undefined &&
-      (end < target.start || end > target.start + target.capacity)
-    ) {
-      bridgeFailure = Object.freeze({
-        message,
-        diagnostic: currentDiagnostic(),
-      });
-    }
-  };
-  // Native cursors are words. Only a range ending at 10000 can have a
-  // valid zero cursor representing its exclusive end. Explicit ORG values
-  // and IMAGE addresses remain literal 16-bit addresses and are not lifted.
-  const logicalCursor = (cursor) =>
-    cursor === 0 && target.start + target.capacity === 0x10000
-      ? 0x10000
-      : cursor;
+  const logicalCursor = (cursor, endpoint) => endpoint ? 0x10000 : cursor;
   const toolServices = createAtomToolServiceGateway({
     sink,
     sourceRead:
@@ -1128,7 +1116,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
           }
           const byte =
             binary === undefined ? runtime.cpu.a : binary.bytes[binary.index++];
-          recordExtent(address + 1, "IMAGE lies outside the target range");
           return toolServices.dispatch(ATOM_TOOL_SERVICE.image, {
             bank: runtime.cpu.c,
             address,
@@ -1182,11 +1169,18 @@ export async function assembleResolvedAtomProject(project, options = {}) {
           }
           if (bridgeFailure !== undefined)
             return ATOM_HOST_SINK_STATUS.TARGET_RANGE;
+          const geometryFlags = runtime.cpu.a;
           return toolServices.dispatch(ATOM_TOOL_SERVICE.commit, {
             descriptor: runtime.cpu.ix,
-            finalCursor: logicalCursor(pair(runtime.cpu.h, runtime.cpu.l)),
+            finalCursor: logicalCursor(
+              pair(runtime.cpu.h, runtime.cpu.l),
+              (geometryFlags & 1) !== 0,
+            ),
             remaining: pair(runtime.cpu.d, runtime.cpu.e),
-            highWater: logicalHighWater,
+            highWater: logicalCursor(
+              pair(runtime.cpu.b, runtime.cpu.c),
+              (geometryFlags & 2) !== 0,
+            ),
           }).status;
         },
       }),
@@ -1254,9 +1248,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       const address = pair(runtime.cpu.h, runtime.cpu.l);
       const source = currentDiagnostic();
       layout.push(Object.freeze({ kind: "org", address, count: 0, source }));
-      recordExtent(address, "ORG lies outside the target range");
     } else if (runtime.cpu.pc === symbols.AtomOutputReserve) {
-      const cursor = logicalCursor(word(memory, symbols.AtomOutputCursor));
+      const cursor = logicalCursor(
+        word(memory, symbols.AtomOutputCursor),
+        (memory[symbols.AtomOutputFlags] & 1) !== 0,
+      );
       const count = pair(runtime.cpu.h, runtime.cpu.l);
       layout.push(
         Object.freeze({
@@ -1265,10 +1261,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
           count,
           source: currentDiagnostic(),
         }),
-      );
-      recordExtent(
-        cursor + count,
-        "DS reservation lies outside the target range",
       );
     } else if (
       runtime.cpu.pc === symbols.AtomSymbolDeclare ||

@@ -218,12 +218,15 @@ DR_FIN:
     CALL DR_AFIN            ; Validate pending and symbol state.
     JR   C,DR_FFAIL         ; Classify undefined versus internal failure.
 
-; COMMIT receives output cursor and remaining capacity, letting the host
-; derive the final written range without duplicating output-layer arithmetic.
+; COMMIT receives final cursor, remaining capacity, explicit high water and
+; endpoint bits. Hosts no longer reconstruct geometry from output callbacks.
 
     LD   IX,(DR_DESC)       ; COMMIT receives the original build descriptor.
     LD   HL,(OU_CURSO)      ; Supply the final target cursor.
     LD   DE,(OU_REM)        ; Supply the target capacity left unused.
+    LD   BC,(OU_HIGH)       ; Supply the low word of the high-water endpoint.
+    LD   A,(OU_FLAGS)       ; Read cursor/high-water/target endpoint state.
+    AND  OU_FCUR+OU_FHIGH   ; Publish only the two COMMIT endpoint bits.
     CALL HS_CMT             ; Atomically publish the completed generation.
     JR   C,DR_CFAIL         ; Abort if the sink cannot commit it.
 

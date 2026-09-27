@@ -30,13 +30,30 @@ OU_SCAP EQU 1               ; Report that the target interval is too small.
 OU_SINT EQU 2               ; Report an impossible internal state.
 OU_SVRAN EQU 3              ; Report a concrete value outside its field range.
 OU_SRRAN EQU 4              ; Report a relative target outside -128..127.
+OU_FCUR EQU 1               ; Cursor word zero can mean exclusive end $10000.
+OU_FHIGH EQU 2              ; High-water word zero can mean exclusive $10000.
+OU_FTEND EQU 4              ; Target extent itself ends at exclusive $10000.
 
 ;@ROUTINE IN DE,HL OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Start a logical output interval at HL with DE bytes of remaining capacity.
+; Start a target interval at HL with DE bytes of capacity. Keep its absolute
+; bounds and initialise cursor/high-water state before any sink can begin.
 
 OU_RESET:
+    PUSH DE                  ; Preserve the descriptor's target capacity.
+    PUSH HL                  ; Preserve the descriptor's target origin.
     LD   (OU_CURSO),HL      ; Install the first logical output address.
+    LD   (OU_BASE),HL       ; Retain the inclusive lower target bound.
+    LD   (OU_HIGH),HL       ; Start high water at the target origin.
     LD   (OU_REM),DE        ; Record the number of writable target bytes.
+    ADD  HL,DE              ; Calculate the exclusive target end.
+    LD   (OU_END),HL        ; Keep its low sixteen bits for range checks.
+    LD   A,0                ; Prepare a zero-extended carry value.
+    ADC  A,0                ; Record whether the end is exactly $10000.
+    RLCA                    ; Move the endpoint marker toward bit two.
+    RLCA                    ; Store target-end state in OU_FTEND.
+    LD   (OU_FLAGS),A       ; Cursor and high water both start below $10000.
+    POP  HL                 ; Restore the caller's target origin.
+    POP  DE                 ; Restore the caller's target capacity.
     XOR  A                  ; Return status zero with carry clear.
     RET                     ; Give control back to the driver.
 
@@ -48,7 +65,35 @@ OU_CCAP:
     LD   HL,(OU_REM)        ; Load the current capacity without committing it.
     OR   A                  ; Clear carry before the unsigned subtraction.
     SBC  HL,DE              ; Does capacity cover the request?
-    JR   C,OU_DCFAI         ; Reject an oversized request.
+    JP   C,OU_DCFAI         ; Reject an oversized request.
+    LD   A,(OU_FLAGS)       ; Read endpoint state for the current cursor.
+    BIT  0,A                ; Is the cursor already at $10000?
+    JR   NZ,.ATEND          ; Only zero bytes fit at the endpoint.
+    LD   HL,(OU_CURSO)      ; Load the current sixteen-bit cursor.
+    ADD  HL,DE              ; Compute the exclusive end of this operation.
+    JR   C,.WRAPPED         ; Carry can be valid only for exact $10000.
+    LD   A,(OU_FLAGS)       ; Check whether every sixteen-bit end is in range.
+    BIT  2,A                ; Does the configured target end at $10000?
+    JR   NZ,.READY          ; Then this nonwrapped end is necessarily inside.
+    LD   DE,(OU_END)        ; Load the ordinary sixteen-bit target endpoint.
+    OR   A                  ; Clear carry before the unsigned comparison.
+    SBC  HL,DE              ; Is the operation end at or below that endpoint?
+    JR   C,.READY           ; A smaller end is inside the target.
+    JR   Z,.READY           ; Equality is the permitted exclusive endpoint.
+    JP   OU_DCFAI           ; Reject an operation extending past the target.
+.WRAPPED:
+    LD   A,H                ; Check for a zero wrapped result.
+    OR   L                  ; A nonzero result exceeds $10000.
+    JP   NZ,OU_DCFAI        ; Reject arithmetic beyond the Z80 address space.
+    LD   A,(OU_FLAGS)       ; Exact $10000 needs a target with that endpoint.
+    BIT  2,A                ; Is $10000 the configured exclusive target end?
+    JP   Z,OU_DCFAI         ; Otherwise the operation exceeds the target.
+    JR   .READY             ; The exact endpoint is valid for this target.
+.ATEND:
+    LD   A,D                ; Check the requested length's high byte.
+    OR   E                  ; Only a zero-length operation can remain at end.
+    JP   NZ,OU_DCFAI        ; Reject any attempt to write beyond $10000.
+.READY:
     XOR  A                  ; Report a successful capacity check.
     RET                     ; Leave the stored capacity unchanged.
 
@@ -95,21 +140,56 @@ OU_RESER:
     LD   HL,(OU_CURSO)      ; Load the current logical target address.
     ADD  HL,DE              ; Advance past the uninitialized interval.
     LD   (OU_CURSO),HL      ; Publish the new logical cursor.
+    JR   NC,.HIGH           ; No carry leaves the cursor below $10000.
+    LD   A,(OU_FLAGS)       ; Preserve target and high-water endpoint bits.
+    OR   OU_FCUR            ; Mark the cursor as mathematical $10000.
+    LD   (OU_FLAGS),A       ; Keep that endpoint distinct from address zero.
+.HIGH:
     LD   HL,(OU_REM)        ; Load the previously proved remaining capacity.
     OR   A                  ; Clear carry before subtracting the reservation.
     SBC  HL,DE              ; Consume the reserved bytes from the account.
     LD   (OU_REM),HL        ; Publish the reduced capacity.
+    CALL OU_UPDHI           ; Retain the greatest reached logical address.
     XOR  A                  ; Report successful reservation with carry clear.
     RET                     ; Return without submitting any IMAGE bytes.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Select a new logical origin. Enforcing the target extent and any append-only
-; policy is the surrounding platform adapter's responsibility.
+; Select an origin inside the configured target. A successful backward ORG
+; changes the final cursor but never reduces the accumulated high-water mark.
 
 OU_SORIG:
+    PUSH DE                 ; Keep the caller's DE pair unchanged.
+    PUSH HL                 ; Keep the origin during comparison.
+    LD   DE,(OU_BASE)       ; Load the target's inclusive lower bound.
+    OR   A                  ; Clear carry before checking the lower bound.
+    SBC  HL,DE              ; Is the requested address at or above the base?
+    POP  HL                 ; Restore origin and preserve flags.
+    JR   C,.BAD             ; Reject an origin before the configured target.
+    LD   A,(OU_FLAGS)       ; Read the target-end representation.
+    BIT  2,A                ; Is its exclusive end mathematical $10000?
+    JR   NZ,.INRANGE        ; Every address is below this endpoint.
+    PUSH HL                 ; Preserve the origin during the upper-bound test.
+    LD   DE,(OU_END)        ; Load the ordinary exclusive target endpoint.
+    OR   A                  ; Clear carry before the unsigned comparison.
+    SBC  HL,DE              ; Is the requested address below the endpoint?
+    POP  HL                 ; Restore the origin after comparison.
+    JR   C,.INRANGE         ; A smaller address is inside the target.
+    JR   Z,.INRANGE         ; The exclusive endpoint itself is a valid cursor.
+    JR   .BAD               ; Reject an origin beyond the configured target.
+.INRANGE:
     LD   (OU_CURSO),HL      ; Set cursor to requested origin.
+    LD   A,(OU_FLAGS)       ; Read flags before clearing cursor-end state.
+    AND  $FE                ; An ORG literal cannot mean $10000.
+    LD   (OU_FLAGS),A       ; Publish the ordinary sixteen-bit cursor state.
+    PUSH HL                 ; Preserve the requested address for the caller.
+    CALL OU_UPDHI           ; Raise high water if this ORG moves it forward.
+    POP  HL                 ; Restore the input cursor promised by this entry.
+    POP  DE                 ; Restore the caller's original DE pair.
     XOR  A                  ; Report successful cursor update.
     RET                     ; Continue statement assembly at the new address.
+.BAD:
+    POP  DE                 ; Restore the caller's original DE pair.
+    JP   OU_DCFAI           ; Report a target-capacity/range failure.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY,DE,IX,IY
 ; Submit A as one IMAGE byte at the cursor. C=0 is the base output class.
@@ -124,11 +204,49 @@ OU_EBREA:
     LD   HL,(OU_CURSO)      ; Reload the accepted byte's address.
     INC  HL                 ; Move to the next logical output address.
     LD   (OU_CURSO),HL      ; Commit the new cursor.
+    LD   A,H                ; Check whether increment reached the end.
+    OR   L                  ; Zero means the accepted byte was at $FFFF.
+    JR   NZ,.HIGH           ; Keep the ordinary cursor otherwise.
+    LD   A,(OU_FLAGS)       ; Preserve target/high-water endpoint state.
+    OR   OU_FCUR            ; Distinguish the end from literal address zero.
+    LD   (OU_FLAGS),A       ; Publish the cursor endpoint bit.
+.HIGH:
+    CALL OU_UPDHI           ; Retain the greatest accepted output address.
     LD   HL,(OU_REM)        ; Reload the target-capacity account.
     DEC  HL                 ; Charge the accepted byte against the account.
     LD   (OU_REM),HL        ; Commit the reduced remaining capacity.
     XOR  A                  ; Normalize success status and clear carry.
     RET                     ; Return after the host and local state agree.
+
+;@ROUTINE CLOBBERS A,DE,HL,ZERO,SIGN,PARITY,HALFCARRY,CARRY
+; Raise high water to the current cursor. Reload the cursor here because
+; callers may have reused HL while updating another part of output state.
+; Cursor-end state promotes the mathematical mark to $10000.
+
+OU_UPDHI:
+    LD   A,(OU_FLAGS)       ; Read cursor and accumulated endpoint markers.
+    BIT  1,A                ; Is high water already mathematical $10000?
+    RET  NZ                 ; Nothing can raise that maximum further.
+    BIT  0,A                ; Did this cursor just reach mathematical $10000?
+    JR   NZ,.ENDPOINT       ; Promote high water without another comparison.
+    LD   HL,(OU_CURSO)      ; Read the cursor rather than trusting caller HL.
+    LD   DE,(OU_HIGH)       ; Load the current ordinary high-water word.
+    OR   A                  ; Clear carry before the unsigned comparison.
+    SBC  HL,DE              ; Is the current cursor greater than high water?
+    RET  C                  ; A lower cursor must not shrink the extent.
+    RET  Z                  ; Equality already represents the maximum.
+    LD   HL,(OU_CURSO)      ; Restore the current cursor after subtraction.
+    LD   (OU_HIGH),HL       ; Publish the new ordinary high-water mark.
+    RET                     ; Leave the endpoint bits unchanged.
+.ENDPOINT:
+    XOR  A                  ; Mathematical $10000 has a zero low word.
+    LD   (OU_HIGH),A        ; Store the endpoint's low byte.
+    LD   (OU_HIGH+1),A      ; Store its high byte as well.
+    LD   A,(OU_FLAGS)       ; Preserve cursor and target endpoint markers.
+    OR   OU_FHIGH           ; Mark high water as mathematical $10000.
+    LD   (OU_FLAGS),A       ; Keep the endpoint explicit for COMMIT.
+    RET                     ; The greatest possible Z80 endpoint is retained.
+
 OU_DCFAI:                   ; Return the shared capacity-failure status.
     LD   A,OU_SCAP          ; Identify target-capacity exhaustion.
     SCF                     ; Mark the operation as failed.
@@ -147,16 +265,12 @@ OU_EINS:
     RET  C                  ; Publish nothing when the form is invalid.
     LD   (OU_ILEN),A        ; Save encoded length, one to four bytes.
 
-; Compare the returned length against remaining capacity without changing it.
+; Prove both remaining capacity and the absolute target extent before emit.
 
-    LD   B,A                ; Hold the short instruction length in B.
-    LD   HL,(OU_REM)        ; Load the available target capacity.
-    LD   A,H                ; Inspect the high byte first.
-    OR   A                  ; Any nonzero high byte suffices.
-    JR   NZ,.ICREADY        ; Skip low-byte capacity check.
-    LD   A,L                ; Compare the small remaining capacity directly.
-    CP   B                  ; Set carry when fewer than B bytes remain.
-    JR   C,.ICFAIL          ; Reject the instruction before emitting a prefix.
+    LD   L,A                ; Pass the short encoded length as a word request.
+    LD   H,0                ; Zero-extend its one-byte encoder result.
+    CALL OU_CCAP            ; Check the whole instruction without mutation.
+    JR   C,.ICFAIL          ; Reject before emitting any encoded byte.
 .ICREADY:                   ; Check pending storage after output capacity.
     CALL PR_CREFE           ; Check every unresolved field.
     RET  C                  ; Return before instruction emission.
@@ -403,15 +517,18 @@ OU_RWDOM:
 OU_CEND:                    ; Mark the end of executable output code.
 OU_WBEG:                    ; Begin the output module's fixed workspace.
 
-; Fixed workspace is fourteen bytes: four for cursor/capacity and ten
-; shared by the instruction buffer and patch-resolution state while
-; draining one symbol's pending patches.
+; Fixed workspace is twenty-one bytes: seven for target geometry, four for
+; cursor/capacity and ten shared by emission and patch-resolution scratch.
 
 ; Statements call OU_EINS and OU_RSLV in sequence, never nested, so
 ; their scratch lifetimes do not overlap.
 
 OU_CURSO: DW 0              ; Current logical target address.
 OU_REM: DW 0                ; Remaining bytes in the initial target interval.
+OU_BASE: DW 0               ; Inclusive lower target address.
+OU_END: DW 0                ; Low word of the exclusive target endpoint.
+OU_HIGH: DW 0               ; Low word of the exclusive high-water endpoint.
+OU_FLAGS: DB 0              ; Cursor, high-water and target endpoint bits.
 OU_WUNIO: DS 10             ; Instruction/patch scratch overlay.
 OU_IBEG EQU OU_WUNIO        ; Instruction start address during emission.
 OU_INSB EQU OU_WUNIO+2      ; Four-byte encoder destination buffer.

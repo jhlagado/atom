@@ -30,6 +30,8 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomDriverProofCommitDescriptor: 0x600b,
   AtomDriverProofCommitCursor: 0x600d,
   AtomDriverProofCommitRemaining: 0x600f,
+  AtomDriverProofCommitHighWater: 0x6011,
+  AtomDriverProofCommitFlags: 0x6013,
   AtomDriverProofAdapterWorkspaceEnd: 0x6018,
   AtomDriverProofSourceStart: 0x8000,
   AtomDriverSourceBefore: 0x8000,
@@ -181,6 +183,8 @@ export async function createDriverHarness() {
         writeServiceWord(symbols.AtomDriverProofCommitDescriptor, cpu.ix);
         writeServiceWord(symbols.AtomDriverProofCommitCursor, (cpu.h << 8) | cpu.l);
         writeServiceWord(symbols.AtomDriverProofCommitRemaining, (cpu.d << 8) | cpu.e);
+        writeServiceWord(symbols.AtomDriverProofCommitHighWater, (cpu.b << 8) | cpu.c);
+        writeServiceByte(symbols.AtomDriverProofCommitFlags, cpu.a);
         writeServiceByte(symbols.AtomDriverProofOpen, 0);
         writeServiceByte(symbols.AtomDriverProofCommitted, 1);
         status = 0;
@@ -379,6 +383,8 @@ export async function createDriverHarness() {
         commitDescriptor: word(memory, symbols.AtomDriverProofCommitDescriptor),
         cursor: word(memory, symbols.AtomDriverProofCommitCursor),
         remaining: word(memory, symbols.AtomDriverProofCommitRemaining),
+        highWater: word(memory, symbols.AtomDriverProofCommitHighWater),
+        geometryFlags: memory[symbols.AtomDriverProofCommitFlags],
       };
     },
     undefinedKey(pointer) {

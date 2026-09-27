@@ -53,7 +53,7 @@ h.outputEmitWord(0x1234);
 h.resetAssembly({ capacity: 1 });
 h.outputEmitWord(0x1234);
 h.outputEmitByte(0x56);
-h.resetAssembly({ capacity: 4 });
+h.resetAssembly({ capacity: 0x1100 });
 h.outputReserve(3);
 h.outputSetOrigin(0x5000);
 

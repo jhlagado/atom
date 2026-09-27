@@ -33,10 +33,10 @@ test("the GitHub release contains the checked CP/M executable and provenance", a
     platform: "CP/M 2.2",
     artifact: {
       file: "ATOM.COM",
-      bytes: 15366,
+      bytes: 15592,
       sha256: executableSha256,
       loadAddress: 0x100,
-      entryAddress: 12671,
+      entryAddress: 12886,
     },
     source: {
       repository: "https://github.com/jhlagado/atom",

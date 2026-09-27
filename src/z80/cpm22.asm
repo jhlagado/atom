@@ -1261,15 +1261,23 @@ HS_PW:
     XOR  A                  ; Return success with carry clear.
     RET                     ; Finish the word-PATCH operation.
 
-;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Convert the final cursor to image length, create a temporary file and
+;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Convert explicit high water to image length, create a temporary file and
 ; serialize the selected format. COM and BIN write CP/M records from the RAM
 ; image; HEX streams records through the shared final-image helper below.
 
 HS_CMT:
+    BIT  1,A                ; Is high water the mathematical endpoint $10000?
+    JR   NZ,.ENDPOINT       ; Use the explicit endpoint form.
+    LD   H,B                ; Load the high-water word's high byte.
+    LD   L,C                ; Complete the ordinary high-water address.
+    JR   .LENGTH            ; Convert the absolute address to file length.
+.ENDPOINT:
+    LD   HL,0               ; Zero is the stored word for mathematical $10000.
+.LENGTH:
     LD   DE,CP_TARGET_START  ; Load the image's logical base address.
     OR   A                  ; Clear carry before subtracting base.
-    SBC  HL,DE              ; Convert cursor to image length.
+    SBC  HL,DE              ; Convert high water to image length.
     LD   (CP_OUTPUT_REMAINING),HL  ; Retain bytes to write as records.
     LD   HL,CP_OUTPUT_START  ; Point at the first byte of the tentative image.
     LD   (CP_OUTPUT_CURSOR),HL  ; Seed the sequential record cursor.

@@ -68,7 +68,7 @@ const result = {
   execution: harness.statistics,
   wholeAssembler: {
     classification: "Measured",
-    bytes: 12400,
+    bytes: 12615,
     kibibytes: 12.1,
     basis: "Current checked native image, including fixed workspace",
   },

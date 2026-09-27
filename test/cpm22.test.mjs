@@ -126,6 +126,23 @@ test("the CP/M publication path preserves representative eight-bit binary bytes"
   );
 });
 
+test("CP/M COMMIT publishes a reserved extent after backward ORG", async () => {
+  const source = Buffer.from(
+    "ORG $100\r\nDS $81\r\nORG $100\r\nDB $A5\r\n",
+    "ascii",
+  );
+  const result = await runCpm22Atom(source);
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.equal(result.outputFile?.records, 2);
+  assert.equal(result.outputFile?.bytes.length, 256);
+  assert.deepEqual(
+    result.outputFile?.bytes.slice(0, 129),
+    Uint8Array.of(0xa5, ...new Uint8Array(128)),
+  );
+  assert.equal(result.returnA, 0);
+});
+
 test("native Atom publishes a selected raw BIN", async () => {
   const expected = await expectedRepresentativeProgram();
   const result = await runCpm22Atom(representativeSource, undefined, {

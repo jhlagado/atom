@@ -592,11 +592,11 @@ test("directive output helpers return directly and enforce exact capacities", ()
   assert.equal(h.outputEmitByte(0x56).carry, 0);
   assert.deepEqual(h.operations(), [{ kind: 1, bank: 0, address: 0x4000, bytes: [0x56] }]);
 
-  h.resetAssembly({ capacity: 4 });
+  h.resetAssembly({ capacity: 0x1100 });
   assert.equal(h.outputReserve(3).carry, 0);
-  assert.deepEqual(h.outputState(), { cursor: 0x4003, remaining: 1 });
+  assert.deepEqual(h.outputState(), { cursor: 0x4003, remaining: 0x10fd });
   assert.equal(h.outputSetOrigin(0x5000).carry, 0);
-  assert.deepEqual(h.outputState(), { cursor: 0x5000, remaining: 1 });
+  assert.deepEqual(h.outputState(), { cursor: 0x5000, remaining: 0x10fd });
 });
 
 test("statements measured public-entry execution matches the pinned observations", () => {

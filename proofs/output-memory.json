@@ -12,14 +12,14 @@
     { "name": "patch-code", "start": "AtomPatchCodeStart", "end": "AtomPatchCodeEnd", "exactBytes": 67 },
     { "name": "parser-code", "start": "AtomParserCodeStart", "end": "AtomParserCodeEnd", "exactBytes": 2048 },
     { "name": "parser-workspace", "start": "AtomParserWorkspaceStart", "end": "AtomParserWorkspaceEnd", "exactBytes": 92 },
-    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 467 },
-    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
+    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 666 },
+    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 21 },
     { "name": "statement-code", "start": "AtomStatementCodeStart", "end": "AtomStatementCodeEnd", "exactBytes": 1358 },
     { "name": "statement-workspace", "start": "AtomStatementWorkspaceStart", "end": "AtomStatementWorkspaceEnd", "exactBytes": 24 },
-    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 621 },
+    { "name": "driver-code", "start": "AtomDriverCodeStart", "end": "AtomDriverCodeEnd", "exactBytes": 630 },
     { "name": "driver-workspace", "start": "AtomDriverWorkspaceStart", "end": "AtomDriverWorkspaceEnd", "exactBytes": 9 },
     { "name": "host-service-code", "start": "AtomHostServiceCodeStart", "end": "AtomHostServiceCodeEnd", "exactBytes": 8 },
-    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomOutputProofAdapterWorkspaceStart", "exactBytes": 12176 },
+    { "name": "lower-free", "start": "AtomHostResidentEnd", "end": "AtomOutputProofAdapterWorkspaceStart", "exactBytes": 11961 },
     { "name": "proof-adapter-workspace", "start": "AtomOutputProofAdapterWorkspaceStart", "end": "AtomOutputProofAdapterWorkspaceEnd", "exactBytes": 10 },
     { "name": "adapter-free", "start": "AtomOutputProofAdapterWorkspaceEnd", "end": "AtomOutputProofSourceStart", "exactBytes": 8182 },
     { "name": "proof-source", "start": "AtomOutputProofSourceStart", "end": "AtomOutputProofSourceEnd", "exactBytes": 130 },
@@ -36,7 +36,7 @@
     { "name": "reserved-top", "start": 65280, "end": 65536, "exactBytes": 256 }
   ],
   "extents": [
-    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12400 },
+    { "name": "linked-resident", "start": "AtomEncoderCoreStart", "end": "AtomHostResidentEnd", "exactBytes": 12615 },
     {
       "name": "integrated-code-and-tables",
       "sum": [
@@ -48,7 +48,7 @@
         ["AtomParserCodeStart", "AtomParserCodeEnd"],
         ["AtomOutputCodeStart", "AtomOutputCodeEnd"]
       ],
-      "exactBytes": 9699
+      "exactBytes": 9898
     },
     {
       "name": "integrated-fixed-workspace",
@@ -60,10 +60,10 @@
         ["AtomParserWorkspaceStart", "AtomParserWorkspaceEnd"],
         ["AtomOutputWorkspaceStart", "AtomOutputWorkspaceEnd"]
       ],
-      "exactBytes": 681
+      "exactBytes": 688
     },
-    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 467 },
-    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 14 },
+    { "name": "output-code", "start": "AtomOutputCodeStart", "end": "AtomOutputCodeEnd", "exactBytes": 666 },
+    { "name": "output-workspace", "start": "AtomOutputWorkspaceStart", "end": "AtomOutputWorkspaceEnd", "exactBytes": 21 },
     { "name": "proof-adapter-workspace", "start": "AtomOutputProofAdapterWorkspaceStart", "end": "AtomOutputProofAdapterWorkspaceEnd", "exactBytes": 10 }
   ]
 }

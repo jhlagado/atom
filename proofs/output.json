@@ -31,10 +31,10 @@
       "maxCycles": 170
     },
     "AtomOutputReset": {
-      "measuredInstructions": 4,
-      "maxInstructions": 20,
-      "measuredCycles": 50,
-      "maxCycles": 130
+      "measuredInstructions": 17,
+      "maxInstructions": 50,
+      "measuredCycles": 186,
+      "maxCycles": 500
     },
     "AtomPendingPeek": {
       "measuredInstructions": 152,
@@ -61,15 +61,15 @@
       "maxCycles": 156160
     },
     "AtomOutputEmitInstruction": {
-      "measuredInstructions": 699,
+      "measuredInstructions": 812,
       "maxInstructions": 2260,
-      "measuredCycles": 6368,
+      "measuredCycles": 7513,
       "maxCycles": 20570
     },
     "AtomOutputResolveSymbol": {
       "measuredInstructions": 1014,
       "maxInstructions": 3420,
-      "measuredCycles": 13170,
+      "measuredCycles": 13317,
       "maxCycles": 40650
     }
   }

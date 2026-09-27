@@ -122,8 +122,8 @@ test("the desktop host resolves, masks, and executes one project through native 
   assert.equal(result.native.carry, 0);
   assert.equal(result.execution.returnPc, 0xfffe);
   assert.equal(result.execution.finalSp, 0xfeff);
-  assert.equal(result.core.codeBytes, 11_686);
-  assert.equal(result.core.residentExtentBytes, 12_400);
+  assert.equal(result.core.codeBytes, 11_894);
+  assert.equal(result.core.residentExtentBytes, 12_615);
   const proof = JSON.parse(await fs.readFile("proofs/host-runner.json", "utf8"));
   assert.equal(
     result.execution.instructions,
@@ -347,7 +347,7 @@ test("descending ORG output is rejected by the append-only host sink", async () 
   assert.equal(error.sink.open, false);
 });
 
-test("commit rejects an out-of-range final cursor even when no IMAGE exposed it", async () => {
+test("the native core rejects an out-of-range ORG even when no IMAGE exposes it", async () => {
   const error = await assemblyError(
     () =>
       assembleResolvedAtomProject(resolvedParts(["ORG 4101H\n"]), {
@@ -356,10 +356,10 @@ test("commit rejects an out-of-range final cursor even when no IMAGE exposed it"
     "output",
     "sink",
   );
-  assert.equal(error.message, "ORG lies outside the target range");
+  assert.match(error.message, /target extent or remaining capacity/);
   assert.deepEqual(
     error.execution.serviceTrace.map(({ method }) => method),
-    ["begin", "commit", "abort"],
+    ["begin", "abort"],
   );
   assert.equal(error.sink.open, false);
 });
@@ -387,7 +387,7 @@ test("an intermediate out-of-range ORG remains a failure after the cursor return
     "output",
     "sink",
   );
-  assert.equal(error.message, "ORG lies outside the target range");
+  assert.match(error.message, /target extent or remaining capacity/);
   assert.deepEqual(error.diagnostic, {
     logicalIdentity: "part-0.asm",
     ordinal: 0,
@@ -397,7 +397,7 @@ test("an intermediate out-of-range ORG remains a failure after the cursor return
   });
   assert.deepEqual(
     error.execution.serviceTrace.map(({ method }) => method),
-    ["begin", "commit", "abort"],
+    ["begin", "abort"],
   );
 });
 
@@ -411,7 +411,7 @@ test("an intermediate out-of-range DS reservation retains its directive position
     "output",
     "sink",
   );
-  assert.equal(error.message, "DS reservation lies outside the target range");
+  assert.match(error.message, /target extent or remaining capacity/);
   assert.deepEqual(error.diagnostic, {
     logicalIdentity: "part-0.asm",
     ordinal: 0,

@@ -2,12 +2,12 @@
   "format": "atom-native-symbol-ledger",
   "version": 2,
   "statistics": {
-    "statements": 8764,
-    "sourceBytes": 551575,
+    "statements": 8883,
+    "sourceBytes": 559658,
     "sourceParts": 16,
     "checkedParts": 17,
-    "checkedBytes": 552748,
-    "globalSymbols": 876,
+    "checkedBytes": 560831,
+    "globalSymbols": 877,
     "privateSymbols": 441
   },
   "symbols": [
@@ -6988,6 +6988,12 @@
     {
       "original": "AtomOutputRemaining",
       "short": "OU_REM",
+      "private": false,
+      "module": "OU"
+    },
+    {
+      "original": "AtomOutputFlags",
+      "short": "OU_FLAGS",
       "private": false,
       "module": "OU"
     },

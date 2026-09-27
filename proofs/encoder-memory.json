@@ -5,13 +5,13 @@
       "name": "linked-resident",
       "start": 0,
       "end": "AtomHostResidentEnd",
-      "exactBytes": 12400
+      "exactBytes": 12615
     },
     {
       "name": "lower-free",
       "start": "AtomHostResidentEnd",
       "end": "AtomHarnessInputBefore",
-      "exactBytes": 20367
+      "exactBytes": 20152
     },
     {
       "name": "guarded-input",
@@ -67,7 +67,7 @@
       "name": "linked-resident",
       "start": "AtomEncoderCoreStart",
       "end": "AtomHostResidentEnd",
-      "exactBytes": 12400
+      "exactBytes": 12615
     },
     {
       "name": "code",

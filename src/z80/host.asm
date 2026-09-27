@@ -8,9 +8,11 @@
 ;  COMMIT and ABORT implementations at the same labels.
 ;
 ;  BEGIN receives IX = build descriptor. IMAGE/PATCH byte receive A = value,
-;  C = output class and HL = logical address. PATCH word receives HL = value,
-;  DE = logical address and C = class. COMMIT receives IX = descriptor,
-;  HL = final cursor and DE = remaining capacity. ABORT has no inputs.
+;  C = output class and HL = address. PATCH word receives HL = value, DE =
+;  address and C = class. COMMIT receives IX, final cursor in HL, remaining
+;  capacity in DE, high-water low word in BC, and endpoint flags in A: bit 0
+;  Bit 0 marks cursor $10000 and bit 1 marks high water $10000.
+;  ABORT takes no inputs.
 ;
 ;  The separate NOPs preserve distinct hook addresses for host interception.
 ;  Without interception, HS_FCLOS returns A=$FF with carry set.
@@ -41,7 +43,7 @@ HS_PB:
 HS_PW:
     NOP                     ; PATCH-word hook; fall through unbound.
 
-;@ROUTINE IN IX,HL,DE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable COMMIT service entry and fail closed when unbound.
 
 HS_CMT:

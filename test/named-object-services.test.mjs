@@ -105,7 +105,7 @@ test("Atom assembles through named objects and publishes one patched flat image"
     toolProfile,
   });
 
-  assert.equal(result.core.residentExtentBytes, 12_400);
+  assert.equal(result.core.residentExtentBytes, 12_615);
   assert.deepEqual([...provider.bytes("build/program.bin")], [
     0x18, 0x02, 0x00, 0x00, 0x00, 0x1a, 0x7f, 0x80, 0xff,
   ]);
@@ -195,6 +195,26 @@ test("Atom retains an uninitialized high-water extent after a backward ORG", asy
   assert.equal(result.generation.finalCursor, 0x4000);
   assert.equal(result.generation.highWater, 0x4004);
   assert.deepEqual([...provider.bytes("build/program.bin")], [0, 0, 0, 0]);
+});
+
+test("the named-object adapter preserves an exclusive $10000 COMMIT endpoint", async () => {
+  const source = "ORG 0FFFEH\nDB $AA,$BB\n";
+  const provider = new MemoryNamedObjectServices(new Map([
+    ["source/0.asm", encoder.encode(source)],
+  ]));
+  const toolProfile = createNamedObjectAtomAdapter({
+    provider,
+    sourceNames: ["source/0.asm"],
+    outputName: "build/end.bin",
+  });
+  const result = await assembleResolvedAtomProject(project(source), {
+    target: { start: 0xfffe, capacity: 2 },
+    toolProfile,
+  });
+
+  assert.equal(result.generation.finalCursor, 0x10000);
+  assert.equal(result.generation.highWater, 0x10000);
+  assert.deepEqual([...provider.bytes("build/end.bin")], [0xaa, 0xbb]);
 });
 
 test("a failed named-object commit preserves the preceding Atom image", async () => {

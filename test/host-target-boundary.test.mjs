@@ -60,6 +60,17 @@ test("ORG gaps do not require remaining capacity to reach zero at the endpoint",
   assert.equal(bytes[0xff], 7);
 });
 
+test("high-water survives backward ORG when the final cursor is an ordinary word", async () => {
+  const result = await assemble(
+    "ORG 0FFFFH\nDS 1\nORG 1\n",
+    { start: 1, capacity: 0xffff },
+  );
+  assert.equal(result.generation.finalCursor, 1);
+  assert.equal(result.generation.highWater, 0x10000);
+  assert.equal(result.generation.remaining, 0xfffe);
+  assert.equal(materializeAtomGeneration(result.generation).bytes.length, 0xffff);
+});
+
 test("wrapped writes, reservations and explicit ORG zero never publish a generation", async () => {
   for (const tail of ["DB 8\n", "DS 1\n", "ORG 0\n"]) {
     await assert.rejects(
