@@ -127,6 +127,8 @@ COM selects the CP/M load-and-entry convention but adds no header. HEX contains
 formats are materialised from ASO in 36,864-byte windows. CP/M files occupy
 complete 128-byte records, so BIN and COM may contain zero padding after the
 logical image and HEX may contain `$1A` padding after its end record.
+The boundary tests cover empty and one-byte images, plus images one byte below,
+exactly at and one byte above the window for each format.
 
 ## Memory layout
 

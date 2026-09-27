@@ -235,6 +235,37 @@ test("native Atom publishes a selected raw BIN", async () => {
   assert.equal(result.returnA, 0);
 });
 
+test("CP/M COM and BIN handle empty, one-byte, and replay-window boundaries", async () => {
+  const windowBytes = cpmCensus.materializerWindowBytes;
+  const lengths = [0, 1, windowBytes - 1, windowBytes, windowBytes + 1];
+
+  for (const extension of ["COM", "BIN"]) {
+    for (const length of lengths) {
+      const source = Buffer.from(
+        length === 0
+          ? "ORG $100\r\n"
+          : `ORG $100\r\nDS ${length},$A5\r\n`,
+        "ascii",
+      );
+      const expected = await expectedImageForSource(source, "BOUNDARY.ASM");
+      const result = await runCpm22Atom(source, undefined, {
+        sourceName: "BOUNDARY.ASM",
+        outputName: `BOUNDARY.${extension}`,
+        freshDisk: true,
+      });
+      const physical = result.outputFile?.bytes;
+
+      assert.equal(expected.bytes.length, length, `${extension} length ${length}`);
+      assert.ok(result.outputFile, `${extension} length ${length} was not published`);
+      assert.match(result.atomTranscript, new RegExp(`BOUNDARY\\.${extension} written`));
+      assert.equal(physical?.length, Math.ceil(length / 128) * 128);
+      assert.deepEqual(physical?.slice(0, length), expected.bytes, `${extension} length ${length}`);
+      assert.equal(result.returnA, 0, `${extension} length ${length}`);
+      assert.equal(result.returnSp, 0xe400, `${extension} length ${length}`);
+    }
+  }
+});
+
 test("CP/M COM, BIN and HEX materialize the same Node image and addresses", async () => {
   const source = Buffer.from([
     "ORG 100H",
@@ -324,7 +355,13 @@ test("CP/M materializes large Intel HEX through bounded ASO replay windows", asy
 });
 
 test("CP/M HEX handles empty, one-byte, exact-window, and short-tail images", async () => {
-  const lengths = [0, 1, cpmCensus.materializerWindowBytes, cpmCensus.materializerWindowBytes + 1];
+  const lengths = [
+    0,
+    1,
+    cpmCensus.materializerWindowBytes - 1,
+    cpmCensus.materializerWindowBytes,
+    cpmCensus.materializerWindowBytes + 1,
+  ];
   for (const length of lengths) {
     const source = Buffer.from(
       length === 0 ? "ORG $100\r\n" : `ORG $100\r\nDS ${length},$A5\r\n`,
