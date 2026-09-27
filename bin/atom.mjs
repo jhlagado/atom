@@ -237,6 +237,7 @@ async function main() {
     });
     const base = contentBase(result.generation);
     const requestsCom = build.outputs.some(({ format }) => format === "com");
+    const requestsHex = build.outputs.some(({ format }) => format === "hex");
     const entryAddress = build.target.entryAddress ?? (requestsCom ? 0x100 : base);
     let artifacts;
     let materialized;
@@ -255,7 +256,7 @@ async function main() {
       });
       artifacts = Object.freeze({
         bin: materialized.bytes,
-        hex: writeIntelHex(materialized),
+        ...(requestsHex ? { hex: writeIntelHex(materialized) } : {}),
       });
     } else {
       artifacts = renderAtomArtifacts(result, { base, entryAddress });

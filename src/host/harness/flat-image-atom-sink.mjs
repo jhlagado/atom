@@ -35,7 +35,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
   let generation;
   let materialized;
   let failure;
-  const lifecycle = [];
 
   const reject = (status, code, message) => {
     failure = Object.freeze({ status, code, message });
@@ -44,7 +43,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
 
   const sink = {
     begin(context) {
-      lifecycle.push("begin");
       if (open) {
         return reject(
           ATOM_HOST_SINK_STATUS.LIFECYCLE,
@@ -65,7 +63,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
       return 0;
     },
     image(operation) {
-      lifecycle.push("image");
       if (!open) {
         return reject(
           ATOM_HOST_SINK_STATUS.LIFECYCLE,
@@ -107,7 +104,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
       return 0;
     },
     patch(operation) {
-      lifecycle.push("patch");
       if (!open) {
         return reject(
           ATOM_HOST_SINK_STATUS.LIFECYCLE,
@@ -151,7 +147,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
       return 0;
     },
     commit(context) {
-      lifecycle.push("commit");
       if (!open) {
         return reject(
           ATOM_HOST_SINK_STATUS.LIFECYCLE,
@@ -205,7 +200,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
       return 0;
     },
     abort() {
-      lifecycle.push("abort");
       if (!open) {
         return reject(
           ATOM_HOST_SINK_STATUS.LIFECYCLE,
@@ -223,7 +217,6 @@ export function createFlatImageAtomSink({ fill = 0 } = {}) {
     snapshot() {
       return Object.freeze({
         open,
-        lifecycle: Object.freeze(lifecycle.slice()),
         generation,
         materialized,
         failure,
