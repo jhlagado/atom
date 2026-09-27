@@ -38,7 +38,7 @@ async function linkedSource() {
   const matModule = await readFile(join(nativeRoot, "mat.asm"), "utf8");
   const withHooks = adapter.replace(asoMarker, "");
   const withFinalImage = withHooks.replace(marker, await readFile(finalImageModulePath, "utf8"));
-  const overlay = `ORG CP_ASO_OVERLAY_START\nCP_ASO_OVERLAY_BEGIN:\n${asoModule}\n${matModule}\nALIGN 128\nCP_MAT_WINDOW:\nCP_ASO_OVERLAY_END:\n`;
+  const overlay = `CP_ASO_OVERLAY_BEGIN:\n${asoModule}\n${matModule}\nCP_ASO_OVERLAY_END:\n`;
   const linkedAdapter = withFinalImage.replace(asoOverlayMarker, overlay);
   const atomSource = `${core}\n${linkedAdapter}`;
   return atomSource;
@@ -47,17 +47,80 @@ async function linkedSource() {
 async function build() {
   const nativeCore = await loadNativeAtomCore();
   const { bytes, symbols } = await assembleCpmAtomSource(await linkedSource(), { base: 0x100 });
-  assert.ok(
-    symbols.CP_RESIDENT_END <= symbols.CP_SOURCE_CACHE,
-    `CP/M Atom resident $${symbols.CP_RESIDENT_END.toString(16)} overlaps source cache $${symbols.CP_SOURCE_CACHE.toString(16)}`,
+  assert.equal(
+    symbols.CP_ASO_OVERLAY_BEGIN,
+    symbols.CP_RESIDENT_END,
+    "CP/M ASO code must follow the low resident image without a gap",
   );
   assert.ok(
-    symbols.CP_ASO_OVERLAY_BEGIN >= symbols.CP_ASO_RECORD + 128,
-    "CP/M ASO code overlaps its sequential record buffers",
+    symbols.CP_ASO_OVERLAY_END <= symbols.CP_WORKSPACE_START,
+    "CP/M ASO code exceeds the loaded-code area",
+  );
+  assert.equal(
+    symbols.CP_PART_ORDER & 0xff,
+    0,
+    "CP/M part-order table must begin on a page boundary",
+  );
+  assert.equal(
+    symbols.CP_PART_ORDER_END - symbols.CP_PART_ORDER,
+    256,
+    "CP/M part-order table must occupy one complete page",
+  );
+  assert.equal(
+    symbols.CP_SOURCE_CACHE & 0xff,
+    0,
+    "CP/M source cache must begin at offset zero for RES 7,L indexing",
+  );
+  assert.equal(
+    symbols.CP_SOURCE_CACHE_END - symbols.CP_SOURCE_CACHE,
+    128,
+    "CP/M source cache must occupy one 128-byte record",
+  );
+  assert.ok(
+    symbols.CP_PART_ORDER_END <= symbols.CP_SOURCE_CACHE &&
+      symbols.CP_SOURCE_CACHE_END <= symbols.CP_PART_NAMES &&
+      symbols.CP_PART_NAMES_END <= symbols.CP_PART_DESCRIPTORS &&
+      symbols.CP_PART_DESCRIPTORS_END <= symbols.CP_SYMBOL_START &&
+      symbols.CP_SYMBOL_END <= symbols.CP_PENDING_START &&
+      symbols.CP_PENDING_END <= symbols.CP_ASO_FCB,
+    "CP/M runtime data regions overlap or are out of order",
+  );
+  assert.equal(
+    symbols.CP_MAT_FCB,
+    symbols.CP_PART_ORDER,
+    "CP/M materializer must reuse the dead part-order page only after assembly",
+  );
+  assert.equal(
+    symbols.CP_MAT_RECORD,
+    symbols.CP_MAT_FCB + 36,
+    "CP/M materializer FCB and ASO record buffer must be contiguous",
+  );
+  assert.equal(
+    symbols.CP_MAT_STATE,
+    symbols.CP_MAT_RECORD + 128,
+    "CP/M parser state must follow its 128-byte input record",
+  );
+  assert.ok(
+    symbols.CP_MAT_SCRATCH_END <= symbols.CP_SOURCE_CACHE,
+    "CP/M replay state must fit below the reusable source-cache page",
+  );
+  assert.equal(
+    symbols.CP_MAT_WINDOW,
+    symbols.CP_SOURCE_CACHE_END,
+    "CP/M output window must begin after the reclaimed 128-byte HEX DMA page",
+  );
+  assert.equal(
+    symbols.ZTS_CPM_FINAL_DMA,
+    symbols.CP_SOURCE_CACHE,
+    "HEX output must use the dead source-cache page, not the replay input record",
+  );
+  assert.ok(
+    symbols.ZTS_CPM_FINAL_DMA + 128 <= symbols.CP_MAT_WINDOW,
+    "HEX DMA buffer must remain disjoint from the output replay window",
   );
   assert.ok(
     symbols.CP_ASO_OVERLAY_END <= symbols.CP_OUTPUT_END,
-    "CP/M ASO code exceeds the shared output-memory window",
+    "CP/M loaded code exceeds the output-memory ceiling",
   );
   assert.ok(
     symbols.CP_OUTPUT_END - symbols.CP_MAT_WINDOW >= 128,
@@ -69,6 +132,11 @@ async function build() {
     "CP/M ASO output window must contain complete sequential records",
   );
   assert.equal(bytes.length, symbols.CP_ASO_OVERLAY_END - 0x100);
+  const loadedRecordBytes = Math.ceil(bytes.length / 128) * 128;
+  assert.ok(
+    0x100 + loadedRecordBytes <= symbols.CP_WORKSPACE_START,
+    "CP/M record padding must not overlap the uninitialised workspace",
+  );
   const adapterCodeBytes = symbols.CP_ADAPTER_CODE_END - symbols.CP_ADAPTER_CODE_START;
   const adapterImmutableBytes = symbols.CP_ADAPTER_IMMUTABLE_END - symbols.CP_ADAPTER_IMMUTABLE_START;
   const outputAdapterCodeBytes = symbols.CP_OUTPUT_CODE_END - symbols.CP_OUTPUT_CODE_START;
@@ -81,7 +149,7 @@ async function build() {
     bytes,
     report: {
       format: "atom-cpm22-census",
-      version: 12,
+      version: 14,
       loadAddress: 0x100,
       entryAddress: symbols.CP_ENTRY,
       returnAddress: symbols.CP_RETURN,
@@ -106,26 +174,38 @@ async function build() {
       asoOverlayStart: symbols.CP_ASO_OVERLAY_BEGIN,
       asoOverlayEnd: symbols.CP_ASO_OVERLAY_END,
       asoOverlayBytes: symbols.CP_ASO_OVERLAY_END - symbols.CP_ASO_OVERLAY_BEGIN,
+      materializerScratchStart: symbols.CP_MAT_FCB,
+      materializerScratchEnd: symbols.CP_MAT_SCRATCH_END,
+      materializerScratchBytes: symbols.CP_MAT_SCRATCH_END - symbols.CP_MAT_FCB,
+      materializerFcbAddress: symbols.CP_MAT_FCB,
+      materializerRecordAddress: symbols.CP_MAT_RECORD,
+      hexDmaAddress: symbols.ZTS_CPM_FINAL_DMA,
+      workspaceStartAddress: symbols.CP_WORKSPACE_START,
+      workspaceEndAddress: symbols.CP_ASO_RECORD + 128,
       materializerWindowStart: symbols.CP_MAT_WINDOW,
       materializerWindowBytes: symbols.CP_OUTPUT_END - symbols.CP_MAT_WINDOW,
       materializerPolicy: "sequential-window-replay",
       measuredFullTargetOutputBytes: 0xff00,
       measuredFullTargetOutputRecords: 510,
-      measuredFullTargetMaterializerPasses: 5,
+      measuredFullTargetMaterializerPasses: 2,
       measuredFullTargetAsoSpoolRecordsWritten: 527,
-      measuredFullTargetAsoSpoolRecordsRead: 2635,
-      measuredFullTargetAsoReadCallsIncludingEof: 2640,
+      measuredFullTargetAsoSpoolRecordsRead: 1054,
+      measuredFullTargetAsoReadCallsIncludingEof: 1056,
       measuredFullTargetSequentialOutputWrites: 510,
       measuredFullTargetRandomOutputReads: 0,
       measuredFullTargetRandomOutputWrites: 0,
-      measuredFullTargetInstructions: 21681190,
-      measuredFullTargetTStates: 236578977,
+      measuredFullTargetInstructions: 14878953,
+      measuredFullTargetTStates: 159163215,
+      measuredFullTargetCommandInstructions: 14940908,
+      measuredFullTargetCommandTStates: 160093905,
       measuredFullTargetStackHighWaterBytes: 30,
       asoRunAddress: symbols.CP_ASO_RUN,
       asoRecordAddress: symbols.CP_ASO_RECORD,
       loadedImageEnd: symbols.CP_ASO_OVERLAY_END,
-      residentCapacityBytes: symbols.CP_SOURCE_CACHE - 0x100,
-      residentHeadroomBytes: symbols.CP_SOURCE_CACHE - symbols.CP_RESIDENT_END,
+      loadedImageCapacityBytes: symbols.CP_WORKSPACE_START - 0x100,
+      loadedImageHeadroomBytes: symbols.CP_WORKSPACE_START - symbols.CP_ASO_OVERLAY_END,
+      loadedRecordBytes,
+      loadedRecordPaddingBytes: loadedRecordBytes - bytes.length,
       singleSourceBaselineResidentBytes: 13681,
       multipartResidentDeltaBytes: symbols.CP_RESIDENT_END - 0x100 - 13681,
       nativeCoreResidentBytes: nativeCore.residentExtentBytes,
@@ -159,32 +239,32 @@ async function build() {
       automaticComBinHexUsesAsoSpool: true,
       stackBytes: 0x0c00,
       representativeGeneratedBytes: 34,
-      representativeInstructions: 203309,
-      representativeTStates: 1958991,
-      representativeCommandInstructions: 341871,
-      representativeCommandTStates: 4038542,
+      representativeInstructions: 196020,
+      representativeTStates: 1894547,
+      representativeCommandInstructions: 263692,
+      representativeCommandTStates: 2880040,
       representativeStackHighWaterBytes: 32,
       representativeBdosCalls: 53,
       representativeSourceRandomReads: 8,
-      namedRepresentativeInstructions: 206292,
-      namedRepresentativeTStates: 1991403,
-      namedRepresentativeCommandInstructions: 344534,
-      namedRepresentativeCommandTStates: 4068280,
+      namedRepresentativeInstructions: 199003,
+      namedRepresentativeTStates: 1926959,
+      namedRepresentativeCommandInstructions: 266355,
+      namedRepresentativeCommandTStates: 2909778,
       namedRepresentativeBdosCalls: 51,
       namedRepresentativeSourceRandomReads: 8,
       includeRepresentativePartCount: 3,
-      includeRepresentativeInstructions: 256601,
-      includeRepresentativeTStates: 2483707,
-      includeRepresentativeCommandInstructions: 394843,
-      includeRepresentativeCommandTStates: 4560584,
+      includeRepresentativeInstructions: 245004,
+      includeRepresentativeTStates: 2375927,
+      includeRepresentativeCommandInstructions: 312356,
+      includeRepresentativeCommandTStates: 3358746,
       includeRepresentativeStackHighWaterBytes: 32,
       includeRepresentativeBdosCalls: 70,
       includeRepresentativeSourceRandomReads: 13,
       largeRepresentativeSourceBytes: 16535,
-      largeRepresentativeInstructions: 4283630,
-      largeRepresentativeTStates: 41306060,
-      largeRepresentativeCommandInstructions: 4422032,
-      largeRepresentativeCommandTStates: 43384274,
+      largeRepresentativeInstructions: 4276341,
+      largeRepresentativeTStates: 41241616,
+      largeRepresentativeCommandInstructions: 4343853,
+      largeRepresentativeCommandTStates: 42225772,
       largeRepresentativeBdosCalls: 1076,
       largeRepresentativeSourceRandomReads: 520,
       sha256: createHash("sha256").update(bytes).digest("hex"),

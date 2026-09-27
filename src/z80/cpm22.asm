@@ -17,62 +17,70 @@
 ; half-open logical range [0,length). CP_SOURCE_READ_BYTE maps the ordinal
 ; through the derived order, opens the matching FCB and supplies the byte.
 
-; Fixed transient memory plan. Code/immutable data ends below CP_SOURCE_CACHE;
-; retained include identities and generated part descriptors occupy the gap up
-; to the symbol arena. Symbols, pending records, output and private stack
-; then occupy disjoint high-memory intervals.
+; The COM contains code through the ASO writer/materialiser. Its writable
+; arenas begin at CP_WORKSPACE_START and are initialised before use, so they
+; need addresses in the TPA but no bytes in the loaded file. The output window
+; and private stack remain above those arenas.
 
 CP_BDOS_ENTRY       EQU $0005
-CP_SYMBOL_START     EQU $5000
-CP_SYMBOL_END       EQU $8000
-CP_PENDING_START    EQU $8000
-CP_PENDING_END      EQU $9000
-CP_OUTPUT_START     EQU $9000
+CP_WORKSPACE_START  EQU $4600
+CP_PART_ORDER       EQU CP_WORKSPACE_START
+CP_PART_ORDER_END   EQU $4700
+CP_SOURCE_CACHE     EQU CP_PART_ORDER_END
+CP_SOURCE_CACHE_END EQU $4780
+CP_PART_NAMES       EQU CP_SOURCE_CACHE_END
+CP_PART_NAMES_END   EQU $5275
+CP_PART_DESCRIPTORS EQU CP_PART_NAMES_END
+CP_PART_DESCRIPTORS_END EQU $5770
+CP_NAME_COUNT       EQU CP_PART_DESCRIPTORS_END
+CP_ORDER_COUNT      EQU CP_NAME_COUNT+1
+CP_DESCRIPTOR_CURSOR EQU CP_ORDER_COUNT+1
+CP_ACTIVE_PART      EQU CP_DESCRIPTOR_CURSOR+2
+CP_SCAN_MODE        EQU CP_ACTIVE_PART+1
+CP_SCAN_INDEX       EQU CP_SCAN_MODE+1
+CP_SCAN_PROGRESS    EQU CP_SCAN_INDEX+1
+CP_HEADER_OPEN      EQU CP_SCAN_PROGRESS+1
+CP_RAW_OFFSET       EQU CP_HEADER_OPEN+1
+CP_NEXT_VALUE       EQU CP_RAW_OFFSET+2
+CP_RESOLVER_WORKSPACE_END EQU CP_NEXT_VALUE+1
+CP_SYMBOL_START     EQU CP_RESOLVER_WORKSPACE_END
+CP_SYMBOL_END       EQU CP_SYMBOL_START+$3000
+CP_PENDING_START    EQU CP_SYMBOL_END
+CP_PENDING_END      EQU CP_PENDING_START+$1000
+CP_OUTPUT_START     EQU CP_PENDING_END
 CP_OUTPUT_END       EQU $D780
+; The operation writer owns high TPA buffers only during assembly. Once the
+; ASO file is closed, the old part-order page becomes materializer workspace.
 CP_ASO_FCB          EQU CP_OUTPUT_START
 CP_ASO_RUN          EQU CP_ASO_FCB+36
 CP_ASO_RECORD       EQU CP_ASO_RUN+128
-CP_ASO_OVERLAY_START EQU CP_ASO_RECORD+128
-CP_MAT_READ_PTR     EQU CP_ASO_RUN+1
-CP_MAT_READ_LEFT    EQU CP_ASO_RUN+3
-CP_MAT_BYTE         EQU CP_ASO_RUN+4
-CP_MAT_FILL         EQU CP_ASO_RUN+5
-CP_MAT_WINDOW_START EQU CP_ASO_RUN+6
-CP_MAT_WINDOW_LENGTH EQU CP_ASO_RUN+8
-CP_MAT_WINDOW_LEFT  EQU CP_ASO_RUN+10
-CP_MAT_WINDOW_CURSOR EQU CP_ASO_RUN+12
-CP_MAT_OUTPUT_LEFT  EQU CP_ASO_RUN+14
-CP_MAT_RECORD_KIND  EQU CP_ASO_RUN+16
-CP_MAT_RECORD_LENGTH EQU CP_ASO_RUN+17
-CP_MAT_RECORD_LEFT  EQU CP_ASO_RUN+18
-CP_MAT_RECORD_ADDRESS EQU CP_ASO_RUN+19
-CP_MAT_RECORD_OFFSET EQU CP_ASO_RUN+21
-CP_MAT_RECORD_END   EQU CP_ASO_RUN+23
-CP_MAT_IMAGE_END    EQU CP_ASO_RUN+25
-CP_MAT_IMAGE_TOP    EQU CP_ASO_RUN+27
-CP_MAT_PREVIOUS_KIND EQU CP_ASO_RUN+28
-CP_MAT_PREVIOUS_LENGTH EQU CP_ASO_RUN+29
-CP_MAT_ENDPOINT_TOP EQU CP_ASO_RUN+30
-CP_SOURCE_CACHE     EQU $3E80
-CP_SOURCE_CACHE_END EQU $3F00
-CP_PART_ORDER       EQU $3F00
-CP_PART_ORDER_END   EQU $4000
-CP_PART_NAMES       EQU $4000
-CP_PART_NAMES_END   EQU $4AF5
-CP_PART_DESCRIPTORS EQU $4AF5
-CP_PART_DESCRIPTORS_END EQU $4FF0
-CP_NAME_COUNT       EQU $4FF0
-CP_ORDER_COUNT      EQU $4FF1
-CP_DESCRIPTOR_CURSOR EQU $4FF2
-CP_ACTIVE_PART      EQU $4FF4
-CP_SCAN_MODE        EQU $4FF5
-CP_SCAN_INDEX       EQU $4FF6
-CP_SCAN_PROGRESS    EQU $4FF7
-CP_HEADER_OPEN      EQU $4FF8
-CP_RAW_OFFSET       EQU $4FF9
-CP_NEXT_VALUE       EQU $4FFB
+CP_MAT_FCB          EQU CP_PART_ORDER
+CP_MAT_RECORD       EQU CP_MAT_FCB+36
+CP_MAT_STATE        EQU CP_MAT_RECORD+128
+CP_MAT_READ_PTR     EQU CP_MAT_STATE+1
+CP_MAT_READ_LEFT    EQU CP_MAT_STATE+3
+CP_MAT_BYTE         EQU CP_MAT_STATE+4
+CP_MAT_FILL         EQU CP_MAT_STATE+5
+CP_MAT_WINDOW_START EQU CP_MAT_STATE+6
+CP_MAT_WINDOW_LENGTH EQU CP_MAT_STATE+8
+CP_MAT_WINDOW_LEFT  EQU CP_MAT_STATE+10
+CP_MAT_WINDOW_CURSOR EQU CP_MAT_STATE+12
+CP_MAT_OUTPUT_LEFT  EQU CP_MAT_STATE+14
+CP_MAT_RECORD_KIND  EQU CP_MAT_STATE+16
+CP_MAT_RECORD_LENGTH EQU CP_MAT_STATE+17
+CP_MAT_RECORD_LEFT  EQU CP_MAT_STATE+18
+CP_MAT_RECORD_ADDRESS EQU CP_MAT_STATE+19
+CP_MAT_RECORD_OFFSET EQU CP_MAT_STATE+21
+CP_MAT_RECORD_END   EQU CP_MAT_STATE+23
+CP_MAT_IMAGE_END    EQU CP_MAT_STATE+25
+CP_MAT_IMAGE_TOP    EQU CP_MAT_STATE+27
+CP_MAT_PREVIOUS_KIND EQU CP_MAT_STATE+28
+CP_MAT_PREVIOUS_LENGTH EQU CP_MAT_STATE+29
+CP_MAT_ENDPOINT_TOP EQU CP_MAT_STATE+30
+CP_MAT_SCRATCH_END  EQU CP_MAT_STATE+31
 CP_TARGET_START     EQU $0100
 CP_ASO_TARGET_CAPACITY EQU $FF00
+CP_MAT_WINDOW       EQU CP_SOURCE_CACHE_END
 CP_STACK_TOP        EQU $E400
 CP_DMA_FUNCTION     EQU 26
 CP_OPEN_FUNCTION    EQU 15
@@ -146,15 +154,31 @@ CP_COMMAND_FAILED:
     JR   CP_RETURN          ; Finish through the common warm-boot exit.
 CP_ASSEMBLY_FAILED:
     PUSH AF                 ; Save Atom's status while printing.
+    CP   DR_SOUT            ; Did the sink fail after source processing ended?
+    JR   Z,CP_OUTPUT_FAILED  ; Source state is reclaimed after assembly.
     LD   DE,CP_ASSEMBLY_TEXT  ; Point at the diagnostic prefix.
     CALL CP_PRINT           ; Print the assembly-error prefix.
-    POP  AF                 ; Recover the original assembler status.
-    CALL CP_PRINT_HEX       ; Print the status as two hexadecimal digits.
+    POP  AF                 ; Recover the original public error status.
+    CALL CP_PRINT_HEX       ; Print its two-digit hexadecimal status.
     LD   A,' '              ; Separate status from its source location.
     CALL CP_PUTC            ; Emit the field separator.
     CALL CP_PRINT_ERROR_LOCATION  ; Print name and one-based position.
     LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
     CALL CP_PRINT           ; Finish the diagnostic line.
+    JR   CP_BUILD_FAILED    ; Return failure without touching source again.
+CP_OUTPUT_FAILED:
+    POP  AF                 ; Recover the public output error code.
+    PUSH AF                 ; Keep the status while the prefix is printed.
+    LD   DE,CP_ASSEMBLY_TEXT  ; Keep the established Atom error prefix.
+    CALL CP_PRINT           ; Print the error label before the status byte.
+    POP  AF                 ; Restore the output status after BDOS output.
+    CALL CP_PRINT_HEX       ; Preserve DR_SOUT as the numeric code 04.
+    LD   A,' '              ; Separate the code from the destination name.
+    CALL CP_PUTC            ; Emit the field separator.
+    LD   HL,CP_OUTPUT_NAME  ; Identify the selected destination file.
+    CALL CP_PRINT_NAME      ; Print its normalized CP/M filename.
+    LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
+    CALL CP_PRINT           ; Finish without consulting source tables.
 CP_BUILD_FAILED:
     LD   A,1                ; Record status one for build failure.
 CP_RETURN:
@@ -1140,7 +1164,7 @@ CP_RAW_CACHE_MISS:
     JR   NZ,CP_RAW_READ_EOF  ; Treat a BDOS read failure as no source byte.
 CP_RAW_CACHE_READY:
     LD   HL,(CP_RAW_OFFSET)  ; Restore the byte's logical offset.
-    SET  7,L                ; Map its within-record offset into $80..$FF.
+    RES  7,L                ; Keep its within-record offset in $00..$7F.
     LD   H,CP_SOURCE_CACHE/256  ; Select the source cache's memory page.
     LD   A,(HL)             ; Read the byte from the cached record.
     CP   $1A                ; Test CP/M's text-file end marker.
@@ -1394,6 +1418,15 @@ HS_ABORT:
     XOR  A                  ; Mark the spool FCB closed for repeated cleanup.
     LD   (CP_ASO_OPEN),A    ; Mark the spool closed for this abort.
 CP_ABORT_IMAGE:
+    LD   A,(CP_MAT_READER_OPEN)  ; Check whether the spool reader is open.
+    OR   A                  ; Zero means no materializer reader needs closing.
+    JR   Z,CP_ABORT_TEMP    ; Continue cleanup when already closed.
+    LD   DE,CP_MAT_FCB      ; Pass the relocated reader FCB to CP/M.
+    LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function 16.
+    CALL CP_BDOS            ; Release the active spool reader before reuse.
+    XOR  A                  ; Clear reader ownership even if CLOSE failed.
+    LD   (CP_MAT_READER_OPEN),A  ; Clear the abort close flag.
+CP_ABORT_TEMP:
     LD   A,(CP_OUTPUT_OPEN)  ; Check whether the temporary file is open.
     OR   A                  ; Set zero when no close operation is required.
     JR   Z,CP_ABORT_DELETE  ; Continue directly to removing the temp name.
@@ -1445,7 +1478,7 @@ CP_WRITE_HEX:
 ZTS_CPM_FINAL_BDOS:
     JP   CP_BDOS            ; Use the index-preserving wrapper.
 ZTS_CPM_FINAL_FCB EQU CP_WORK_FCB  ; FCB used for writing HEX records.
-ZTS_CPM_FINAL_DMA EQU CP_SOURCE_CACHE  ; 128-byte buffer shared with input.
+ZTS_CPM_FINAL_DMA EQU CP_SOURCE_CACHE  ; HEX reuses the source-cache page.
 ZTS_CPM_FINAL_SOURCE_CURSOR EQU CP_OUTPUT_CURSOR  ; Current byte in the image.
 ZTS_CPM_FINAL_REMAINING EQU CP_OUTPUT_REMAINING  ; Image bytes left to render.
 ZTS_CPM_FINAL_ADDRESS EQU CP_HEX_ADDRESS  ; Address in the next HEX record.
@@ -1736,6 +1769,7 @@ CP_BACKED_UP: DB 0
 CP_OUTPUT_FORMAT: DB 0
 CP_ASO_ACTIVE: DB 0
 CP_ASO_OPEN: DB 0
+CP_MAT_READER_OPEN: DB 0
 CP_ASO_ERROR: DB 0
 CP_ASO_STATUS: DB 0
 CP_ASO_CLASS: DB 0

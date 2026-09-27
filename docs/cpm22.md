@@ -124,9 +124,32 @@ The output is a flat image beginning at `$0100`. Gaps created by `ORG` or
 uninitialised `DS` contain zero bytes. BIN and COM contain the same raw bytes.
 COM selects the CP/M load-and-entry convention but adds no header. HEX contains
 16-byte addressed data records, checksums and an end-of-file record. All three
-formats are materialised from ASO in 16,000-byte windows. CP/M files occupy
+formats are materialised from ASO in 36,864-byte windows. CP/M files occupy
 complete 128-byte records, so BIN and COM may contain zero padding after the
 logical image and HEX may contain `$1A` padding after its end record.
+
+## Memory layout
+
+The current `ATOM.COM` contains 17,641 bytes, from `$0100` to exclusive
+`$45E9`. The first 15,701 bytes end at `$3E55`. The 1,940-byte ASO writer and
+materialiser code follows immediately and ends at `$45E9`. CP/M stores the
+file in 138 records, or 17,664 bytes; its final 23 padding bytes bring the
+loaded area exactly to `$4600`.
+
+Writable work areas begin at `$4600` and end at `$98A0`. They hold the source
+cache and include tables, the symbol and pending-reference arenas, and the ASO
+file and record buffers. These areas have fixed addresses but are not part of
+the COM payload. The startup and assembly paths write their working values
+before use. Following a successful assembly, the old part-order page holds
+the materialiser FCB and parser state. The old source-cache page `$4700` to
+`$4780` becomes the HEX DMA buffer. The replay window begins at `$4780` and
+ends at `$D780`, for 36,864 bytes or 288 CP/M records. Atom fills it for each
+pass. The private stack grows down from `$E400` through 3,072 reserved bytes.
+A 128-byte gap separates the window from the stack.
+
+The emulator test poisons the work areas and replay window before Atom starts.
+Assembly and output still succeed, checking that neither depends on bytes
+loaded from the COM image in those regions.
 
 ## Limits
 
@@ -137,7 +160,7 @@ logical image and HEX may contain `$1A` padding after its end record.
 | COM or BIN image span | 65,280 bytes, from `$0100` to `$10000` |
 | HEX logical image span | 65,280 bytes, from `$0100` to `$10000` |
 | ASO image span | 65,280 bytes, from `$0100` to `$10000` |
-| Materialiser output window | 16,000 bytes |
+| Materialiser output window | 36,864 bytes (288 CP/M records) |
 | Minimum TPA | 58,112 bytes, with BDOS at `$E400` or higher |
 | Global or current-scope private symbol | 8 significant characters |
 
@@ -149,13 +172,13 @@ intact. The adapter checks the BDOS boundary before using its private memory
 and rejects a smaller TPA. This minimum is emulator-verified; it is not a claim
 of support for every CP/M configuration or physical floppy drive.
 
-The materialiser's measured window is 16,000 bytes (125 CP/M records). On the
+The materialiser's measured window is 36,864 bytes (288 CP/M records). On the
 bundled emulator, a dense COM spanning the complete `$FF00` target range used
-five sequential spool scans: 527 spool records written, 2,635
-spool records read, five EOF probes, and 510 sequential output-record writes.
-The same run made no random output reads or writes. Peak observed stack use was
-30 bytes; this is an emulator observation, not a worst-case stack proof.
-Physical floppy traffic and latency have not been measured.
+two sequential spool scans: 527 spool records written, 1,054 successful spool
+record reads, two EOF probes, and 510 sequential output-record writes. The same
+run made no random output reads or writes. Peak observed stack use was 30 bytes;
+this is an emulator observation, not a worst-case stack proof. Physical floppy
+traffic and latency have not been measured.
 
 ## Diagnostics
 
@@ -163,6 +186,15 @@ An assembly error reports its status, source filename, line and column:
 
 ```text
 Atom error 02 INPUT.ASM:2:1
+```
+
+This source location remains available because source errors return before the
+materialiser reuses the source tables. A disk or materialisation failure uses
+the same numeric diagnostic prefix and includes the destination filename, but
+does not claim a source position:
+
+```text
+Atom error 04 OUTPUT.COM
 ```
 
 Here, `02` means that Atom rejected a source statement. The position is the

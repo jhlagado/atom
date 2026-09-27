@@ -145,28 +145,28 @@ CP_MAT_REPLAY:
     LD   (CP_MAT_IMAGE_TOP),A  ; Start with an ordinary endpoint.
     LD   HL,(CP_ASO_ORIGIN)  ; The empty initial extent starts at origin.
     LD   (CP_MAT_IMAGE_END),HL  ; Use this endpoint to validate PATCH records.
-    LD   DE,CP_ASO_FCB+12   ; Reset the sequential reader's mutable FCB tail.
+    LD   DE,CP_MAT_FCB+12   ; Reset the sequential reader's mutable FCB tail.
     XOR  A                  ; Start at extent and record zero.
     LD   B,24               ; Clear all FCB control and random-record fields.
     CALL CP_CLEAR_WORK_FCB  ; Preserve the spool filename while rewinding it.
-    LD   DE,CP_ASO_FCB      ; Pass the private spool FCB to CP/M OPEN.
+    LD   DE,CP_MAT_FCB      ; Pass the relocated spool FCB to CP/M OPEN.
     LD   C,CP_OPEN_FUNCTION  ; Select sequential file-open function 15.
     CALL CP_BDOS            ; Reopen the committed spool from record zero.
     INC  A                  ; Convert BDOS's $FF not-found result to zero.
     JR   Z,CP_MAT_REPLAY_BAD  ; A missing spool invalidates this output.
     LD   A,1                ; HS_ABORT owns the currently open spool FCB.
-    LD   (CP_ASO_OPEN),A    ; Keep cleanup correct on every parse failure.
+    LD   (CP_MAT_READER_OPEN),A  ; Track the open spool for abort cleanup.
     CALL CP_MAT_HEADER      ; Check signature, version, origin and fill.
     RET  C                  ; Leave the reader open for the common abort path.
     CALL CP_MAT_RECORDS     ; Apply records and require a valid END and EOF.
     RET  C                  ; Do not write a window from an invalid stream.
-    LD   DE,CP_ASO_FCB      ; Close the validated spool pass.
+    LD   DE,CP_MAT_FCB      ; Close the validated spool pass.
     LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function 16.
     CALL CP_BDOS            ; Release the reader before another window pass.
     INC  A                  ; Convert BDOS's $FF close failure to zero.
     JR   Z,CP_MAT_REPLAY_BAD  ; A failed close must abort publication.
     XOR  A                  ; Clear the open flag after a successful close.
-    LD   (CP_ASO_OPEN),A    ; HS_ABORT no longer needs to close the spool.
+    LD   (CP_MAT_READER_OPEN),A  ; Clear the flag after closing the spool.
     RET                     ; Return a verified window with carry clear.
 CP_MAT_REPLAY_BAD:
     JP   CP_MAT_FAILURE     ; Let HS_ABORT remove both temporary files.
@@ -467,7 +467,7 @@ CP_MAT_NEXT_BYTE:
     JR   NZ,CP_MAT_READ_BAD  ; EOF or a disk error before END is invalid.
     LD   A,128              ; A successful BDOS read supplies one full record.
     LD   (CP_MAT_READ_LEFT),A  ; Retain its physical size.
-    LD   HL,CP_ASO_RECORD   ; Point at the first byte from the DMA transfer.
+    LD   HL,CP_MAT_RECORD   ; Point at the first byte from the DMA transfer.
     LD   (CP_MAT_READ_PTR),HL  ; Retain the next byte to consume.
 CP_MAT_BYTE_READY:
     LD   HL,(CP_MAT_READ_PTR)  ; Address the current byte in the record.
@@ -485,10 +485,10 @@ CP_MAT_READ_BAD:
 ; Read one raw physical record, leaving BDOS's status in A.
 
 CP_MAT_FETCH_RECORD:
-    LD   DE,CP_ASO_RECORD   ; Direct the transfer into the one-record buffer.
+    LD   DE,CP_MAT_RECORD   ; Use the relocated record buffer.
     LD   C,CP_DMA_FUNCTION  ; Select CP/M's set-DMA-address service.
     CALL CP_BDOS            ; Install the reader-owned transfer buffer.
-    LD   DE,CP_ASO_FCB      ; Pass the reopened sequential spool FCB.
+    LD   DE,CP_MAT_FCB      ; Pass the relocated sequential spool FCB.
     LD   C,CP_READ_FUNCTION  ; Select CP/M sequential record-read function 20.
     JP   CP_BDOS            ; Return zero, EOF one, or the BDOS error code.
 

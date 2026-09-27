@@ -349,6 +349,14 @@ CP_ASO_COMMIT_APPEND:
     LD   (CP_ASO_ACTIVE),A  ; The completed file is now owned by its caller.
     RET                     ; Return successful COMMIT to the native driver.
 CP_ASO_COMMIT_MATERIALIZE:
+; Compilation is complete and the spool FCB is closed. Preserve its name in
+; the reclaimed part-order page before the replay window overlays the source.
+    LD   HL,CP_ASO_FCB      ; Read the writer's now-closed spool FCB.
+    LD   DE,CP_MAT_FCB      ; Move its filename into materializer-owned RAM.
+    LD   BC,36              ; Copy the complete CP/M file-control block.
+    LDIR                    ; Keep spool identity before overlay reuse.
+    XOR  A                  ; No replay reader is open at the phase boundary.
+    LD   (CP_MAT_READER_OPEN),A  ; Start with the replay reader closed.
     CALL CP_MAT_ASO_OUTPUT  ; Replay ASO into the selected flat output format.
     RET  C                  ; Leave HS_ABORT to clean all tentative files.
     XOR  A                  ; Disable operation dispatch after publication.

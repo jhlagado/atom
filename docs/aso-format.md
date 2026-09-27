@@ -3,7 +3,7 @@
 Status: ASO v1 specification and the Node streaming codec are implemented.
 CP/M Atom writes `.ASO` sequentially and uses an internal ASO spool to build
 COM, BIN or HEX in one command. Its bounded reader replays the spool through
-16,000-byte output windows; binary windows are appended as records and HEX
+36,864-byte output windows; binary windows are appended as records and HEX
 windows are converted by the shared checksum writer. The Node CLI applies
 ordered operations directly for BIN/COM/HEX-only builds. Its flat sink keeps a
 target-sized byte array and a two-bit-per-address validation map; at the
@@ -200,14 +200,14 @@ is therefore applied in both passes at its respective byte positions; a PATCH
 crossing an ASO physical-record boundary is parsed by the sequential byte
 reader. No random output-record operations are used.
 
-The measured window is 16,000 bytes (125 CP/M records). A full `$FF00` logical
-COM or BIN image uses five spool scans, followed by 510 sequential output
-writes. For a dense full-range ASO stream, the bundled emulator measures 527 spool record
-writes, 2,635 successful spool reads plus five EOF probes, and 510 output
-writes. These are logical BDOS operations, not physical floppy seeks or sector
-latency. The spool and output temporary file coexist, so free disk space can
-limit output even when the address range is valid. Failure removes both
-temporaries where possible and preserves the old destination.
+The measured window is 36,864 bytes (288 CP/M records). A full `$FF00` logical
+COM or BIN image uses two spool scans, followed by 510 sequential output
+writes. For a dense full-range ASO stream, the bundled emulator measures 527
+spool record writes, 1,054 successful spool reads plus two EOF probes, and 510
+output writes. These are logical BDOS operations, not physical floppy seeks or
+sector latency. The spool and output temporary file coexist, so free disk
+space can limit output even when the address range is valid. Failure removes
+both temporaries where possible and preserves the old destination.
 
 COM and BIN use the same flat image bytes, gap fill and `$0100..$10000` target
 range; COM adds no file header. CP/M records are 128 bytes and the final record
@@ -226,17 +226,31 @@ a validation pass. A malformed spool or failed disk operation removes the
 temporary files where possible and leaves the previous destination in place.
 An explicit `.ASO` output retains the operation stream instead of replaying it.
 
-Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 38,912 bytes.
-Its low resident extent is 15,647 bytes and its ASO/materialiser overlay is
-2,012 bytes. The replay window is 16,000 bytes. BDOS at `$E400` leaves a
-58,112-byte transient program area from `$0100`; the current check rejects a
-smaller area. A dense `$FF00` image takes five spool scans, 527 sequential
-spool writes, 2,635 successful spool reads plus five EOF probes and 510
-sequential output writes. It makes no random output-record reads or writes in
-the emulator. These are logical BDOS operations, not physical floppy transfers
-or latency. Peak observed stack use is 30 bytes, not a worst-case stack proof.
-The spool and output temporary file coexist, so available disk space can limit
-the output.
+Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 17,641 bytes.
+It contains the 15,701-byte resident image followed immediately by 1,940 bytes
+of ASO writer and materialiser code. Writable arenas occupy `$4600` to `$98A0`
+but are not part of the COM payload. CP/M stores the payload in 138 records
+(17,664 bytes); 23 bytes of final-record padding place the loaded extent
+exactly at `$4600`, where the workspace begins.
+
+After successful assembly, the materialiser reuses the dead part-order page
+for its FCB and parser state. The old 128-byte source-cache page at `$4700` is
+its HEX DMA buffer; the replay window begins at `$4780` and ends at `$D780`.
+That keeps the DMA buffer separate from the ASO input record and from the
+output window. The output window overwrites assembly-only tables and arenas,
+which are no longer needed after a successful assembly. Source errors are
+reported before that handover with their numeric status and source
+`filename:line:column`; later storage failures report status `04` and the
+selected output filename, without inventing a source location.
+
+BDOS at `$E400` leaves a 58,112-byte transient program area from `$0100`; the
+current check rejects a smaller area. A dense `$FF00` image takes two spool
+scans, 527 sequential spool writes, 1,054 successful spool reads plus two EOF
+probes, and 510 sequential output writes. It makes no random output-record
+reads or writes in the emulator. These are logical BDOS operations, not
+physical floppy transfers or latency. Peak observed stack use is 30 bytes,
+not a worst-case stack proof. The spool and output temporary file coexist, so
+available disk space can limit the output.
 
 ### Intel HEX
 
