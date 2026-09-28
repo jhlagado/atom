@@ -83,10 +83,12 @@
     "measure:self-host": "node test/measure-self-host.mjs",
     "measure:cpm22": "node test/measure-cpm22.mjs",
     "measure:cpm22-output-candidates": "node scripts/measure-cpm22-output-candidates.mjs",
-    "release:check": "npm test && node test/measure-host-native.mjs && node test/measure-self-host.mjs",
-    "prepack": "npm run verify:native-source && npm run verify:native-object && npm run verify:cpm22 && node scripts/bundled-dependencies.mjs prepare",
+    "release:check": "npm test && npm run verify:native-object && npm run verify:cpm22 && node test/measure-host-native.mjs && node test/measure-self-host.mjs",
+    "publish:check": "npm run verify:dependencies && npm run verify:package-census && node --test test/host-release.test.mjs && node scripts/check-npm-package.mjs",
+    "verify:runtime-assets": "node scripts/check-runtime-assets.mjs",
+    "prepack": "npm run verify:runtime-assets && node scripts/bundled-dependencies.mjs prepare",
     "postpack": "node scripts/bundled-dependencies.mjs cleanup",
-    "prepublishOnly": "npm run release:check"
+    "prepublishOnly": "npm run publish:check"
   },
   "dependencies": {
     "@jhlagado/debug80-runtime": "git+https://github.com/jhlagado/debug80-runtime.git#b7343aa8c38c248abbc6ee801b4af270d4843ad6",

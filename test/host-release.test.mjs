@@ -62,8 +62,14 @@ test("the product documentation, release gate, license, and measured account agr
   assert.equal(metadata.license, "GPL-3.0-only");
   assert.equal(ATOM_VERSION, metadata.version);
   assert.equal(metadata.publishConfig.access, "public");
-  assert.equal(metadata.scripts.prepublishOnly, "npm run release:check");
+  assert.equal(metadata.scripts.prepublishOnly, "npm run publish:check");
+  assert.equal(metadata.scripts["publish:check"],
+    "npm run verify:dependencies && npm run verify:package-census && node --test test/host-release.test.mjs && node scripts/check-npm-package.mjs");
+  assert.equal(metadata.scripts.prepack,
+    "npm run verify:runtime-assets && node scripts/bundled-dependencies.mjs prepare");
   assert.match(metadata.scripts["release:check"], /npm test/);
+  assert.match(metadata.scripts["release:check"], /verify:native-object/);
+  assert.match(metadata.scripts["release:check"], /verify:cpm22/);
   assert.ok(metadata.files.includes("examples"));
   assert.ok(metadata.files.includes("docs/*.md"));
   for (const kind of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {

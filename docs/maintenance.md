@@ -67,8 +67,8 @@ and symbol addresses may not.
 
 ## Tests
 
-Run the narrowest useful test while editing. Run the complete gate before a
-checkpoint:
+Run the narrowest useful test while editing. Use the full suite for changes to
+the assembler or its host interfaces:
 
 ```sh
 node --test test/parser.test.mjs
@@ -90,6 +90,10 @@ The main test lanes are:
 | `native-object-harness`, `named-object-services` | Portable Z80 service adapter |
 | `host-package`, `host-release` | Installed package and release contents |
 | `host-self-host` | Two executable Atom generations |
+
+The full suite includes slow self-assembly, exhaustive instruction cases and
+installed native-builder tests. It is an engineering check. Publishing the
+Node package uses the smaller package check described below.
 
 The measurement commands report current code, workspace and execution costs:
 
@@ -116,7 +120,33 @@ npm run build:cpm22
 The matching `verify:*` commands rebuild in check mode and report drift. Do not
 edit generated images or proof JSON by hand to make a failing check pass.
 
-## Release
+## Node package checks
+
+`npm publish` automatically runs `npm run publish:check`. This checks dependency
+versions and release metadata, packs the archive, installs it offline in a
+temporary directory and exercises the installed CLI and public API. A short
+program checks forward references and BIN, COM, HEX and D8 output. A rejected
+source checks diagnostics and preservation of an existing output.
+
+Run the same check before publishing:
+
+```sh
+npm run publish:check
+```
+
+`npm pack` checks the hashes and sizes of the existing runtime assets and
+bundles dependencies. Neither command rebuilds the assembler or runs
+self-host proofs. Packing verifies artifact integrity, not that edited Z80
+source matches those artifacts. After a native source change, rebuild the
+affected assets and run the full release check before publishing them.
+
+| Command | Use |
+| --- | --- |
+| `npm run publish:check` | Verify the installable Node package |
+| `npm test` | Run all development tests, including slow native proofs |
+| `npm run release:check` | Qualify a complete release with native rebuild checks and measurements |
+
+## Full release qualification
 
 Run the release gate from a clean checkout:
 
@@ -125,10 +155,11 @@ npm run release:check
 npm run verify:package-census
 ```
 
-The gate rebuilds the native core, object harness and CP/M program. It runs the
-native and host suites, installs the packed npm archive offline and proves two
-self-host generations. It must finish without changing a checked asset or proof
-record.
+The gate runs the native and host suites, including the native-core rebuild,
+offline package installation and self-host proofs. It also explicitly checks
+the object harness and CP/M builds and runs the host-native and self-host
+measurements. It must finish without changing a checked asset or proof record.
+This gate remains mandatory for a version tag and runs in GitHub Actions.
 
 Before tagging a release:
 
@@ -142,8 +173,9 @@ Before tagging a release:
 Pushing the tag creates a GitHub release with the CP/M executable, manifest
 and checksums, then deploys the matching Triptych image and download page to
 GitHub Pages. This workflow does not publish the npm package. The package
-version is prepared in the release commit; `npm publish` remains a separate
-manual step.
+version is prepared in the release commit. `npm publish` remains a separate
+manual step with the smaller Node package check, so it does not repeat the
+full qualification suite.
 
 If the packaged files changed deliberately, refresh the census only after the
 file set is final:
