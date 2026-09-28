@@ -33,13 +33,12 @@ Options:
   -h, --help               Show this help
   -V, --version            Show the Atom version
 
-Output suffixes: .bin .hex .com .nobj .lst .d8.json
+Output suffixes: .bin .hex .com .lst .d8.json
 With no output, Atom writes build/<input>.bin.
 `;
 
 const ATOM_OUTPUT_FORMATS = Object.freeze([
   { format: "d8", suffix: ".d8.json" },
-  { format: "nobj", suffix: ".nobj" },
   { format: "bin", suffix: ".bin" },
   { format: "hex", suffix: ".hex" },
   { format: "com", suffix: ".com" },
@@ -203,7 +202,6 @@ function selectedBytes(selection, artifacts, materialized, entryAddress) {
     case "bin": return artifacts.bin;
     case "hex": return artifacts.hex;
     case "com": return writeAtomCom(materialized, { entryAddress });
-    case "nobj": return artifacts.nobj;
     case "lst": return artifacts.listing;
     case "d8": return artifacts.d8Text;
     default: throw new Error(`unsupported output format: ${selection.format}`);

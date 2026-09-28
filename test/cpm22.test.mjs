@@ -1142,15 +1142,8 @@ test("one native source argument with or without ASM derives a COM output", asyn
   }
 });
 
-test("native question-mark help returns success without assembling", async () => {
-  const result = await runCpm22Atom(representativeSource, undefined, { command: "ATOM ?" });
-  assert.match(result.atomTranscript, /Usage: ATOM \[SOURCE \[OUTPUT\]\]/);
-  assert.equal(result.outputFile, undefined);
-  assert.equal(result.returnA, 0);
-});
-
-test("bare and question-mark help clear carry left set by BDOS output", async () => {
-  for (const command of ["ATOM", "ATOM ?"]) {
+test("bare help clears carry left set by BDOS output", async () => {
+  for (const command of ["ATOM"]) {
     let originalBdos;
     let injected = false;
     let restored = false;
@@ -1223,6 +1216,7 @@ test("bare Atom and a blank command tail show successful help without file I/O",
 
 test("command-tail parsing reports exact usage and filename diagnostics", async () => {
   for (const [command, diagnostic] of [
+    ["ATOM ?", "Invalid source name"],
     ["ATOM INPUT.ASM OUTPUT.COM EXTRA", "Usage: ATOM [SOURCE [OUTPUT]]"],
     ["ATOM INPUT.ASM OUTPUT.COM @", "Usage: ATOM [SOURCE [OUTPUT]]"],
     ["ATOM TOOLONGGG.ASM MADE.COM", "Invalid source name"],

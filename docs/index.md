@@ -12,11 +12,10 @@ Use the [command-line guide](command-line.md) to assemble a program. The
 
 ## Technical references
 
-- [Object format](atom-object-format.md)
 - [Codebase guide](codebase.md)
 - [Converting AZM source](azm-to-atom.md)
 
 ## Maintenance
 
 - [Development and release guide](maintenance.md)
-- [ASO output format and implementation roadmap](aso-format.md)
+- [Internal ASO spool format and implementation notes](aso-format.md)

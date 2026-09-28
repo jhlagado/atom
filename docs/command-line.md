@@ -25,14 +25,14 @@ Name the outputs you want after the input:
 
 ```sh
 atom src/main.asm build/main.bin build/main.hex
-atom src/main.asm build/main.nobj build/main.lst build/main.d8.json
+atom src/main.asm build/main.lst build/main.d8.json
 atom -o build/main.hex src/main.asm
 atom --target cpm22 src/main.asm build/main.com
 atom src/main.asm build/main.com
 ```
 
 Output paths may also be named with `-o` or `--output`. Each path selects one
-format by suffix. Atom recognises `.bin`, `.hex`, `.com`, `.nobj`, `.lst` and
+format by suffix. Atom recognises `.bin`, `.hex`, `.com`, `.lst` and
 `.d8.json`, without case sensitivity. A command cannot repeat a format or
 destination path. Atom renders and stages every requested file before replacing
 an earlier output. A failed build publishes none.

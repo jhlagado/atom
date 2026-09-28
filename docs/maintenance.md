@@ -3,14 +3,15 @@
 Atom's Z80 source is both production code and an explanation of a small native
 assembler. Changes must preserve that explanation as well as the executable.
 
-## ASO output work
+## ASO spool and replay
 
-The [ASO format and implementation status](aso-format.md) describe Atom's
-ordered IMAGE/PATCH stream. Node provides the streaming codec and the CP/M
-program spools every selected output format before materialising COM, BIN or
-HEX in sequential 36,864-byte windows. The current CP/M executable is 17,641
-bytes, with 15,701 bytes of resident code and 1,940 bytes of ASO code after it.
-CP/M stores the payload in 138 records; 23 padding bytes end at the
+The [internal ASO spool format and implementation notes](aso-format.md)
+describe Atom's ordered IMAGE/PATCH stream. Node provides the streaming codec
+and the CP/M program uses a temporary spool before materialising COM, BIN or
+HEX in sequential 36,864-byte windows. ASO is not a selectable final output.
+The current CP/M executable is 17,629
+bytes, with 15,689 bytes of resident code and 1,940 bytes of spool code after it.
+CP/M stores the payload in 138 records; 35 padding bytes end at the
 workspace boundary `$4600`. Its address-only workspace is outside the COM
 payload. The measured minimum TPA is 58,112 bytes with BDOS at `$E400`. These
 emulator measurements do not establish physical floppy performance. Refresh

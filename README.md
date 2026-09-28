@@ -5,7 +5,7 @@ runs as a desktop command or as a native CP/M 2.2 program.
 
 Atom supports the complete Z80 instruction set, global and private labels,
 expressions and the usual code and data directives. It can write BIN, Intel HEX,
-CP/M COM, NOBJ, listing and Debug80 D8 files.
+CP/M COM, listings and Debug80 D8 files.
 
 ## Desktop
 

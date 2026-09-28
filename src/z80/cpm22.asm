@@ -303,8 +303,8 @@ CP_DIAG_NEWLINE:
 CP_COMMAND_CODE_START:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Accept no arguments for help, one source name or two explicit names. A lone
-; `?` remains a help alias. One source derives a COM name. Names use CP/M 8.3.
+; Accept no arguments for help, one source name or two explicit names. A single
+; source derives a COM name. Names use CP/M 8.3.
 
 CP_PARSE_COMMAND:
     XOR  A                  ; Clear command state.
@@ -313,21 +313,13 @@ CP_PARSE_COMMAND:
     LD   B,A                ; Keep the remaining count beside the HL cursor.
     LD   HL,CP_COMMAND_START  ; Start at the first command-tail character.
     CALL CP_SKIP_SPACES     ; Skip leading spaces.
-    JR   NZ,CP_COMMAND_HAS_ARGUMENTS  ; Parse a non-empty command tail.
+    JR   NZ,CP_COMMAND_SOURCE  ; Parse a non-empty command tail.
 CP_COMMAND_HELP:
     LD   DE,CP_USAGE_TEXT   ; Show the compact command syntax.
     CALL CP_PRINT           ; Help performs no source or output file calls.
     LD   A,1                ; Mark help-only success for CP_ENTRY.
     OR   A                  ; Clear carry without losing the help marker.
     RET                     ; Skip source discovery and assembly.
-CP_COMMAND_HAS_ARGUMENTS:
-    LD   A,B                ; Inspect the non-space argument length.
-    CP   1                  ; A lone question mark is the only help form.
-    JR   NZ,CP_COMMAND_SOURCE  ; Longer input must begin with a source name.
-    LD   A,(HL)             ; Read the sole non-space character.
-    CP   '?'                ; Select help only for the exact `?` argument.
-    JR   NZ,CP_COMMAND_SOURCE  ; Otherwise validate it as a filename.
-    JR   CP_COMMAND_HELP    ; Keep `?` as a successful compatibility alias.
 CP_COMMAND_SOURCE:
     CALL CP_PARSE_FILENAME  ; Parse the source argument as 8.3.
     JP   C,CP_BAD_SOURCE_NAME  ; Distinguish a bad source name.

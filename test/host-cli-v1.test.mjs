@@ -43,7 +43,6 @@ test("CLI v1 defaults to one trimmed BIN and publishes only named formats", asyn
     "main.asm",
     "out/program.bin",
     "out/program.hex",
-    "out/program.nobj",
     "out/program.lst",
     "out/program.d8.json",
   ], root);
@@ -53,7 +52,6 @@ test("CLI v1 defaults to one trimmed BIN and publishes only named formats", asyn
     "program.d8.json",
     "program.hex",
     "program.lst",
-    "program.nobj",
   ]);
   assert.deepEqual(await fs.readFile(path.join(root, "out", "program.bin")), Buffer.from([1, 2, 3]));
 
@@ -77,6 +75,7 @@ test("CLI v1 validates positive output selection and rejects removed switches", 
   for (const [arguments_, message] of [
     [["main.asm", "a.bin", "b.bin"], /output format is repeated/],
     [["main.asm", "output"], /recognized format suffix/],
+    [["main.asm", "output.nobj"], /recognized format suffix/],
     [["--origin", "4000H", "main.asm"], /unknown option/],
     [["--no-bin", "main.asm"], /unknown option/],
     [["--hex", "main.asm"], /unknown option/],

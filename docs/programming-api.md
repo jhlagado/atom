@@ -44,7 +44,6 @@ filesystem resolver.
 `renderAtomArtifacts()` returns the general output representations in memory:
 
 ```text
-nobj       Uint8Array
 bin        Uint8Array
 hex        string
 listing    string
@@ -58,9 +57,8 @@ output. It does not change Atom's IMAGE and PATCH records.
 The command-line program has a separate internal path for builds requesting
 only BIN, COM or HEX: it applies IMAGE and PATCH callbacks to a flat image as
 assembly runs. Calls to `assembleAtomProject()` and `renderAtomArtifacts()` keep
-the generation-based API shown here. Requests that include NOBJ, listing or D8
-also use that full generation so those formats retain their operation and
-source metadata.
+the generation-based API shown here. Listing and D8 requests also use that
+full generation so those formats retain their source metadata.
 
 COM is the same flat byte image under CP/M's `$0100` load convention. Use
 `writeAtomCom()` to validate the base and entry address and return its bytes.
@@ -123,7 +121,6 @@ The package root also exports:
 - `loadNativeAtomCore()` for the checked Z80 image and symbol map
 - `createMemoryAtomSink()` and `materializeAtomGeneration()` for IMAGE and
   PATCH consumers
-- `writeAtomNobj()`, `parseAtomNobj()` and `materializeAtomNobj()`
 - `writeAtomCom()`, `writeIntelHex()`, `writeAtomListing()` and `writeAtomD8()`
 - `createNamedObjectAtomAdapter()` for the Z80 Tool Services boundary
 - `createDebug80ExecutionAdapter()` and
