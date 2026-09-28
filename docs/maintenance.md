@@ -169,10 +169,13 @@ npm test
 ```
 
 Commit the generated `site/releases/<version>/atom.img`, its `system.json`
-descriptor, and the updated `site/index.html` with the release candidate. The
-image contains the Triptych N04 system and the exact `ATOM.COM` from the checked
-census. The release workflow adds the official GitHub release files to the same
-versioned directory and deploys the complete site. The stable page is
+descriptor, `disk-contents.json`, and the updated `site/index.html` with the
+release candidate. The image contains the Triptych N04 system, the exact
+`ATOM.COM` from the checked census, verified `EDIT.COM`, and the `HELLO.ASM`
+example with a `HELLO.COM` assembled by Atom. The contents manifest records
+the image files, sizes, checksums and Edit source provenance. The release
+workflow adds the official GitHub release files to the same versioned directory
+and deploys the complete site. The stable page is
 `https://jhlagado.github.io/atom/`; its Triptych link opens the descriptor from
 that release directory. Published version directories are immutable. The
 separate Pages workflow can redeploy the current site on demand.

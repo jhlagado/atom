@@ -84,6 +84,8 @@ test("native CP/M command forms remain explicit in package documentation", async
     assert.ok(source.includes("ATOM HELLO.ASM"), `${filename} omits the source-only form`);
     assert.ok(source.includes("HELLO.COM written"), `${filename} omits the derived output`);
     assert.ok(source.includes("ATOM ?"), `${filename} omits the compatibility help alias`);
+    assert.ok(source.includes("EDIT.COM"), `${filename} omits the bundled editor`);
+    assert.ok(source.includes("disk-contents.json"), `${filename} omits the image inventory`);
     for (const suffix of [".COM", ".BIN", ".HEX", ".ASO"]) {
       assert.ok(source.includes(suffix), `${filename} omits ${suffix}`);
     }

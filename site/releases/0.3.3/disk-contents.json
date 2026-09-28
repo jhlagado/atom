@@ -1,0 +1,35 @@
+{
+  "format": "atom-triptych-disk-contents-v1",
+  "release": "0.3.3",
+  "files": [
+    {
+      "name": "ATOM.COM",
+      "bytes": 17641,
+      "sha256": "e2c4a71aca52659ce8ebac87fba9aedd40384ccb858d7d4642cba89137c163ca",
+      "source": "assets/atom-cpm22.com"
+    },
+    {
+      "name": "HELLO.ASM",
+      "bytes": 680,
+      "sha256": "88f28c6bf8a8d84a76de243ad8ddd17bb2cb812416055eebc358baaaffba8952",
+      "source": "examples/cpm/hello.asm"
+    },
+    {
+      "name": "HELLO.COM",
+      "bytes": 27,
+      "sha256": "55627adc5e7fc6700b1d639bea60af6b6c078c5983702a37f8b75ecf21c4cd58",
+      "assembledFrom": "HELLO.ASM",
+      "assembler": "Atom"
+    },
+    {
+      "name": "EDIT.COM",
+      "bytes": 5513,
+      "sha256": "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4",
+      "source": {
+        "repository": "https://github.com/jhlagado/edit.git",
+        "revision": "dbbda081b58077c98b509625176739bd9c5608ec",
+        "license": "GPL-3.0-or-later"
+      }
+    }
+  ]
+}

@@ -88,6 +88,15 @@ try {
     assert.equal(image.length, descriptor.image.bytes);
     assert.equal(image.length, 2_097_152);
     assert.equal(sha256(image), descriptor.image.sha256);
+    let diskContents;
+    try {
+      diskContents = await readFile(join(target, "disk-contents.json"));
+      const contents = JSON.parse(diskContents.toString("utf8"));
+      assert.equal(contents.format, "atom-triptych-disk-contents-v1");
+      assert.equal(contents.release, version);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
 
     const downloadDirectory = join(temporaryRoot, version);
     await mkdir(downloadDirectory, { recursive: true });
@@ -127,16 +136,15 @@ try {
     for (const [name, bytes] of officialFiles) {
       await writeImmutable(join(target, name), bytes);
     }
-    const pagesChecksums = Buffer.from(
-      [
-        sha256(officialFiles.get("ATOM.COM")) + "  ATOM.COM",
-        sha256(officialFiles.get("ATOM.manifest.json")) + "  ATOM.manifest.json",
-        sha256(officialFiles.get("SHA256SUMS")) + "  SHA256SUMS",
-        sha256(image) + "  atom.img",
-        sha256(systemBytes) + "  system.json",
-        "",
-      ].join("\n"),
-    );
+    const checksumLines = [
+      sha256(officialFiles.get("ATOM.COM")) + "  ATOM.COM",
+      sha256(officialFiles.get("ATOM.manifest.json")) + "  ATOM.manifest.json",
+      sha256(officialFiles.get("SHA256SUMS")) + "  SHA256SUMS",
+      sha256(image) + "  atom.img",
+      sha256(systemBytes) + "  system.json",
+    ];
+    if (diskContents) checksumLines.push(sha256(diskContents) + "  disk-contents.json");
+    const pagesChecksums = Buffer.from(checksumLines.concat("").join("\n"));
     await writeImmutable(join(target, "PAGES-SHA256SUMS"), pagesChecksums);
 
     process.stdout.write(

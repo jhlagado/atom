@@ -72,14 +72,53 @@ try {
   assert.equal(sourceCom.length, census.residentBytes);
   assert.equal(sha256(sourceCom), census.sha256, "ATOM.COM differs from its checked census");
 
+  const exampleSourceName = "examples/cpm/hello.asm";
+  const exampleSourcePath = join(repositoryRoot, exampleSourceName);
+  const exampleSource = await readFile(exampleSourcePath);
+  const exampleComPath = join(temporaryDirectory, "HELLO.COM");
+  run(
+    process.execPath,
+    [join(repositoryRoot, "bin/atom.mjs"), exampleSourceName, exampleComPath],
+    repositoryRoot,
+  );
+  const exampleCom = await readFile(exampleComPath);
+
+  const editRoot = join(triptychRoot, "third_party/edit");
+  const editComPath = join(editRoot, "EDIT.COM");
+  const editCom = await readFile(editComPath);
+  const editManifestBytes = await readFile(join(editRoot, "manifest.json"));
+  const editManifest = JSON.parse(editManifestBytes.toString("utf8"));
+  const editOrigin = JSON.parse(await readFile(join(editRoot, "PROVENANCE.json"), "utf8"));
+  const editRelease = JSON.parse(
+    await readFile(join(editRoot, "release.provenance.json"), "utf8"),
+  );
+  const editSha256 = "6be83f6edb9ee92387c7b3817f473fbbc389a58ab1a20d9a2a6101e695fb77c4";
+  const editRevision = "dbbda081b58077c98b509625176739bd9c5608ec";
+  assert.equal(editManifest.format, "edit-build-manifest-v1");
+  assert.equal(editManifest.artifact, "EDIT.COM");
+  assert.equal(editManifest.version, "0.2.0");
+  assert.equal(editManifest.bytes, 5_513);
+  assert.equal(editManifest.sha256, editSha256);
+  assert.equal(editOrigin.repository, "https://github.com/jhlagado/edit.git");
+  assert.equal(editOrigin.revision, editRevision);
+  assert.equal(editOrigin.license, "GPL-3.0-or-later");
+  assert.equal(editOrigin.bytes, editCom.length);
+  assert.equal(editOrigin.sha256, editSha256);
+  assert.equal(editRelease.schema, "triptych-release-provenance-v1");
+  assert.equal(editRelease.repository, editOrigin.repository);
+  assert.equal(editRelease.revision, editRevision);
+  assert.equal(editRelease.bytes, editCom.length);
+  assert.equal(editRelease.sha256, editSha256);
+  assert.equal(editRelease.manifestSha256, sha256(editManifestBytes));
+  assert.equal(editCom.length, 5_513);
+  assert.equal(sha256(editCom), editSha256, "EDIT.COM differs from its verified release");
+
   const systemPath = join(triptychRoot, "distribution/disk-library", systemAsset);
   const system = await readFile(systemPath);
   assert.equal(system.length, 16_384, "Triptych N04 resident image must be 16 KiB");
   assert.equal(sha256(system), systemSha256, "Triptych resident image differs from its pin");
 
   const imagePath = join(temporaryDirectory, "atom.img");
-  const exportedPath = join(temporaryDirectory, "ATOM.exported");
-
   run(
     "cargo",
     [
@@ -95,63 +134,118 @@ try {
     ],
     triptychRoot,
   );
-  run(
-    "cargo",
-    [
-      "run",
-      "--locked",
-      "-p",
-      "triptych-cpm-cli",
-      "--",
-      "import",
-      imagePath,
-      join(repositoryRoot, "assets/atom-cpm22.com"),
-      "ATOM.COM",
-    ],
-    triptychRoot,
-  );
+  const diskFiles = [
+    { name: "ATOM.COM", path: join(repositoryRoot, "assets/atom-cpm22.com"), bytes: sourceCom },
+    { name: "HELLO.ASM", path: exampleSourcePath, bytes: exampleSource },
+    { name: "HELLO.COM", path: exampleComPath, bytes: exampleCom },
+    { name: "EDIT.COM", path: editComPath, bytes: editCom },
+  ];
+  for (const file of diskFiles) {
+    run(
+      "cargo",
+      [
+        "run",
+        "--locked",
+        "-p",
+        "triptych-cpm-cli",
+        "--",
+        "import",
+        imagePath,
+        file.path,
+        file.name,
+      ],
+      triptychRoot,
+    );
+  }
 
   const listing = run(
     "cargo",
     ["run", "--locked", "-p", "triptych-cpm-cli", "--", "list", imagePath],
     triptychRoot,
   );
-  const expectedRecords = Math.ceil(sourceCom.length / 128);
-  const expectedRecordBytes = expectedRecords * 128;
-  assert.match(
-    listing,
-    new RegExp(`ATOM\\.COM\\s+${expectedRecords}\\s+${expectedRecordBytes}`),
-  );
-
-  run(
-    "cargo",
-    [
-      "run",
-      "--locked",
-      "-p",
-      "triptych-cpm-cli",
-      "--",
-      "export",
-      imagePath,
-      "ATOM.COM",
-      exportedPath,
-    ],
-    triptychRoot,
-  );
+  for (const file of diskFiles) {
+    const expectedRecords = Math.ceil(file.bytes.length / 128);
+    const expectedRecordBytes = expectedRecords * 128;
+    assert.match(
+      listing,
+      new RegExp(
+        `${file.name.replaceAll(".", "\\.")}\\s+${expectedRecords}\\s+${expectedRecordBytes}`,
+      ),
+    );
+    const exportedPath = join(temporaryDirectory, file.name + ".exported");
+    run(
+      "cargo",
+      [
+        "run",
+        "--locked",
+        "-p",
+        "triptych-cpm-cli",
+        "--",
+        "export",
+        imagePath,
+        file.name,
+        exportedPath,
+      ],
+      triptychRoot,
+    );
+    const exported = await readFile(exportedPath);
+    assert.equal(
+      exported.length,
+      Math.ceil(file.bytes.length / 128) * 128,
+      `${file.name} must occupy complete CP/M records`,
+    );
+    assert.deepEqual(
+      exported.subarray(0, file.bytes.length),
+      file.bytes,
+      `${file.name} payload differs`,
+    );
+    assert.ok(
+      exported.subarray(file.bytes.length).every((byte) => byte === 0x1a),
+      `${file.name} record padding must use the text EOF byte`,
+    );
+  }
 
   const image = await readFile(imagePath);
-  const exported = await readFile(exportedPath);
-  const releaseCom = sourceCom;
   assert.equal(image.length, 2_097_152, "Triptych image must be exactly 2 MiB");
   assert.deepEqual(image.subarray(0, system.length), system);
-  assert.equal(exported.length, Math.ceil(releaseCom.length / 128) * 128);
-  assert.deepEqual(exported.subarray(0, releaseCom.length), releaseCom);
-  assert.ok(
-    exported.subarray(releaseCom.length).every((byte) => byte === 0x1a),
-    "CP/M file-record padding must use the text EOF byte",
-  );
 
   const imageSha256 = sha256(image);
+  const diskContents = {
+    format: "atom-triptych-disk-contents-v1",
+    release: version,
+    files: [
+      {
+        name: "ATOM.COM",
+        bytes: sourceCom.length,
+        sha256: sha256(sourceCom),
+        source: "assets/atom-cpm22.com",
+      },
+      {
+        name: "HELLO.ASM",
+        bytes: exampleSource.length,
+        sha256: sha256(exampleSource),
+        source: "examples/cpm/hello.asm",
+      },
+      {
+        name: "HELLO.COM",
+        bytes: exampleCom.length,
+        sha256: sha256(exampleCom),
+        assembledFrom: "HELLO.ASM",
+        assembler: "Atom",
+      },
+      {
+        name: "EDIT.COM",
+        bytes: editCom.length,
+        sha256: editSha256,
+        source: {
+          repository: editOrigin.repository,
+          revision: editRevision,
+          license: editOrigin.license,
+        },
+      },
+    ],
+  };
+  const diskContentsBytes = Buffer.from(JSON.stringify(diskContents, null, 2) + "\n");
   const descriptor = {
     schema: "triptych-external-system-v1",
     name: "Atom " + version + " for CP/M",
@@ -169,6 +263,7 @@ try {
   await mkdir(releaseDirectory, { recursive: true });
   await writeImmutable(join(releaseDirectory, "atom.img"), image);
   await writeImmutable(join(releaseDirectory, "system.json"), descriptorBytes);
+  await writeImmutable(join(releaseDirectory, "disk-contents.json"), diskContentsBytes);
 
   const descriptorUrl =
     "https://jhlagado.github.io/atom/releases/" + version + "/system.json";
@@ -198,6 +293,9 @@ try {
     '      <li><a href="' + launchUrl.href + '">Run Atom in Triptych</a>.</li>',
     '      <li><a href="releases/' + version + '/atom.img">Download the',
     "          2 MiB Triptych disk image</a>.</li>",
+    "    </ul>",
+    "    <p>The disk includes ATOM.COM, EDIT.COM, and a HELLO.ASM example with its assembled HELLO.COM.</p>",
+    "    <ul>",
     '      <li><a href="https://github.com/jhlagado/atom/releases/tag/v' + version + '">',
     "          Release notes and checksums</a>.</li>",
     "    </ul>",
@@ -220,13 +318,15 @@ try {
           encoding: "utf8",
         }).trim(),
         profile: systemProfile,
-        com: { bytes: releaseCom.length, sha256: sha256(releaseCom) },
+        com: { bytes: sourceCom.length, sha256: sha256(sourceCom) },
+        diskFiles: diskContents.files,
         image: {
           path: "site/releases/" + version + "/atom.img",
           bytes: image.length,
           sha256: imageSha256,
         },
         descriptor: "site/releases/" + version + "/system.json",
+        diskContents: "site/releases/" + version + "/disk-contents.json",
         triptychLaunchUrl: launchUrl.href,
       },
       null,

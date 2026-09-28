@@ -1,7 +1,7 @@
 {
   "format": "atom-package-census",
   "version": 2,
-  "package": "atom-z80@0.3.2",
-  "packageOwnedUnpackedBytes": 1361856,
-  "packageOwnedEntries": 74
+  "package": "atom-z80@0.3.3",
+  "packageOwnedUnpackedBytes": 1363265,
+  "packageOwnedEntries": 76
 }
