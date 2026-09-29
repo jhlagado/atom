@@ -12,6 +12,32 @@
     "ccp": "triptych",
     "bdos": "triptych"
   },
+  "taggedRelease": {
+    "version": "0.3.3",
+    "bytes": 17641,
+    "sha256": "e2c4a71aca52659ce8ebac87fba9aedd40384ccb858d7d4642cba89137c163ca",
+    "scenario": {
+      "id": "atom-tagged-v0.3.3-in-triptych",
+      "initialDriveSha256": "d1e1b8cd22907332baa72fb033b105e65b8e5d363d2940fbcac0424d205e151f",
+      "driveSha256": "2be70624972c9540ef58159b7304e5a9bfbe0d5cd4af4474079310da5b446217",
+      "sessions": [
+        {
+          "id": "assemble-hello",
+          "transcriptBytes": 46,
+          "transcriptSha256": "407b178f871dcd3f710a804226514cf0550f4504a000a96875a815dde7085ec9",
+          "driveSha256": "2be70624972c9540ef58159b7304e5a9bfbe0d5cd4af4474079310da5b446217",
+          "screenSha256": "637688ece49a080d7fdebf01e8662d8e465a3d5cd112741b5347f22819526d17"
+        },
+        {
+          "id": "run-generated-program",
+          "transcriptBytes": 40,
+          "transcriptSha256": "90f35086a126034bf2e0c82c984681cc2ab43b626e9802d1c626e05212b914b3",
+          "driveSha256": "2be70624972c9540ef58159b7304e5a9bfbe0d5cd4af4474079310da5b446217",
+          "screenSha256": "ce4926467b7de204bfbd4972d84a23164ccc99e798b768c90920b708da27afcb"
+        }
+      ]
+    }
+  },
   "scenario": {
     "id": "atom-current-com-in-triptych-candidate",
     "initialDriveSha256": "d2ffcca150b526e1391b56b84279f3fdcc03a55c5d55493cdd86605d2368486d",

@@ -166,11 +166,12 @@ Node package-publish check. The release gate must finish without changing a
 checked asset or proof record.
 This gate remains mandatory for a version tag and runs in GitHub Actions.
 
-The optional `npm run verify:triptych-cpm` check needs a Triptych checkout next
-to Atom, or `TRIPTYCH_ROOT` set to that checkout. It replaces `ATOM.COM` only
-in a temporary test scenario, then runs the Triptych CP/M assembler-and-run
-proof. It does not change the published disk image and is separate from the
-Node package-publish check.
+The optional `npm run verify:triptych-cpm` check needs a clean tracked Triptych
+checkout next to Atom, or `TRIPTYCH_ROOT` set to that checkout. It tests both
+the COM at the pinned Atom release tag and the current candidate in temporary
+Triptych scenarios, then assembles and runs a sample program with each. It
+does not change the versioned disk image and is separate from the Node
+package-publish check.
 
 Before tagging a release:
 
