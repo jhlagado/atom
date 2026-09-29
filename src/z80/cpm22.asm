@@ -205,7 +205,7 @@ CP_MEMORY_OK:
     OR   A                  ; Test whether parsing selected help-only mode.
     JR   NZ,CP_SUCCESS      ; Help returns success without assembly.
     CALL CP_RESOLVE_SOURCE  ; Resolve includes and measure all parts.
-    JP   C,CP_BUILD_FAILED  ; Report an invalid source graph across the longer adapter.
+    JP   C,CP_BUILD_FAILED  ; Report source-graph failure.
     LD   HL,CP_ASO_TARGET_CAPACITY  ; All output modes cover $0100..$10000.
     LD   (CP_DESCRIPTOR+13),HL  ; Install the selected target extent.
     LD   IX,CP_DESCRIPTOR   ; Pass the measured source descriptor.
