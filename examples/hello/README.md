@@ -13,8 +13,7 @@ atom main.asm
 
 The command writes `build/main.bin`. The file is 19
 bytes long and covers `$4000` through `$4012`. The two uninitialized bytes from
-`DS 2` appear as zero in the flat binary. Request `build/main.nobj` explicitly
-when the distinction between initialised bytes and reserved storage is needed.
+`DS 2` appear as zero in the flat binary.
 
 The example uses uppercase source consistently. Atom remains case-insensitive
 for symbols, mnemonics, directives, hexadecimal digits and preprocessor names.

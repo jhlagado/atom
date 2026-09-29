@@ -63,10 +63,11 @@ CP_PP_NAME_LENGTH   EQU CP_PP_NUM_VALUE+2
 CP_PP_STATE_END     EQU CP_PP_NAME_LENGTH+1
 CP_PP_STACK         EQU CP_PP_STATE_END
 CP_PP_STACK_END     EQU CP_PP_STACK+16
-CP_PP_DEFINE_ENTRY_BYTES EQU 20
-CP_PP_DEFINE_CAPACITY EQU 32
-CP_PP_DEFINE_TABLE  EQU CP_PP_STACK_END
-CP_PP_DEFINE_TABLE_END EQU CP_PP_DEFINE_TABLE+CP_PP_DEFINE_ENTRY_BYTES*CP_PP_DEFINE_CAPACITY
+    CP_PP_DEFINE_ENTRY_BYTES EQU 20
+    CP_PP_DEFINE_CAPACITY EQU 32
+    CP_PP_DEFINE_TABLE  EQU CP_PP_STACK_END
+    CP_PP_DEFINE_BYTES EQU CP_PP_DEFINE_ENTRY_BYTES*CP_PP_DEFINE_CAPACITY
+    CP_PP_DEFINE_TABLE_END EQU CP_PP_DEFINE_TABLE+CP_PP_DEFINE_BYTES
 CP_PP_TOKEN         EQU CP_PP_DEFINE_TABLE_END
 CP_PP_TOKEN_END     EQU CP_PP_TOKEN+17
 CP_PP_NAME          EQU CP_PP_TOKEN_END
@@ -332,7 +333,7 @@ CP_DIAG_NEWLINE:
 CP_COMMAND_CODE_START:
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Accept no arguments for help, one source name or two explicit names. A single
+; Accept help, one source, or source plus output. A single name derives COM.
 ; source derives a COM name. Names use CP/M 8.3.
 
 CP_PARSE_COMMAND:
@@ -801,16 +802,16 @@ CP_SCAN_LINE:
     JR   Z,CP_SCAN_DIRECTIVE  ; Parse one while the header is still open.
     LD   A,(CP_HEADER_OPEN)  ; Check whether the leading header is still open.
     OR   A                  ; Body source closes the header permanently.
-    JR   Z,CP_SCAN_BODY      ; A closed header has no conditional include scope.
-    CALL CP_PP_CHECK_INCLUDE_SCOPE  ; Includes inside open IF blocks must close first.
+    JR   Z,CP_SCAN_BODY     ; Closed header has no include scope.
+    CALL CP_PP_CHECK_INCLUDE_SCOPE  ; Reject open IF state at include.
     JP   C,CP_SCAN_INVALID  ; Preserve the required directive error.
 CP_SCAN_BODY:
     XOR  A                  ; Any ordinary source byte closes the header.
     LD   (CP_HEADER_OPEN),A  ; Later includes and definitions are invalid.
     LD   (CP_PP_DEFS_OPEN),A  ; No definition may follow ordinary source.
-    LD   A,(CP_PP_ACTIVE)  ; Determine whether this source line is selected.
+    LD   A,(CP_PP_ACTIVE)   ; Determine whether this source line is selected.
     OR   A                  ; Inactive source still closes the file header.
-    JR   Z,CP_SCAN_SKIP_LINE  ; Skip its contents while processing later IF lines.
+    JR   Z,CP_SCAN_SKIP_LINE  ; Skip inactive source text.
 CP_SCAN_SKIP_LINE:
     CALL CP_SKIP_SOURCE_LINE  ; Discard the rest of this physical line.
     JR   NC,CP_SCAN_LINE    ; Carry clear means another line is available.
@@ -818,7 +819,7 @@ CP_SCAN_SKIP_LINE:
     JR   Z,CP_SCAN_COMPLETE  ; Treat a zero status as the end of this source.
     JR   CP_SCAN_IO         ; Reject a source offset outside the 16-bit range.
 CP_SCAN_DIRECTIVE:
-    CALL CP_PP_SCAN_DIRECTIVE  ; Parse INCLUDE, DEFINE and conditional directives.
+    CALL CP_PP_SCAN_DIRECTIVE  ; Parse host preprocessing directives.
     JR   C,CP_SCAN_FAILURE  ; Parsing and file errors share this return path.
     OR   A                  ; In ordering mode A=1 means a child is not ready.
     JR   NZ,CP_SCAN_DONE    ; Stop so the caller can defer this source part.
@@ -827,7 +828,7 @@ CP_SCAN_EOF:
     OR   A                  ; A=0 means EOF/read failure; A=2 overflow.
     JR   NZ,CP_SCAN_IO      ; Reject a source offset that wrapped.
 CP_SCAN_COMPLETE:
-    LD   A,(CP_PP_DEPTH)  ; Every conditional must be closed before EOF.
+    LD   A,(CP_PP_DEPTH)    ; Every conditional must be closed before EOF.
     OR   A                  ; A remaining frame is an unterminated IF.
     JR   NZ,CP_SCAN_INVALID  ; Do not accept an incomplete conditional file.
     XOR  A                  ; No unresolved dependencies remain.
@@ -839,7 +840,7 @@ CP_SCAN_IO:
     LD   DE,CP_READ_FAILED_TEXT  ; Select the source-read error message.
     JR   CP_SCAN_FAILURE    ; Return the read error through the shared exit.
 CP_SCAN_INVALID:
-    LD   DE,CP_INVALID_DIRECTIVE_TEXT  ; Select the malformed-preprocessor message.
+    LD   DE,CP_INVALID_DIRECTIVE_TEXT  ; Select syntax-error detail.
 CP_SCAN_FAILURE:
     SCF                     ; Carry marks failure regardless of text.
     RET                     ; Do not accept an incomplete dependency scan.
@@ -926,9 +927,9 @@ CP_INCLUDE_READY:
 ; Deduplicate the eleven-byte CP/M name. Discovery adds missing names.
 ; Ordering reports whether each child has already been emitted.
 
-    CALL CP_PP_MARK_INCLUDE  ; Keep open header conditions attached to this import.
-    LD   A,(CP_PP_ACTIVE)  ; Inactive branches still validate but do not import.
-    OR   A                  ; Zero means the filename is syntactically valid only.
+    CALL CP_PP_MARK_INCLUDE  ; Retain header IF state for import.
+    LD   A,(CP_PP_ACTIVE)   ; Zero means validate, but do not import.
+    OR   A                  ; Zero means validate name only.
     JR   Z,CP_INCLUDE_IGNORED  ; Do not open or order an inactive dependency.
 
     PUSH IX                 ; Save IX across name lookup.
@@ -1256,7 +1257,7 @@ CP_RESOLVED_SOURCE_READY:
     POP  HL                 ; Restore the source offset.
     POP  BC                 ; Restore the caller's parser state.
     RET  C                  ; Return end-of-input or a failed read unchanged.
-    JP   CP_PP_RUNTIME_FILTER  ; Apply current conditional masking and directives.
+    JP   CP_PP_RUNTIME_FILTER  ; Filter directives and inactive lines.
 
 ;@ROUTINE IN HL OUT A,ZERO CLOBBERS BC,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
 ; Decide whether a percent character begins a recognized host directive.

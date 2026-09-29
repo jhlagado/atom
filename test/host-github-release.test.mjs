@@ -36,7 +36,7 @@ test("the GitHub release contains the checked CP/M executable and provenance", a
     platform: "CP/M 2.2",
     artifact: {
       file: "ATOM.COM",
-      bytes: 17641,
+      bytes: 19191,
       sha256: executableSha256,
       loadAddress: 0x100,
       entryAddress: 12886,

@@ -42,7 +42,6 @@ try {
     "build/main.hex",
     "build/main.lst",
     "build/main.d8.json",
-    "build/main.nobj",
   ], { cwd: project });
   assert.equal(result.signal, null);
   assert.equal(result.status, 0, result.stderr);

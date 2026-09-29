@@ -88,6 +88,8 @@ The main test lanes are:
 | `host-native-atom-runner` | Prepared source through the Z80 core |
 | `host-artifacts` | NOBJ, BIN, COM, HEX, listing and D8 |
 | `cpm22`, `host-cpm-*` | Native CP/M command and files |
+| `cpm22/self-host` | Resident CP/M Atom assembling the Atom core |
+| `verify:triptych-cpm` | Current Atom COM assembling and running a CP/M program in Triptych WASM |
 | `native-object-harness`, `named-object-services` | Portable Z80 service adapter |
 | `host-package`, `host-release` | Installed package and release contents |
 | `host-self-host` | Two executable Atom generations |
@@ -157,10 +159,18 @@ npm run verify:package-census
 ```
 
 The gate runs the native and host suites, including the native-core rebuild,
-offline package installation and self-host proofs. It also explicitly checks
-the object harness and CP/M builds and runs the host-native and self-host
-measurements. It must finish without changing a checked asset or proof record.
+offline package installation and Node self-host proofs. It explicitly checks
+the object harness and CP/M build, then runs the CP/M self-assembly proof and
+the host-native and self-host measurements. The CP/M proof is kept outside the
+Node package-publish check. The release gate must finish without changing a
+checked asset or proof record.
 This gate remains mandatory for a version tag and runs in GitHub Actions.
+
+The optional `npm run verify:triptych-cpm` check needs a Triptych checkout next
+to Atom, or `TRIPTYCH_ROOT` set to that checkout. It replaces `ATOM.COM` only
+in a temporary test scenario, then runs the Triptych CP/M assembler-and-run
+proof. It does not change the published disk image and is separate from the
+Node package-publish check.
 
 Before tagging a release:
 

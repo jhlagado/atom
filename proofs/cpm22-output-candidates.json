@@ -5,7 +5,7 @@
   "inTpaComplete": {
     "classification": "Measured complete retained adapter",
     "outputCodeBytes": 736,
-    "outputWindowBytes": 36864
+    "outputWindowBytes": 33280
   },
   "randomRecord": {
     "classification": "Measured lower-bound kernel",

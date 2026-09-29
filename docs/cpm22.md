@@ -227,6 +227,11 @@ Contributors can rebuild and verify the native image with:
 npm run build:cpm22
 npm run verify:cpm22
 node --test test/cpm22.test.mjs
+npm run test:cpm22-self-host
 ```
 
 `npm run build:cpm22` regenerates both the COM and its measurement census.
+The CP/M self-assembly proof runs the resident `ATOM.COM`, assembles a
+CP/M-ready copy of the Atom core source, and compares its output with the Node
+assembler at the same origin. It is part of release qualification, but not the
+Node package-publish check.

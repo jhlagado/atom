@@ -4,7 +4,7 @@
 ; The source-byte adapter repeats only the conditional state changes while the
 ; tokenizer reads forward. Directive bytes become comments; inactive text
 ; becomes spaces, with every original line ending and byte offset preserved.
-; Definitions are numeric, case-insensitive, up to seventeen-character names. The
+; Defines are numeric and case-insensitive; names hold up to 17 characters.
 ; native profile supports 32 definitions and 16 nested conditional levels.
 
 ;@ROUTINE IN CP_SCAN_INDEX OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
@@ -19,9 +19,9 @@ CP_PP_SCAN_RESET:
     OR   A                  ; Only ordinal zero is the entry file.
     JR   NZ,CP_PP_SCAN_DEPENDENCY  ; Includes cannot define host values.
     XOR  A                  ; Rebuild root definitions on each root scan.
-    LD   (CP_PP_DEFINE_COUNT),A  ; Topological passes must not accumulate duplicates.
+    LD   (CP_PP_DEFINE_COUNT),A  ; Reset definitions for each scan.
     LD   A,1                ; Definitions may begin in the root header.
-    LD   (CP_PP_DEFS_OPEN),A  ; The first include, condition or source closes it.
+    LD   (CP_PP_DEFS_OPEN),A  ; Close the define header at its first boundary.
     RET                     ; Keep the empty table ready for root defines.
 CP_PP_SCAN_DEPENDENCY:
     XOR  A                  ; A dependency cannot declare definitions.
@@ -35,8 +35,8 @@ CP_PP_RUNTIME_RESET:
     XOR  A                  ; Clear conditional depth and select its base.
     LD   (CP_PP_DEPTH),A    ; Nested conditions never cross a source part.
     INC  A                  ; The first line is active by default.
-    LD   (CP_PP_ACTIVE),A   ; Ordinary source is visible until an IF says otherwise.
-    LD   HL,$FFFF           ; No source offset can equal this unaligned sentinel.
+    LD   (CP_PP_ACTIVE),A   ; Show ordinary source until an IF disables it.
+    LD   HL,$FFFF           ; Use a sentinel outside valid byte offsets.
     LD   (CP_PP_LAST_DIRECTIVE),HL  ; A repeated peek must not apply IF twice.
     RET                     ; Preserve the preflight definition table.
 
@@ -45,7 +45,7 @@ CP_PP_RUNTIME_RESET:
 ; HL enters after '%'; A=1 means an include is waiting for its child.
 
 CP_PP_SCAN_DIRECTIVE:
-    LD   (CP_PP_WORD_START),HL  ; Keep the position used by the INCLUDE parser.
+    LD   (CP_PP_WORD_START),HL  ; Save the INCLUDE keyword position.
     CALL CP_PP_READ_TOKEN   ; Read the directive name into the shared buffer.
     JP   C,CP_PP_INVALID    ; Empty or overlong words are malformed.
     LD   (CP_PP_SOURCE_CURSOR),HL  ; Save the source position while matching.
@@ -70,19 +70,19 @@ CP_PP_SCAN_DIRECTIVE:
     CALL CP_PP_MATCH_WORD   ; Match the complete keyword.
     JR   Z,CP_PP_SCAN_IF    ; Evaluate and push a new condition.
 CP_PP_INVALID:
-    LD   DE,CP_INVALID_DIRECTIVE_TEXT  ; Report an unsupported source directive.
+    LD   DE,CP_INVALID_DIRECTIVE_TEXT  ; Select unsupported-directive detail.
     SCF                     ; Carry marks the incomplete source profile.
     RET                     ; No output generation has begun.
 CP_PP_SCAN_INCLUDE:
     LD   A,(CP_HEADER_OPEN)  ; Includes belong to the leading header only.
     OR   A                  ; Test whether ordinary source already began.
-    JR   Z,CP_PP_SCAN_BAD_INCLUDE  ; Reject a late include before opening files.
+    JR   Z,CP_PP_SCAN_BAD_INCLUDE  ; Reject late imports before opening files.
     XOR  A                  ; Any include closes the definition preamble.
     LD   (CP_PP_DEFS_OPEN),A  ; Defines must precede includes and conditions.
     LD   HL,(CP_PP_WORD_START)  ; Restore the cursor immediately after '%'.
     JP   CP_PARSE_INCLUDE   ; Parse its filename and active dependency.
 CP_PP_SCAN_BAD_INCLUDE:
-    LD   DE,CP_INVALID_INCLUDE_TEXT  ; Preserve the established include diagnostic.
+    LD   DE,CP_INVALID_INCLUDE_TEXT  ; Select malformed-include detail.
     SCF                     ; Carry rejects the source before output starts.
     RET                     ; Return the include-specific message.
 CP_PP_SCAN_DEFINE:
@@ -109,11 +109,11 @@ CP_PP_SCAN_IF:
     RET                     ; Continue with the newly selected branch.
 CP_PP_SCAN_ELSE:
     XOR  A                  ; ELSE also closes the definition preamble.
-    LD   (CP_PP_DEFS_OPEN),A  ; Keep the preamble rule independent of activity.
+    LD   (CP_PP_DEFS_OPEN),A  ; Close define header, even when inactive.
     LD   HL,(CP_PP_SOURCE_CURSOR)  ; Start at the directive's trailing text.
     CALL CP_PP_CHECK_TRAILING  ; Require only whitespace or a comment.
     JP   C,CP_PP_INVALID    ; Reject arguments after ELSE.
-    LD   (CP_PP_SCAN_CURSOR),HL  ; Preserve the scanner position through frame updates.
+    LD   (CP_PP_SCAN_CURSOR),HL  ; Save cursor before pushing frame.
     CALL CP_PP_SET_ELSE     ; Validate and activate the alternate branch.
     JP   C,CP_PP_INVALID    ; Report unmatched or duplicate ELSE consistently.
     XOR  A                  ; ELSE is a consumed directive, not a dependency.
@@ -125,7 +125,7 @@ CP_PP_SCAN_ENDIF:
     LD   HL,(CP_PP_SOURCE_CURSOR)  ; Validate the rest of the physical line.
     CALL CP_PP_CHECK_TRAILING  ; ENDIF accepts no arguments.
     JP   C,CP_PP_INVALID    ; Reject extra words after ENDIF.
-    LD   (CP_PP_SCAN_CURSOR),HL  ; Preserve the scanner position while popping.
+    LD   (CP_PP_SCAN_CURSOR),HL  ; Save cursor before popping frame.
     CALL CP_PP_POP_IF       ; Restore the parent branch's activity.
     JP   C,CP_PP_INVALID    ; Report an unmatched ENDIF consistently.
     XOR  A                  ; No dependency is pending after ENDIF.
@@ -138,8 +138,8 @@ CP_PP_SCAN_ENDIF:
 CP_PP_RUNTIME_DIRECTIVE:
     LD   (CP_PP_WORD_START),HL  ; Save the cursor immediately after '%'.
     CALL CP_PP_READ_TOKEN   ; Read the keyword without changing source bytes.
-    JP   C,CP_PP_RUNTIME_BAD  ; Preflight should have rejected malformed input.
-    LD   (CP_PP_SOURCE_CURSOR),HL  ; Preserve the cursor through keyword tests.
+    JP   C,CP_PP_RUNTIME_BAD  ; Reject source that changed after preflight.
+    LD   (CP_PP_SOURCE_CURSOR),HL  ; Save the cursor before testing keywords.
     LD   HL,CP_PP_WORD_IF   ; IF changes the active source state.
     LD   B,2                ; Match exactly the IF keyword.
     CALL CP_PP_MATCH_WORD   ; Keep the source cursor in workspace.
@@ -152,15 +152,15 @@ CP_PP_RUNTIME_DIRECTIVE:
     LD   B,5                ; Match exactly five letters.
     CALL CP_PP_MATCH_WORD   ; Keep IF stack boundaries explicit.
     JR   Z,CP_PP_RUNTIME_ENDIF  ; Pop one frame after checking arguments.
-    LD   A,0                ; Other preflight-validated directives do not alter state.
+    LD   A,0                ; Other directives leave state unchanged.
     OR   A                  ; Clear carry for the source-byte adapter.
     RET                     ; INCLUDE and DEFINE remain comments at runtime.
 CP_PP_RUNTIME_IF:
     LD   HL,(CP_PP_SOURCE_CURSOR)  ; Continue after the IF keyword.
     CALL CP_PP_PARSE_IF     ; Repeat the same value and nesting rules.
-    RET                     ; Carry indicates a source changed after preflight.
+    RET                     ; Carry means the source changed after preflight.
 CP_PP_RUNTIME_ELSE:
-    LD   HL,(CP_PP_SOURCE_CURSOR)  ; Validate trailing text before changing state.
+    LD   HL,(CP_PP_SOURCE_CURSOR)  ; Check trailing text before state changes.
     CALL CP_PP_CHECK_TRAILING  ; An ELSE argument is never silently ignored.
     JR   C,CP_PP_RUNTIME_BAD  ; Reject mutation after source preflight.
     CALL CP_PP_SET_ELSE     ; Toggle only a valid top-level frame.
@@ -173,7 +173,7 @@ CP_PP_RUNTIME_ENDIF:
     RET                     ; Return the updated conditional state.
 CP_PP_RUNTIME_BAD:
     LD   A,2                ; Signal that the source changed after preflight.
-    SCF                     ; The source provider treats this as a read failure.
+    SCF                     ; Report a source-read failure.
     RET                     ; Never assemble with uncertain condition state.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
@@ -182,27 +182,27 @@ CP_PP_RUNTIME_BAD:
 CP_PP_PARSE_DEFINE:
     CALL CP_PP_READ_TOKEN   ; Read the case-insensitive definition name.
     JP   C,CP_PP_INVALID    ; A definition needs a name.
-    LD   (CP_PP_SOURCE_CURSOR),HL  ; Save its delimiter while validating the name.
+    LD   (CP_PP_SOURCE_CURSOR),HL  ; Save delimiter while checking the name.
     CALL CP_PP_VALIDATE_NAME  ; Enforce the native name-field limit.
     JP   C,CP_PP_INVALID    ; Reject invalid or overlong names.
     LD   (CP_PP_NAME_LENGTH),A  ; Retain its length while reading the value.
     LD   HL,(CP_PP_SOURCE_CURSOR)  ; Resume where the name token ended.
     CALL CP_PP_READ_TOKEN   ; Skip whitespace and read one numeric value.
     JP   C,CP_PP_INVALID    ; A definition needs a value.
-    LD   (CP_PP_SOURCE_CURSOR),HL  ; Preserve the value delimiter through parsing.
+    LD   (CP_PP_SOURCE_CURSOR),HL  ; Save delimiter while parsing the value.
     CALL CP_PP_PARSE_VALUE  ; Resolve numeric syntax or a previous name.
     JP   C,CP_PP_INVALID    ; Reject undefined names and values above 16 bits.
-    LD   (CP_PP_NUM_VALUE),HL  ; Keep the value while checking the line ending.
+    LD   (CP_PP_NUM_VALUE),HL  ; Keep the value until the line end is checked.
     LD   HL,(CP_PP_SOURCE_CURSOR)  ; Resume at the delimiter after the value.
     CALL CP_PP_CHECK_TRAILING  ; Only whitespace, a comment or EOL may follow.
     JP   C,CP_PP_INVALID    ; Reject additional define operands.
-    LD   (CP_PP_SCAN_CURSOR),HL  ; Keep the next source offset through table lookup.
+    LD   (CP_PP_SCAN_CURSOR),HL  ; Save the next source position for lookup.
     CALL CP_PP_NAME_TO_TOKEN  ; Reuse lookup with the staged name.
     CALL CP_PP_FIND_DEFINE  ; A pre-existing match is a duplicate definition.
     JP   NC,CP_PP_INVALID   ; Reject duplicates even when values are equal.
     CALL CP_PP_STORE_DEFINE  ; Append the new value to the bounded table.
     RET  C                  ; A full table is an explicit profile error.
-    LD   HL,(CP_PP_SCAN_CURSOR)  ; Restore the next source offset after storing.
+    LD   HL,(CP_PP_SCAN_CURSOR)  ; Restore next source position.
     RET                     ; Carry reports a full definition table.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
@@ -211,14 +211,14 @@ CP_PP_PARSE_DEFINE:
 CP_PP_PARSE_IF:
     CALL CP_PP_READ_TOKEN   ; Read one number or prior definition name.
     JP   C,CP_PP_INVALID    ; IF requires exactly one value.
-    LD   (CP_PP_SOURCE_CURSOR),HL  ; Retain the delimiter through value evaluation.
+    LD   (CP_PP_SOURCE_CURSOR),HL  ; Keep delimiter until evaluation ends.
     CALL CP_PP_PARSE_VALUE  ; Unknown names fail only in an active parent.
-    JP   C,CP_PP_INVALID    ; Reject malformed values and active unknown names.
-    LD   (CP_PP_NUM_VALUE),HL  ; Preserve the resolved value across line checks.
-    LD   HL,(CP_PP_SOURCE_CURSOR)  ; Resume at the condition's trailing delimiter.
+    JP   C,CP_PP_INVALID    ; Reject invalid values or active unknown names.
+    LD   (CP_PP_NUM_VALUE),HL  ; Keep the result while checking trailing text.
+    LD   HL,(CP_PP_SOURCE_CURSOR)  ; Resume at the trailing delimiter.
     CALL CP_PP_CHECK_TRAILING  ; Require the directive to end after one value.
     JP   C,CP_PP_INVALID    ; Reject operators and extra arguments.
-    LD   (CP_PP_SCAN_CURSOR),HL  ; Preserve the scanner position while pushing.
+    LD   (CP_PP_SCAN_CURSOR),HL  ; Save cursor before pushing the frame.
     LD   HL,(CP_PP_NUM_VALUE)  ; Restore the unsigned sixteen-bit value.
     LD   A,H                ; Test its high byte.
     OR   L                  ; Either nonzero byte selects a true branch.
@@ -226,10 +226,10 @@ CP_PP_PARSE_IF:
     JR   Z,CP_PP_PARSE_IF_PUSH  ; Keep zero false.
     INC  A                  ; Convert any nonzero value to true.
 CP_PP_PARSE_IF_PUSH:
-    CALL CP_PP_PUSH_IF      ; Store parent/condition flags and update activity.
+    CALL CP_PP_PUSH_IF      ; Save parent state and update activity.
     RET  C                  ; Preserve a nesting-limit failure.
-    LD   HL,(CP_PP_SCAN_CURSOR)  ; Continue after the condition's physical line.
-    RET                     ; Return the condition result with source position.
+    LD   HL,(CP_PP_SCAN_CURSOR)  ; Continue after this physical line.
+    RET                     ; Return condition state and source position.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Push parent activity and the condition result into a sixteen-byte stack.
@@ -323,7 +323,7 @@ CP_PP_MARK_INCLUDE:
     PUSH HL                 ; The include parser owns the source cursor.
     LD   A,(CP_PP_DEPTH)    ; No frame needs a marker outside conditionals.
     OR   A                  ; Avoid touching the empty stack.
-    JR   Z,CP_PP_MARK_INCLUDE_DONE  ; Return when the include is unconditional.
+    JR   Z,CP_PP_MARK_INCLUDE_DONE  ; Unconditional include needs no frame.
     LD   B,A                ; Visit every open frame.
     LD   HL,CP_PP_STACK     ; Start with the outermost IF.
 CP_PP_MARK_INCLUDE_LOOP:
@@ -340,10 +340,10 @@ CP_PP_MARK_INCLUDE_DONE:
 ; Return carry when ordinary source begins inside a conditional include.
 
 CP_PP_CHECK_INCLUDE_SCOPE:
-    PUSH HL                 ; The source reader still needs its current offset.
-    LD   A,(CP_HEADER_OPEN)  ; Only leading-header conditionals are restricted.
-    OR   A                  ; A closed header cannot have a legal late include.
-    JR   Z,CP_PP_CHECK_INCLUDE_DONE  ; The include parser will report any late one.
+    PUSH HL                 ; Preserve the source reader's current offset.
+    LD   A,(CP_HEADER_OPEN)  ; Restrict conditional imports to the header.
+    OR   A                  ; A closed header cannot accept an import.
+    JR   Z,CP_PP_CHECK_INCLUDE_DONE  ; Let the parser report a late import.
     LD   A,(CP_PP_DEPTH)    ; Closed frames no longer constrain source order.
     OR   A                  ; An empty stack makes ordinary source safe.
     JR   Z,CP_PP_CHECK_INCLUDE_DONE  ; Continue without scanning the table.
@@ -351,7 +351,7 @@ CP_PP_CHECK_INCLUDE_SCOPE:
     LD   HL,CP_PP_STACK     ; Begin at the outermost conditional.
 CP_PP_CHECK_INCLUDE_LOOP:
     BIT  3,(HL)             ; Has this frame seen an include before ENDIF?
-    JR   NZ,CP_PP_CHECK_INCLUDE_BAD  ; Ordinary source cannot split that header block.
+    JR   NZ,CP_PP_CHECK_INCLUDE_BAD  ; Reject ordinary source inside header.
     INC  HL                 ; Advance to the next frame.
     DJNZ CP_PP_CHECK_INCLUDE_LOOP  ; Check every still-open ancestor.
     XOR  A                  ; No include-bearing condition remains open.
@@ -376,25 +376,25 @@ CP_PP_READ_TOKEN_LOOP:
     CP   9                  ; Tabs have the same token-boundary meaning.
     JR   Z,CP_PP_READ_TOKEN_SPACE  ; Skip leading tabs or finish a token.
     CP   ';'                ; Semicolon begins a source comment.
-    JR   Z,CP_PP_READ_TOKEN_END  ; Leave the comment marker for trailing checks.
+    JR   Z,CP_PP_READ_TOKEN_END  ; Leave ';' for trailing-text validation.
     CP   13                 ; CR terminates this physical line.
     JR   Z,CP_PP_READ_TOKEN_END  ; Leave CR for the line validator.
     CP   10                 ; LF also terminates a directive line.
     JR   Z,CP_PP_READ_TOKEN_END  ; Preserve LF for the trailing validator.
     LD   B,A                ; Keep the character while checking capacity.
-    LD   A,(CP_PP_TOKEN_LENGTH)  ; Read the number of token bytes already stored.
+    LD   A,(CP_PP_TOKEN_LENGTH)  ; Read the token length so far.
     CP   17                 ; The fixed token buffer holds at most 17 bytes.
-    JR   NC,CP_PP_READ_TOKEN_BAD  ; Reject a token that exceeds the native bound.
+    JR   NC,CP_PP_READ_TOKEN_BAD  ; Reject a token beyond the native limit.
     LD   C,A                ; Use the current length as the array index.
     LD   A,B                ; Restore the source character.
     CP   'a'                ; Check for an ASCII lowercase letter.
-    JR   C,CP_PP_READ_TOKEN_CASED  ; Leave uppercase and punctuation unchanged.
+    JR   C,CP_PP_READ_TOKEN_CASED  ; Keep uppercase and punctuation unchanged.
     CP   'z'+1              ; Check the exclusive lowercase upper bound.
     JR   NC,CP_PP_READ_TOKEN_CASED  ; Leave bytes beyond 'z' unchanged.
     AND  $DF                ; Fold lowercase ASCII to uppercase.
 CP_PP_READ_TOKEN_CASED:
     LD   (CP_PP_NUM_DIGIT),A  ; Save the normalized byte during indexing.
-    LD   (CP_PP_SOURCE_CURSOR),HL  ; Preserve the source cursor while indexing.
+    LD   (CP_PP_SOURCE_CURSOR),HL  ; Save the source cursor while indexing.
     LD   A,C                ; Load the token's current length.
     LD   C,A                ; Form its low-byte address offset.
     LD   B,0                ; The token index is less than eighteen.
@@ -449,7 +449,7 @@ CP_PP_MATCH_WORD_LOOP:
     RET                     ; The caller can branch on exact equality.
 
 ;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Validate trailing directive text; consume EOL or a complete semicolon comment.
+; Accept end of line or a complete trailing comment.
 
 CP_PP_CHECK_TRAILING:
     CALL CP_NEXT_SOURCE_BYTE  ; Inspect the byte after the final token.
@@ -489,7 +489,7 @@ CP_PP_PARSE_VALUE:
     JP   Z,CP_PP_BAD_CARRY  ; Return carry for an empty value.
     LD   A,(CP_PP_TOKEN)    ; Inspect the first normalized byte.
     CP   'A'                ; A leading letter selects a definition name.
-    JR   C,CP_PP_VALUE_NOT_NAME  ; Numeric forms start with a digit, '$' or '%'.
+    JR   C,CP_PP_VALUE_NOT_NAME  ; Numbers start with a digit, '$' or '%'.
     CP   'Z'+1              ; Bound the first byte to ASCII letters.
     JP   C,CP_PP_VALUE_NAME  ; Resolve a case-folded preprocessor name.
 CP_PP_VALUE_NOT_NAME:
@@ -497,7 +497,7 @@ CP_PP_VALUE_NOT_NAME:
     JR   Z,CP_PP_VALUE_HEX_PREFIX  ; Skip the prefix before digit parsing.
     CP   '%'                ; A percent prefix selects binary.
     JR   Z,CP_PP_VALUE_BIN_PREFIX  ; The host directive itself began earlier.
-    CP   '0'                ; Decimal and Intel-suffix forms start with digits.
+    CP   '0'                ; Decimal and Intel suffixes start with digits.
     JP   C,CP_PP_BAD_CARRY  ; Reject punctuation outside the numeric grammar.
     CP   '9'+1              ; Digits stop before colon and alphabetic bytes.
     JP   NC,CP_PP_BAD_CARRY  ; Reject a nonnumeric leading byte.
@@ -514,7 +514,7 @@ CP_PP_VALUE_NOT_NAME:
     ADD  HL,BC              ; Inspect a possible Intel suffix.
     LD   A,(HL)             ; Read the final token byte.
     CP   'H'                ; Intel hexadecimal ends in H.
-    JR   Z,CP_PP_VALUE_HEX_SUFFIX  ; Parse its preceding digits in base sixteen.
+    JR   Z,CP_PP_VALUE_HEX_SUFFIX  ; Parse preceding digits as hexadecimal.
     CP   'B'                ; Intel binary ends in B.
     JR   Z,CP_PP_VALUE_BIN_SUFFIX  ; Parse its preceding digits in base two.
     JR   CP_PP_PARSE_NUMERIC  ; Keep decimal when neither suffix is present.
@@ -553,9 +553,9 @@ CP_PP_PARSE_NUMERIC:
     JP   Z,CP_PP_BAD_CARRY  ; A token consisting of H or B is a name instead.
     XOR  A                  ; Begin numeric accumulation at zero.
     LD   HL,0               ; HL is the unsigned 16-bit result.
-    LD   (CP_PP_NUM_VALUE),HL  ; Preserve the accumulator between helper calls.
+    LD   (CP_PP_NUM_VALUE),HL  ; Keep the accumulator across helper calls.
     XOR  A                  ; The digit index begins at zero.
-    LD   (CP_PP_NUM_INDEX),A  ; Count digits independently of their source offset.
+    LD   (CP_PP_NUM_INDEX),A  ; Count digits, not source positions.
 CP_PP_NUMERIC_LOOP:
     LD   A,(CP_PP_NUM_INDEX)  ; Read the next digit's token index.
     LD   C,A                ; Convert it to a pointer displacement.
@@ -568,7 +568,7 @@ CP_PP_NUMERIC_LOOP:
     LD   A,(HL)             ; Read its normalized ASCII byte.
     CALL CP_PP_DIGIT_VALUE  ; Convert it under the selected radix.
     JP   C,CP_PP_BAD_CARRY  ; Reject letters or digits outside the radix.
-    LD   (CP_PP_NUM_DIGIT),A  ; Save the converted digit during multiplication.
+    LD   (CP_PP_NUM_DIGIT),A  ; Save digit during multiply.
     LD   HL,(CP_PP_NUM_VALUE)  ; Load the accumulated prefix value.
     LD   A,(CP_PP_NUM_BASE)  ; Select the radix's multiply operation.
     CP   2                  ; Binary values double before adding each digit.
@@ -592,9 +592,9 @@ CP_PP_MULTIPLY_SIXTEEN:
     ADD  HL,HL              ; Complete the four-bit hexadecimal shift.
     JP   C,CP_PP_BAD_CARRY  ; Reject a value outside the 16-bit range.
 CP_PP_ADD_DIGIT:
-    LD   A,L                ; Begin a little-endian addition with the low byte.
+    LD   A,L                ; Start the addition with the low byte.
     LD   C,A                ; Keep that byte while loading the new digit.
-    LD   A,(CP_PP_NUM_DIGIT)  ; Read the validated value from zero through fifteen.
+    LD   A,(CP_PP_NUM_DIGIT)  ; Read the validated digit value (0..15).
     ADD  A,C                ; Add the digit to the low byte.
     LD   L,A                ; Store the low result byte.
     JR   NC,CP_PP_NUMERIC_STORE  ; No carry leaves the high byte unchanged.
@@ -617,9 +617,9 @@ CP_PP_VALUE_NAME:
     JP   C,CP_PP_BAD_CARRY  ; Reject malformed or overlong identifiers.
     CALL CP_PP_FIND_DEFINE  ; Resolve the prior entry-header definition.
     RET  NC                 ; A found definition returns its value in HL.
-    LD   A,(CP_PP_ACTIVE)   ; Unknown names under inactive parents are ignored.
+    LD   A,(CP_PP_ACTIVE)   ; Ignore unknown names in inactive branches.
     OR   A                  ; Active source requires an existing definition.
-    JP   NZ,CP_PP_BAD_CARRY  ; Reject an undefined name in an active condition.
+    JP   NZ,CP_PP_BAD_CARRY  ; Reject a missing name in an active condition.
     LD   HL,0               ; Inactive nested conditions select false.
     XOR  A                  ; Preserve that non-error result.
     RET                     ; The outer inactive frame remains decisive.
@@ -660,7 +660,7 @@ CP_PP_DIGIT_BAD:
 CP_PP_MULTIPLY_TEN:
     PUSH HL                 ; Preserve the original value for the final sum.
     ADD  HL,HL              ; Form value*2.
-    JR   C,CP_PP_MULTIPLY_TEN_BAD_ORIGINAL  ; Reject overflow and unwind one word.
+    JR   C,CP_PP_MULTIPLY_TEN_BAD_ORIGINAL  ; Reject overflow; undo high word.
     PUSH HL                 ; Save value*2 while constructing value*8.
     ADD  HL,HL              ; Form value*4.
     JR   C,CP_PP_MULTIPLY_TEN_BAD_DOUBLE  ; Remove both saved words.
@@ -683,12 +683,12 @@ CP_PP_MULTIPLY_TEN_BAD_ORIGINAL:
 ; Find the token's uppercase name in the fixed eleven-byte definition records.
 
 CP_PP_FIND_DEFINE:
-    LD   A,(CP_PP_TOKEN_LENGTH)  ; Check the token against the record's name field.
-    CP   CP_PP_NAME_BYTES+1  ; Values longer than that field cannot be defined.
-    JR   NC,CP_PP_DEFINE_MISSING  ; Return not-found for an overlong identifier.
+    LD   A,(CP_PP_TOKEN_LENGTH)  ; Check length against the name field.
+    CP   CP_PP_NAME_BYTES+1  ; Reject names wider than the fixed field.
+    JR   NC,CP_PP_DEFINE_MISSING  ; Treat an overlong name as missing.
     LD   A,(CP_PP_DEFINE_COUNT)  ; A zero count means the table is empty.
     OR   A                  ; Avoid an IX walk when no values exist.
-    JR   Z,CP_PP_DEFINE_MISSING  ; The caller decides whether missing is legal.
+    JR   Z,CP_PP_DEFINE_MISSING  ; Let the caller decide if missing is legal.
     LD   B,A                ; Visit every preceding definition.
     LD   IX,CP_PP_DEFINE_TABLE  ; Address the first fixed-width record.
 CP_PP_FIND_DEFINE_LOOP:
@@ -718,7 +718,7 @@ CP_PP_FIND_DEFINE_NAME:
 CP_PP_FIND_DEFINE_DIFFERENT:
     POP  IX                 ; Restore the record pointer after mismatch.
 CP_PP_FIND_DEFINE_NEXT:
-    LD   DE,CP_PP_DEFINE_ENTRY_BYTES  ; Skip one complete length/name/value record.
+    LD   DE,CP_PP_DEFINE_ENTRY_BYTES  ; Advance by one full definition record.
     ADD  IX,DE              ; Advance to the next definition.
     DJNZ CP_PP_FIND_DEFINE_LOOP  ; Stop after the published record count.
 CP_PP_DEFINE_MISSING:
@@ -726,18 +726,18 @@ CP_PP_DEFINE_MISSING:
     RET                     ; HL has no meaning on this path.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Validate a token as a one-to-seventeen-character name and stage it in CP_PP_NAME.
+; Validate a 1-17 character name and copy it to CP_PP_NAME.
 
 CP_PP_VALIDATE_NAME:
     LD   A,(CP_PP_TOKEN_LENGTH)  ; Read the complete candidate length.
     OR   A                  ; Empty names are invalid.
     JR   Z,CP_PP_NAME_BAD   ; Reject an absent identifier.
-    CP   CP_PP_NAME_BYTES+1  ; The fixed field holds at most seventeen characters.
+    CP   CP_PP_NAME_BYTES+1  ; The name field holds at most 17 characters.
     JR   NC,CP_PP_NAME_BAD  ; Reject anything wider than its storage field.
     LD   (CP_PP_NAME_LENGTH),A  ; Retain the length for lookup and insertion.
     LD   HL,CP_PP_NAME      ; Fill unused name bytes with spaces.
-    LD   B,CP_PP_NAME_BYTES  ; Every record stores a complete padded name field.
-    LD   A,' '              ; CP/M-style padding makes comparison deterministic.
+    LD   B,CP_PP_NAME_BYTES  ; Compare the complete padded name field.
+    LD   A,' '              ; Space padding makes comparisons deterministic.
 CP_PP_NAME_CLEAR:
     LD   (HL),A             ; Clear one staged name byte.
     INC  HL                 ; Advance to the next name position.
@@ -749,11 +749,11 @@ CP_PP_NAME_CLEAR:
     LD   HL,CP_PP_NAME      ; Store its canonical bytes separately.
 CP_PP_NAME_CHECK:
     LD   A,(DE)             ; Read the next uppercase character.
-    LD   (CP_PP_NUM_DIGIT),A  ; Keep the byte without corrupting DE's token pointer.
+    LD   (CP_PP_NUM_DIGIT),A  ; Save the byte without changing DE.
     LD   A,C                ; Zero marks the first character.
     OR   A                  ; The first character must be a letter.
     LD   A,(CP_PP_NUM_DIGIT)  ; Restore the candidate byte.
-    JR   NZ,CP_PP_NAME_LATER  ; Later characters also allow digits and underscore.
+    JR   NZ,CP_PP_NAME_LATER  ; Later bytes may include digits and underscore.
     CP   'A'                ; Test the inclusive first-letter lower bound.
     JR   C,CP_PP_NAME_BAD   ; Reject leading digits and punctuation.
     CP   'Z'+1              ; Test the exclusive first-letter upper bound.
@@ -766,7 +766,7 @@ CP_PP_NAME_LATER:
     JR   C,CP_PP_NAME_STORE  ; Store a valid later letter.
 CP_PP_NAME_NOT_ALPHA:
     CP   '0'                ; Digits are permitted after the first byte.
-    JR   C,CP_PP_NAME_UNDERSCORE  ; Test underscore before rejecting punctuation.
+    JR   C,CP_PP_NAME_UNDERSCORE  ; Check underscore before other punctuation.
     CP   '9'+1              ; Bound the digit range.
     JR   C,CP_PP_NAME_STORE  ; Store a valid later digit.
 CP_PP_NAME_UNDERSCORE:
@@ -802,26 +802,26 @@ CP_PP_TOKEN_NAME_CHECK:
     LD   (CP_PP_NUM_DIGIT),A  ; Preserve it without changing the DE cursor.
     LD   A,C                ; Check whether this is the first character.
     OR   A                  ; A nonzero count permits more character classes.
-    LD   A,(CP_PP_NUM_DIGIT)  ; Restore the candidate byte for its range checks.
-    JR   NZ,CP_PP_TOKEN_NAME_LATER  ; Later bytes may also be digits or underscores.
+    LD   A,(CP_PP_NUM_DIGIT)  ; Reload the byte for its range checks.
+    JR   NZ,CP_PP_TOKEN_NAME_LATER  ; Later bytes allow digits and underscore.
     CP   'A'                ; A name must start with an uppercase letter.
-    JR   C,CP_PP_NAME_BAD   ; Reject a digit or punctuation in the first position.
+    JR   C,CP_PP_NAME_BAD   ; Reject an invalid first character.
     CP   'Z'+1              ; Test the exclusive end of the letter range.
     JR   NC,CP_PP_NAME_BAD  ; Reject an initial underscore.
     JR   CP_PP_TOKEN_NAME_NEXT  ; The first letter passed validation.
 CP_PP_TOKEN_NAME_LATER:
     CP   'A'                ; Test the later-letter range first.
-    JR   C,CP_PP_TOKEN_NAME_NOT_ALPHA  ; Digits and underscores are checked below.
+    JR   C,CP_PP_TOKEN_NAME_NOT_ALPHA  ; Check digits and underscore below.
     CP   'Z'+1              ; Bound the inclusive uppercase letters.
     JR   C,CP_PP_TOKEN_NAME_NEXT  ; Advance past a valid later letter.
 CP_PP_TOKEN_NAME_NOT_ALPHA:
     CP   '0'                ; Decimal digits may follow the initial letter.
-    JR   C,CP_PP_TOKEN_NAME_UNDERSCORE  ; Check underscore before rejecting punctuation.
+    JR   C,CP_PP_TOKEN_NAME_UNDERSCORE  ; Check underscore before punctuation.
     CP   '9'+1              ; Bound the decimal digit range.
     JR   C,CP_PP_TOKEN_NAME_NEXT  ; Accept a digit after the first character.
 CP_PP_TOKEN_NAME_UNDERSCORE:
     CP   '_'                ; Underscore is the only other allowed byte.
-    JR   NZ,CP_PP_NAME_BAD  ; Reject punctuation not in the identifier grammar.
+    JR   NZ,CP_PP_NAME_BAD  ; Reject invalid identifier punctuation.
 CP_PP_TOKEN_NAME_NEXT:
     INC  DE                 ; Advance to the following token character.
     INC  C                  ; Mark all remaining bytes as noninitial.
@@ -833,7 +833,7 @@ CP_PP_TOKEN_NAME_NEXT:
 ; Copy a staged definition name to the query buffer for duplicate detection.
 
 CP_PP_NAME_TO_TOKEN:
-    LD   A,(CP_PP_NAME_LENGTH)  ; Reuse the original name's significant length.
+    LD   A,(CP_PP_NAME_LENGTH)  ; Keep the name's significant length.
     LD   (CP_PP_TOKEN_LENGTH),A  ; Configure the generic lookup routine.
     LD   HL,CP_PP_NAME      ; Read the staged padded name.
     LD   DE,CP_PP_TOKEN     ; Write its bytes into the query buffer.
@@ -856,7 +856,7 @@ CP_PP_STORE_DEFINE:
     LD   B,A                ; Advance over the occupied fixed-width records.
     LD   IX,CP_PP_DEFINE_TABLE  ; Start with the first slot.
     OR   A                  ; A zero count already selects that slot.
-    JR   Z,CP_PP_STORE_DEFINE_AT  ; Skip pointer stepping for the first record.
+    JR   Z,CP_PP_STORE_DEFINE_AT  ; The first record needs no pointer step.
 CP_PP_STORE_DEFINE_NEXT:
     LD   DE,CP_PP_DEFINE_ENTRY_BYTES  ; Advance by one complete record.
     ADD  IX,DE              ; Select the following definition slot.
@@ -887,16 +887,16 @@ CP_PP_STORE_DEFINE_NAME:
 CP_PP_RUNTIME_FILTER:
     PUSH BC                 ; The source-provider boundary preserves BC.
     PUSH IX                 ; Definition lookup uses IX internally.
-    LD   (CP_PP_CURRENT_OFFSET),HL  ; Save the byte's original source position.
+    LD   (CP_PP_CURRENT_OFFSET),HL  ; Save the byte's source position.
     LD   (CP_PP_NUM_DIGIT),A  ; Keep the raw byte across directive detection.
     CP   '%'                ; Only a line-leading percent starts a directive.
-    JR   NZ,CP_PP_FILTER_ACTIVITY  ; Ordinary bytes use current activity directly.
+    JR   NZ,CP_PP_FILTER_ACTIVITY  ; Ordinary bytes follow current activity.
     PUSH HL                 ; The line-prefix check scans backwards.
-    CALL CP_PERCENT_IS_DIRECTIVE  ; Ignore percent bytes in strings and expressions.
+    CALL CP_PERCENT_IS_DIRECTIVE  ; Ignore '%' in strings and expressions.
     POP  HL                 ; Restore the exact byte offset.
     JR   NZ,CP_PP_FILTER_ACTIVITY  ; Return ordinary percent text unchanged.
-    LD   DE,(CP_PP_CURRENT_OFFSET)  ; Compare with the previously processed directive.
-    LD   HL,(CP_PP_LAST_DIRECTIVE)  ; Peeks may ask for one byte more than once.
+    LD   DE,(CP_PP_CURRENT_OFFSET)  ; Compare with last directive offset.
+    LD   HL,(CP_PP_LAST_DIRECTIVE)  ; A peek may request this byte again.
     OR   A                  ; Clear carry before the equality subtraction.
     SBC  HL,DE              ; Has this source offset already changed state?
     JR   Z,CP_PP_FILTER_COMMENT  ; A repeated peek must not push twice.
@@ -905,12 +905,12 @@ CP_PP_RUNTIME_FILTER:
     CALL CP_PP_RUNTIME_DIRECTIVE  ; Apply IF/ELSE/ENDIF exactly once.
     JR   C,CP_PP_FILTER_FAILURE  ; A changed source cannot be filtered safely.
     LD   HL,(CP_PP_CURRENT_OFFSET)  ; Record the processed directive's offset.
-    LD   (CP_PP_LAST_DIRECTIVE),HL  ; Suppress the following tokenizer consume call.
+    LD   (CP_PP_LAST_DIRECTIVE),HL  ; Skip matching tokenizer consume.
 CP_PP_FILTER_COMMENT:
-    LD   A,';'              ; Atom treats the complete directive line as a comment.
+    LD   A,';'              ; Atom skips this line as a comment.
     JR   CP_PP_FILTER_RETURN  ; Do not expose directive tokens to the core.
 CP_PP_FILTER_ACTIVITY:
-    LD   A,(CP_PP_ACTIVE)   ; Read whether ordinary bytes belong to the branch.
+    LD   A,(CP_PP_ACTIVE)   ; Check whether this branch is active.
     OR   A                  ; An active branch preserves its exact source.
     JR   NZ,CP_PP_FILTER_RAW  ; Return the original byte unchanged.
     LD   A,(CP_PP_NUM_DIGIT)  ; Restore the original byte for newline checks.
@@ -938,11 +938,11 @@ CP_PP_FILTER_FAILURE:
 ; Return a generic carry-set failure for malformed stack or value state.
 
 CP_PP_BAD_CARRY:
-    SCF                     ; Mark the conditional or numeric operation invalid.
+    SCF                     ; Report an invalid conditional or number.
     RET                     ; The caller supplies the public diagnostic.
 
 ; Directive spellings are separate data so one matcher enforces exact tokens.
-CP_PP_WORD_INCLUDE: DB 'I','N','C','L','U','D','E'  ; Existing dependency directive.
+CP_PP_WORD_INCLUDE: DB 'I','N','C','L','U','D','E'  ; Include keyword.
 CP_PP_WORD_DEFINE: DB 'D','E','F','I','N','E'  ; Root numeric definition.
 CP_PP_WORD_IF: DB 'I','F'   ; Conditional opener.
 CP_PP_WORD_ELSE: DB 'E','L','S','E'  ; Alternate branch.

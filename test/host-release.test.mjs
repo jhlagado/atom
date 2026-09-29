@@ -70,6 +70,7 @@ test("the product documentation, release gate, license, and measured account agr
   assert.match(metadata.scripts["release:check"], /npm test/);
   assert.match(metadata.scripts["release:check"], /verify:native-object/);
   assert.match(metadata.scripts["release:check"], /verify:cpm22/);
+  assert.match(metadata.scripts["release:check"], /test:cpm22-self-host/);
   assert.ok(metadata.files.includes("examples"));
   assert.ok(metadata.files.includes("docs/*.md"));
   for (const kind of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"]) {
