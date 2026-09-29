@@ -3,7 +3,7 @@
 Status: ASO v1 specification and the Node streaming codec are implemented.
 CP/M uses this operation stream as a temporary spool while producing COM, BIN
 or HEX. It is not a selectable final output. Its bounded reader replays the
-spool through 36,864-byte output windows; binary windows are appended as
+spool through 33,280-byte output windows; binary windows are appended as
 records and HEX windows are converted by the shared checksum writer. The Node
 CLI applies ordered operations directly for BIN/COM/HEX-only builds. Its flat
 sink keeps a target-sized byte array and a two-bit-per-address validation map;
@@ -210,7 +210,7 @@ is therefore applied in both passes at its respective byte positions; a PATCH
 crossing an ASO physical-record boundary is parsed by the sequential byte
 reader. No random output-record operations are used.
 
-The measured window is 36,864 bytes (288 CP/M records). A full `$FF00` logical
+The measured window is 33,280 bytes (260 CP/M records). A full `$FF00` logical
 COM or BIN image uses two spool scans, followed by 510 sequential output
 writes. For a dense full-range ASO stream, the bundled emulator measures 527
 spool record writes, 1,054 successful spool reads plus two EOF probes, and 510
@@ -240,22 +240,22 @@ COM, BIN and HEX now use an internal `NAME.BAK` ASO spool and replay it into
 geometry, END, padding and physical EOF on every pass. Empty output still gets
 a validation pass. A malformed spool or failed disk operation removes the
 temporary files where possible and leaves the previous destination in place.
-Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 17,629 bytes.
-It contains the 15,689-byte resident image followed immediately by 1,940 bytes
-of spool writer and materialiser code. Writable arenas occupy `$4600` to `$98A0`
-but are not part of the COM payload. CP/M stores the payload in 138 records
-(17,664 bytes); 23 bytes of final-record padding place the loaded extent
-exactly at `$4600`, where the workspace begins.
+Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 19,191 bytes.
+It contains the 17,251-byte resident image followed immediately by 1,940 bytes
+of spool writer and materialiser code. Writable arenas occupy `$5400` to
+`$A96A` but are not part of the COM payload. CP/M stores the payload in 150
+records (19,200 bytes); nine bytes of final-record padding place the loaded
+extent at `$4C00`, 2 KiB below the workspace.
 
 After successful assembly, the materialiser reuses the dead part-order page
-for its FCB and parser state. The old 128-byte source-cache page at `$4700` is
-its HEX DMA buffer; the replay window begins at `$4780` and ends at `$D780`.
-That keeps the DMA buffer separate from the ASO input record and from the
-output window. The output window overwrites assembly-only tables and arenas,
-which are no longer needed after a successful assembly. Source errors are
-reported before that handover with their numeric status and source
-`filename:line:column`; later storage failures report status `04` and the
-selected output filename, without inventing a source location.
+for its FCB and parser state. The source-cache page at `$5500` becomes its HEX
+DMA buffer; the replay window begins at `$5580` and ends at `$D780`, for 33,280
+bytes (260 CP/M records). That keeps the DMA buffer separate from the ASO
+input record and from the output window. The output window overwrites
+assembly-only tables and arenas, which are no longer needed after a successful
+assembly. Source errors are reported before that handover with their numeric
+status and source `filename:line:column`; later storage failures report status
+`04` and the selected output filename, without inventing a source location.
 
 BDOS at `$E400` leaves a 58,112-byte transient program area from `$0100`; the
 current check rejects a smaller area. A dense `$FF00` image takes two spool
@@ -288,7 +288,7 @@ Output changes are implemented in independently proved steps. Current status:
 1. **Complete:** executable byte-exact valid and invalid vectors and the Node streaming writer/reader.
 2. **Complete:** the ordered native output contract and explicit high-water result at COMMIT, including forward reservations, backward `ORG` and the `$10000` endpoint.
 3. **Complete:** a CP/M internal spool writer that emits canonical operations sequentially and pads CP/M records. It is checked byte-for-byte against the Node codec and tested with a logical image beyond the old RAM window.
-4. **Complete:** CP/M COM/BIN automatically spool and materialise through bounded sequential windows. Tests cover the `$FF00` range, empty and one-byte images, images one byte below, at and above the 36,864-byte window, late patches to earlier windows, PATCH payloads crossing a window, malformed streams, injected read/write/close/rename failures, disk-full rollback and prior-output preservation. The memory extent, stack observation and record traffic are measured.
+4. **Complete:** CP/M COM/BIN automatically spool and materialise through bounded sequential windows. Tests cover the `$FF00` range, empty and one-byte images, images one byte below, at and above the 33,280-byte window, late patches to earlier windows, PATCH payloads crossing a window, malformed streams, injected read/write/close/rename failures, disk-full rollback and prior-output preservation. The memory extent, stack observation and record traffic are measured.
 5. **Complete:** CP/M HEX replays ASO windows through the shared HEX writer. Tests cover multi-window output, checksums, record padding, spool validation and preservation of an earlier destination.
 6. **Complete:** Node CLI BIN/COM/HEX-only builds apply ordered IMAGE/PATCH callbacks directly to one flat target buffer. Builds requesting listing or D8, and existing programming-API calls, retain the full generation path and its metadata. A shared forward-patch/gap fixture matches across the Node flat sink, Node generation renderer and CP/M COM/BIN/HEX outputs.
 

@@ -23,15 +23,15 @@
 ; and private stack remain above those arenas.
 
 CP_BDOS_ENTRY       EQU $0005
-CP_WORKSPACE_START  EQU $4600
+CP_WORKSPACE_START  EQU $5400
 CP_PART_ORDER       EQU CP_WORKSPACE_START
-CP_PART_ORDER_END   EQU $4700
+CP_PART_ORDER_END   EQU CP_PART_ORDER+$100
 CP_SOURCE_CACHE     EQU CP_PART_ORDER_END
-CP_SOURCE_CACHE_END EQU $4780
+CP_SOURCE_CACHE_END EQU CP_SOURCE_CACHE+$80
 CP_PART_NAMES       EQU CP_SOURCE_CACHE_END
-CP_PART_NAMES_END   EQU $5275
+CP_PART_NAMES_END   EQU CP_PART_NAMES+$AF5
 CP_PART_DESCRIPTORS EQU CP_PART_NAMES_END
-CP_PART_DESCRIPTORS_END EQU $5770
+CP_PART_DESCRIPTORS_END EQU CP_PART_DESCRIPTORS+$4FB
 CP_NAME_COUNT       EQU CP_PART_DESCRIPTORS_END
 CP_ORDER_COUNT      EQU CP_NAME_COUNT+1
 CP_DESCRIPTOR_CURSOR EQU CP_ORDER_COUNT+1
@@ -42,7 +42,36 @@ CP_SCAN_PROGRESS    EQU CP_SCAN_INDEX+1
 CP_HEADER_OPEN      EQU CP_SCAN_PROGRESS+1
 CP_RAW_OFFSET       EQU CP_HEADER_OPEN+1
 CP_NEXT_VALUE       EQU CP_RAW_OFFSET+2
-CP_RESOLVER_WORKSPACE_END EQU CP_NEXT_VALUE+1
+CP_PP_DEPTH         EQU CP_NEXT_VALUE+1
+CP_PP_ACTIVE        EQU CP_PP_DEPTH+1
+CP_PP_DEFS_OPEN     EQU CP_PP_ACTIVE+1
+CP_PP_DEFINE_COUNT  EQU CP_PP_DEFS_OPEN+1
+CP_PP_TOKEN_LENGTH  EQU CP_PP_DEFINE_COUNT+1
+CP_PP_NUM_BASE      EQU CP_PP_TOKEN_LENGTH+1
+CP_PP_NUM_START     EQU CP_PP_NUM_BASE+1
+CP_PP_NUM_COUNT     EQU CP_PP_NUM_START+1
+CP_PP_NUM_INDEX     EQU CP_PP_NUM_COUNT+1
+CP_PP_NUM_DIGIT     EQU CP_PP_NUM_INDEX+1
+CP_PP_ALLOW_UNDEFINED EQU CP_PP_NUM_DIGIT+1
+CP_PP_LAST_DIRECTIVE EQU CP_PP_ALLOW_UNDEFINED+1
+CP_PP_SOURCE_CURSOR EQU CP_PP_LAST_DIRECTIVE+2
+CP_PP_WORD_START    EQU CP_PP_SOURCE_CURSOR+2
+CP_PP_CURRENT_OFFSET EQU CP_PP_WORD_START+2
+CP_PP_SCAN_CURSOR   EQU CP_PP_CURRENT_OFFSET+2
+CP_PP_NUM_VALUE     EQU CP_PP_SCAN_CURSOR+2
+CP_PP_NAME_LENGTH   EQU CP_PP_NUM_VALUE+2
+CP_PP_STATE_END     EQU CP_PP_NAME_LENGTH+1
+CP_PP_STACK         EQU CP_PP_STATE_END
+CP_PP_STACK_END     EQU CP_PP_STACK+16
+CP_PP_DEFINE_ENTRY_BYTES EQU 20
+CP_PP_DEFINE_CAPACITY EQU 32
+CP_PP_DEFINE_TABLE  EQU CP_PP_STACK_END
+CP_PP_DEFINE_TABLE_END EQU CP_PP_DEFINE_TABLE+CP_PP_DEFINE_ENTRY_BYTES*CP_PP_DEFINE_CAPACITY
+CP_PP_TOKEN         EQU CP_PP_DEFINE_TABLE_END
+CP_PP_TOKEN_END     EQU CP_PP_TOKEN+17
+CP_PP_NAME          EQU CP_PP_TOKEN_END
+CP_PP_NAME_BYTES    EQU 17
+CP_RESOLVER_WORKSPACE_END EQU CP_PP_NAME+CP_PP_NAME_BYTES
 CP_SYMBOL_START     EQU CP_RESOLVER_WORKSPACE_END
 CP_SYMBOL_END       EQU CP_SYMBOL_START+$3000
 CP_PENDING_START    EQU CP_SYMBOL_END
@@ -749,6 +778,7 @@ CP_SCAN_PART:
     JR   C,CP_SCAN_FAILURE  ; Stop if the FCB cannot be opened.
     LD   A,1                ; The header accepts directives until code begins.
     LD   (CP_HEADER_OPEN),A  ; A source statement closes this header.
+    CALL CP_PP_SCAN_RESET   ; Reset conditional state and root definitions.
     LD   HL,0               ; Begin at the first logical source byte.
 CP_SCAN_LINE:
 
@@ -767,10 +797,20 @@ CP_SCAN_LINE:
     JR   Z,CP_SCAN_LINE     ; Continue scanning after the line ending.
     CP   ';'                ; Semicolon starts a source comment.
     JR   Z,CP_SCAN_SKIP_LINE  ; Ignore the remainder of that physical line.
-    CP   '%'                ; A percent byte may begin an INCLUDE directive.
+    CP   '%'                ; A percent byte may begin a host directive.
     JR   Z,CP_SCAN_DIRECTIVE  ; Parse one while the header is still open.
+    LD   A,(CP_HEADER_OPEN)  ; Check whether the leading header is still open.
+    OR   A                  ; Body source closes the header permanently.
+    JR   Z,CP_SCAN_BODY      ; A closed header has no conditional include scope.
+    CALL CP_PP_CHECK_INCLUDE_SCOPE  ; Includes inside open IF blocks must close first.
+    JP   C,CP_SCAN_INVALID  ; Preserve the required directive error.
+CP_SCAN_BODY:
     XOR  A                  ; Any ordinary source byte closes the header.
-    LD   (CP_HEADER_OPEN),A  ; A later percent directive is then invalid.
+    LD   (CP_HEADER_OPEN),A  ; Later includes and definitions are invalid.
+    LD   (CP_PP_DEFS_OPEN),A  ; No definition may follow ordinary source.
+    LD   A,(CP_PP_ACTIVE)  ; Determine whether this source line is selected.
+    OR   A                  ; Inactive source still closes the file header.
+    JR   Z,CP_SCAN_SKIP_LINE  ; Skip its contents while processing later IF lines.
 CP_SCAN_SKIP_LINE:
     CALL CP_SKIP_SOURCE_LINE  ; Discard the rest of this physical line.
     JR   NC,CP_SCAN_LINE    ; Carry clear means another line is available.
@@ -778,10 +818,7 @@ CP_SCAN_SKIP_LINE:
     JR   Z,CP_SCAN_COMPLETE  ; Treat a zero status as the end of this source.
     JR   CP_SCAN_IO         ; Reject a source offset outside the 16-bit range.
 CP_SCAN_DIRECTIVE:
-    LD   A,(CP_HEADER_OPEN)  ; Check whether source has closed the header.
-    OR   A                  ; A=0 means this percent directive came too late.
-    JR   Z,CP_SCAN_INVALID  ; Report a misplaced or unsupported directive.
-    CALL CP_PARSE_INCLUDE   ; Visit the include or test its ordering state.
+    CALL CP_PP_SCAN_DIRECTIVE  ; Parse INCLUDE, DEFINE and conditional directives.
     JR   C,CP_SCAN_FAILURE  ; Parsing and file errors share this return path.
     OR   A                  ; In ordering mode A=1 means a child is not ready.
     JR   NZ,CP_SCAN_DONE    ; Stop so the caller can defer this source part.
@@ -790,6 +827,9 @@ CP_SCAN_EOF:
     OR   A                  ; A=0 means EOF/read failure; A=2 overflow.
     JR   NZ,CP_SCAN_IO      ; Reject a source offset that wrapped.
 CP_SCAN_COMPLETE:
+    LD   A,(CP_PP_DEPTH)  ; Every conditional must be closed before EOF.
+    OR   A                  ; A remaining frame is an unterminated IF.
+    JR   NZ,CP_SCAN_INVALID  ; Do not accept an incomplete conditional file.
     XOR  A                  ; No unresolved dependencies remain.
 CP_SCAN_DONE:
     RET                     ; Preserve A for the discovery/order caller.
@@ -799,7 +839,7 @@ CP_SCAN_IO:
     LD   DE,CP_READ_FAILED_TEXT  ; Select the source-read error message.
     JR   CP_SCAN_FAILURE    ; Return the read error through the shared exit.
 CP_SCAN_INVALID:
-    LD   DE,CP_INVALID_INCLUDE_TEXT  ; Select the malformed-header message.
+    LD   DE,CP_INVALID_DIRECTIVE_TEXT  ; Select the malformed-preprocessor message.
 CP_SCAN_FAILURE:
     SCF                     ; Carry marks failure regardless of text.
     RET                     ; Do not accept an incomplete dependency scan.
@@ -886,6 +926,11 @@ CP_INCLUDE_READY:
 ; Deduplicate the eleven-byte CP/M name. Discovery adds missing names.
 ; Ordering reports whether each child has already been emitted.
 
+    CALL CP_PP_MARK_INCLUDE  ; Keep open header conditions attached to this import.
+    LD   A,(CP_PP_ACTIVE)  ; Inactive branches still validate but do not import.
+    OR   A                  ; Zero means the filename is syntactically valid only.
+    JR   Z,CP_INCLUDE_IGNORED  ; Do not open or order an inactive dependency.
+
     PUSH IX                 ; Save IX across name lookup.
     PUSH HL                 ; Save the source cursor.
     CALL CP_FIND_OR_ADD_NAME  ; Reuse a known child or append its name.
@@ -896,6 +941,9 @@ CP_INCLUDE_READY:
     CALL CP_VISIT_INCLUDED_CHILD  ; Return the pending-child status.
     POP  HL                 ; Restore cursor; preserve result flags.
     RET                     ; Return the pending-child status.
+CP_INCLUDE_IGNORED:
+    XOR  A                  ; An inactive import creates no pending child.
+    RET                     ; Continue preflight with the next directive.
 CP_INCLUDE_SKIP_COMMENT:
     CALL CP_SKIP_SOURCE_LINE  ; Consume the trailing comment through line end.
     JR   C,CP_INCLUDE_TRAILING_EOF  ; Check the carried end status.
@@ -1198,6 +1246,7 @@ CP_RESOLVED_READ_BYTE:
     LD   D,CP_PART_ORDER/256  ; Address the order table's fixed memory page.
     LD   A,(DE)             ; Map order to source ordinal.
     CALL CP_OPEN_PART       ; Open the source named by that original ordinal.
+    CALL CP_PP_RUNTIME_RESET  ; Start each source part outside a conditional.
     POP  HL                 ; Restore the byte offset.
     POP  BC                 ; Restore the caller's parser state.
 CP_RESOLVED_SOURCE_READY:
@@ -1207,22 +1256,7 @@ CP_RESOLVED_SOURCE_READY:
     POP  HL                 ; Restore the source offset.
     POP  BC                 ; Restore the caller's parser state.
     RET  C                  ; Return end-of-input or a failed read unchanged.
-    CP   '%'                ; Check for host directive marker.
-    JR   Z,CP_RESOLVED_PERCENT  ; Test whether the percent is line-leading.
-    OR   A                  ; Clear carry for an ordinary source byte.
-    RET                     ; Return the byte without changing its contents.
-CP_RESOLVED_PERCENT:
-    PUSH HL                 ; Save offset during backward scan.
-    CALL CP_PERCENT_IS_DIRECTIVE  ; Check preceding bytes for line start.
-    POP  HL                 ; Restore the offset of the percent byte.
-    JR   Z,CP_RESOLVED_DIRECTIVE  ; Mask it only at the start of a line.
-    LD   A,'%'              ; Restore a percent used in ordinary source text.
-    OR   A                  ; Return unchanged percent byte.
-    RET                     ; Return the unchanged percent character.
-CP_RESOLVED_DIRECTIVE:
-    LD   A,';'              ; Mask directive as Atom comment.
-    OR   A                  ; Return the comment marker with carry clear.
-    RET                     ; Preserve the original source offset in HL.
+    JP   CP_PP_RUNTIME_FILTER  ; Apply current conditional masking and directives.
 
 ;@ROUTINE IN HL OUT A,ZERO CLOBBERS BC,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
 ; Decide whether a percent character begins a recognized host directive.
@@ -1253,6 +1287,7 @@ CP_PERCENT_PREVIOUS:
 CP_PERCENT_YES:
     XOR  A                  ; Mark a line-leading percent.
     RET                     ; Return with carry clear.
+;@@ATOM_CPM_PREPROCESSOR@@
 CP_SOURCE_CODE_END:
 
 ; These Atom sink entries replace the fail-closed host stubs. IMAGE and PATCH
@@ -1731,6 +1766,10 @@ CP_AUXILIARY_EXISTS_TEXT:
 CP_INVALID_INCLUDE_TEXT:
     DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
     DB '%','I','N','C','L','U','D','E',13,10,'$'  ; Directive name.
+CP_INVALID_DIRECTIVE_TEXT:
+    DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
+    DB 's','o','u','r','c','e',' '  ; Describe the rejected construct.
+    DB 'd','i','r','e','c','t','i','v','e',13,10,'$'  ; Finish the message.
 CP_INCLUDE_CYCLE_TEXT:
     DB 13,10,'I','n','c','l','u','d','e',' '  ; Include prefix.
     DB 'c','y','c','l','e',13,10,'$'  ; Cycle suffix.

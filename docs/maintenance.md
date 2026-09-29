@@ -8,14 +8,14 @@ assembler. Changes must preserve that explanation as well as the executable.
 The [internal ASO spool format and implementation notes](aso-format.md)
 describe Atom's ordered IMAGE/PATCH stream. Node provides the streaming codec
 and the CP/M program uses a temporary spool before materialising COM, BIN or
-HEX in sequential 36,864-byte windows. ASO is not a selectable final output.
-The current CP/M executable is 17,629
-bytes, with 15,689 bytes of resident code and 1,940 bytes of spool code after it.
-CP/M stores the payload in 138 records; 35 padding bytes end at the
-workspace boundary `$4600`. Its address-only workspace is outside the COM
-payload. The measured minimum TPA is 58,112 bytes with BDOS at `$E400`. These
-emulator measurements do not establish physical floppy performance. Refresh
-them with
+HEX in sequential 33,280-byte windows. ASO is not a selectable final output.
+The current CP/M executable is 19,191 bytes, with 17,251 bytes of resident
+code and 1,940 bytes of spool code after it. CP/M loads the payload in 150
+records; nine bytes pad the file to the record boundary at `$4C00`. The
+uninitialised workspace begins at `$5400`, so it is outside the COM payload
+with 2 KiB between the loaded record boundary and workspace. The measured
+minimum TPA is 58,112 bytes with BDOS at `$E400`. These emulator measurements
+do not establish physical floppy performance. Refresh them with
 `npm run measure:cpm22` after any native change.
 
 ## Assembly source style

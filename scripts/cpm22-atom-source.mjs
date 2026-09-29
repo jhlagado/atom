@@ -90,8 +90,8 @@ export async function assembleCpmAtomSource(source, { name = "cpm-link", base = 
   const { project, aliases } = prepareCpmAtomSource(source, name);
   const result = await assembleResolvedAtomProject(project, {
     target: { start: base, capacity: Math.min(0xffff, 0x10000 - base) },
-    maxInstructions: 300_000_000,
-    maxCycles: 3_000_000_000,
+    maxInstructions: 600_000_000,
+    maxCycles: 6_000_000_000,
   }).catch((cause) => {
     const location = cause.diagnostic;
     const part = project.parts[location?.ordinal];

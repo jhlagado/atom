@@ -164,7 +164,8 @@ decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\` and `\xHH` to one byte.
 
 ## Host directives
 
-The Node host consumes preprocessing directives before the Z80 assembler runs:
+The Node host and native CP/M adapter consume preprocessing directives before
+the resident Z80 assembler runs. The exact limits depend on the host:
 
 ```asm
 %DEFINE DEBUG 1
@@ -176,10 +177,12 @@ The Node host consumes preprocessing directives before the Z80 assembler runs:
 ```
 
 `%DEFINE` binds one immutable 16-bit preprocessor value. It does not substitute
-text and does not declare an assembler symbol. Source definitions are allowed
-only in the entry file's leading header. Included files receive the frozen
-definition environment. Command-line `-DNAME[=value]` definitions behave the
-same way. A duplicate name is an error.
+text and does not declare an assembler symbol. Definitions belong in the entry
+file's leading header and are available to included files. A duplicate name is
+an error. The Node host also accepts command-line `-DNAME[=value]` definitions.
+The CP/M profile accepts up to 32 numeric source definitions, each with a
+case-insensitive name of up to 17 characters. Put them before imports and
+conditional directives; the profile has no command-line `-D` form.
 
 `%INCLUDE` is import-once dependency discovery, not C-style textual inclusion.
 It is allowed only in a part's leading header. Dependencies are assembled once,
@@ -187,13 +190,21 @@ before their importer, while retaining their own filenames and source offsets.
 An include-selecting conditional must close before ordinary assembler source.
 Body `%IF` blocks may select source lines but cannot include files.
 
-The host replaces directives and inactive lines with spaces while preserving
-every CR and LF byte. The native assembler therefore receives no `%` directive
-but can still report positions in the original source. `%` remains available
-for a binary literal when followed by `0` or `1` and as remainder otherwise.
+The Node host masks directives and inactive text with spaces. The CP/M adapter
+turns each directive marker into an assembler comment and masks inactive text.
+Both preserve every CR and LF byte and the original source offsets. The
+resident assembler therefore receives no preprocessor directive. `%` remains
+available for a binary literal when followed by `0` or `1` and as remainder
+otherwise.
 
-The native CP/M profile implements leading `%INCLUDE` only. It does not parse
-`%DEFINE`, conditional directives or `INCBIN`.
+The CP/M profile accepts quoted current-drive 8.3 include names and numeric
+definitions using decimal, `$`-prefixed hexadecimal, `%`-prefixed binary or
+Intel `H` and `B` suffixes. Intel hexadecimal values that start with a letter
+need a leading zero, as in `0FFFFH`. Conditions contain one literal or
+previously defined name. `%IF`, `%ELSE` and `%ENDIF` may nest 16 levels and
+must balance within each source file. A conditional include must close in the
+leading header before ordinary source begins. Inactive includes are not opened.
+CP/M definitions do not substitute text, and `INCBIN` is not supported there.
 
 ## Not supported
 
@@ -201,6 +212,6 @@ Atom does not currently implement macros, op expansion, automatic branch
 promotion, dotted directives, typed layout, modules or imports with
 namespace semantics, repeated textual inclusion, string-valued equates,
 forward equates or banked output. Filesystem work, dependency resolution,
-conditional assembly, listing generation, D8 maps, Intel HEX and artifact
-publication are host or operating-adapter services rather than resident
-assembler features.
+preprocessing, listing generation, D8 maps, Intel HEX and artifact publication
+are host or operating-adapter services rather than resident assembler
+features.

@@ -28,6 +28,8 @@ async function linkedSource() {
   modules = replaceNativeSourceRead(modules, "CP_SOURCE_READ_BYTE");
   const core = joinNativeCoreModules(modules, { includeHostServices: false });
   const adapter = await readFile(join(nativeRoot, "cpm22.asm"), "utf8");
+  const preprocessorMarker = ";@@ATOM_CPM_PREPROCESSOR@@";
+  assert.equal(adapter.split(preprocessorMarker).length, 2, "CP/M adapter must contain one preprocessor module marker");
   const asoMarker = ";@@ATOM_CPM_ASO_WRITER@@";
   assert.equal(adapter.split(asoMarker).length, 2, "CP/M adapter must contain one ASO writer module marker");
   const asoOverlayMarker = ";@@ATOM_CPM_ASO_OVERLAY@@";
@@ -36,10 +38,13 @@ async function linkedSource() {
   assert.equal(adapter.split(marker).length, 2, "CP/M adapter must contain one final-image module marker");
   const asoModule = await readFile(join(nativeRoot, "aso.asm"), "utf8");
   const matModule = await readFile(join(nativeRoot, "mat.asm"), "utf8");
-  const withHooks = adapter.replace(asoMarker, "");
-  const withFinalImage = withHooks.replace(marker, await readFile(finalImageModulePath, "utf8"));
+  const preprocessorModule = await readFile(join(nativeRoot, "cpprep.asm"), "utf8");
+  const withPreprocessor = adapter.replace(preprocessorMarker, () => preprocessorModule);
+  const withHooks = withPreprocessor.replace(asoMarker, "");
+  const finalImageModule = await readFile(finalImageModulePath, "utf8");
+  const withFinalImage = withHooks.replace(marker, () => finalImageModule);
   const overlay = `CP_ASO_OVERLAY_BEGIN:\n${asoModule}\n${matModule}\nCP_ASO_OVERLAY_END:\n`;
-  const linkedAdapter = withFinalImage.replace(asoOverlayMarker, overlay);
+  const linkedAdapter = withFinalImage.replace(asoOverlayMarker, () => overlay);
   const atomSource = `${core}\n${linkedAdapter}`;
   return atomSource;
 }
@@ -194,10 +199,10 @@ async function build() {
       measuredFullTargetSequentialOutputWrites: 510,
       measuredFullTargetRandomOutputReads: 0,
       measuredFullTargetRandomOutputWrites: 0,
-      measuredFullTargetInstructions: 14878950,
-      measuredFullTargetTStates: 159163192,
-      measuredFullTargetCommandInstructions: 14940905,
-      measuredFullTargetCommandTStates: 160093882,
+      measuredFullTargetInstructions: 14901803,
+      measuredFullTargetTStates: 159415819,
+      measuredFullTargetCommandInstructions: 14968355,
+      measuredFullTargetCommandTStates: 160420605,
       measuredFullTargetStackHighWaterBytes: 30,
       asoRunAddress: symbols.CP_ASO_RUN,
       asoRecordAddress: symbols.CP_ASO_RECORD,
@@ -239,32 +244,32 @@ async function build() {
       automaticComBinHexUsesAsoSpool: true,
       stackBytes: 0x0c00,
       representativeGeneratedBytes: 34,
-      representativeInstructions: 196017,
-      representativeTStates: 1894524,
-      representativeCommandInstructions: 263689,
-      representativeCommandTStates: 2880017,
+      representativeInstructions: 200613,
+      representativeTStates: 1949873,
+      representativeCommandInstructions: 272882,
+      representativeCommandTStates: 3009462,
       representativeStackHighWaterBytes: 32,
       representativeBdosCalls: 53,
       representativeSourceRandomReads: 8,
-      namedRepresentativeInstructions: 199000,
-      namedRepresentativeTStates: 1926936,
-      namedRepresentativeCommandInstructions: 266352,
-      namedRepresentativeCommandTStates: 2909755,
+      namedRepresentativeInstructions: 203596,
+      namedRepresentativeTStates: 1982285,
+      namedRepresentativeCommandInstructions: 275545,
+      namedRepresentativeCommandTStates: 3039200,
       namedRepresentativeBdosCalls: 51,
       namedRepresentativeSourceRandomReads: 8,
       includeRepresentativePartCount: 3,
-      includeRepresentativeInstructions: 245001,
-      includeRepresentativeTStates: 2375904,
-      includeRepresentativeCommandInstructions: 312353,
-      includeRepresentativeCommandTStates: 3358723,
+      includeRepresentativeInstructions: 251125,
+      includeRepresentativeTStates: 2436034,
+      includeRepresentativeCommandInstructions: 323074,
+      includeRepresentativeCommandTStates: 3492949,
       includeRepresentativeStackHighWaterBytes: 32,
       includeRepresentativeBdosCalls: 70,
       includeRepresentativeSourceRandomReads: 13,
       largeRepresentativeSourceBytes: 16535,
-      largeRepresentativeInstructions: 4276338,
-      largeRepresentativeTStates: 41241593,
-      largeRepresentativeCommandInstructions: 4343850,
-      largeRepresentativeCommandTStates: 42225749,
+      largeRepresentativeInstructions: 4641404,
+      largeRepresentativeTStates: 45753662,
+      largeRepresentativeCommandInstructions: 4713513,
+      largeRepresentativeCommandTStates: 46811914,
       largeRepresentativeBdosCalls: 1076,
       largeRepresentativeSourceRandomReads: 520,
       sha256: createHash("sha256").update(bytes).digest("hex"),

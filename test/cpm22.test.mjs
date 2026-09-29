@@ -1398,6 +1398,123 @@ test("include names are case-insensitive and repeated imports assemble once", as
   assert.deepEqual(result.outputFile?.bytes.slice(0, 2), Uint8Array.of(1, 2));
 });
 
+test("CP/M filters nested conditional assembly and evaluates Atom numeric forms", async () => {
+  const source = Buffer.from([
+    "%DEFINE TARGET 0FFFFH",
+    "%DEFINE ENABLED 1",
+    "%DEFINE HEXVAL $2A",
+    "%DEFINE COPY HEXVAL",
+    "ORG $100",
+    "DB 1",
+    "%IF target",
+    "DB 2",
+    "%ELSE",
+    "DB 3",
+    "%ENDIF",
+    "%IF 0",
+    "%IF UNDEFINED",
+    "DB 4",
+    "%ENDIF",
+    "%ELSE",
+    "DB 5",
+    "%ENDIF",
+    "%IF ENABLED",
+    "DB 6",
+    "%ENDIF",
+    "%IF 01110111B",
+    "DB 7",
+    "%ENDIF",
+    "%IF %101",
+    "DB 8",
+    "%ENDIF",
+    "%IF copy",
+    "DB 9",
+    "%ENDIF",
+    "",
+  ].join("\r\n"), "ascii");
+  const result = await runCpm22Atom(source);
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 7), Uint8Array.of(1, 2, 5, 6, 7, 8, 9));
+});
+
+test("CP/M rejects malformed and unsupported conditional directives before output", async () => {
+  const sources = [
+    "%ELSE\r\n",
+    "%ELSE EXTRA\r\n",
+    "%ENDIF\r\n",
+    "%ENDIF EXTRA\r\n",
+    "%IF\r\n%ENDIF\r\n",
+    "%IF 1\r\n%ELSE\r\n%ELSE\r\n%ENDIF\r\n",
+    "%IF 1\r\nDB 1\r\n",
+    "%DEFINE VALUE\r\n",
+    "%DEFINE VALUE 1 EXTRA\r\n",
+    "%DEFINE VALUE 1\r\n%DEFINE value 1\r\n",
+    "%IF 1 2\r\n%ENDIF\r\n",
+    "%IF 10000H\r\n%ENDIF\r\n",
+    "%IF 2B\r\n%ENDIF\r\n",
+    "%UNKNOWN\r\n",
+    "%DEFINE ABCDEFGHIJKLMNOPQR 1\r\n",
+    "ORG $100\r\n%DEFINE LATE 1\r\n",
+    `${Array.from({ length: 17 }, () => "%IF 1").join("\r\n")}\r\n${Array.from({ length: 17 }, () => "%ENDIF").join("\r\n")}\r\n`,
+  ];
+
+  for (const source of sources) {
+    const result = await runCpm22Atom(Buffer.from(source, "ascii"));
+    assert.ok(
+      /Invalid source directive/.test(result.atomTranscript),
+      `Expected rejection for ${JSON.stringify(source)}; received ${JSON.stringify(result.atomTranscript.slice(0, 96))}`,
+    );
+    assert.equal(result.outputFile, undefined);
+  }
+});
+
+test("CP/M accepts 32 definitions and a 17-character case-insensitive name", async () => {
+  const definitions = Array.from(
+    { length: 31 },
+    (_, index) => `%DEFINE VALUE${index} ${index === 30 ? "1" : "0"}`,
+  );
+  definitions.push("%DEFINE ABCDEFGHIJKLMNOPQ 1");
+  const accepted = await runCpm22Atom(Buffer.from([
+    ...definitions,
+    "ORG $100",
+    "%IF abcdefghijklmnopq",
+    "DB $2A",
+    "%ENDIF",
+    "",
+  ].join("\r\n"), "ascii"));
+  assert.match(accepted.atomTranscript, /OUTPUT\.COM written/);
+  assert.equal(accepted.outputFile?.bytes[0], 0x2a);
+
+  const rejected = await runCpm22Atom(Buffer.from([
+    ...definitions,
+    "%DEFINE EXTRA 1",
+    "",
+  ].join("\r\n"), "ascii"));
+  assert.match(rejected.atomTranscript, /Invalid source directive/);
+  assert.equal(rejected.outputFile, undefined);
+});
+
+test("CP/M conditional includes resolve only the active dependency", async () => {
+  const result = await runCpm22Atom(
+    Buffer.from([
+      "%DEFINE USE_A 1",
+      "%IF USE_A",
+      '%INCLUDE "A.ASM"',
+      "%ELSE",
+      '%INCLUDE "MISSING.ASM"',
+      "%ENDIF",
+      "DB 2",
+      "",
+    ].join("\r\n"), "ascii"),
+    undefined,
+    { files: [["A.ASM", Buffer.from("ORG $100\r\nDB 1\r\n", "ascii")]] },
+  );
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 2), Uint8Array.of(1, 2));
+});
+
 test("include part boundaries cannot join tokens", async () => {
   const result = await runMultipart([
     Buffer.from("ORG $100\r\nLD", "ascii"),

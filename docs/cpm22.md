@@ -82,9 +82,9 @@ directives. Include names are case-insensitive.
 
 `%INCLUDE` belongs to the leading header of a file. Blank lines, whitespace,
 and comments may appear in that header. Once ordinary source begins, another
-`%INCLUDE` is an error. The provider changes each validated directive line into
-an assembler comment without moving any other byte, so diagnostic offsets stay
-exact.
+`%INCLUDE` is an error. The CP/M preprocessor checks directive lines before
+assembly. It turns each directive into an assembler comment, masks inactive
+source as spaces and preserves every line ending and byte offset.
 
 The native profile accepts quoted current-drive CP/M 8.3 names only:
 
@@ -93,8 +93,21 @@ The native profile accepts quoted current-drive CP/M 8.3 names only:
 ```
 
 It does not parse project JSON, search paths or directory paths. Those are
-desktop facilities. `%DEFINE`, conditional preprocessing and `INCBIN` also
-remain Node-hosted facilities at present.
+desktop facilities. The CP/M preprocessor accepts up to 32 numeric `%DEFINE`
+values in the root file's leading header. Put definitions before any include
+or conditional directive. Names are case-insensitive and may be up to 17
+characters. Values may use decimal, `$`-prefixed hexadecimal, `%`-prefixed
+binary or Intel `H` and `B` suffixes. Intel hexadecimal values that start with
+a letter need a leading zero, as in `0FFFFH`. A definition can refer to an
+earlier definition.
+
+`%IF`, `%ELSE` and `%ENDIF` select source and include branches. Conditions may
+nest up to 16 levels and must be balanced within each file. Each condition is
+one numeric literal or previously defined name. A conditional
+`%INCLUDE` must be completed in the leading header before ordinary source
+begins. Inactive includes are not opened. These numeric definitions are for
+conditions; they do not substitute text into assembler source. `INCBIN` is not
+part of the CP/M profile.
 
 ## Assembly and publication
 
@@ -112,7 +125,7 @@ The output is a flat image beginning at `$0100`. Gaps created by `ORG` or
 uninitialised `DS` contain zero bytes. BIN and COM contain the same raw bytes.
 COM selects the CP/M load-and-entry convention but adds no header. HEX contains
 16-byte addressed data records, checksums and an end-of-file record. All three
-formats are materialised from the operation stream in 36,864-byte windows.
+formats are materialised from the operation stream in 33,280-byte windows.
 CP/M files occupy
 complete 128-byte records, so BIN and COM may contain zero padding after the
 logical image and HEX may contain `$1A` padding after its end record.
@@ -121,22 +134,23 @@ exactly at and one byte above the window for each format.
 
 ## Memory layout
 
-The current `ATOM.COM` contains 17,629 bytes, from `$0100` to exclusive
-`$45DD`. The first 15,689 bytes end at `$3E49`. The 1,940-byte output writer
-and materialiser overlay follows immediately and ends at `$45DD`. CP/M stores
-the file in 138 records, or 17,664 bytes; its final 35 padding bytes bring
-the loaded area exactly to `$4600`.
+The current `ATOM.COM` contains 19,191 bytes, from `$0100` to exclusive
+`$4BF7`. The first 17,251 bytes end at `$4463`. The 1,940-byte output writer
+and materialiser overlay follows immediately and ends at `$4BF7`. CP/M stores
+the file in 150 records, or 19,200 bytes; nine bytes pad the loaded extent to
+`$4C00`. The uninitialised workspace begins at `$5400`, leaving 2 KiB between
+the loaded record boundary and workspace.
 
-Writable work areas begin at `$4600` and end at `$98A0`. They hold the source
-cache and include tables, the symbol and pending-reference arenas, and the
-spool and record buffers. These areas have fixed addresses but are not part of
-the COM payload. The startup and assembly paths write their working values
-before use. Following a successful assembly, the old part-order page holds
-the materialiser FCB and parser state. The old source-cache page `$4700` to
-`$4780` becomes the HEX DMA buffer. The replay window begins at `$4780` and
-ends at `$D780`, for 36,864 bytes or 288 CP/M records. Atom fills it for each
-pass. The private stack grows down from `$E400` through 3,072 reserved bytes.
-A 128-byte gap separates the window from the stack.
+Writable work areas extend from `$5400` to `$A96A`. They hold the source
+cache, include and conditional tables, symbol and pending-reference arenas,
+and spool buffers. These fixed-address areas are not part of the COM payload.
+The startup and assembly paths initialise their working values before use.
+After successful assembly, the part-order page at `$5400` holds the
+materialiser FCB and parser state. The source-cache page at `$5500` becomes the
+HEX DMA buffer. The replay window begins at `$5580` and ends at `$D780`, for
+33,280 bytes or 260 CP/M records. Atom fills it for each pass. The private
+stack grows down from `$E400` through 3,072 reserved bytes. A 128-byte gap
+separates the window from the stack.
 
 The emulator test poisons the work areas and replay window before Atom starts.
 Assembly and output still succeed, checking that neither depends on bytes
@@ -150,7 +164,7 @@ loaded from the COM image in those regions.
 | One source file | 65,535 bytes |
 | COM or BIN image span | 65,280 bytes, from `$0100` to `$10000` |
 | HEX logical image span | 65,280 bytes, from `$0100` to `$10000` |
-| Materialiser output window | 36,864 bytes (288 CP/M records) |
+| Materialiser output window | 33,280 bytes (260 CP/M records) |
 | Minimum TPA | 58,112 bytes, with BDOS at `$E400` or higher |
 | Global or current-scope private symbol | 8 significant characters |
 
@@ -162,7 +176,7 @@ the BDOS boundary before using its private memory and rejects a smaller TPA.
 This minimum is emulator-verified; it is not a claim of support for every CP/M
 configuration or physical floppy drive.
 
-The materialiser's measured window is 36,864 bytes (288 CP/M records). On the
+The materialiser's measured window is 33,280 bytes (260 CP/M records). On the
 bundled emulator, a dense COM spanning the complete `$FF00` target range used
 two sequential spool scans and 510 sequential output-record writes. The same
 run made no random output reads or writes. Peak observed stack use was 30 bytes;
