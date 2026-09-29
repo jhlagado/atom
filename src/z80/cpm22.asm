@@ -73,7 +73,49 @@ CP_PP_TOKEN_END     EQU CP_PP_TOKEN+17
 CP_PP_NAME          EQU CP_PP_TOKEN_END
 CP_PP_NAME_BYTES    EQU 17
 CP_RESOLVER_WORKSPACE_END EQU CP_PP_NAME+CP_PP_NAME_BYTES
-CP_SYMBOL_START     EQU CP_RESOLVER_WORKSPACE_END
+; Each binary include keeps its source position, explicit byte count, CP/M
+; filename and ten-byte DS replacement. Thirty-two rows bound native use.
+CP_BIN_CAPACITY     EQU 32
+CP_BIN_ENTRY_BYTES  EQU 28
+CP_BIN_FILENAME     EQU 7
+CP_BIN_REPLACEMENT  EQU 18
+CP_BIN_REPLACEMENT_BYTES EQU 10
+CP_BIN_COUNT        EQU CP_RESOLVER_WORKSPACE_END
+CP_BIN_TABLE        EQU CP_BIN_COUNT+1
+CP_BIN_TABLE_END    EQU CP_BIN_TABLE+CP_BIN_CAPACITY*CP_BIN_ENTRY_BYTES
+CP_BIN_WORKSPACE    EQU CP_BIN_TABLE_END
+CP_BIN_ENABLED      EQU CP_BIN_WORKSPACE
+CP_BIN_FILTER_INDEX EQU CP_BIN_ENABLED+1
+CP_BIN_FILTER_PTR   EQU CP_BIN_FILTER_INDEX+1
+CP_BIN_FILTER_LAST_PART EQU CP_BIN_FILTER_PTR+2
+CP_BIN_FILTER_LAST_OFFSET EQU CP_BIN_FILTER_LAST_PART+1
+CP_BIN_SINK_INDEX   EQU CP_BIN_FILTER_LAST_OFFSET+2
+CP_BIN_SINK_PTR     EQU CP_BIN_SINK_INDEX+1
+CP_BIN_SINK_ACTIVE  EQU CP_BIN_SINK_PTR+2
+CP_BIN_SINK_PART    EQU CP_BIN_SINK_ACTIVE+1
+CP_BIN_SINK_OFFSET  EQU CP_BIN_SINK_PART+1
+CP_BIN_SINK_REMAIN  EQU CP_BIN_SINK_OFFSET+2
+CP_BIN_SINK_VALUE   EQU CP_BIN_SINK_REMAIN+2
+; These two live flags must survive replay, which reuses the high workspace.
+CP_BIN_ERROR        EQU CP_BIN_RESIDENT_ERROR
+CP_BIN_OPEN         EQU CP_BIN_RESIDENT_OPEN
+CP_BIN_RECORD_LEFT  EQU CP_BIN_SINK_VALUE+1
+CP_BIN_RECORD_PTR   EQU CP_BIN_RECORD_LEFT+1
+CP_BIN_SCAN_PART    EQU CP_BIN_RECORD_PTR+2
+CP_BIN_SCAN_OFFSET  EQU CP_BIN_SCAN_PART+1
+CP_BIN_SCAN_DESC    EQU CP_BIN_SCAN_OFFSET+2
+CP_BIN_SCAN_END     EQU CP_BIN_SCAN_DESC+2
+CP_BIN_STATEMENT    EQU CP_BIN_SCAN_END+2
+CP_BIN_TOKEN_OFFSET EQU CP_BIN_STATEMENT+2
+CP_BIN_LINE_END     EQU CP_BIN_TOKEN_OFFSET+2
+CP_BIN_COUNT_VALUE  EQU CP_BIN_LINE_END+2
+CP_BIN_NAME         EQU CP_BIN_COUNT_VALUE+2
+CP_BIN_BYTE_TEMP    EQU CP_BIN_NAME+11
+CP_BIN_BUILD_PTR    EQU CP_BIN_BYTE_TEMP+1
+CP_BIN_FCB          EQU CP_BIN_BUILD_PTR+2
+CP_BIN_FCB_END      EQU CP_BIN_FCB+36
+CP_BIN_WORKSPACE_END EQU CP_BIN_FCB_END
+CP_SYMBOL_START     EQU CP_BIN_WORKSPACE_END
 CP_SYMBOL_END       EQU CP_SYMBOL_START+$3000
 CP_PENDING_START    EQU CP_SYMBOL_END
 CP_PENDING_END      EQU CP_PENDING_START+$1000
@@ -163,7 +205,7 @@ CP_MEMORY_OK:
     OR   A                  ; Test whether parsing selected help-only mode.
     JR   NZ,CP_SUCCESS      ; Help returns success without assembly.
     CALL CP_RESOLVE_SOURCE  ; Resolve includes and measure all parts.
-    JR   C,CP_BUILD_FAILED  ; Report an invalid source graph.
+    JP   C,CP_BUILD_FAILED  ; Report an invalid source graph across the longer adapter.
     LD   HL,CP_ASO_TARGET_CAPACITY  ; All output modes cover $0100..$10000.
     LD   (CP_DESCRIPTOR+13),HL  ; Install the selected target extent.
     LD   IX,CP_DESCRIPTOR   ; Pass the measured source descriptor.
@@ -184,6 +226,11 @@ CP_COMMAND_FAILED:
     JR   CP_RETURN          ; Finish through the common warm-boot exit.
 CP_ASSEMBLY_FAILED:
     PUSH AF                 ; Save Atom's status while printing.
+    LD   A,(CP_BIN_ERROR)   ; A rejected IMAGE byte is not a source syntax error.
+    OR   A                  ; Binary I/O keeps its own source-aware diagnostic.
+    JR   NZ,CP_BIN_ASSEMBLY_FAILED  ; Report it with the output-failure code.
+    POP  AF                 ; Restore the original Atom status before classifying.
+    PUSH AF                 ; Keep it for the established output/source split.
     CP   DR_SOUT            ; Did the sink fail after source processing ended?
     JR   Z,CP_OUTPUT_FAILED  ; Source state is reclaimed after assembly.
     LD   DE,CP_ASSEMBLY_TEXT  ; Point at the diagnostic prefix.
@@ -195,7 +242,16 @@ CP_ASSEMBLY_FAILED:
     CALL CP_PRINT_ERROR_LOCATION  ; Print name and one-based position.
     LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
     CALL CP_PRINT           ; Finish the diagnostic line.
-    JR   CP_BUILD_FAILED    ; Return failure without touching source again.
+    JP   CP_BUILD_FAILED    ; Return failure without touching source again.
+CP_BIN_ASSEMBLY_FAILED:
+    POP  AF                 ; Discard Atom's statement-facing wrapper status.
+    LD   DE,CP_ASSEMBLY_TEXT  ; Keep the public CP/M error prefix consistent.
+    CALL CP_PRINT           ; Start the diagnostic with "Atom error".
+    LD   A,DR_SOUT          ; Classify binary stream failure as output error 04.
+    CALL CP_PRINT_HEX       ; Preserve the public sink-failure number.
+    LD   A,' '              ; Separate the code from its source location.
+    CALL CP_PUTC            ; Keep the existing diagnostic field layout.
+    JP   CP_BIN_OUTPUT_FAILED  ; Add source location and binary filename.
 CP_OUTPUT_FAILED:
     POP  AF                 ; Recover the public output error code.
     PUSH AF                 ; Keep the status while the prefix is printed.
@@ -205,10 +261,22 @@ CP_OUTPUT_FAILED:
     CALL CP_PRINT_HEX       ; Preserve DR_SOUT as the numeric code 04.
     LD   A,' '              ; Separate the code from the destination name.
     CALL CP_PUTC            ; Emit the field separator.
+    LD   A,(CP_BIN_ERROR)   ; Did a binary source fail inside the IMAGE sink?
+    OR   A                  ; Zero keeps the ordinary output-name diagnostic.
+    JR   NZ,CP_BIN_OUTPUT_FAILED  ; Keep the source location for INCBIN errors.
     LD   HL,CP_OUTPUT_NAME  ; Identify the selected destination file.
     CALL CP_PRINT_NAME      ; Print its normalized CP/M filename.
     LD   DE,CP_NEWLINE_TEXT  ; Point at the terminating line break.
     CALL CP_PRINT           ; Finish without consulting source tables.
+    JP   CP_BUILD_FAILED    ; Return failure after the ordinary sink message.
+CP_BIN_OUTPUT_FAILED:
+    CALL CP_PRINT_ERROR_LOCATION  ; Report the source file and line:column.
+    LD   A,' '              ; Separate the source operation from its payload.
+    CALL CP_PUTC            ; Emit the field separator.
+    LD   HL,CP_BIN_FCB      ; The dedicated FCB retains the binary filename.
+    CALL CP_PRINT_NAME      ; Identify the failed binary input.
+    LD   DE,CP_BIN_READ_TEXT  ; Explain that its payload could not be read.
+    CALL CP_PRINT           ; Finish the binary-source diagnostic.
 CP_BUILD_FAILED:
     LD   A,1                ; Record status one for build failure.
 CP_RETURN:
@@ -759,6 +827,8 @@ CP_MEASURE_BYTE:
     JR   NZ,CP_BUILD_DESCRIPTOR  ; Measure the next dependency-ordered file.
     LD   A,(CP_NAME_COUNT)  ; Publish the final descriptor count to the core.
     LD   (CP_DESCRIPTOR),A  ; Descriptors are complete and ready for assembly.
+    CALL CP_BIN_PREPARE    ; Validate active binary includes before assembly.
+    JP   C,CP_RESOLVE_FAILURE  ; No output transaction begins after preflight fail.
     XOR  A                  ; Return success with carry clear.
     RET                     ; Return after publishing the count.
 CP_RESOLVE_IO:
@@ -769,6 +839,976 @@ CP_RESOLVE_FAILURE:
     CALL CP_PRINT           ; Print the error selected in DE.
     SCF                     ; Return failure to the command entry point.
     RET                     ; No partial descriptor set reaches the core.
+
+; Preflight active INCBIN statements after dependency order and definitions
+; are final. The scan records exact source anchors before the core starts.
+
+CP_BIN_PREPARE:
+    XOR  A                  ; Disable rewriting until the table is complete.
+    LD   (CP_BIN_ENABLED),A ; No partially collected row may reach assembly.
+    LD   (CP_BIN_COUNT),A   ; Start with an empty binary-include table.
+    LD   (CP_BIN_ERROR),A   ; Clear the source-sink failure discriminator.
+    LD   HL,CP_BIN_TABLE    ; Select the first fixed-width metadata row.
+    LD   (CP_BIN_BUILD_PTR),HL  ; The collector appends rows in source order.
+    XOR  A                  ; Rescan the root to rebuild its numeric defines.
+    LD   (CP_SCAN_INDEX),A  ; Root discovery ordinal is always zero.
+    LD   A,1                ; Ordering mode verifies every header child is ready.
+    LD   (CP_SCAN_MODE),A   ; Root definitions are rebuilt during this scan.
+    XOR  A                  ; Scan the root header from its first source byte.
+    CALL CP_SCAN_PART       ; Rebuild definitions without changing part order.
+    RET  C                  ; Preserve a header, include or file-read failure.
+    OR   A                  ; Every dependency must already be ordered.
+    JP   NZ,CP_BIN_INVALID  ; A pending root child violates resolver invariants.
+    LD   A,$FF              ; Force the first ordered source part to reopen.
+    LD   (CP_ACTIVE_PART),A ; Runtime conditional state resets on that open.
+    XOR  A                  ; Begin scanning dependency-order ordinal zero.
+    LD   (CP_BIN_SCAN_PART),A  ; Metadata uses the assembler's part ordinals.
+    LD   HL,CP_PART_DESCRIPTORS  ; The first five-byte descriptor is ordinal zero.
+    LD   (CP_BIN_SCAN_DESC),HL  ; Advance this pointer once per source part.
+    LD   HL,0               ; Every resolved source part begins at offset zero.
+    LD   (CP_BIN_SCAN_OFFSET),HL  ; Track the next byte requested from Atom.
+    CALL CP_BIN_SCAN_LOAD_END  ; Cache this part's exclusive logical end.
+CP_BIN_SCAN_LINE:
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; Read the next filtered source position.
+    LD   DE,(CP_BIN_SCAN_END)  ; Compare it with the descriptor's exclusive end.
+    OR   A                  ; Clear carry before the unsigned subtraction.
+    SBC  HL,DE              ; Has this part reached its measured end?
+    JP   NC,CP_BIN_SCAN_PART_DONE  ; Move on without requesting an EOF byte.
+    CALL CP_BIN_READ_BYTE   ; Apply conditional masking and advance the cursor.
+    JP   C,CP_BIN_SOURCE_READ_FAILED  ; A changed file cannot pass preflight.
+    CP   ' '                ; Ignore leading source indentation.
+    JR   Z,CP_BIN_SCAN_LINE  ; Continue to the first token on this physical line.
+    CP   9                  ; A tab also precedes an optional label or directive.
+    JR   Z,CP_BIN_SCAN_LINE  ; Leave tab-separated source syntax unchanged.
+    CP   13                 ; CR marks a physical line boundary.
+    JR   Z,CP_BIN_SCAN_LINE  ; The next byte may be LF or the next line.
+    CP   10                 ; LF-only files use the same outer scan loop.
+    JR   Z,CP_BIN_SCAN_LINE  ; The line break was already consumed.
+    CP   ';'                ; A comment cannot contain an assembler directive.
+    JP   Z,CP_BIN_SKIP_LINE  ; Ignore its remaining bytes through line end.
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; The token began at the byte just read.
+    DEC  HL                 ; Convert the next-byte cursor to its start offset.
+    LD   (CP_BIN_STATEMENT),HL  ; Retain a possible label's source position.
+    CALL CP_BIN_SCAN_TOKEN  ; Collect and uppercase the first source token.
+    JP   C,CP_BIN_TOKEN_STATUS  ; Distinguish token length after the full scan.
+CP_BIN_FIRST_TOKEN_READY:
+    LD   (CP_BIN_BYTE_TEMP),A  ; Keep the delimiter across keyword matching.
+    LD   HL,CP_BIN_WORD_INCBIN  ; Select the exact six-byte operation name.
+    LD   B,6                ; Do not accept a prefix or longer identifier.
+    CALL CP_PP_MATCH_WORD   ; Compare the case-folded token buffer.
+    JR   Z,CP_BIN_FIRST_IS_INCBIN  ; A direct statement may begin with INCBIN.
+    LD   A,(CP_BIN_BYTE_TEMP)  ; Other first names may be colon labels.
+    CP   ':'                ; Test for a directly adjacent label separator.
+    JP   Z,CP_BIN_LABEL_AFTER_COLON  ; Read the operation after this label.
+    CP   ' '                ; The colon may also follow source whitespace.
+    JR   Z,CP_BIN_LABEL_SPACE  ; Check for that common label layout.
+    CP   9                  ; Tabs may precede the optional colon as well.
+    JR   Z,CP_BIN_LABEL_SPACE  ; Ignore spaces while looking for the colon.
+    CP   13                 ; A consumed CR already ended this ordinary statement.
+    JP   Z,CP_BIN_SCAN_LINE  ; Do not skip the following physical source line.
+    CP   10                 ; LF-only files terminate the token in the same way.
+    JP   Z,CP_BIN_SCAN_LINE  ; Resume immediately after the consumed line ending.
+    JP   CP_BIN_SKIP_LINE   ; An unrelated statement has no binary input.
+CP_BIN_FIRST_IS_INCBIN:
+    LD   HL,(CP_BIN_STATEMENT)  ; Retain the token location for malformed forms too.
+    LD   (CP_BIN_TOKEN_OFFSET),HL  ; Diagnostics always point at this keyword.
+    LD   A,(CP_BIN_BYTE_TEMP)  ; A colon makes this token a label, not an op.
+    CP   ':'                ; Permit a label named INCBIN before another op.
+    JP   Z,CP_BIN_LABEL_AFTER_COLON  ; Inspect the statement after its colon.
+    CP   ' '                ; Whitespace may precede a label's colon.
+    JR   Z,CP_BIN_INCBIN_SPACE  ; Distinguish INCBIN: from the directive form.
+    CP   9                  ; A tab may also separate a label from its colon.
+    JR   Z,CP_BIN_INCBIN_SPACE  ; Use the same bounded lookahead for either form.
+    CP   13                 ; A directive cannot continue on the next source line.
+    JP   Z,CP_BIN_INVALID   ; Reject a missing same-line filename and count.
+    CP   10                 ; LF-only source has the same operand boundary.
+    JP   Z,CP_BIN_INVALID   ; Never let INCBIN borrow operands from a later line.
+    CP   0                  ; EOF after the keyword is an incomplete directive.
+    JP   Z,CP_BIN_INVALID   ; Require a separator and one complete operand list.
+    CP   ';'                ; A comment without operands is still incomplete.
+    JP   Z,CP_BIN_INVALID   ; Do not read through the comment into another line.
+    JP   CP_BIN_INVALID     ; The operation requires horizontal separation.
+CP_BIN_INCBIN_SPACE:
+    CALL CP_BIN_READ_BYTE   ; Look past optional whitespace for a label colon.
+    JP   C,CP_BIN_INVALID   ; A directive with no operands is incomplete.
+    CP   ' '                ; Skip additional spaces while checking the colon.
+    JR   Z,CP_BIN_INCBIN_SPACE  ; Keep the lookahead on this physical line.
+    CP   9                  ; Tabs are the only other permitted lookahead space.
+    JR   Z,CP_BIN_INCBIN_SPACE  ; Continue until colon or the first operand byte.
+    CP   ':'                ; A matching token plus colon is a label declaration.
+    JP   Z,CP_BIN_LABEL_AFTER_COLON  ; Its following token may be another operation.
+    CP   13                 ; A directive's operands must remain on this line.
+    JP   Z,CP_BIN_INVALID   ; Reject a line break before the quoted filename.
+    CP   10                 ; Do not let LF-only input continue into a new line.
+    JP   Z,CP_BIN_INVALID   ; Keep the directive grammar physically line-bounded.
+    CP   ';'                ; An operand cannot be replaced by a comment.
+    JP   Z,CP_BIN_INVALID   ; Reject the incomplete directive before assembly.
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; The first nonspace operand byte was consumed.
+    DEC  HL                 ; Restore the cursor so the operand parser reads it.
+    LD   (CP_BIN_SCAN_OFFSET),HL  ; The quote or invalid byte stays on this line.
+    JR   CP_BIN_DIRECT_INCLUDE  ; Parse only after the boundary checks above.
+CP_BIN_DIRECT_INCLUDE:
+    CALL CP_BIN_PARSE_INCLUDE  ; Validate path/count and append one metadata row.
+    JP   C,CP_BIN_PREPARE_RETURN  ; Keep the diagnostic selected by the helper.
+    JP   CP_BIN_SCAN_LINE   ; Continue after the consumed source line.
+CP_BIN_LABEL_SPACE:
+    CALL CP_BIN_READ_BYTE   ; Find the next non-space byte after a possible label.
+    JP   C,CP_BIN_SCAN_LINE  ; EOF ends this final, non-directive source line.
+    CP   ' '                ; Skip another ordinary space before a colon.
+    JR   Z,CP_BIN_LABEL_SPACE  ; Continue through the label's horizontal padding.
+    CP   9                  ; Tabs have the same role around the colon.
+    JR   Z,CP_BIN_LABEL_SPACE  ; Continue until a delimiter or another token.
+    CP   ':'                ; A colon confirms this first token is a label.
+    JR   Z,CP_BIN_LABEL_AFTER_COLON  ; Parse a possible INCBIN operation next.
+    CP   13                 ; The delimiter was already consumed from this line.
+    JP   Z,CP_BIN_SCAN_LINE  ; Do not skip the following source line as a tail.
+    CP   10                 ; LF-only sources terminate the optional label probe.
+    JP   Z,CP_BIN_SCAN_LINE  ; Continue directly at the next physical line.
+    JP   CP_BIN_SKIP_LINE   ; No colon means this was not a supported label form.
+CP_BIN_LABEL_AFTER_COLON:
+    CALL CP_BIN_READ_BYTE   ; Read the first byte after the label separator.
+    JP   C,CP_BIN_SCAN_LINE  ; A label-only final line has no binary operation.
+    CP   ' '                ; Ignore indentation before the operation name.
+    JR   Z,CP_BIN_LABEL_AFTER_COLON  ; Continue across ordinary spaces.
+    CP   9                  ; Tabs may separate the colon from the operation.
+    JR   Z,CP_BIN_LABEL_AFTER_COLON  ; Continue across horizontal whitespace.
+    CP   13                 ; A line ending leaves the label without an operation.
+    JP   Z,CP_BIN_SCAN_LINE  ; Begin the next physical line across this module.
+    CP   10                 ; An LF-only line has the same empty-tail result.
+    JP   Z,CP_BIN_SCAN_LINE  ; Resume at the byte after LF across this module.
+    CP   ';'                ; A trailing comment has no operation token.
+    JR   Z,CP_BIN_SKIP_LINE  ; Consume its remaining line before continuing.
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; The operation token began at the byte read.
+    DEC  HL                 ; Convert the next-byte cursor to its start offset.
+    LD   (CP_BIN_TOKEN_OFFSET),HL  ; Store the exact diagnostic/sink position.
+    CALL CP_BIN_SCAN_TOKEN  ; Collect the operation following the label.
+    JR   NC,CP_BIN_LABEL_TOKEN_READY  ; A consumed delimiter completes the token.
+    OR   A                  ; A=1 means too long; A=0 means ordinary EOF.
+    JP   NZ,CP_BIN_SKIP_LINE  ; An overlong operation cannot equal INCBIN.
+    XOR  A                  ; EOF acts as a delimiter for an incomplete directive.
+CP_BIN_LABEL_TOKEN_READY:
+    LD   (CP_BIN_BYTE_TEMP),A  ; Preserve the operation's following delimiter.
+    LD   HL,CP_BIN_WORD_INCBIN  ; Select the supported binary directive name.
+    LD   B,6                ; Match every letter in INCBIN.
+    CALL CP_PP_MATCH_WORD   ; Compare without accepting an identifier prefix.
+    JR   NZ,CP_BIN_LABEL_NOT_INCBIN  ; Other labeled statements need no rewrite.
+    LD   A,(CP_BIN_BYTE_TEMP)  ; The directive needs same-line horizontal spacing.
+    CP   ' '                ; Ordinary spaces separate the quoted operand.
+    JR   Z,CP_BIN_LABEL_INCLUDE  ; Parse after validating this boundary.
+    CP   9                  ; Tabs are the other accepted separator.
+    JP   NZ,CP_BIN_INVALID  ; Do not consume a path from another source line.
+CP_BIN_LABEL_INCLUDE:
+    CALL CP_BIN_PARSE_INCLUDE  ; Preflight and record the labeled binary input.
+    JP   C,CP_BIN_PREPARE_RETURN  ; Stop before any output transaction begins.
+    JP   CP_BIN_SCAN_LINE   ; Continue at the next unconsumed source byte.
+CP_BIN_LABEL_NOT_INCBIN:
+    LD   A,(CP_BIN_BYTE_TEMP)  ; The parser already consumed this delimiter.
+    CP   ';'                ; A comment delimiter requires skipping its tail.
+    JR   Z,CP_BIN_SKIP_LINE  ; Ignore the rest of the physical line.
+    CP   ' '                ; A non-INCBIN statement may have more operands.
+    JR   Z,CP_BIN_SKIP_LINE  ; Skip them without scanning their text as labels.
+    CP   9                  ; Tabs also begin the remainder of the statement.
+    JR   Z,CP_BIN_SKIP_LINE  ; Keep operand names out of directive detection.
+    JP   CP_BIN_SCAN_LINE   ; CR, LF or EOF was already consumed.
+CP_BIN_TOKEN_STATUS:
+    OR   A                  ; A=1 marks an overlong token; A=0 marks EOF.
+    JP   Z,CP_BIN_FIRST_TOKEN_READY  ; An exact INCBIN token at EOF is malformed.
+    JP   CP_BIN_SKIP_LINE   ; No supported directive can exceed the token limit.
+CP_BIN_SKIP_LINE:
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; Stop at the measured part end if needed.
+    LD   DE,(CP_BIN_SCAN_END)  ; Keep random reads inside the source descriptor.
+    OR   A                  ; Clear carry before the unsigned comparison.
+    SBC  HL,DE              ; Is there another byte on this line?
+    JP   NC,CP_BIN_SCAN_LINE  ; The next iteration advances to another part.
+    CALL CP_BIN_READ_BYTE   ; Consume one filtered byte from the comment/tail.
+    JP   C,CP_BIN_SOURCE_READ_FAILED  ; A premature read failure is not EOF.
+    CP   13                 ; CR ends the current physical line.
+    JP   Z,CP_BIN_SCAN_LINE  ; Resume after LF at the outer scan loop.
+    CP   10                 ; LF-only and CRLF sources share this terminator.
+    JR   NZ,CP_BIN_SKIP_LINE  ; Keep scanning until either byte is consumed.
+    JP   CP_BIN_SCAN_LINE   ; Resume after LF without changing source offsets.
+
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Recreate the entry-header define table after dependency ordering completes.
+
+CP_BIN_SCAN_LOAD_END:
+    LD   HL,(CP_BIN_SCAN_DESC)  ; Point to the current five-byte descriptor.
+    LD   DE,3                ; Its exclusive logical end begins at byte three.
+    ADD  HL,DE               ; Address the low byte of the end offset.
+    LD   E,(HL)              ; Read the low byte of this source's length.
+    INC  HL                  ; Advance to the high end byte.
+    LD   D,(HL)              ; Complete the sixteen-bit source length.
+    EX   DE,HL               ; Return the end offset in HL.
+    LD   (CP_BIN_SCAN_END),HL ; Cache the exclusive scan boundary.
+    RET                      ; The source itself begins at logical offset zero.
+
+;@ROUTINE IN A,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Read one condition-filtered source byte and advance the preflight cursor.
+
+CP_BIN_READ_BYTE:
+    LD   A,(CP_BIN_SCAN_PART)  ; Select the resolved source-part ordinal.
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; Read the next logical byte position.
+    CALL CP_SOURCE_READ_BYTE  ; Apply the ordinary CP/M source and IF filters.
+    RET  C                   ; Preserve premature EOF/read failure for caller.
+    LD   (CP_BIN_BYTE_TEMP),A ; Keep the source byte during cursor update.
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; Reload the current zero-based offset.
+    INC  HL                  ; Advance to the byte after the one just read.
+    LD   (CP_BIN_SCAN_OFFSET),HL  ; Publish the next position to every helper.
+    LD   A,(CP_BIN_BYTE_TEMP) ; Restore the filtered source byte.
+    OR   A                   ; Clear carry and preserve the byte in A.
+    RET                      ; The scan cursor now names the following byte.
+
+;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Collect one token into CP_PP_TOKEN, folding lowercase ASCII to uppercase.
+
+CP_BIN_SCAN_TOKEN:
+    LD   (CP_BIN_BYTE_TEMP),A ; Preserve the first byte before clearing length.
+    XOR  A                   ; Start this candidate with an empty token.
+    LD   (CP_PP_TOKEN_LENGTH),A  ; CP_PP_MATCH_WORD reads this exact length.
+    LD   A,(CP_BIN_BYTE_TEMP) ; Restore the first character for the token loop.
+CP_BIN_SCAN_TOKEN_LOOP:
+    LD   (CP_BIN_BYTE_TEMP),A ; Preserve the current byte across tests.
+    CP   ' '                 ; Space completes the token without being stored.
+    JR   Z,CP_BIN_SCAN_TOKEN_END  ; Return the delimiter to the caller.
+    CP   9                   ; A tab also delimits a source token.
+    JR   Z,CP_BIN_SCAN_TOKEN_END  ; Preserve it as the token terminator.
+    CP   ':'                 ; Colon separates a label from its operation.
+    JR   Z,CP_BIN_SCAN_TOKEN_END  ; Do not merge the label and colon.
+    CP   ';'                 ; A comment begins after the token boundary.
+    JR   Z,CP_BIN_SCAN_TOKEN_END  ; Leave comment handling to the caller.
+    CP   13                  ; Carriage return terminates the physical line.
+    JR   Z,CP_BIN_SCAN_TOKEN_END  ; Keep line endings outside the token.
+    CP   10                  ; Line feed is the second accepted terminator.
+    JR   Z,CP_BIN_SCAN_TOKEN_END  ; Return it without adding it to the token.
+    LD   A,(CP_PP_TOKEN_LENGTH)  ; Read the current token byte count.
+    CP   17                  ; The shared token buffer has seventeen positions.
+    JR   NC,CP_BIN_SCAN_TOKEN_LONG  ; Ignore overlong ordinary labels safely.
+    LD   C,A                 ; Use the token length as a buffer index.
+    LD   A,(CP_BIN_BYTE_TEMP) ; Restore the source character.
+    CP   'a'                 ; Check whether lowercase folding applies.
+    JR   C,CP_BIN_TOKEN_CASED  ; Leave uppercase and punctuation unchanged.
+    CP   'z'+1               ; Compare with the exclusive lowercase bound.
+    JR   NC,CP_BIN_TOKEN_CASED  ; Leave bytes outside ASCII lowercase unchanged.
+    AND  $DF                 ; Fold the supported keyword to uppercase.
+CP_BIN_TOKEN_CASED:
+    LD   (CP_BIN_BYTE_TEMP),A ; Save the normalized character while indexing.
+    LD   B,0                 ; The token length is smaller than eighteen.
+    LD   A,C                 ; Place the current position in BC.
+    LD   C,A                 ; Complete its one-byte index.
+    LD   HL,CP_PP_TOKEN      ; Select the bounded token buffer.
+    ADD  HL,BC               ; Address its next free byte.
+    LD   A,(CP_BIN_BYTE_TEMP) ; Restore the normalized character.
+    LD   (HL),A              ; Append it to the token.
+    LD   HL,CP_PP_TOKEN_LENGTH  ; Address the token's published length.
+    INC  (HL)                ; Include the byte just stored above.
+    CALL CP_BIN_READ_BYTE    ; Read the following token byte or delimiter.
+    JR   NC,CP_BIN_SCAN_TOKEN_LOOP  ; Continue until a delimiter is consumed.
+    XOR  A                   ; EOF completes the current nonempty token.
+    SCF                      ; Mark the delimiter as end of this source part.
+    RET                      ; The caller still compares the collected token.
+CP_BIN_SCAN_TOKEN_END:
+    LD   A,(CP_BIN_BYTE_TEMP) ; Return the consumed delimiter to the caller.
+    OR   A                   ; Clear carry and classify the delimiter byte.
+    RET                      ; CP_PP_TOKEN contains only source token bytes.
+CP_BIN_SCAN_TOKEN_LONG:
+    LD   A,1                 ; Distinguish an overlong token from clean EOF.
+    SCF                      ; Tell the caller to ignore this unsupported name.
+    RET                      ; No partial token can equal the six-byte keyword.
+
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Parse one quoted 8.3 binary name and a required numeric byte count.
+
+CP_BIN_PARSE_INCLUDE:
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; Resume after the consumed INCBIN delimiter.
+CP_BIN_PARSE_PATH_SPACE:
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the next raw byte of this active source line.
+    JP   C,CP_BIN_INVALID    ; A path must begin before source end.
+    CP   ' '                 ; Ignore spaces between INCBIN and its path.
+    JR   Z,CP_BIN_PARSE_PATH_SPACE  ; Keep scanning horizontal whitespace.
+    CP   9                   ; Tabs are also valid between directive operands.
+    JR   Z,CP_BIN_PARSE_PATH_SPACE  ; Continue until the opening quote.
+    CP   13                  ; Never let a missing path continue onto another line.
+    JP   Z,CP_BIN_INVALID    ; The opening quote must follow on this physical line.
+    CP   10                  ; LF-only sources have the same operand boundary.
+    JP   Z,CP_BIN_INVALID    ; Keep the binary directive on its source line.
+    CP   ';'                 ; A comment cannot stand in for the filename.
+    JP   Z,CP_BIN_INVALID    ; Reject an incomplete directive before assembly.
+    CP   '"'                ; CP/M accepts only a quoted current-drive name.
+    JP   NZ,CP_BIN_INVALID   ; Reject paths, comments and unquoted names.
+    CALL CP_CLEAR_INCLUDE_FCB  ; Prepare the normalized scratch filename FCB.
+    CALL CP_PARSE_INCLUDE_NAME  ; Validate and store the complete 8.3 filename.
+    JP   C,CP_BIN_INVALID    ; Reject malformed or incomplete quoted names.
+    LD   (CP_BIN_SCAN_OFFSET),HL  ; Preserve the cursor after the closing quote.
+    LD   HL,CP_WORK_FCB+1   ; Copy the normalized name/type from the parser FCB.
+    LD   DE,CP_BIN_NAME     ; Preserve it while work FCB builds temp names.
+    LD   BC,11              ; The filename has eight base and three type bytes.
+    LDIR                    ; Retain this binary identity in private workspace.
+    LD   HL,(CP_BIN_SCAN_OFFSET)  ; Resume at the first byte after the filename.
+CP_BIN_PARSE_COMMA_SPACE:
+    CALL CP_NEXT_SOURCE_BYTE  ; Read the delimiter after the closing quote.
+    JP   C,CP_BIN_INVALID   ; A byte count is mandatory on the native profile.
+    CP   ' '                 ; Skip optional whitespace before the comma.
+    JR   Z,CP_BIN_PARSE_COMMA_SPACE  ; Keep the operand grammar simple.
+    CP   9                   ; Permit a tab before the required comma.
+    JR   Z,CP_BIN_PARSE_COMMA_SPACE  ; Continue over horizontal whitespace.
+    CP   13                  ; Do not search a later physical line for the comma.
+    JP   Z,CP_BIN_INVALID    ; A count belongs to the same INCBIN statement.
+    CP   10                  ; Reject the equivalent LF-only operand break.
+    JP   Z,CP_BIN_INVALID    ; Preserve original newline bytes and semantics.
+    CP   ';'                 ; A trailing comment cannot replace the required count.
+    JP   Z,CP_BIN_INVALID    ; Keep the count mandatory on the directive line.
+    CP   ','                 ; The second operand is the exact byte count.
+    JP   NZ,CP_BIN_INVALID   ; Reject a missing count or extra filename text.
+    CALL CP_PP_READ_TOKEN   ; Read one bounded numeric literal after the comma.
+    JP   C,CP_BIN_INVALID   ; Reject a missing or overlong count token.
+    LD   A,(CP_PP_TOKEN)    ; Inspect the first byte before definition lookup.
+    CP   '0'                ; Decimal and Intel suffix values start with digits.
+    JR   C,CP_BIN_COUNT_PREFIX  ; Check the two supported numeric prefixes.
+    CP   '9'+1              ; Accept decimal and 0FFFFH lexical starts.
+    JR   C,CP_BIN_COUNT_NUMERIC  ; Parse a digit-leading number.
+CP_BIN_COUNT_PREFIX:
+    CP   '$'                ; Dollar selects hexadecimal.
+    JR   Z,CP_BIN_COUNT_NUMERIC  ; Pass the complete token to the shared parser.
+    CP   '%'                ; Percent selects binary outside a line-leading host directive.
+    JP   NZ,CP_BIN_INVALID   ; Named counts are excluded from portable INCBIN.
+CP_BIN_COUNT_NUMERIC:
+    CALL CP_PP_PARSE_VALUE  ; Convert decimal, hex or binary to an unsigned word.
+    JP   C,CP_BIN_INVALID   ; Reject invalid digits and values above $FFFF.
+    LD   (CP_BIN_COUNT_VALUE),HL  ; Preserve the declared logical payload length.
+    LD   HL,(CP_PP_SOURCE_CURSOR)  ; Resume at the count token's trailing delimiter.
+    CALL CP_PP_CHECK_TRAILING  ; Allow only whitespace, EOL or a comment.
+    JP   C,CP_BIN_INVALID   ; Reject another operand or trailing source token.
+    LD   (CP_BIN_SCAN_OFFSET),HL  ; Continue scanning after the full directive line.
+    LD   (CP_BIN_LINE_END),HL  ; Start with the returned exclusive source cursor.
+    CALL CP_BIN_TRIM_LINE_END  ; Remove CR/LF from the rewriteable content range.
+    JP   C,CP_BIN_SOURCE_READ_FAILED  ; A changed source cannot be rewritten safely.
+    CALL CP_BIN_VALIDATE_INCLUDE  ; Check span, collision, capacity and existence.
+    RET                      ; Preserve the metadata check's status and message.
+
+;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,ZERO,SIGN,PARITY,HALFCARRY
+; Find the end of source text before a consumed CR, LF or CRLF sequence.
+
+CP_BIN_TRIM_LINE_END:
+    LD   A,H                 ; Check whether the returned end is source offset zero.
+    OR   L                   ; No preceding newline can exist at zero.
+    RET  Z                   ; Keep an empty content range unchanged.
+    DEC  HL                  ; Address the last consumed source byte.
+    PUSH HL                 ; The raw source reader uses HL as its cache cursor.
+    CALL CP_RAW_SOURCE_BYTE  ; Inspect it without applying text transformation.
+    POP  HL                 ; Restore the source offset for line-end storage.
+    RET  C                   ; EOF leaves the initial exclusive end unchanged.
+    CP   13                  ; A consumed CR is the first byte outside the line.
+    JR   Z,CP_BIN_LINE_END_AT_HL  ; Keep the content end before that CR.
+    CP   10                  ; A consumed LF also lies outside line content.
+    JR   Z,CP_BIN_LINE_END_LF  ; Trim LF and test for a preceding CR.
+    OR   A                   ; A non-newline byte returns clear carry.
+    RET                      ; The original exclusive end is already correct.
+CP_BIN_LINE_END_LF:
+    LD   (CP_BIN_LINE_END),HL ; The content ends immediately before LF.
+    LD   A,H                 ; Check whether LF was the first source byte.
+    OR   L                   ; No preceding CR is possible at offset zero.
+    RET  Z                   ; Preserve the LF-only content boundary.
+    DEC  HL                  ; Inspect the byte before LF for a CRLF pair.
+    PUSH HL                 ; Preserve its source offset across the cache lookup.
+    CALL CP_RAW_SOURCE_BYTE  ; Read only the preceding physical source byte.
+    POP  HL                 ; Restore the offset before deciding the boundary.
+    RET  C                   ; Keep the LF boundary if source changed meanwhile.
+    CP   13                  ; CRLF has one content end before its CR byte.
+    JR   Z,CP_BIN_LINE_END_AT_HL  ; CR is outside content as well as LF.
+    OR   A                   ; A non-CR predecessor leaves the LF boundary clear.
+    RET                      ; Do not leak CP's carry for bytes below carriage return.
+CP_BIN_LINE_END_AT_HL:
+    LD   (CP_BIN_LINE_END),HL ; Publish the first byte of the line ending.
+    RET                      ; Every source offset after the directive stays fixed.
+
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Validate and append one active, bounded binary include record.
+
+CP_BIN_VALIDATE_INCLUDE:
+    LD   A,(CP_BIN_COUNT)    ; Read the number of preflighted binary statements.
+    CP   CP_BIN_CAPACITY     ; The fixed table must not be overrun.
+    JP   NC,CP_BIN_TOO_MANY  ; Reject the thirty-third include before a write.
+    LD   HL,(CP_BIN_LINE_END)  ; Load the rewriteable source-content boundary.
+    LD   DE,(CP_BIN_TOKEN_OFFSET)  ; Locate the directive keyword start.
+    OR   A                  ; Clear carry before calculating the available span.
+    SBC  HL,DE              ; Count bytes from INCBIN through line content.
+    LD   DE,CP_BIN_REPLACEMENT_BYTES  ; The generated DS statement is ten bytes.
+    OR   A                  ; Clear carry before checking the minimum span.
+    SBC  HL,DE              ; Does the original line retain the full replacement?
+    JP   C,CP_BIN_INVALID   ; Never change source offsets or truncate the line.
+    CALL CP_BIN_OPEN_CHECK  ; Protect transaction names and prove the file exists.
+    JP   C,CP_BIN_PREPARE_RETURN  ; Keep the failing filename and source anchor.
+    CALL CP_BIN_APPEND_ROW  ; Publish a complete, source-ordered table entry.
+    XOR  A                  ; Return success after the row count is incremented.
+    RET                      ; The scanner continues with the next source line.
+
+;@ROUTINE CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Preserve exact input names while rejecting output/temp/backup aliases.
+
+CP_BIN_OPEN_CHECK:
+    LD   DE,CP_BIN_FCB+12   ; Address the mutable tail of the private binary FCB.
+    XOR  A                  ; Clear record counters, extent and random record.
+    LD   B,24               ; The eleven name bytes precede this twenty-four-byte tail.
+    CALL CP_CLEAR_WORK_FCB  ; Initialize all binary-FCB control fields.
+    XOR  A                  ; Select the logged-in drive for every INCBIN file.
+    LD   (CP_BIN_FCB),A     ; CP/M native paths cannot name another drive.
+    LD   HL,CP_BIN_NAME     ; Read the normalized eleven-byte 8.3 identity.
+    LD   DE,CP_BIN_FCB+1    ; Store it after the drive byte in the private FCB.
+    LD   BC,11              ; Copy the complete base and extension fields.
+    LDIR                    ; The runtime reader never reuses CP_WORK_FCB.
+    LD   HL,CP_BIN_FCB      ; Compare the candidate's drive and 8.3 identity.
+    LD   DE,CP_OUTPUT_NAME  ; The final output name must remain protected.
+    CALL CP_NAMES_EQUAL     ; Z marks a destructive binary/output collision.
+    JR   Z,CP_BIN_NAME_CONFLICT  ; Do not replace an input after it was assembled.
+    CALL CP_SET_TEMP_FCB    ; Reconstruct the transaction's temporary filename.
+    LD   HL,CP_BIN_FCB      ; Keep the binary identity in its independent FCB.
+    LD   DE,CP_WORK_FCB     ; Compare with the temporary output name.
+    CALL CP_NAMES_EQUAL     ; Z means ASO or final output could overwrite the input.
+    JR   Z,CP_BIN_NAME_CONFLICT  ; Reject a binary alias of the temporary file.
+    CALL CP_SET_BACKUP_FCB  ; Reconstruct the reserved backup/spool name.
+    LD   HL,CP_BIN_FCB      ; Restore the binary FCB pointer for comparison.
+    LD   DE,CP_WORK_FCB     ; The work FCB now carries the backup name.
+    CALL CP_NAMES_EQUAL     ; Z means the ASO spool could destroy this input.
+    JR   Z,CP_BIN_NAME_CONFLICT  ; Protect BAK when it is the private spool.
+    LD   DE,CP_BIN_FCB      ; Open the candidate using its dedicated FCB.
+    LD   C,CP_OPEN_FUNCTION  ; Select CP/M file-open function fifteen.
+    CALL CP_BDOS            ; Confirm the binary file exists before output begins.
+    INC  A                  ; BDOS returns $FF when the file cannot be opened.
+    JR   Z,CP_BIN_FILE_MISSING  ; Report the source position and requested file.
+    LD   DE,CP_BIN_FCB      ; Close the temporary validation open.
+    LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close function sixteen.
+    CALL CP_BDOS            ; Release the FCB before assembly starts.
+    INC  A                  ; Convert close failure into the zero test.
+    JR   Z,CP_BIN_FILE_CLOSE_FAILED  ; Do not accept an uncertain input handle.
+    XOR  A                  ; Clear carry and status after successful validation.
+    RET                      ; CP_BIN_FCB is ready for a clean runtime reopen.
+CP_BIN_NAME_CONFLICT:
+    CALL CP_BIN_PRINT_FAILURE_LOCATION  ; Show the source file, line and column.
+    LD   HL,CP_BIN_FCB      ; Identify the candidate binary that aliases output.
+    CALL CP_PRINT_NAME      ; Print the conflicting current-drive 8.3 name.
+    LD   DE,CP_BIN_CONFLICT_TEXT  ; Select the destructive-name diagnostic.
+    SCF                     ; Reject this source before ASO begins.
+    RET                      ; No transaction file has been created.
+CP_BIN_FILE_MISSING:
+    CALL CP_BIN_PRINT_FAILURE_LOCATION  ; Point at the active INCBIN statement.
+    LD   HL,CP_BIN_FCB      ; Identify the unavailable binary source.
+    CALL CP_PRINT_NAME      ; Print its exact CP/M filename.
+    LD   DE,CP_BIN_READ_TEXT  ; Select the binary-input diagnostic suffix.
+    SCF                     ; Refuse to assemble a missing payload.
+    RET                      ; The prior output remains untouched.
+CP_BIN_FILE_CLOSE_FAILED:
+    CALL CP_BIN_PRINT_FAILURE_LOCATION  ; Keep the source anchor on close failure.
+    LD   HL,CP_BIN_FCB      ; Identify the FCB whose close failed.
+    CALL CP_PRINT_NAME      ; Print the requested binary filename.
+    LD   DE,CP_BIN_READ_TEXT  ; Report the preflight file operation failure.
+    SCF                     ; Stop before the assembler can begin a generation.
+    RET                      ; No partial operation stream exists.
+
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Append the normalized source anchor, count, name and DS replacement text.
+
+CP_BIN_APPEND_ROW:
+    LD   HL,(CP_BIN_BUILD_PTR)  ; Select the next unused metadata row.
+    LD   A,(CP_BIN_SCAN_PART)  ; Store its dependency-ordered source part.
+    LD   (HL),A              ; Byte zero keys both filtering and sink dispatch.
+    INC  HL                  ; Advance to the exact INCBIN keyword offset.
+    LD   DE,(CP_BIN_TOKEN_OFFSET)  ; Load the operation's original source position.
+    LD   (HL),E              ; Store the offset low byte.
+    INC  HL                  ; Advance to the offset high byte.
+    LD   (HL),D              ; Complete the stable statement anchor.
+    INC  HL                  ; Advance to the source line's content end.
+    LD   DE,(CP_BIN_LINE_END)  ; Load the exclusive end before CR/LF.
+    LD   (HL),E              ; Store the line-end low byte.
+    INC  HL                  ; Advance to the line-end high byte.
+    LD   (HL),D              ; Preserve every original line-ending offset.
+    INC  HL                  ; Advance to the requested binary byte count.
+    LD   DE,(CP_BIN_COUNT_VALUE)  ; Load the explicit payload length.
+    LD   (HL),E              ; Store the count low byte.
+    INC  HL                  ; Advance to the count high byte.
+    LD   (HL),D              ; Complete the sixteen-bit logical length.
+    INC  HL                  ; Advance to the eleven-byte normalized name.
+    EX   DE,HL               ; Keep the row cursor in DE while copying.
+    LD   HL,CP_BIN_NAME      ; Read the candidate's base and type fields.
+    LD   BC,11               ; The row stores exactly the CP/M 8.3 name bytes.
+    LDIR                    ; Preserve it independently of all FCB work.
+    EX   DE,HL               ; Resume at row offset eighteen, the replacement text.
+    LD   A,'D'               ; Begin the fixed-width DS lowering.
+    LD   (HL),A              ; Replacement byte zero is uppercase D.
+    INC  HL                  ; Advance within the ten-byte directive form.
+    LD   A,'S'               ; Select the second mnemonic character.
+    LD   (HL),A              ; Store S after D.
+    INC  HL                  ; Advance to the operand separator.
+    LD   A,' '               ; Keep the assembler's ordinary token boundary.
+    LD   (HL),A              ; Store the space after DS.
+    INC  HL                  ; Advance to the hexadecimal prefix.
+    LD   A,'$'               ; Use a fixed-width hexadecimal byte count.
+    LD   (HL),A              ; Store the prefix before four digits.
+    INC  HL                  ; Advance to the most-significant count nibble.
+    LD   DE,(CP_BIN_COUNT_VALUE)  ; Load both count bytes for nibble extraction.
+    LD   A,D                 ; Select the high byte's upper nibble.
+    RRCA                    ; Move bit four into the low nibble.
+    RRCA                    ; Move bit five into the low nibble.
+    RRCA                    ; Move bit six into the low nibble.
+    RRCA                    ; Move bit seven into the low nibble.
+    AND  $0F                 ; Keep only the most-significant hexadecimal digit.
+    CALL CP_BIN_HEX_CHAR     ; Convert nibble 0..15 to uppercase ASCII.
+    LD   (HL),A              ; Store count digit three.
+    INC  HL                  ; Advance to the next count nibble.
+    LD   A,D                 ; Reload the count's high byte.
+    AND  $0F                 ; Keep its lower nibble.
+    CALL CP_BIN_HEX_CHAR     ; Convert it to the second hexadecimal digit.
+    LD   (HL),A              ; Store count digit two.
+    INC  HL                  ; Advance to the high nibble of the low byte.
+    LD   A,E                 ; Select the count's low byte.
+    RRCA                    ; Move bit four into the low nibble.
+    RRCA                    ; Move bit five into the low nibble.
+    RRCA                    ; Move bit six into the low nibble.
+    RRCA                    ; Move bit seven into the low nibble.
+    AND  $0F                 ; Keep the third hexadecimal digit.
+    CALL CP_BIN_HEX_CHAR     ; Convert it to uppercase ASCII.
+    LD   (HL),A              ; Store count digit one.
+    INC  HL                  ; Advance to the least-significant nibble.
+    LD   A,E                 ; Reload the low count byte.
+    AND  $0F                 ; Keep its lower nibble.
+    CALL CP_BIN_HEX_CHAR     ; Convert it to the final hexadecimal digit.
+    LD   (HL),A              ; Store count digit zero.
+    INC  HL                  ; Advance to the data-fill separator.
+    LD   A,','               ; DS uses an explicit fill byte for IMAGE output.
+    LD   (HL),A              ; Separate count from the zero fill value.
+    INC  HL                  ; Advance to the final fill digit.
+    LD   A,'0'               ; The sink replaces each fill byte with payload.
+    LD   (HL),A              ; Store the tenth replacement character.
+    INC  HL                  ; Point at the following 28-byte row boundary.
+    LD   (CP_BIN_BUILD_PTR),HL  ; Save the append cursor only after completion.
+    LD   HL,CP_BIN_COUNT    ; Publish the fully initialized metadata record.
+    INC  (HL)                ; Include this row in the bounded table.
+    RET                      ; Return with carry clear.
+
+;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Convert one four-bit count nibble to an uppercase hexadecimal character.
+
+CP_BIN_HEX_CHAR:
+    CP   10                  ; Values zero through nine use decimal glyphs.
+    JR   C,CP_BIN_HEX_DIGIT  ; Keep their ASCII representation direct.
+    ADD  A,'A'-10            ; Convert ten through fifteen to A through F.
+    RET                      ; Return the complete uppercase hex digit.
+CP_BIN_HEX_DIGIT:
+    ADD  A,'0'               ; Convert the nibble to its ASCII digit.
+    RET                      ; Return the completed replacement character.
+
+CP_BIN_PREPARE_RETURN:
+    RET                      ; Preserve the detailed error selected above.
+CP_BIN_INVALID:
+    CALL CP_BIN_PRINT_FAILURE_LOCATION  ; Identify the malformed INCBIN line.
+    LD   DE,CP_INVALID_INCBIN_TEXT  ; Select the source-syntax diagnostic.
+    SCF                     ; Stop before output generation begins.
+    RET                      ; Return the user-facing detail in DE.
+CP_BIN_TOO_MANY:
+    CALL CP_BIN_PRINT_FAILURE_LOCATION  ; Point to the first excess include.
+    LD   DE,CP_BIN_LIMIT_TEXT  ; Report the published native-profile limit.
+    SCF                     ; Do not write beyond the fixed table.
+    RET                      ; Return the capacity detail in DE.
+CP_BIN_SOURCE_READ_FAILED:
+    CALL CP_BIN_PRINT_FAILURE_LOCATION  ; Identify the part whose bytes changed.
+    LD   DE,CP_READ_FAILED_TEXT  ; Reuse the established CP/M source read text.
+    SCF                     ; A measured source must not end during collection.
+    RET                      ; The descriptor and physical file no longer agree.
+CP_BIN_PRINT_FAILURE_LOCATION:
+    LD   A,(CP_BIN_SCAN_PART)  ; Publish the dependency-order source ordinal.
+    LD   (ST_EPART),A       ; Reuse the public source-diagnostic contract.
+    LD   HL,(CP_BIN_TOKEN_OFFSET)  ; Point at the exact INCBIN operation name.
+    LD   (ST_EOFF),HL       ; Keep byte offset stable while location is rendered.
+    CALL CP_PRINT_ERROR_LOCATION  ; Print source filename and line:column.
+    LD   A,' '               ; Separate the location from its diagnostic detail.
+    JP   CP_PUTC             ; Return after the field separator.
+
+CP_BIN_SCAN_PART_DONE:
+    LD   HL,CP_BIN_SCAN_PART  ; Advance to the next dependency-ordered source.
+    INC  (HL)                ; Descriptor ordinals are consecutive bytes.
+    LD   A,(HL)              ; Read the next part or the final descriptor count.
+    LD   HL,CP_DESCRIPTOR    ; Address the published number of resolved parts.
+    CP   (HL)                ; Equality means every source part was scanned.
+    JR   Z,CP_BIN_PREPARED   ; Enable the complete metadata table.
+    LD   HL,(CP_BIN_SCAN_DESC)  ; Select the descriptor just completed.
+    LD   DE,5                ; Every Atom source descriptor occupies five bytes.
+    ADD  HL,DE               ; Point to the next dependency-order descriptor.
+    LD   (CP_BIN_SCAN_DESC),HL  ; Retain its address for the next part.
+    CALL CP_BIN_SCAN_LOAD_END  ; Load the following part's exclusive end.
+    LD   HL,0                ; Each source part uses an independent zero origin.
+    LD   (CP_BIN_SCAN_OFFSET),HL  ; Restart scanning at its first byte.
+    JP   CP_BIN_SCAN_LINE    ; Continue with the next resolved source.
+CP_BIN_PREPARED:
+    XOR  A                   ; Runtime filtering begins with table row zero.
+    LD   (CP_BIN_FILTER_INDEX),A  ; Initialize the binary-lowering cursor.
+    LD   (CP_BIN_SINK_INDEX),A  ; The output sink consumes rows in source order.
+    LD   HL,CP_BIN_TABLE     ; Point both consumers to the first fixed row.
+    LD   (CP_BIN_FILTER_PTR),HL  ; Runtime source transformation starts here.
+    LD   (CP_BIN_SINK_PTR),HL  ; IMAGE dispatch starts at the same source anchor.
+    LD   A,$FF               ; Force filtering to resynchronize at the first byte.
+    LD   (CP_BIN_FILTER_LAST_PART),A  ; No source part has been filtered yet.
+    LD   HL,$FFFF            ; No valid source offset equals this sentinel.
+    LD   (CP_BIN_FILTER_LAST_OFFSET),HL  ; Peeks can detect backward source reads.
+    XOR  A                   ; No binary file is open and no sink is active.
+    LD   (CP_BIN_SINK_ACTIVE),A  ; Clear the current binary statement state.
+    LD   (CP_BIN_OPEN),A     ; The dedicated binary FCB is closed.
+    LD   (CP_BIN_RECORD_LEFT),A  ; No binary record bytes are buffered.
+    LD   HL,0                ; No payload byte is expected before Atom begins.
+    LD   (CP_BIN_SINK_REMAIN),HL  ; Clear the active statement's remaining count.
+    LD   A,$FF               ; Force Atom's first source read to reopen part zero.
+    LD   (CP_ACTIVE_PART),A  ; Preflight left the final source file open at EOF.
+    XOR  A                   ; Keep this operation's status clear for the caller.
+    INC  A                   ; Only now expose all completely validated rows.
+    LD   (CP_BIN_ENABLED),A  ; Runtime rewriting starts at the assembly boundary.
+    RET                      ; Return success with metadata ready for Atom.
+
+;@ROUTINE IN A,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Replace only the active INCBIN line's content; preserve its source offsets.
+
+CP_BIN_RUNTIME_FILTER:
+    LD   A,(CP_BIN_ENABLED)  ; Preflight must publish a complete metadata table.
+    OR   A                   ; Zero means ordinary source has no rewrite rows.
+    JR   NZ,.READY           ; Continue with the table cursor when enabled.
+    LD   A,(CP_PP_NUM_DIGIT) ; Restore the source provider's original byte.
+    OR   A                   ; This path never reports a binary I/O error.
+    RET                      ; Return ordinary source unchanged.
+.READY:
+    LD   A,(CP_ACTIVE_PART)  ; Read the currently selected dependency ordinal.
+    LD   E,A                 ; Keep it while comparing the previous filter call.
+    LD   A,(CP_BIN_FILTER_LAST_PART)  ; A part change restarts the row cursor.
+    CP   E                   ; Does the cached cursor belong to this part?
+    JR   NZ,.RESET           ; Reset before searching another source file.
+    LD   HL,(CP_PP_CURRENT_OFFSET)  ; Load this byte's logical source position.
+    LD   DE,(CP_BIN_FILTER_LAST_OFFSET)  ; Compare with the previous position.
+    OR   A                   ; Clear borrow before the unsigned subtraction.
+    SBC  HL,DE               ; Did Atom request an earlier byte again?
+    JR   C,.RESET            ; Rewind the metadata cursor for a backward peek.
+    JR   NC,.SAVE_POSITION   ; Keep the cursor for repeated or forward source reads.
+.RESET:
+    XOR  A                   ; Restart at metadata row zero.
+    LD   (CP_BIN_FILTER_INDEX),A  ; Clear the byte-sized row ordinal.
+    LD   HL,CP_BIN_TABLE     ; Select the first fixed-width entry.
+    LD   (CP_BIN_FILTER_PTR),HL  ; Publish the reset row pointer.
+.SAVE_POSITION:
+    LD   A,(CP_ACTIVE_PART)  ; Retain the part used for this lookup.
+    LD   (CP_BIN_FILTER_LAST_PART),A  ; The next call can detect part changes.
+    LD   HL,(CP_PP_CURRENT_OFFSET)  ; Reload the requested source offset.
+    LD   (CP_BIN_FILTER_LAST_OFFSET),HL  ; Peeks can detect a later rewind.
+.ROW:
+    LD   A,(CP_BIN_FILTER_INDEX)  ; Read the next possible include row.
+    LD   B,A                 ; Keep the row ordinal for the bound check.
+    LD   A,(CP_BIN_COUNT)    ; Read the number of complete metadata entries.
+    CP   B                   ; Equality means every include line was passed.
+    JR   Z,.ORIGINAL          ; No remaining row can change this source byte.
+    LD   HL,(CP_BIN_FILTER_PTR)  ; Address the current metadata row.
+    LD   A,(HL)              ; Read its dependency-ordered part ordinal.
+    LD   E,A                 ; Keep the row's part for the unsigned compare.
+    LD   A,(CP_ACTIVE_PART)  ; Read the current source part.
+    CP   E                   ; Is this byte before or after the row's part?
+    JR   C,.ORIGINAL         ; A later row leaves this earlier byte untouched.
+    JR   NZ,.ADVANCE         ; A previous part cannot match this source byte.
+    INC  HL                  ; Advance to the include keyword's offset low byte.
+    LD   E,(HL)              ; Read the operation anchor's low byte.
+    INC  HL                  ; Advance to its high byte.
+    LD   D,(HL)              ; Complete the operation anchor word.
+    LD   HL,(CP_PP_CURRENT_OFFSET)  ; Load the current byte's source offset.
+    OR   A                   ; Clear borrow before comparing source positions.
+    SBC  HL,DE               ; Is the current byte before the keyword?
+    JR   C,.ORIGINAL         ; Keep labels and indentation before INCBIN.
+    LD   HL,(CP_BIN_FILTER_PTR)  ; Address the row's exclusive content end.
+    LD   DE,3                ; Its line-end word begins at byte three.
+    ADD  HL,DE               ; Point at the line-end low byte.
+    LD   E,(HL)              ; Read the exclusive content end's low byte.
+    INC  HL                  ; Advance to the high byte.
+    LD   D,(HL)              ; Complete the line-end boundary.
+    LD   HL,(CP_PP_CURRENT_OFFSET)  ; Reload the byte being transformed.
+    OR   A                   ; Clear borrow before the boundary comparison.
+    SBC  HL,DE               ; Has the source reached CR, LF or end of file?
+    JP   NC,.ADVANCE         ; Preserve endings and move beyond this metadata.
+    LD   HL,(CP_BIN_FILTER_PTR)  ; Address the row's operation anchor.
+    INC  HL                  ; Point to the start-offset low byte.
+    LD   E,(HL)              ; Read its low byte.
+    INC  HL                  ; Advance to the high byte.
+    LD   D,(HL)              ; Complete the start-offset word.
+    LD   HL,(CP_PP_CURRENT_OFFSET)  ; Compute displacement from the keyword.
+    OR   A                   ; Clear borrow before computing the replacement index.
+    SBC  HL,DE               ; HL now contains the source-byte displacement.
+    LD   A,H                 ; Replacement text is only ten bytes long.
+    OR   A                   ; A nonzero high byte is already beyond that span.
+    JR   NZ,.SPACE           ; Mask any remaining directive text with spaces.
+    LD   A,L                 ; Read the small replacement-text displacement.
+    CP   CP_BIN_REPLACEMENT_BYTES  ; Check whether it names one of ten bytes.
+    JR   NC,.SPACE           ; The rest of the old line becomes whitespace.
+    LD   C,A                 ; Preserve the replacement index across addition.
+    LD   HL,(CP_BIN_FILTER_PTR)  ; Address this row's fixed DS replacement.
+    LD   DE,CP_BIN_REPLACEMENT  ; Its first replacement byte is at offset eighteen.
+    ADD  HL,DE               ; Point at the generated source text.
+    LD   E,C                 ; Zero-extend the displacement in DE.
+    LD   D,0                 ; Complete the offset pair.
+    ADD  HL,DE               ; Select the character corresponding to this byte.
+    LD   A,(HL)              ; Read one byte of the fixed-width DS statement.
+    OR   A                   ; Return it with carry clear.
+    RET                      ; Keep every original byte offset unchanged.
+.SPACE:
+    LD   A,' '               ; Do not leave any original filename characters.
+    OR   A                   ; Return harmless assembler whitespace.
+    RET                      ; The line ending remains outside the rewrite span.
+.ADVANCE:
+    LD   HL,(CP_BIN_FILTER_PTR)  ; Select the row just passed by the source cursor.
+    LD   DE,CP_BIN_ENTRY_BYTES  ; Every fixed row has the same twenty-eight-byte size.
+    ADD  HL,DE               ; Move to the following include record.
+    LD   (CP_BIN_FILTER_PTR),HL  ; Save its address for the next byte request.
+    LD   HL,CP_BIN_FILTER_INDEX  ; Address the byte-sized row ordinal.
+    INC  (HL)                ; Advance only after this row is fully passed.
+    JR   .ROW                ; Compare the following metadata entry.
+.ORIGINAL:
+    LD   A,(CP_PP_NUM_DIGIT) ; Return the byte originally supplied by CP/M.
+    OR   A                   ; Clear carry for the ordinary active-source path.
+    RET                      ; No later include row matches this position.
+
+;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Substitute sequential binary bytes for the zero-fill IMAGE operations.
+
+CP_BIN_SINK_BYTE:
+    LD   A,(CP_BIN_SINK_ACTIVE)  ; Is one INCBIN statement currently emitting?
+    OR   A                   ; Zero means compare the next source-ordered row.
+    JR   Z,.SEEK              ; Start or skip a row when no statement is active.
+    CALL CP_BIN_SINK_COMPARE ; Compare this IMAGE anchor with the active row.
+    JR   Z,.READ              ; A matching anchor consumes the next payload byte.
+    LD   HL,(CP_BIN_SINK_REMAIN)  ; Load any payload bytes not emitted yet.
+    LD   A,H                 ; Test the remaining count's high byte.
+    OR   L                   ; A nonzero count means Atom emitted too few bytes.
+    JP   NZ,CP_BIN_SINK_FAIL ; Reject a short DS before another source statement.
+    CALL CP_BIN_SINK_ADVANCE ; The complete row may now leave the ordered cursor.
+.SEEK:
+    LD   A,(CP_BIN_SINK_INDEX)  ; Read the next candidate row ordinal.
+    LD   B,A                 ; Retain it while comparing with the complete count.
+    LD   A,(CP_BIN_COUNT)    ; Read the number of active include statements.
+    CP   B                   ; Equality means this IMAGE byte is ordinary output.
+    JR   Z,.ORIGINAL          ; No metadata remains to substitute.
+    LD   HL,(CP_BIN_SINK_PTR)  ; Address the candidate row's count field.
+    LD   DE,5                ; The count word begins at metadata offset five.
+    ADD  HL,DE               ; Select its low byte.
+    LD   E,(HL)              ; Load the count low byte.
+    INC  HL                  ; Advance to its high byte.
+    LD   D,(HL)              ; Complete the declared byte count.
+    LD   A,D                 ; Check for the zero-byte form.
+    OR   E                   ; A zero count emits no IMAGE operations.
+    JR   NZ,.COMPARE          ; Nonzero rows must match one sink anchor.
+    CALL CP_BIN_SINK_ADVANCE ; Consume a zero-length metadata row without I/O.
+    JR   .SEEK                ; Continue with the following row.
+.COMPARE:
+    CALL CP_BIN_SINK_COMPARE ; Compare source part and operation byte offset.
+    JR   C,.ORIGINAL          ; An earlier IMAGE operation precedes this row.
+    JR   Z,.START              ; A matching operation begins its binary payload.
+    JP   CP_BIN_SINK_FAIL     ; Passing an unconsumed row means IMAGE was absent.
+.START:
+    LD   HL,(CP_BIN_SINK_PTR)  ; Address the declared count in this metadata row.
+    LD   DE,5                ; Skip its part and two source-position words.
+    ADD  HL,DE               ; Read the count low byte.
+    LD   E,(HL)              ; Preserve the low byte in DE.
+    INC  HL                  ; Advance to the high byte.
+    LD   D,(HL)              ; Complete the full sixteen-bit payload count.
+    EX   DE,HL               ; Move the count to HL for its workspace store.
+    LD   (CP_BIN_SINK_REMAIN),HL  ; Track precisely the IMAGE bytes still expected.
+    LD   A,1                 ; Mark the row active before opening its file.
+    LD   (CP_BIN_SINK_ACTIVE),A  ; Any open failure still retains its source row.
+    CALL CP_BIN_RUNTIME_OPEN ; Open the dedicated FCB at sequential record zero.
+    JP   C,CP_BIN_SINK_FAIL  ; No output can commit after a failed binary open.
+.READ:
+    LD   HL,(CP_BIN_SINK_REMAIN)  ; Guard against an extra IMAGE from Atom.
+    LD   A,H                 ; Inspect both count bytes before reading.
+    OR   L                   ; A completed statement cannot emit another byte.
+    JP   Z,CP_BIN_SINK_FAIL  ; Reject excess output at the exact source anchor.
+    CALL CP_BIN_RUNTIME_READ ; Read from the buffered 128-byte binary record.
+    JP   C,CP_BIN_SINK_FAIL  ; EOF or BDOS error aborts the tentative output.
+    LD   (CP_BIN_SINK_VALUE),A  ; Keep the payload for HS_IB's spool call.
+    LD   HL,(CP_BIN_SINK_REMAIN)  ; Load the declared bytes left after this one.
+    DEC  HL                  ; Account for the just-read payload byte.
+    LD   (CP_BIN_SINK_REMAIN),HL  ; Retain the remaining logical file length.
+    LD   A,H                 ; Check whether the complete payload has arrived.
+    OR   L                   ; Zero requires closing the FCB before returning.
+    JR   NZ,.BYTE_READY       ; Keep the sequential file open for another record.
+    CALL CP_BIN_RUNTIME_CLOSE ; Finish the binary input immediately at its count.
+    JP   C,CP_BIN_SINK_FAIL  ; A close error prevents successful publication.
+.BYTE_READY:
+    XOR  A                   ; Report success; HS_IB reloads the byte from RAM.
+    RET                      ; The caller restores its address and class.
+.ORIGINAL:
+    LD   A,(CP_BIN_SINK_VALUE)  ; Keep the ordinary zero-fill byte unchanged.
+    OR   A                   ; Clear carry for the normal ASO image operation.
+    RET                      ; Continue without reading any binary file.
+
+;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Compare the current IMAGE source anchor with the pending metadata row.
+
+CP_BIN_SINK_COMPARE:
+    LD   HL,(CP_BIN_SINK_PTR)  ; Point at the row's source-part ordinal.
+    LD   A,(HL)              ; Read the dependency-order part identity.
+    LD   E,A                 ; Keep it beside the incoming IMAGE anchor.
+    LD   A,(CP_BIN_SINK_PART)  ; Read the current Atom statement's part.
+    CP   E                   ; Carry means current part precedes the row.
+    RET  NZ                  ; Return the part ordering in the flags.
+    INC  HL                  ; Advance to the metadata offset's low byte.
+    LD   E,(HL)              ; Read the keyword offset's low byte.
+    INC  HL                  ; Advance to the keyword offset's high byte.
+    LD   D,(HL)              ; Complete the row's exact statement anchor.
+    LD   HL,(CP_BIN_SINK_OFFSET)  ; Load the current Atom source position.
+    OR   A                   ; Clear carry before comparing the two offsets.
+    SBC  HL,DE               ; Carry means the current IMAGE is earlier.
+    RET                      ; Preserve the three-way anchor comparison.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Advance both sink cursors over one completed or zero-count metadata row.
+
+CP_BIN_SINK_ADVANCE:
+    LD   HL,CP_BIN_SINK_ACTIVE  ; Address the current-operation flag.
+    XOR  A                   ; No row remains active after cursor advancement.
+    LD   (HL),A              ; Clear it before publishing the following pointer.
+    LD   HL,(CP_BIN_SINK_PTR)  ; Select the row that was just consumed.
+    LD   DE,CP_BIN_ENTRY_BYTES  ; Fixed-width rows keep the table scan bounded.
+    ADD  HL,DE               ; Point at its successor.
+    LD   (CP_BIN_SINK_PTR),HL  ; Publish the source-order next-row pointer.
+    LD   HL,CP_BIN_SINK_INDEX  ; Address the row's byte-sized ordinal.
+    INC  (HL)                ; Advance it exactly once with the pointer.
+    RET                      ; Return ready to compare another IMAGE operation.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Require every nonempty INCBIN row to have produced its exact byte count.
+
+CP_BIN_SINK_FINISH:
+    LD   A,(CP_BIN_SINK_ACTIVE)  ; Check the final operation's count state.
+    OR   A                   ; Zero means no payload row is active.
+    JR   Z,.ROWS              ; Inspect all metadata that remains unconsumed.
+    LD   HL,(CP_BIN_SINK_REMAIN)  ; Read any bytes Atom failed to request.
+    LD   A,H                 ; Check the high count byte.
+    OR   L                   ; A remaining payload is a short IMAGE sequence.
+    JP   NZ,CP_BIN_SINK_FAIL ; Keep the diagnostic anchored to that directive.
+    CALL CP_BIN_SINK_ADVANCE ; The final completed row can now be retired.
+.ROWS:
+    LD   A,(CP_BIN_SINK_INDEX)  ; Read the next pending metadata ordinal.
+    LD   B,A                 ; Retain it while comparing against the row count.
+    LD   A,(CP_BIN_COUNT)    ; Load the total number of active directives.
+    CP   B                   ; Equality means no required row remains.
+    JR   Z,.CLOSED            ; Confirm that no FCB escaped the final operation.
+    LD   HL,(CP_BIN_SINK_PTR)  ; Address this pending row's count field.
+    LD   DE,5                ; The explicit count begins at row offset five.
+    ADD  HL,DE               ; Select its low byte.
+    LD   A,(HL)              ; Read the low count byte.
+    INC  HL                  ; Advance to its high byte.
+    OR   (HL)                ; Any nonzero count means the row was never emitted.
+    JP   NZ,CP_BIN_SINK_FAIL ; Refuse to commit an unconsumed binary statement.
+    CALL CP_BIN_SINK_ADVANCE ; Retire a zero-count statement without opening it.
+    JR   .ROWS                ; Check the rest of the fixed metadata table.
+.CLOSED:
+    LD   A,(CP_BIN_OPEN)    ; The normal final byte closes every binary input.
+    OR   A                   ; A lingering open FCB is an internal mismatch.
+    JP   NZ,CP_BIN_SINK_FAIL ; Abort instead of publishing with an open file.
+    XOR  A                   ; Return success after every row has been checked.
+    RET                      ; The ASO commit can now seal and publish output.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Open the metadata row's binary file with a clean sequential FCB.
+
+CP_BIN_RUNTIME_OPEN:
+    LD   DE,CP_BIN_FCB+12   ; Address its sequential-record control fields.
+    XOR  A                   ; Clear extent, record and random record numbers.
+    LD   B,24                ; The FCB has a twenty-four-byte mutable tail.
+    CALL CP_CLEAR_WORK_FCB  ; Reset this runtime open to the first record.
+    XOR  A                   ; Select CP/M's current logged-in drive.
+    LD   (CP_BIN_FCB),A     ; Native INCBIN paths contain no drive prefix.
+    LD   HL,(CP_BIN_SINK_PTR)  ; Address the metadata row's eleven-byte name.
+    LD   DE,CP_BIN_FILENAME  ; The filename begins after the two source offsets.
+    ADD  HL,DE               ; Skip the row header and explicit count.
+    LD   DE,CP_BIN_FCB+1    ; Point past the drive byte in the FCB.
+    LD   BC,11               ; Copy the complete normalized 8.3 identity.
+    LDIR                    ; Keep the binary FCB independent of CP_INPUT_FCB.
+    LD   DE,CP_BIN_FCB      ; Pass the clean filename to CP/M's open service.
+    LD   C,CP_OPEN_FUNCTION  ; Select function fifteen for sequential reading.
+    CALL CP_BDOS            ; Open the payload from its first record.
+    INC  A                   ; Convert BDOS's $FF error into the zero test.
+    JR   Z,.FAILED           ; Propagate an open failure through the sink.
+    LD   A,1                 ; Record that abort cleanup now owns the FCB.
+    LD   (CP_BIN_OPEN),A    ; Close it on any later assembly or sink failure.
+    XOR  A                   ; Start with no buffered record bytes.
+    LD   (CP_BIN_RECORD_LEFT),A  ; A new file always begins with a BDOS read.
+    LD   HL,CP_SOURCE_CACHE  ; Use the existing 128-byte transfer area as DMA.
+    LD   (CP_BIN_RECORD_PTR),HL  ; Payload records are consumed sequentially.
+    XOR  A                   ; Return a successful open with carry clear.
+    RET                      ; The first actual record is fetched on demand.
+.FAILED:
+    SCF                     ; No file handle was acquired on the failed open.
+    RET                      ; HS_ABORT therefore has nothing to close.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Close one complete binary payload and release its record buffer.
+
+CP_BIN_RUNTIME_CLOSE:
+    LD   DE,CP_BIN_FCB      ; Pass the dedicated payload FCB to CP/M.
+    LD   C,CP_CLOSE_FUNCTION  ; Select sequential file close, function sixteen.
+    CALL CP_BDOS            ; Flush CP/M's directory state for this input.
+    INC  A                   ; A zero result becomes one; $FF becomes zero.
+    JR   Z,.FAILED           ; Leave ownership set if CP/M rejects the close.
+    XOR  A                   ; Clear both open and buffered-record state.
+    LD   (CP_BIN_OPEN),A    ; HS_ABORT no longer owns a successfully closed FCB.
+    LD   (CP_BIN_RECORD_LEFT),A  ; Do not reuse the tail of its final record.
+    RET                      ; Return with carry clear after a clean close.
+.FAILED:
+    SCF                     ; The source statement cannot commit after CLOSE fails.
+    RET                      ; Leave CP_BIN_OPEN set for abort cleanup to retry.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Return one payload byte, refilling the shared DMA page per CP/M record.
+
+CP_BIN_RUNTIME_READ:
+    LD   A,(CP_BIN_RECORD_LEFT)  ; Reuse the current physical record if possible.
+    OR   A                   ; Zero requests one sequential 128-byte read.
+    JR   NZ,.BYTE            ; The buffered record still contains payload.
+    LD   DE,CP_SOURCE_CACHE  ; Direct CP/M's next binary record to the cache page.
+    LD   C,CP_DMA_FUNCTION  ; Select CP/M set-DMA function twenty-six.
+    CALL CP_BDOS            ; Install the DMA address before the disk read.
+    LD   HL,$FFFF            ; No valid source record uses this cache key.
+    LD   (CP_SOURCE_CACHE_KEY),HL  ; Invalidate before BDOS overwrites the page.
+    LD   DE,CP_BIN_FCB      ; Pass the next sequential binary record's FCB.
+    LD   C,CP_READ_FUNCTION  ; Select sequential record read, function twenty.
+    CALL CP_BDOS            ; Read one physical record into CP_SOURCE_CACHE.
+    OR   A                   ; Zero means success; EOF or error is nonzero.
+    JR   NZ,.FAILED           ; Never treat a short binary file as text padding.
+    LD   A,128               ; One complete CP/M record is now available.
+    LD   (CP_BIN_RECORD_LEFT),A  ; Count down as payload bytes are returned.
+    LD   HL,CP_SOURCE_CACHE  ; Restart at the first byte of this record.
+    LD   (CP_BIN_RECORD_PTR),HL  ; Retain the current DMA-page cursor.
+.BYTE:
+    LD   HL,(CP_BIN_RECORD_PTR)  ; Address the next unconsumed payload byte.
+    LD   A,(HL)              ; Binary $1A, CR and LF are ordinary data here.
+    INC  HL                  ; Advance the in-memory record cursor.
+    LD   (CP_BIN_RECORD_PTR),HL  ; Keep the following byte for the next IMAGE.
+    LD   HL,CP_BIN_RECORD_LEFT  ; Address the bytes left in this physical record.
+    DEC  (HL)                ; Consume exactly one of its 128 transferred bytes.
+    OR   A                   ; The payload value itself does not set carry.
+    RET                      ; Return one byte with the record state updated.
+.FAILED:
+    SCF                     ; BDOS EOF/error cannot satisfy the declared count.
+    RET                      ; HS_IB aborts the uncommitted output transaction.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Save the INCBIN source anchor and fail the output sink without losing origin.
+
+CP_BIN_SINK_FAIL:
+    LD   A,1                 ; Tell CP_ENTRY to print a binary-source diagnostic.
+    LD   (CP_BIN_ERROR),A   ; DR_SOUT otherwise identifies only the output file.
+    LD   HL,(CP_BIN_SINK_PTR)  ; Read the failed metadata row's part ordinal.
+    LD   A,(HL)              ; Select the dependency-order part number.
+    LD   (ST_EPART),A       ; Preserve the public source-diagnostic location.
+    INC  HL                  ; Advance to the operation offset's low byte.
+    LD   A,(HL)              ; Read that low byte.
+    LD   E,A                 ; Preserve it across the high-byte read.
+    INC  HL                  ; Advance to the operation offset's high byte.
+    LD   D,(HL)              ; Complete the metadata source offset.
+    EX   DE,HL               ; Move the source offset into HL.
+    LD   (ST_EOFF),HL       ; Keep the exact directive token as the failure site.
+    LD   A,1                 ; Return a nonzero host-sink detail.
+    SCF                     ; Tell Atom to abort before COMMIT.
+    RET                      ; HS_ABORT closes any still-open binary FCB.
 
 ;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Scan and validate one source header. Mode zero discovers names; mode one
@@ -1308,7 +2348,29 @@ HS_BEG:
 ; Serialize one IMAGE or byte-PATCH value in the private CP/M operation spool.
 
 HS_IB:
-    JP   CP_ASO_IMAGE       ; Append the IMAGE byte to the operation spool.
+    LD   (CP_BIN_SINK_VALUE),A  ; Retain Atom's fill byte while selecting a row.
+    LD   A,(CP_BIN_COUNT)   ; Avoid the dispatch cost for ordinary CP/M sources.
+    OR   A                  ; A zero count means no INCBIN metadata exists.
+    JR   NZ,.BINARY         ; Only counted binary rows need the sequential reader.
+    LD   A,(CP_BIN_SINK_VALUE)  ; Restore the original Atom IMAGE fill byte.
+    JP   CP_ASO_IMAGE       ; Keep the no-INCBIN output path byte-for-byte intact.
+.BINARY:
+    PUSH BC                 ; Keep the address-space class for CP_ASO_IMAGE.
+    PUSH HL                 ; Keep the logical target address for the sink.
+    LD   A,(ST_EPART)       ; Read the current statement's resolved part ordinal.
+    LD   (CP_BIN_SINK_PART),A  ; Match the sink event to its preflight row.
+    LD   HL,(ST_EOFF)       ; Read the exact IMAGE-producing source position.
+    LD   (CP_BIN_SINK_OFFSET),HL  ; Retain it while BDOS uses the shared DMA page.
+    CALL CP_BIN_SINK_BYTE   ; Substitute the next binary byte when anchors match.
+    JR   C,.BINARY_FAILED  ; Preserve the source-aware failure for CP_ENTRY.
+    POP  HL                 ; Restore the logical IMAGE address.
+    POP  BC                 ; Restore its address-space class.
+    LD   A,(CP_BIN_SINK_VALUE)  ; Load either payload or original fill byte.
+    JP   CP_ASO_IMAGE       ; Append the selected value to the ASO stream.
+.BINARY_FAILED:
+    POP  HL                 ; Restore the caller's stack before reporting failure.
+    POP  BC                 ; Preserve the original address-class register.
+    RET                      ; Return the failed sink status to Atom's driver.
 HS_PB:
     JP   CP_ASO_PATCH_BYTE  ; Append the replacement byte to the spool.
 
@@ -1322,7 +2384,28 @@ HS_PW:
 ; COMMIT seals the operation stream and publishes its selected representation.
 
 HS_CMT:
+    PUSH AF                 ; Preserve Atom's high-water flags and endpoint bit.
+    PUSH BC                 ; Preserve the low high-water/address pair.
+    PUSH DE                 ; Preserve the image origin passed to COMMIT.
+    PUSH HL                 ; Preserve the upper high-water word.
+    PUSH IX                 ; Preserve the descriptor geometry pointer.
+    CALL CP_BIN_SINK_FINISH ; Refuse publication unless every payload was consumed.
+    JR   C,.INCOMPLETE      ; Restore geometry before returning a sink failure.
+    POP  IX                 ; Restore the descriptor expected by CP_ASO_COMMIT.
+    POP  HL                 ; Restore the high-water geometry word.
+    POP  DE                 ; Restore the image origin.
+    POP  BC                 ; Restore the low high-water/address pair.
+    POP  AF                 ; Restore original flags and Atom's endpoint marker.
     JP   CP_ASO_COMMIT      ; Seal, materialize if needed, and publish.
+.INCOMPLETE:
+    POP  IX                 ; Restore every input even when validation fails.
+    POP  HL                 ; Keep the caller's stack balanced for HS_ABORT.
+    POP  DE                 ; Preserve caller-owned image geometry.
+    POP  BC                 ; Restore its address pair.
+    POP  AF                 ; Recover Atom's A before selecting sink status.
+    LD   A,1                ; Return the established nonzero sink-failure status.
+    SCF                     ; HS_ABORT will discard the tentative spool.
+    RET                      ; No partial output may be committed.
 CP_COMMIT_RAM:
     POP  AF                 ; Restore flags expected by the RAM finalizer.
     BIT  1,A                ; Is high water the mathematical endpoint $10000?
@@ -1437,6 +2520,15 @@ CP_COMMIT_FAILURE:
 ; final file aside, restore the backup. Cleanup tolerates early failure.
 
 HS_ABORT:
+    LD   A,(CP_BIN_OPEN)    ; Check whether a binary include still owns an FCB.
+    OR   A                  ; A clear flag needs no binary close operation.
+    JR   Z,CP_ABORT_ASO     ; Continue when no binary input is open.
+    LD   DE,CP_BIN_FCB      ; Pass the dedicated payload FCB to CP/M.
+    LD   C,CP_CLOSE_FUNCTION  ; Select CP/M close-file function sixteen.
+    CALL CP_BDOS            ; Release the binary input before other cleanup.
+    XOR  A                  ; Clear ownership even when CLOSE itself failed.
+    LD   (CP_BIN_OPEN),A    ; HS_ABORT must remain safe if called again.
+CP_ABORT_ASO:
     LD   A,(CP_ASO_OPEN)    ; Check whether an ASO temporary file is open.
     OR   A                  ; A clear flag needs no ASO close operation.
     JR   Z,CP_ABORT_IMAGE   ; Continue with the ordinary temporary file.
@@ -1767,6 +2859,20 @@ CP_AUXILIARY_EXISTS_TEXT:
 CP_INVALID_INCLUDE_TEXT:
     DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
     DB '%','I','N','C','L','U','D','E',13,10,'$'  ; Directive name.
+CP_BIN_WORD_INCBIN:
+    DB 'I','N','C','B','I','N'  ; Exact assembler operation token.
+CP_INVALID_INCBIN_TEXT:
+    DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
+    DB 'I','N','C','B','I','N',13,10,'$'  ; Native byte-count directive.
+CP_BIN_LIMIT_TEXT:
+    DB 13,10,'T','o','o',' ','m','a','n','y',' '  ; Error prefix.
+    DB 'I','N','C','B','I','N',' ','f','i','l','e','s',13,10,'$'
+CP_BIN_CONFLICT_TEXT:
+    DB ' ','c','o','n','f','l','i','c','t','s',' '  ; Name collision suffix.
+    DB 'w','i','t','h',' ','o','u','t','p','u','t',13,10,'$'
+CP_BIN_READ_TEXT:
+    DB ' ','b','i','n','a','r','y',' ','r','e','a','d',' '  ; Input failure.
+    DB 'f','a','i','l','e','d',13,10,'$'
 CP_INVALID_DIRECTIVE_TEXT:
     DB 13,10,'I','n','v','a','l','i','d',' '  ; Error prefix.
     DB 's','o','u','r','c','e',' '  ; Describe the rejected construct.
@@ -1795,6 +2901,10 @@ CP_ADAPTER_WORKSPACE2_START:
 
 CP_OUTPUT_CURSOR: DW 0
 CP_SOURCE_CACHE_KEY EQU CP_OUTPUT_CURSOR
+; Replay may overwrite the binary FCB and metadata, so only these live abort
+; and diagnostic flags remain in the low resident workspace.
+CP_BIN_RESIDENT_ERROR: DB 0
+CP_BIN_RESIDENT_OPEN: DB 0
 CP_OUTPUT_REMAINING: DW 0
 CP_OUTPUT_OPEN: DB 0
 CP_BACKED_UP: DB 0

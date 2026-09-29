@@ -130,7 +130,7 @@ DW BASE,$+2
 DS 16
 DS 8,$FF
 ALIGN 16
-INCBIN "assets/font.bin"
+INCBIN "FONT.BIN", 2048
 CSTR "READY"
 PSTR "NAME"
 ISTR "TOKEN"
@@ -149,11 +149,15 @@ ISTR "TOKEN"
 - `ALIGN BOUNDARY` emits initialised zero bytes up to the next address divisible
   by a resolved positive boundary. An already aligned address emits nothing.
   The boundary need not be a power of two.
-- `INCBIN "PATH"` emits the complete binary file as initialised bytes. The path
-  is relative to the source file containing the directive and must remain
-  inside the project root. Paths use ASCII. The Node host snapshots the file
-  before native assembly. One binary may contain from zero through 65,535
-  bytes. Offset and length operands are not accepted.
+- `INCBIN "PATH" [, COUNT]` emits binary bytes as initialised data. `COUNT`,
+  when present, selects a prefix of the file and must be a numeric literal. On
+  Node it is optional; omitting it emits the complete file. The path is
+  relative to the source file and must remain inside the project root. Paths
+  use ASCII, and the Node host snapshots the selected bytes before assembly.
+  On CP/M, a current-drive 8.3 name and an explicit count are required because
+  CP/M reports file data in 128-byte records. The declared count is authoritative
+  for the final record, whose padding cannot be distinguished from payload.
+  CP/M accepts at most 32 active `INCBIN` statements per assembly.
 - `CSTR "TEXT"` emits the decoded bytes followed by zero.
 - `PSTR "TEXT"` emits the decoded byte count followed by the bytes.
 - `ISTR "TEXT"` sets bit 7 on the final decoded byte. An empty `ISTR` emits
@@ -204,7 +208,9 @@ need a leading zero, as in `0FFFFH`. Conditions contain one literal or
 previously defined name. `%IF`, `%ELSE` and `%ENDIF` may nest 16 levels and
 must balance within each source file. A conditional include must close in the
 leading header before ordinary source begins. Inactive includes are not opened.
-CP/M definitions do not substitute text, and `INCBIN` is not supported there.
+CP/M definitions do not substitute text. The CP/M `INCBIN` form uses a
+current-drive 8.3 name and requires an explicit numeric byte count; it reads
+binary records sequentially during assembly.
 
 ## Not supported
 

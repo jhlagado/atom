@@ -56,10 +56,12 @@ atom -DDEBUG -DMODE=2 src/main.asm build/main.bin
 Values accept decimal, `$FFFF`, `%1010`, `0FFFFH` and `1010B` forms. Quote or
 escape `$` forms when the shell would expand them.
 
-`INCBIN` paths are relative to the containing source file:
+`INCBIN` paths are relative to the containing source file. Add a numeric byte
+count when the source must also assemble on CP/M; Node accepts the count as a
+prefix length or omits it to include the whole file:
 
 ```asm
-FONT: INCBIN "assets/font.bin"
+FONT: INCBIN "FONT.BIN", 2048
 ```
 
 Source and binary paths are confined to the project root, checked for exact

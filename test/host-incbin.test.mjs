@@ -95,12 +95,35 @@ test("INCBIN bytes retain their source line in listings and D8", async (t) => {
   ]);
 });
 
+test("INCBIN accepts an explicit portable byte count", async (t) => {
+  const root = await projectRoot(t, {
+    "main.asm": [
+      "ORG $4000",
+      'PAYLOAD: INCBIN "payload.bin", $0003',
+      'TAIL: INCBIN "payload.bin", 10B',
+      "NOP",
+      "",
+    ].join("\n"),
+    "payload.bin": Uint8Array.from([0x00, 0x1a, 0xff, 0x41, 0x42]),
+  });
+  const result = await assembleAtomProject({
+    root,
+    entry: "main.asm",
+    target: { start: 0x4000, capacity: 16 },
+  });
+  assert.deepEqual([...materializeAtomGeneration(result.generation).bytes], [
+    0x00, 0x1a, 0xff, 0x00, 0x1a, 0x00,
+  ]);
+});
+
 test("INCBIN rejects malformed, escaping, missing, and oversized inputs", async (t) => {
   const cases = [
     ['INCBIN payload.bin\n', {}, "preprocessing", "invalid-incbin"],
     ['INCBIN "café.bin"\n', {}, "preprocessing", "invalid-incbin"],
     ['INCBIN "../payload.bin"\n', {}, "dependency", "root-escape"],
     ['INCBIN "missing.bin"\n', {}, "dependency", "missing-source"],
+    ['INCBIN "payload.bin", LENGTH\n', { "payload.bin": Uint8Array.of(1) }, "preprocessing", "invalid-incbin-count"],
+    ['INCBIN "payload.bin", 2\n', { "payload.bin": Uint8Array.of(1) }, "preprocessing", "incbin-size"],
     ['INCBIN "large.bin"\n', { "large.bin": new Uint8Array(0x10000) }, "preprocessing", "incbin-size"],
   ];
   for (const [source, files, category, code] of cases) {
@@ -129,6 +152,13 @@ test("INCBIN rejects malformed, escaping, missing, and oversized inputs", async 
   });
   const project = await resolveAtomProject({ root: boundary, entry: "main.asm" });
   assert.deepEqual(project.parts[0].binaryIncludes.map(({ bytes }) => bytes.length), [0, 0xffff]);
+
+  const countedPrefix = await projectRoot(t, {
+    "main.asm": 'INCBIN "large.bin", 3\n',
+    "large.bin": new Uint8Array(0x10000).fill(0x5a),
+  });
+  const prefixProject = await resolveAtomProject({ root: countedPrefix, entry: "main.asm" });
+  assert.deepEqual([...prefixProject.parts[0].binaryIncludes[0].bytes], [0x5a, 0x5a, 0x5a]);
 });
 
 test("the native bridge fails closed when supplied INCBIN metadata disagrees with DS", async () => {

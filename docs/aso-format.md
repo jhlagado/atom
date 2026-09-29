@@ -240,12 +240,12 @@ COM, BIN and HEX now use an internal `NAME.BAK` ASO spool and replay it into
 geometry, END, padding and physical EOF on every pass. Empty output still gets
 a validation pass. A malformed spool or failed disk operation removes the
 temporary files where possible and leaves the previous destination in place.
-Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 19,191 bytes.
-It contains the 17,251-byte resident image followed immediately by 1,940 bytes
+Measured with ATOM and the bundled CP/M emulator, `ATOM.COM` is 21,185 bytes.
+It contains the 19,245-byte resident image followed immediately by 1,940 bytes
 of spool writer and materialiser code. Writable arenas occupy `$5400` to
-`$A96A` but are not part of the COM payload. CP/M stores the payload in 150
-records (19,200 bytes); nine bytes of final-record padding place the loaded
-extent at `$4C00`, 2 KiB below the workspace.
+`$AD40` but are not part of the COM payload. CP/M stores the payload in 166
+records (21,248 bytes); 63 bytes pad the final record. Loaded records end at
+`$5400`, where the uninitialised workspace begins.
 
 After successful assembly, the materialiser reuses the dead part-order page
 for its FCB and parser state. The source-cache page at `$5500` becomes its HEX

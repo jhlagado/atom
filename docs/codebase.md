@@ -131,8 +131,10 @@ appears once. Every file remains a distinct source part.
 Atom replaces host directives and inactive lines with spaces while retaining
 CR and LF bytes. The native offset therefore points at the same byte in the
 original file. Active `INCBIN` lines are lowered to equal-length initialised
-reservations. Their binary snapshots remain beside the source part and the
-desktop output bridge substitutes those bytes during assembly.
+reservations. The Node host keeps the selected binary snapshot beside its
+source part and substitutes those bytes during assembly. CP/M collects active
+directives in dependency order, rewrites them to the same reservation form,
+then reads the counted binary prefix sequentially as the assembler emits it.
 
 The main modules are:
 

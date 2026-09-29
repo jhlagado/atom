@@ -106,8 +106,37 @@ nest up to 16 levels and must be balanced within each file. Each condition is
 one numeric literal or previously defined name. A conditional
 `%INCLUDE` must be completed in the leading header before ordinary source
 begins. Inactive includes are not opened. These numeric definitions are for
-conditions; they do not substitute text into assembler source. `INCBIN` is not
-part of the CP/M profile.
+conditions; they do not substitute text into assembler source.
+
+## Binary data
+
+The CP/M profile reads binary data from the current drive using an 8.3 name.
+Give `INCBIN` an explicit byte count:
+
+```asm
+ORG $100
+PAYLOAD: INCBIN "FONT.BIN", 2048
+RET
+```
+
+The count may be decimal, `$`-prefixed hexadecimal, `%`-prefixed binary, or an
+Intel `H` or `B` suffix value. It selects the number of bytes to emit from the
+start of the file; zero is allowed. The CP/M profile accepts at most 32 active
+`INCBIN` statements per assembly. The directive also works in included source
+parts and inside active conditional branches. An inactive directive does not
+open its file.
+
+Atom reads payload records sequentially while assembling. Binary bytes such as
+`$00`, `$1A`, CR and LF remain data. The declared count is important because
+CP/M exposes files in 128-byte records: padding in the final allocated record
+cannot be distinguished from file content. Choose the count from the real
+binary length. If the count requires a record that the file does not contain,
+Atom stops and leaves any previous output unchanged.
+
+Use a current-drive 8.3 name rather than a directory path. The same counted
+form is portable to Node, where the path is relative to the source file and
+must remain inside the project root. Node also permits omitting the count to
+include the complete binary file.
 
 ## Assembly and publication
 
@@ -134,16 +163,16 @@ exactly at and one byte above the window for each format.
 
 ## Memory layout
 
-The current `ATOM.COM` contains 19,191 bytes, from `$0100` to exclusive
-`$4BF7`. The first 17,251 bytes end at `$4463`. The 1,940-byte output writer
-and materialiser overlay follows immediately and ends at `$4BF7`. CP/M stores
-the file in 150 records, or 19,200 bytes; nine bytes pad the loaded extent to
-`$4C00`. The uninitialised workspace begins at `$5400`, leaving 2 KiB between
-the loaded record boundary and workspace.
+The current `ATOM.COM` contains 21,185 bytes, from `$0100` to exclusive
+`$53C1`. The 19,245-byte resident image ends at `$4C2D`. The 1,940-byte output
+writer and materialiser overlay follows immediately. CP/M stores the payload
+in 166 records, or 21,248 bytes; 63 bytes pad the final record. The loaded
+records end at `$5400`, where the uninitialised workspace begins.
 
-Writable work areas extend from `$5400` to `$A96A`. They hold the source
-cache, include and conditional tables, symbol and pending-reference arenas,
-and spool buffers. These fixed-address areas are not part of the COM payload.
+Writable work areas extend from `$5400` to `$AD40`. They hold the source
+cache, include, conditional and binary-include tables, symbol and
+pending-reference arenas, and spool buffers. These fixed-address areas are
+not part of the COM payload.
 The startup and assembly paths initialise their working values before use.
 After successful assembly, the part-order page at `$5400` holds the
 materialiser FCB and parser state. The source-cache page at `$5500` becomes the
@@ -162,6 +191,7 @@ loaded from the COM image in those regions.
 | --- | ---: |
 | Source files | 255 |
 | One source file | 65,535 bytes |
+| Active `INCBIN` statements | 32 |
 | COM or BIN image span | 65,280 bytes, from `$0100` to `$10000` |
 | HEX logical image span | 65,280 bytes, from `$0100` to `$10000` |
 | Materialiser output window | 33,280 bytes (260 CP/M records) |

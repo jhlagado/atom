@@ -152,16 +152,18 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
     15, 15, 15, 26, 33, 26, 33,
     15, 26, 33, 26, 33,
     15, 26, 33, 26, 33,
+    15, 26, 33, 26, 33,
+    15, 26, 33, 26, 33,
     22, 15, 26, 33, 26, 33, 26, 21, 16,
     22, 15, 26, 20, 26, 20, 16, 26, 21, 16,
     19, 19, 23, 23, 19, 9,
     2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 9,
   ]);
-  assert.deepEqual(result.atomRandomReadRecords, [0, 1, 0, 1, 0, 1, 0, 1]);
+  assert.deepEqual(result.atomRandomReadRecords, [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
   assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
 });
 
-test("successful CP/M assembly requests source bytes in forward order per part", async () => {
+test("CP/M source preflight and assembly each read the part in forward order", async () => {
   const source = Buffer.from([
     "ORG $100",
     "VALUE EQU 0FFFFH",
@@ -175,16 +177,24 @@ test("successful CP/M assembly requests source bytes in forward order per part",
   const result = await runCpm22Atom(source, undefined, { trackSourceRequests: true });
 
   assert.match(result.atomTranscript, /OUTPUT\.COM written/);
-  const lastOffsetByPart = new Map();
+  const passes = [[]];
+  let previous = -1;
   for (const request of result.atomSourceRequests) {
-    const previous = lastOffsetByPart.get(request.part) ?? -1;
-    assert.ok(
-      request.offset >= previous,
-      `part ${request.part} moved backwards from ${previous} to ${request.offset}`,
-    );
-    lastOffsetByPart.set(request.part, request.offset);
+    assert.equal(request.part, 0);
+    if (request.offset < previous) passes.push([]);
+    passes.at(-1).push(request.offset);
+    previous = request.offset;
   }
-  assert.deepEqual([...lastOffsetByPart.keys()], [0]);
+  assert.equal(passes.length, 2, "preflight and assembly each traverse the source");
+  for (const [index, offsets] of passes.entries()) {
+    assert.equal(offsets[0], 0, `pass ${index + 1} begins at the first source byte`);
+    for (let cursor = 1; cursor < offsets.length; cursor += 1) {
+      assert.ok(
+        offsets[cursor] >= offsets[cursor - 1],
+        `pass ${index + 1} moved backwards from ${offsets[cursor - 1]} to ${offsets[cursor]}`,
+      );
+    }
+  }
 });
 
 test("CP/M runtime arenas and the output window work without COM initialisation", async () => {
@@ -227,6 +237,14 @@ test("the CP/M publication path preserves representative eight-bit binary bytes"
     result.outputFile?.bytes.slice(0, 5),
     Uint8Array.of(0x00, 0x1a, 0x7f, 0x80, 0xff),
   );
+});
+
+test("ordinary CP/M assembly preserves the IMAGE fill byte and COMMIT geometry", async () => {
+  const result = await runCpm22Atom(Buffer.from("ORG $100\r\nDB $A5,0\r\nRET\r\n", "ascii"));
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 3), Uint8Array.of(0xa5, 0x00, 0xc9));
+  assert.equal(result.returnA, 0);
+  assert.equal(result.returnSp, 0xe400);
 });
 
 test("CP/M COMMIT publishes a reserved extent after backward ORG", async () => {
@@ -826,11 +844,13 @@ test("a failed materialized-output write preserves the old COM and removes the s
   let originalBdosEntry;
   let injectedWriteFailure = false;
   let restoredBdosEntry = false;
+  const closedFcbAddresses = [];
   const result = await runCpm22Atom(
-    Buffer.from("ORG $100\r\nDS $5000,0\r\n", "ascii"),
+    Buffer.from("ORG $100\r\nDS $5000,$41\r\n", "ascii"),
     prior,
     {
       beforeBdos({ call, fcb, memory }) {
+        if (call === 16) closedFcbAddresses.push(fcb);
         const extension = String.fromCharCode(
           memory[fcb + 9] & 0x7f,
           memory[fcb + 10] & 0x7f,
@@ -852,7 +872,12 @@ test("a failed materialized-output write preserves the old COM and removes the s
   assert.equal(restoredBdosEntry, true);
   assert.equal(result.returnA, 1);
   assert.equal(result.returnSp, 0xe400);
+  assert.ok(
+    !closedFcbAddresses.includes(cpmCensus.binaryIncludeFcbAddress),
+    "replay data must not turn the reclaimed binary FCB into a live handle",
+  );
   assert.match(result.atomTranscript, /Atom error 04 OUTPUT\.COM/);
+  assert.doesNotMatch(result.atomTranscript, /binary read failed/);
   assert.doesNotMatch(result.atomTranscript, /Atom error \d\d INPUT\.ASM/);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
@@ -1515,6 +1540,183 @@ test("CP/M conditional includes resolve only the active dependency", async () =>
   assert.deepEqual(result.outputFile?.bytes.slice(0, 2), Uint8Array.of(1, 2));
 });
 
+test("CP/M INCBIN emits counted binary bytes without interpreting text markers", async () => {
+  const payload = Uint8Array.of(0x00, 0x1a, 0x0d, 0x0a, 0xff);
+  const result = await runCpm22Atom(
+    Buffer.from([
+      "ORG $100",
+      "%IF 1",
+      'PAYLOAD: INCBIN "DATA.BIN", $0005 ; Binary data keeps every byte value.',
+      "%ENDIF",
+      "RET",
+      "",
+    ].join("\r\n"), "ascii"),
+    undefined,
+    { files: [["DATA.BIN", payload]] },
+  );
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 6), Uint8Array.of(
+    0x00, 0x1a, 0x0d, 0x0a, 0xff, 0xc9,
+  ));
+});
+
+test("CP/M INCBIN preflight respects bare-line endings and the INCBIN label name", async () => {
+  const result = await runCpm22Atom(
+    Buffer.from('ORG $100\nNOP\nINCBIN "DATA.BIN", 1\nRET\n', "ascii"),
+    undefined,
+    { files: [["DATA.BIN", Uint8Array.of(0x5a)]] },
+  );
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 3), Uint8Array.of(0x00, 0x5a, 0xc9));
+
+  const label = await runCpm22Atom(Buffer.from("ORG $100\r\nINCBIN : RET\r\n", "ascii"));
+  assert.match(label.atomTranscript, /OUTPUT\.COM written/);
+  assert.equal(label.outputFile?.bytes[0], 0xc9);
+});
+
+test("CP/M INCBIN trims LF after trailing tabs in labeled and bare forms", async () => {
+  for (const statement of [
+    'INCBIN "DATA.BIN", 1\t',
+    'PAYLOAD: INCBIN "DATA.BIN", 1\t ; Trailing comment.\t',
+  ]) {
+    const result = await runCpm22Atom(
+      Buffer.from(`ORG $100\n${statement}\nRET\n`, "ascii"),
+      undefined,
+      { files: [["DATA.BIN", Uint8Array.of(0x5a)]] },
+    );
+    assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+    assert.deepEqual(result.outputFile?.bytes.slice(0, 2), Uint8Array.of(0x5a, 0xc9));
+  }
+});
+
+test("CP/M INCBIN rejects operands borrowed from a following source line", async () => {
+  for (const source of [
+    'ORG $100\r\nINCBIN\r\n"DATA.BIN", 1\r\nRET\r\n',
+    'ORG $100\r\nINCBIN "DATA.BIN"\r\n, 1\r\nRET\r\n',
+    'ORG $100\r\nINCBIN "DATA.BIN",\r\n1\r\nRET\r\n',
+  ]) {
+    const result = await runCpm22Atom(
+      Buffer.from(source, "ascii"),
+      Uint8Array.of(0xc9),
+      { files: [["DATA.BIN", Uint8Array.of(0x5a)]] },
+    );
+    assert.match(result.atomTranscript, /INPUT\.ASM:2:1\s+Invalid INCBIN/);
+    assert.deepEqual(result.outputFile?.bytes.slice(0, 1), Uint8Array.of(0xc9));
+  }
+});
+
+test("CP/M INCBIN handles consecutive counts and a binary record boundary", async () => {
+  const payload = Uint8Array.from({ length: 129 }, (_, index) => (index * 37) & 0xff);
+  const result = await runCpm22Atom(
+    Buffer.from([
+      "ORG $100",
+      'FIRST: INCBIN "DATA.BIN", 5',
+      'SECOND: INCBIN "DATA.BIN", 101B',
+      'CROSSING: INCBIN "DATA.BIN", $0081',
+      "RET",
+      "",
+    ].join("\r\n"), "ascii"),
+    undefined,
+    { files: [["DATA.BIN", payload]] },
+  );
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  const expected = Buffer.concat([
+    Buffer.from(payload.subarray(0, 5)),
+    Buffer.from(payload.subarray(0, 5)),
+    Buffer.from(payload),
+    Buffer.from([0xc9]),
+  ]);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, expected.length), Uint8Array.from(expected));
+});
+
+test("CP/M INCBIN is collected after dependency ordering and ignores inactive files", async () => {
+  const payload = Uint8Array.of(0x31, 0x32, 0x33);
+  const result = await runCpm22Atom(
+    Buffer.from([
+      '%INCLUDE "BINARY.ASM"',
+      "%IF 0",
+      'INCBIN "MISSING.BIN", 1',
+      "%ENDIF",
+      "RET",
+      "",
+    ].join("\r\n"), "ascii"),
+    undefined,
+    {
+      files: [
+        ["BINARY.ASM", Buffer.from('ORG $100\r\nPAYLOAD: INCBIN "DATA.BIN", 3\r\n', "ascii")],
+        ["DATA.BIN", payload],
+      ],
+    },
+  );
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  assert.deepEqual(result.outputFile?.bytes.slice(0, 4), Uint8Array.of(0x31, 0x32, 0x33, 0xc9));
+});
+
+test("CP/M INCBIN accepts zero bytes and enforces its 32-entry metadata bound", async () => {
+  const makeSource = (count) => Buffer.from([
+    ...Array.from({ length: count }, () => 'INCBIN "UNUSED.BIN", 0'),
+    "ORG $100",
+    "RET",
+    "",
+  ].join("\r\n"), "ascii");
+  const unusedFile = ["UNUSED.BIN", Uint8Array.of(0x5a)];
+  const accepted = await runCpm22Atom(makeSource(32), undefined, { files: [unusedFile] });
+  assert.match(accepted.atomTranscript, /OUTPUT\.COM written/);
+  assert.equal(accepted.outputFile?.bytes[0], 0xc9);
+
+  const rejected = await runCpm22Atom(makeSource(33), Uint8Array.of(0xc9), { files: [unusedFile] });
+  assert.match(rejected.atomTranscript, /INPUT\.ASM:33:1\s+Too many INCBIN files/);
+  assert.equal(rejected.outputFile?.bytes[0], 0xc9);
+  assert.equal(readCpm22File(rejected.finalDisk, "OUTPUT.$$$"), undefined);
+});
+
+test("CP/M INCBIN rejects missing counts and protects a prior output on late EOF", async () => {
+  const missingCount = await runCpm22Atom(
+    Buffer.from('ORG $100\r\nINCBIN "DATA.BIN"\r\nRET\r\n', "ascii"),
+    Uint8Array.of(0xc9),
+    { files: [["DATA.BIN", Uint8Array.of(1)]] },
+  );
+  assert.match(missingCount.atomTranscript, /INPUT\.ASM:2:1\s+Invalid INCBIN/);
+  assert.equal(missingCount.outputFile?.bytes[0], 0xc9);
+
+  const incomplete = await runCpm22Atom(
+    Buffer.from('ORG $100\r\nINCBIN "DATA.BIN", 129\r\nRET\r\n', "ascii"),
+    Uint8Array.of(0xc9),
+    { files: [["DATA.BIN", new Uint8Array(128).fill(0x5a)]] },
+  );
+  assert.match(incomplete.atomTranscript, /INPUT\.ASM:2:1 DATA\.BIN binary read failed/);
+  assert.deepEqual(incomplete.outputFile?.bytes.slice(0, 1), Uint8Array.of(0xc9));
+  assert.equal(readCpm22File(incomplete.finalDisk, "OUTPUT.$$$"), undefined);
+});
+
+test("CP/M INCBIN cannot alias the output, temporary or backup file", async () => {
+  const sourceFor = (name) => Buffer.from(
+    `ORG $100\r\nINCBIN "${name}", 1\r\nRET\r\n`,
+    "ascii",
+  );
+  const outputAlias = await runCpm22Atom(
+    sourceFor("OUTPUT.COM"),
+    undefined,
+    { files: [["OUTPUT.COM", Uint8Array.of(0x5a)]] },
+  );
+  assert.match(outputAlias.atomTranscript, /OUTPUT\.COM conflicts with output/);
+  assert.deepEqual(outputAlias.outputFile?.bytes.slice(0, 1), Uint8Array.of(0x5a));
+
+  for (const name of ["OUTPUT.$$$", "OUTPUT.BAK"]) {
+    const prior = Uint8Array.of(0xc9);
+    const result = await runCpm22Atom(
+      sourceFor(name),
+      prior,
+    );
+    assert.ok(result.atomTranscript.includes(`${name} conflicts with output`));
+    assert.deepEqual(result.outputFile?.bytes.slice(0, 1), prior);
+    assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
+  }
+});
+
 test("include part boundaries cannot join tokens", async () => {
   const result = await runMultipart([
     Buffer.from("ORG $100\r\nLD", "ascii"),
@@ -1541,7 +1743,7 @@ test("the CP/M source reader accepts 65,535 bytes and rejects the next byte", as
   exact[0] = 0x3b;
   const accepted = await runCpm22Atom(exact);
   assert.match(accepted.atomTranscript, /OUTPUT\.COM written/);
-  assert.equal(accepted.atomRandomReadRecords.length, 2_048);
+  assert.equal(accepted.atomRandomReadRecords.length, 3_072);
   assert.deepEqual(accepted.atomRandomReadRecords.slice(-2), [510, 511]);
   const prior = Uint8Array.from([0xc9]);
   const rejected = await runCpm22Atom(Buffer.concat([exact, Buffer.from("x")]), prior);
@@ -1577,17 +1779,17 @@ test("the random-record cache supports forward lookahead and backward token rere
     Buffer.from(`ORG $100\r\nDB LOW${" ".repeat(300)}($1234)\r\n`, "ascii"),
   );
   assert.deepEqual(lookahead.outputFile?.bytes.slice(0, 1), Uint8Array.from([0x34]));
-  assert.deepEqual(lookahead.atomRandomReadRecords, [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]);
+  assert.deepEqual(lookahead.atomRandomReadRecords, [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]);
   assert.deepEqual(
     lookahead.atomSourceCacheMisses.map(({ key }) => key),
-    [0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100],
+    [0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100, 0, 0x80, 0x100],
   );
 
   const string = await runCpm22Atom(
     Buffer.from(`ORG $100\r\nDB "${"A".repeat(200)}"\r\n`, "ascii"),
   );
   assert.deepEqual(string.outputFile?.bytes.slice(0, 200), new Uint8Array(200).fill(0x41));
-  assert.deepEqual(string.atomRandomReadRecords, [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
+  assert.deepEqual(string.atomRandomReadRecords, [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
 });
 
 test("a malformed source beyond 4 KiB retains its exact offset and rolls back", async () => {
@@ -1618,7 +1820,7 @@ test("a 16 KiB source assembles through selected files with a measured cache wal
   assert.equal(result.atomCycles, result.census.largeRepresentativeTStates);
   assert.equal(result.atomBdosCalls.length, result.census.largeRepresentativeBdosCalls);
   assert.equal(result.atomRandomReadRecords.length, result.census.largeRepresentativeSourceRandomReads);
-  assert.equal(result.atomRandomReadRecords.length, 520);
+  assert.equal(result.atomRandomReadRecords.length, 780);
   assert.deepEqual(result.atomRandomReadRecords.slice(-4), [126, 127, 128, 129]);
   assert.equal(0xe400 - result.atomMinimumSp, 32);
 });

@@ -921,7 +921,10 @@ CP_PP_FILTER_ACTIVITY:
     LD   A,' '              ; Inactive source becomes harmless whitespace.
     JR   CP_PP_FILTER_RETURN  ; Preserve its byte offset and column.
 CP_PP_FILTER_RAW:
-    LD   A,(CP_PP_NUM_DIGIT)  ; Return the unchanged active source byte.
+    LD   HL,(CP_PP_CURRENT_OFFSET)  ; Keep the source position beside the byte.
+    LD   A,(CP_PP_NUM_DIGIT)  ; Restore the original active or line-ending byte.
+    CALL CP_BIN_RUNTIME_FILTER  ; Lower an active INCBIN line to its DS form.
+    JR   C,CP_PP_FILTER_FAILURE  ; A failed binary read aborts the generation.
 CP_PP_FILTER_RETURN:
     POP  IX                 ; Restore the caller's index register.
     POP  BC                 ; Restore the parser's byte and loop state.
