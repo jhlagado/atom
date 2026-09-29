@@ -2,8 +2,8 @@
   "format": "atom-triptych-cpm-proof",
   "version": 1,
   "atom": {
-    "bytes": 19191,
-    "sha256": "c1f782b3a5c3ce90dfae5f4e5674c8920c89c8286ea9eb6b4e99905982026389"
+    "bytes": 21185,
+    "sha256": "23b11e9b7542ff9cb6941cc1f6252de9f13b6ed6c9f99c126c0e30820deec11b"
   },
   "triptych": {
     "repository": "https://github.com/jhlagado/triptych",
@@ -40,21 +40,21 @@
   },
   "scenario": {
     "id": "atom-current-com-in-triptych-candidate",
-    "initialDriveSha256": "d2ffcca150b526e1391b56b84279f3fdcc03a55c5d55493cdd86605d2368486d",
-    "driveSha256": "d56360e0fba5a137f65b98115bb40b3d3b6bb225b14738ecf25ec096b1f9e7b4",
+    "initialDriveSha256": "3c320666ab9c1250675d5ca57d8b9bb88130d2c3ed11f3d25e61d481ecccc1d5",
+    "driveSha256": "25c6672e27cade526dfd3f97907da32821e49083fc7a49ccabb20113960fd3cf",
     "sessions": [
       {
         "id": "assemble-hello",
         "transcriptBytes": 46,
         "transcriptSha256": "407b178f871dcd3f710a804226514cf0550f4504a000a96875a815dde7085ec9",
-        "driveSha256": "d56360e0fba5a137f65b98115bb40b3d3b6bb225b14738ecf25ec096b1f9e7b4",
+        "driveSha256": "25c6672e27cade526dfd3f97907da32821e49083fc7a49ccabb20113960fd3cf",
         "screenSha256": "637688ece49a080d7fdebf01e8662d8e465a3d5cd112741b5347f22819526d17"
       },
       {
         "id": "run-generated-program",
         "transcriptBytes": 40,
         "transcriptSha256": "90f35086a126034bf2e0c82c984681cc2ab43b626e9802d1c626e05212b914b3",
-        "driveSha256": "d56360e0fba5a137f65b98115bb40b3d3b6bb225b14738ecf25ec096b1f9e7b4",
+        "driveSha256": "25c6672e27cade526dfd3f97907da32821e49083fc7a49ccabb20113960fd3cf",
         "screenSha256": "ce4926467b7de204bfbd4972d84a23164ccc99e798b768c90920b708da27afcb"
       }
     ]
