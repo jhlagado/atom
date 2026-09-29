@@ -161,6 +161,32 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
   assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
 });
 
+test("successful CP/M assembly requests source bytes in forward order per part", async () => {
+  const source = Buffer.from([
+    "ORG $100",
+    "VALUE EQU 0FFFFH",
+    "LD A,(IX-128)",
+    "LD (IY+127),A",
+    "DW VALUE",
+    "DB 1+2*3",
+    "; A trailing comment is read after the instruction bytes.",
+    "",
+  ].join("\r\n"), "ascii");
+  const result = await runCpm22Atom(source, undefined, { trackSourceRequests: true });
+
+  assert.match(result.atomTranscript, /OUTPUT\.COM written/);
+  const lastOffsetByPart = new Map();
+  for (const request of result.atomSourceRequests) {
+    const previous = lastOffsetByPart.get(request.part) ?? -1;
+    assert.ok(
+      request.offset >= previous,
+      `part ${request.part} moved backwards from ${previous} to ${request.offset}`,
+    );
+    lastOffsetByPart.set(request.part, request.offset);
+  }
+  assert.deepEqual([...lastOffsetByPart.keys()], [0]);
+});
+
 test("CP/M runtime arenas and the output window work without COM initialisation", async () => {
   assert.equal(cpmCensus.loadedImageEnd, cpmCensus.residentBytes + 0x100);
   assert.ok(cpmCensus.loadedImageEnd <= cpmCensus.workspaceStartAddress);

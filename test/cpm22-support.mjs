@@ -96,6 +96,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   const bdosCalls = [];
   const randomReadRecords = [];
   const sourceCacheMisses = [];
+  const sourceRequests = options.trackSourceRequests ? [] : undefined;
   let sourceReadCount = 0;
   let lastSourceOffset;
   let measureAtom = false;
@@ -105,8 +106,13 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
       if (measureAtom) {
         minimumSp = Math.min(minimumSp, runtime.getRegisters().sp);
         if (runtime.getPC() === census.sourceReadAddress) {
-          lastSourceOffset = (runtime.getRegisters().h << 8) | runtime.getRegisters().l;
+          const registers = runtime.getRegisters();
+          lastSourceOffset = (registers.h << 8) | registers.l;
           sourceReadCount += 1;
+          sourceRequests?.push(Object.freeze({
+            part: registers.a,
+            offset: lastSourceOffset,
+          }));
         }
         if (runtime.getPC() === census.sourceCacheMissAddress) {
           const registers = runtime.getRegisters();
@@ -188,6 +194,9 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     atomRandomReadRecords: Object.freeze(randomReadRecords.slice()),
     atomSourceCacheMisses: Object.freeze(sourceCacheMisses.slice()),
     atomSourceReads: sourceReadCount,
+    ...(sourceRequests === undefined
+      ? {}
+      : { atomSourceRequests: Object.freeze(sourceRequests.slice()) }),
     entrySp,
     returnSp,
     returnA,
