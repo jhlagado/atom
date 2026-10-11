@@ -1,0 +1,15 @@
+{
+  "schema": "triptych-external-system-v1",
+  "name": "Atom 0.3.5 for CP/M",
+  "instruction": "Atom is on the writable A: drive. Type ATOM for help or ATOM HELLO to assemble the example.",
+  "profile": "triptych-cpu-v0.1-2m-n04",
+  "image": {
+    "asset": "atom.img",
+    "bytes": 2097152,
+    "sha256": "d76825ab8a0788f1b8891405b7d070948ba3c170dc2f00ce17588b2a879dc69e"
+  },
+  "workDisk": "copy-image",
+  "workDrives": [
+    "B"
+  ]
+}

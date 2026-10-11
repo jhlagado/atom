@@ -1,0 +1,338 @@
+import {
+  createFlatTargetImage,
+  renderTargetCpmCom,
+  renderTargetIntelHex,
+} from "@jhlagado/z80-tool-services";
+
+import { materializeAtomGeneration } from "../harness/native-atom-runner.mjs";
+import { ATOM_VERSION } from "../package-metadata.mjs";
+import { writeAtomNobj } from "./atom-nobj.mjs";
+
+const decoder = new TextDecoder("utf-8", { fatal: false });
+
+const hex4 = (value) => value.toString(16).toUpperCase().padStart(4, "0");
+const hex2 = (value) => value.toString(16).toUpperCase().padStart(2, "0");
+
+export function writeIntelHex(materialized, { lineEnding = "\n" } = {}) {
+  const targetImage = materialized.targetImage ?? createFlatTargetImage({
+    base: materialized.base,
+    bytes: materialized.bytes,
+  });
+  return renderTargetIntelHex(targetImage, { lineEnding });
+}
+
+export function writeAtomCom(materialized, { entryAddress = 0x100 } = {}) {
+  if (materialized.base !== 0x100 || entryAddress !== 0x100) {
+    throw new RangeError("COM output requires load and entry address $0100");
+  }
+  if (materialized.end > 0x10000 || materialized.bytes.length > 0xff00) {
+    throw new RangeError("COM output exceeds the 65,280-byte CP/M address range");
+  }
+  const targetImage = materialized.targetImage === undefined ||
+    materialized.targetImage.geometry.entryAddress !== entryAddress
+    ? createFlatTargetImage({
+        base: materialized.base,
+        bytes: materialized.bytes,
+        entryAddress,
+        capacity: 0xff00,
+      })
+    : materialized.targetImage;
+  try {
+    renderTargetCpmCom(targetImage);
+    return materialized.bytes;
+  } catch (cause) {
+    throw new RangeError(cause instanceof Error ? cause.message : "invalid COM output", { cause });
+  }
+}
+
+function sourceLines(project) {
+  return project.parts.flatMap((part) => {
+    const text = decoder.decode(part.originalBytes);
+    const lines = text.split(/\r\n|\n|\r/);
+    if (lines.at(-1) === "") lines.pop();
+    return lines.map((source, index) => ({
+      part,
+      source,
+      line: index + 1,
+      key: `${part.ordinal}:${index + 1}`,
+    }));
+  });
+}
+
+function finalByteMap(generation, fill) {
+  const bytes = new Map();
+  for (const operation of generation.images) {
+    for (let index = 0; index < operation.bytes.length; index += 1) {
+      bytes.set(operation.address + index, operation.bytes[index]);
+    }
+  }
+  for (const operation of generation.patches) {
+    for (let index = 0; index < operation.bytes.length; index += 1) {
+      bytes.set(operation.address + index, operation.bytes[index]);
+    }
+  }
+  for (const event of generation.layout ?? []) {
+    if (event.kind !== "reserve") continue;
+    for (let index = 0; index < event.count; index += 1) {
+      if (!bytes.has(event.address + index)) bytes.set(event.address + index, fill);
+    }
+  }
+  return bytes;
+}
+
+function sourceLine(project, source) {
+  const part = project.parts[source?.ordinal];
+  if (part === undefined || source === undefined) return "";
+  return decoder.decode(part.originalBytes).split(/\r\n|\n|\r/)[source.line - 1] ?? "";
+}
+
+function imageKind(project, source) {
+  const statement = sourceLine(project, source).replace(
+    /^\s*(?:(?:\.[_A-Za-z][_A-Za-z0-9]*|[_A-Za-z][_A-Za-z0-9]*)\s*:\s*)?/,
+    "",
+  );
+  return /^\.?(?:DB|DW|CSTR|PSTR|ISTR|ALIGN|INCBIN)\b/i.test(statement) ? "data" : "code";
+}
+
+function sourceRanges(project, generation, fill) {
+  const final = finalByteMap(generation, fill);
+  const byLine = new Map();
+  const add = (source, address, length, kind) => {
+    if (source === undefined || length === 0) return;
+    const key = `${source.ordinal}:${source.line}`;
+    const ranges = byLine.get(key) ?? [];
+    const previous = ranges.at(-1);
+    if (previous !== undefined && previous.kind === kind && previous.address + previous.length === address) {
+      previous.length += length;
+    } else {
+      ranges.push({ address, length, kind });
+    }
+    byLine.set(key, ranges);
+  };
+  for (const operation of generation.images) {
+    add(operation.source, operation.address, operation.bytes.length, imageKind(project, operation.source));
+  }
+  for (const event of generation.layout ?? []) {
+    if (event.kind === "reserve") add(event.source, event.address, event.count, "directive");
+    if (event.kind === "org") add(event.source, event.address, 0, "directive");
+  }
+  return { byLine, final };
+}
+
+function classifySymbol(symbol, project) {
+  const line = sourceLine(project, symbol.source);
+  if (line === "") return "unknown";
+  // EQU must follow the declared name and optional colon. Its appearance in
+  // a trailing comment or quoted data does not turn an address into a constant.
+  return /^\s*\.?[_A-Za-z][_A-Za-z0-9]*(?:\s*:\s*|\s+)EQU\b/i.test(line)
+    ? "constant" : "label";
+}
+
+function uniqueSymbols(generation, project) {
+  const found = new Map();
+  for (const symbol of generation.symbols ?? []) {
+    const source = symbol.source;
+    const key = `${symbol.name}\0${source?.ordinal ?? -1}\0${source?.offset ?? -1}\0${symbol.value}`;
+    if (!found.has(key)) found.set(key, Object.freeze({ ...symbol, kind: classifySymbol(symbol, project) }));
+  }
+  return [...found.values()].sort((left, right) =>
+    (left.name < right.name ? -1 : left.name > right.name ? 1 : 0) ||
+    (left.source?.ordinal ?? 0) - (right.source?.ordinal ?? 0) ||
+    (left.source?.offset ?? 0) - (right.source?.offset ?? 0),
+  );
+}
+
+// Relative jumps within this many bytes of their -128..127 limit are listed,
+// because a small edit between the jump and its target can break them.
+const JUMP_MARGIN = 4;
+const RELATIVE_OPCODES = new Map([
+  [0x10, "DJNZ"], [0x18, "JR"], [0x20, "JR NZ"], [0x28, "JR Z"], [0x30, "JR NC"], [0x38, "JR C"],
+]);
+// JP forms that have a JR equivalent. JP PO/PE/P/M and JP (HL) have none.
+const ABSOLUTE_OPCODES = new Map([
+  [0xc3, "JP"], [0xc2, "JP NZ"], [0xca, "JP Z"], [0xd2, "JP NC"], [0xda, "JP C"],
+]);
+
+// Find relative jumps close to their range limit and absolute jumps that a
+// two-byte JR could replace, from the final bytes of each code line.
+export function atomJumpReport(project, generation, { fill = 0 } = {}) {
+  const { byLine, final } = sourceRanges(project, generation, fill);
+  const nearLimit = [];
+  const couldBeRelative = [];
+  for (const item of sourceLines(project)) {
+    for (const range of byLine.get(item.key) ?? []) {
+      if (range.kind !== "code") continue;
+      const opcode = final.get(range.address);
+      const where = { file: item.part.logicalIdentity, line: item.line, address: range.address, source: item.source.trim() };
+      if (range.length === 2 && RELATIVE_OPCODES.has(opcode)) {
+        const offset = ((final.get(range.address + 1) ?? 0) << 24) >> 24;
+        const margin = offset >= 0 ? 127 - offset : offset + 128;
+        if (margin <= JUMP_MARGIN) nearLimit.push({ ...where, offset, margin });
+      } else if (range.length === 3 && ABSOLUTE_OPCODES.has(opcode)) {
+        const target = (final.get(range.address + 1) ?? 0) | ((final.get(range.address + 2) ?? 0) << 8);
+        const offset = target - ((range.address + 2) & 0xffff);
+        if (offset >= -128 && offset <= 127) couldBeRelative.push({ ...where, offset });
+      }
+    }
+  }
+  return { nearLimit, couldBeRelative };
+}
+
+// Size of each global label's code: the bytes up to the next global label.
+export function atomRoutineSizes(project, generation, { fill = 0 } = {}) {
+  const { final } = sourceRanges(project, generation, fill);
+  if (final.size === 0) return [];
+  const end = Math.max(...final.keys()) + 1;
+  const labels = uniqueSymbols(generation, project)
+    .filter((symbol) => symbol.kind === "label" && !symbol.name.startsWith(".") && symbol.value < end)
+    .sort((left, right) => left.value - right.value || (left.name < right.name ? -1 : 1));
+  return labels.map((symbol, index) => {
+    const next = labels.slice(index + 1).find((later) => later.value > symbol.value);
+    return { name: symbol.name, address: symbol.value, bytes: (next?.value ?? end) - symbol.value, source: symbol.source };
+  });
+}
+
+export function writeAtomListing(project, generation, { fill = 0 } = {}) {
+  const { byLine, final } = sourceRanges(project, generation, fill);
+  const output = [];
+  for (const item of sourceLines(project)) {
+    const ranges = byLine.get(item.key) ?? [];
+    const initialized = ranges.filter(({ kind }) => kind !== "directive");
+    const reservation = ranges.find(({ kind }) => kind === "directive");
+    const addresses = initialized.flatMap(({ address, length }) => Array.from({ length }, (_, index) => address + index));
+    const chunks = [];
+    for (let index = 0; index < addresses.length; index += 8) chunks.push(addresses.slice(index, index + 8));
+    if (chunks.length === 0) chunks.push(reservation === undefined ? [] : [reservation]);
+    for (let index = 0; index < chunks.length; index += 1) {
+      const chunk = chunks[index];
+      const reserved = chunk.length === 1 && typeof chunk[0] === "object" ? chunk[0] : undefined;
+      const gutter = reserved !== undefined
+        ? `${hex4(reserved.address)}  <${reserved.length} reserved>`.padEnd(29)
+        : chunk.length === 0
+        ? "                  "
+        : `${hex4(chunk[0])}  ${chunk.map((address) => hex2(final.get(address) ?? fill)).join(" ").padEnd(23)}`;
+      const identity = index === 0 ? `${item.part.logicalIdentity}:${item.line}`.padEnd(24) : "".padEnd(24);
+      output.push(`${gutter}  ${identity}${index === 0 ? item.source : ""}`.trimEnd());
+    }
+  }
+  output.push("", "Symbols:");
+  for (const symbol of uniqueSymbols(generation, project)) {
+    const value = symbol.kind === "constant" ? `=${hex4(symbol.value)}` : hex4(symbol.value);
+    const where = symbol.source === undefined ? "" : ` ${symbol.source.logicalIdentity}:${symbol.source.line}`;
+    output.push(`${symbol.name.padEnd(12)} ${value}${where}`);
+  }
+  const routines = atomRoutineSizes(project, generation, { fill });
+  if (routines.length > 0) {
+    output.push("", "Routine sizes:");
+    for (const routine of routines) {
+      output.push(`${routine.name.padEnd(12)} ${hex4(routine.address)} ${String(routine.bytes).padStart(5)} bytes`);
+    }
+  }
+  const jumps = atomJumpReport(project, generation, { fill });
+  if (jumps.nearLimit.length > 0) {
+    output.push("", `Relative jumps within ${JUMP_MARGIN} bytes of their limit:`);
+    for (const jump of jumps.nearLimit) {
+      output.push(`${hex4(jump.address)}  offset ${String(jump.offset).padStart(4)}  ${`${jump.file}:${jump.line}`.padEnd(24)}${jump.source}`);
+    }
+  }
+  if (jumps.couldBeRelative.length > 0) {
+    output.push("", "JP instructions that could be JR:");
+    for (const jump of jumps.couldBeRelative) {
+      output.push(`${hex4(jump.address)}  offset ${String(jump.offset).padStart(4)}  ${`${jump.file}:${jump.line}`.padEnd(24)}${jump.source}`);
+    }
+  }
+  return `${output.join("\n")}\n`;
+}
+
+export function writeAtomD8(
+  project,
+  generation,
+  { entryAddress = generation.target.start, fill = 0, base = generation.target.start } = {},
+) {
+  const { byLine } = sourceRanges(project, generation, fill);
+  const listingLines = new Map();
+  let listingCursor = 1;
+  for (const item of sourceLines(project)) {
+    listingLines.set(item.key, listingCursor);
+    const ranges = byLine.get(item.key) ?? [];
+    const initializedBytes = ranges
+      .filter(({ kind }) => kind !== "directive")
+      .reduce((sum, range) => sum + range.length, 0);
+    listingCursor += Math.max(1, Math.ceil(initializedBytes / 8));
+  }
+  const symbols = uniqueSymbols(generation, project).map((symbol) => ({
+    name: symbol.name,
+    ...(symbol.source === undefined ? {} : {
+      identity: `${symbol.source.logicalIdentity}#${symbol.source.offset}:${symbol.name}`,
+    }),
+    kind: symbol.kind,
+    ...(symbol.kind === "constant" ? { value: symbol.value } : { address: symbol.value }),
+    ...(symbol.source === undefined ? {} : {
+      file: symbol.source.logicalIdentity,
+      line: symbol.source.line,
+      scope: symbol.name.startsWith(".") ? "local" : "global",
+      visibility: symbol.name.startsWith(".") ? "local" : "source",
+      sourceUnit: symbol.source.logicalIdentity,
+    }),
+  }));
+  const files = Object.fromEntries(project.parts.map((part) => {
+    const fileSymbols = symbols
+      .filter(({ file }) => file === part.logicalIdentity)
+      .map(({ file: _file, ...symbol }) => symbol);
+    const segments = [];
+    for (const [key, ranges] of byLine) {
+      if (!key.startsWith(`${part.ordinal}:`)) continue;
+      const line = Number(key.slice(key.indexOf(":") + 1));
+      for (const range of ranges) segments.push({
+        start: range.address,
+        end: range.address + range.length,
+        lstLine: listingLines.get(key),
+        line,
+        column: 1,
+        kind: range.kind,
+        confidence: "high",
+      });
+    }
+    segments.sort((left, right) => left.start - right.start || left.line - right.line);
+    return [part.logicalIdentity, {
+      ...(fileSymbols.length === 0 ? {} : { symbols: fileSymbols }),
+      ...(segments.length === 0 ? {} : { segments }),
+    }];
+  }));
+  const topSegments = generation.highWater > base
+    ? [{ start: base, end: generation.highWater }]
+    : [{ start: base, end: base }];
+  return {
+    format: "d8-debug-map",
+    version: 1,
+    arch: "z80",
+    addressWidth: 16,
+    endianness: "little",
+    files,
+    segments: topSegments,
+    fileList: project.parts.map(({ logicalIdentity }) => logicalIdentity),
+    symbols,
+    generator: {
+      name: "atom",
+      tool: "atom",
+      version: ATOM_VERSION,
+      inputs: { entry: project.parts.at(-1)?.logicalIdentity },
+      entryAddress,
+    },
+  };
+}
+
+export function renderAtomArtifacts(result, options = {}) {
+  const fill = options.fill ?? 0;
+  const entryAddress = options.entryAddress ?? result.generation.target.start;
+  const materialized = materializeAtomGeneration(result.generation, { fill, base: options.base });
+  const d8 = writeAtomD8(result.project, result.generation, { fill, entryAddress, base: materialized.base });
+  return Object.freeze({
+    nobj: writeAtomNobj(result.generation, result.project, { fill, entryAddress }),
+    bin: materialized.bytes,
+    hex: writeIntelHex(materialized, { lineEnding: options.lineEnding ?? "\n" }),
+    listing: writeAtomListing(result.project, result.generation, { fill }),
+    d8,
+    d8Text: `${JSON.stringify(d8, null, 2)}\n`,
+  });
+}

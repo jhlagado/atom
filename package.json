@@ -1,0 +1,74 @@
+{
+  "name": "atom-z80",
+  "version": "0.3.7",
+  "description": "atom: a streaming Z80 assembler that runs on a Z80",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhlagado/atom.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jhlagado/atom/issues"
+  },
+  "homepage": "https://github.com/jhlagado/atom#readme",
+  "keywords": [
+    "z80",
+    "assembler",
+    "tec-1"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "atom": "bin/atom.mjs",
+    "azm-to-atom": "bin/azm-to-atom.mjs"
+  },
+  "exports": {
+    ".": "./src/host/index.mjs",
+    "./cpm22/image": "./assets/atom-cpm22.com",
+    "./cpm22/census": "./proofs/cpm22-census.json",
+    "./native-builder": {
+      "types": "./src/host/build/object-harness-builder.d.mts",
+      "import": "./src/host/build/object-harness-builder.mjs"
+    }
+  },
+  "files": [
+    "assets/native-core.json",
+    "assets/atom-cpm22.com",
+    "proofs/cpm22-census.json",
+    "assets/atom-object-harness.bin",
+    "bin",
+    "docs/*.md",
+    "examples",
+    "src/z80/*.asm",
+    "src/host",
+    "LICENSE",
+    "AUTHORSHIP",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "verify:build": "node scripts/build.mjs --check",
+    "verify:dependencies": "node scripts/verify-dependencies.mjs",
+    "pretest": "npm run verify:dependencies",
+    "test": "node --test --test-concurrency=2 test/*.test.mjs",
+    "prepack": "node scripts/check-runtime-assets.mjs && node scripts/bundled-dependencies.mjs prepare",
+    "postpack": "node scripts/bundled-dependencies.mjs cleanup",
+    "release:check": "npm run verify:build && npm test",
+    "prepare:github-release": "node scripts/prepare-github-release.mjs",
+    "prepare:triptych-release": "node scripts/prepare-triptych-release.mjs",
+    "prepare:pages-releases": "node scripts/materialize-pages-releases.mjs",
+    "prepublishOnly": "npm run release:check"
+  },
+  "dependencies": {
+    "@jhlagado/z80-runtime": "git+https://github.com/jhlagado/z80-runtime.git#e4ee190",
+    "@jhlagado/z80-tool-services": "git+https://github.com/jhlagado/z80-tool-services.git#853820c3008d6ab26f709c6bb05a6a7193072c60"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@jhlagado/debug80-runtime": "git+https://github.com/jhlagado/debug80-runtime.git#b7343aa8c38c248abbc6ee801b4af270d4843ad6"
+  }
+}

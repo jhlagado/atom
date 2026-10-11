@@ -1,0 +1,22 @@
+{
+  "format": "atom-cpm22-release",
+  "version": 2,
+  "release": "0.3.2",
+  "tag": "v0.3.2",
+  "platform": "CP/M 2.2",
+  "artifact": {
+    "file": "ATOM.COM",
+    "bytes": 17641,
+    "sha256": "e2c4a71aca52659ce8ebac87fba9aedd40384ccb858d7d4642cba89137c163ca",
+    "loadAddress": 256,
+    "entryAddress": 12886
+  },
+  "source": {
+    "repository": "https://github.com/jhlagado/atom",
+    "commit": "6940f4cd00bd3c933e7bb5b382ff2ccdbb977ba4"
+  },
+  "build": {
+    "assembler": "ATOM"
+  },
+  "license": "GPL-3.0-only"
+}
