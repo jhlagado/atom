@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+*.bin
+!test/fixtures/cpm22/bootstrap.bin
+*.hex
+*.d8m
+build/

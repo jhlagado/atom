@@ -1,0 +1,15 @@
+{
+  "schema": "triptych-external-system-v1",
+  "name": "Atom 0.3.2 for CP/M",
+  "instruction": "Switch to B: for the writable work disk, then type ATOM ? for help.",
+  "profile": "triptych-cpu-v0.1-2m-n04",
+  "image": {
+    "asset": "atom.img",
+    "bytes": 2097152,
+    "sha256": "c639eea5c9854ee5c978a794b042904d47d8da19775cf50e527c4c51b6ef6c5c"
+  },
+  "workDisk": "copy-image",
+  "workDrives": [
+    "B"
+  ]
+}
