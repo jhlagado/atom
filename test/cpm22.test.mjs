@@ -454,7 +454,7 @@ test("a failed internal spool read preserves the existing COM and removes both t
   );
 
   assert.equal(injectedReadFailure, true);
-  assert.equal(readerClosedAfterFailure, true, "HS_ABORT must close the replay reader FCB");
+  assert.equal(readerClosedAfterFailure, true, "hsAbort must close the replay reader FCB");
   assert.equal(replayWindowWasPrepared, true, "ASO replay must start only after the output window is initialized");
   assert.equal(restoredBdosEntry, true);
   assert.equal(result.returnA, 1);

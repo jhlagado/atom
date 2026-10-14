@@ -10,19 +10,19 @@
 ;  commits the generation.
 ;
 ;  The driver does not read files. Each part record supplies an ordinal and a
-;  half-open source range. TK_RESET passes it to the tokenizer, whose
+;  half-open source range. tkReset passes it to the tokenizer, whose
 ;  byte service may be backed by memory, an emulator or a native host.
 ;
 ;  PUBLIC ENTRY POINT
 ;  ------------------
 ;
-;  DR_ASM assembles one ordered multipart source stream.
+;  drAsm assembles one ordered multipart source stream.
 ;    Entry: IX points to the build descriptor below.
 ;    Success: carry clear, A=0, generation committed.
-;    Failure: carry set, A=DR_S* status. DR_DETAI holds the subsystem or
-;             configuration detail. ST_EPART/ST_EOFF locate source errors.
-;             DR_MSG holds the message number from src/host/diagnostics.mjs,
-;             with its arguments in DR_SYM, DR_VAL and DR_RPART/DR_ROFF.
+;    Failure: carry set, A=driver status. drDetail holds the subsystem or
+;             configuration detail. stAtPart/stAtOff locate source errors.
+;             drMsg holds the message number from src/host/diagnostics.mjs,
+;             with its arguments in drSym, drVal and drAtPart/drAtOff.
 ;    State: resident assembler state is reset. A successful BEGIN ends in
 ;           a successful COMMIT or one ABORT. Failed COMMIT also needs ABORT.
 ;
@@ -50,104 +50,104 @@
 ;  and preserves its original status. COMMIT failure also aborts the
 ;  open generation.
 
-DR_CBEG: ; Beginning of driver code and immutable constants.
+drBeg: ; Beginning of driver code and immutable constants.
 
 ; Public assembly statuses returned in A.
 
-DR_SOK      EQU     0                   ; Assembly committed successfully.
-DR_SCFG     EQU     1                   ; The build descriptor is invalid.
-DR_SSRC     EQU     2                   ; A source statement was rejected.
-DR_SUNDE    EQU     3                   ; A referenced symbol remains undefined.
-DR_SOUT     EQU     4                   ; The output service rejected an operation.
-DR_SINT     EQU     5                   ; A resident assembler invariant failed.
+drOk        EQU     0                   ; Assembly committed successfully.
+drBadCfg    EQU     1                   ; The build descriptor is invalid.
+drBadSrc    EQU     2                   ; A source statement was rejected.
+drUndef     EQU     3                   ; A referenced symbol remains undefined.
+drBadOut    EQU     4                   ; The output service rejected an operation.
+drIntErr    EQU     5                   ; A resident assembler invariant failed.
 
-; Configuration detail values stored in DR_DETAI.
+; Configuration detail values stored in drDetail.
 
-DR_CPCNT    EQU     1                   ; No source parts were supplied.
-DR_CPTAB    EQU     2                   ; The part-record table wraps address space.
-DR_CPORD    EQU     3                   ; A part record has the wrong ordinal.
-DR_CSRC     EQU     4                   ; A source range wraps address space.
-DR_CSYM     EQU     5                   ; The symbol arena wraps address space.
-DR_CPEND    EQU     6                   ; The pending arena wraps address space.
-DR_CTGT     EQU     7                   ; The target range exceeds address space.
+drCfgCnt    EQU     1                   ; No source parts were supplied.
+drCfgTab    EQU     2                   ; The part-record table wraps address space.
+drCfgIdx    EQU     3                   ; A part record has the wrong ordinal.
+drCfgSrc    EQU     4                   ; A source range wraps address space.
+drCfgSym    EQU     5                   ; The symbol arena wraps address space.
+drCfgRef    EQU     6                   ; The pending arena wraps address space.
+drCfgOut    EQU     7                   ; The target range exceeds address space.
 
 ; The ordinal is one byte, so a build can contain at most 255 parts.
 
-DR_PCAP     EQU     255                 ; Maximum count representable by one byte.
+drMaxCnt    EQU     255                 ; Maximum count representable by one byte.
 
 ; Message numbers from src/host/diagnostics.mjs. The five subsystem blocks
 ; start at these bases. a test checks them against the shared message list.
 
-DR_MINT     EQU     0                   ; Internal error.
-DR_MUNDF    EQU     1                   ; Undefined symbol.
-DR_MOUT     EQU     2                   ; The output was rejected.
-DR_MCFG     EQU     3                   ; Invalid build description.
-DR_MJREF    EQU     10                  ; Forward relative jump out of range.
-DR_MVREF    EQU     11                  ; Forward reference value out of range.
-DR_MTK      EQU     13                  ; First tokenizer message.
-DR_MEX      EQU     25                  ; First expression message.
-DR_MSY      EQU     36                  ; First symbol message.
-DR_MPR      EQU     46                  ; First parser message.
-DR_MOU      EQU     64                  ; First output message.
+drMsgInt    EQU     0                   ; Internal error.
+drMsgNil    EQU     1                   ; Undefined symbol.
+drMsgRej    EQU     2                   ; The output was rejected.
+drMsgCfg    EQU     3                   ; Invalid build description.
+drMsgJmp    EQU     10                  ; Forward relative jump out of range.
+drMsgBig    EQU     11                  ; Forward reference value out of range.
+drTokMsg    EQU     13                  ; First tokenizer message.
+drExMsg     EQU     25                  ; First expression message.
+drSymMsg    EQU     36                  ; First symbol message.
+drInsMsg    EQU     46                  ; First parser message.
+drOutMsg    EQU     64                  ; First output message.
 
 ; Part-record size and field offsets.
 
-DR_PDB      EQU     5                   ; Bytes in one source-part record.
-DR_PORDI    EQU     0                   ; Part ordinal field.
-DR_PBEG     EQU     1                   ; Source-range beginning field.
-DR_PEND     EQU     3                   ; Source-range exclusive-end field.
+drRecLen    EQU     5                   ; Bytes in one source-part record.
+drRecIdx    EQU     0                   ; Part ordinal field.
+drRecBeg    EQU     1                   ; Source-range beginning field.
+drRecEnd    EQU     3                   ; Source-range exclusive-end field.
 
 ; Build-descriptor field offsets.
 
-DR_DPCNT    EQU     0                   ; Source-part count.
-DR_DPART    EQU     1                   ; Source-part table address.
-DR_DSBEG    EQU     3                   ; Symbol-arena beginning.
-DR_DSEND    EQU     5                   ; Symbol-arena exclusive end.
-DR_DPBEG    EQU     7                   ; Pending-arena beginning.
-DR_DPEND    EQU     9                   ; Pending-arena exclusive end.
-DR_DTBEG    EQU     11                  ; Target origin.
-DR_DTCAP    EQU     13                  ; Target capacity in bytes.
-DR_DESCB    EQU     15                  ; Complete descriptor size.
+drCount     EQU     0                   ; Source-part count.
+drParts     EQU     1                   ; Source-part table address.
+drSymBeg    EQU     3                   ; Symbol-arena beginning.
+drSymEnd    EQU     5                   ; Symbol-arena exclusive end.
+drRefBeg    EQU     7                   ; Pending-arena beginning.
+drRefEnd    EQU     9                   ; Pending-arena exclusive end.
+drOutBeg    EQU     11                  ; Target origin.
+drOutCap    EQU     13                  ; Target capacity in bytes.
+drDscLen    EQU     15                  ; Complete descriptor size.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Keep the descriptor address in resident workspace. Later subsystem calls are
 ; free to use IX, so the entry register cannot remain its owner.
 
-DR_ASM: ; Assemble and prepare a diagnostic on failure.
-    CALL DR_RUN                         ; Assemble, leaving any failure status in A.
+drAsm: ; Assemble and prepare a diagnostic on failure.
+    CALL drRun                          ; Assemble, leaving any failure status in A.
     RET  NC                             ; A successful build needs no diagnostic.
     PUSH AF                             ; Keep the public status and carry.
-    CALL DR_DIAG                        ; Reduce the nested statuses to one message.
+    CALL drDiag                         ; Reduce the nested statuses to one message.
     POP  AF                             ; Return the original status with carry set.
-    RET                                 ; DR_MSG now describes the failure.
+    RET                                 ; drMsg now describes the failure.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Perform the assembly described by the build descriptor at IX.
 
-DR_RUN: ; Validate, reset and assemble one multipart request.
+drRun: ; Validate, reset and assemble one multipart request.
     PUSH IX                             ; Transfer descriptor pointer via stack.
     POP  HL                             ; HL now owns the address supplied in IX.
-    LD   (DR_DESC),HL                   ; Retain it while subsystem calls reuse IX.
+    LD   (drDesc),HL                    ; Retain it while subsystem calls reuse IX.
 
-; Clear the public detail fields before any operation can fail. DR_USYM is set
+; Clear the public detail fields before any operation can fail. drAbsent is set
 ; only when finalisation identifies a particular unresolved symbol.
 
     XOR  A                              ; Produce zero once for all public detail state.
-    LD   (DR_DETAI),A                   ; Clear the prior subsystem/configuration detail.
-    LD   (DR_USYM),A                    ; Clear the undefined-symbol pointer low byte.
-    LD   (DR_USYM+1),A                  ; Clear its high byte as well.
-    LD   (DR_MSG),A                     ; Start with no message.
+    LD   (drDetail),A                   ; Clear the prior subsystem/configuration detail.
+    LD   (drAbsent),A                   ; Clear the undefined-symbol pointer low byte.
+    LD   (drAbsent+1),A                 ; Clear its high byte as well.
+    LD   (drMsg),A                      ; Start with no message.
     LD   HL,0                           ; Form a zero word for the diagnostic arguments.
-    LD   (DR_SYM),HL                    ; No symbol argument yet.
-    LD   (DR_VAL),HL                    ; No value argument yet.
+    LD   (drSym),HL                     ; No symbol argument yet.
+    LD   (drVal),HL                     ; No value argument yet.
     DEC  A                              ; Form $FF, which marks no related location.
-    LD   (DR_RPART),A                   ; Clear the related location.
+    LD   (drAtPart),A                   ; Clear the related location.
     INC  A                              ; Restore zero for the source location below.
 
 ; Initialise source location to part zero, offset zero. Config errors
 ; therefore have a deterministic location even though no source has been read.
 
-    LD   HL,ST_EPART                    ; Address the contiguous part-and-offset location.
+    LD   HL,stAtPart                    ; Address the contiguous part-and-offset location.
     LD   (HL),A                         ; Default diagnostics to source part zero.
     INC  HL                             ; Advance to the offset low byte.
     LD   (HL),A                         ; Default the source offset low byte to zero.
@@ -156,63 +156,63 @@ DR_RUN: ; Validate, reset and assemble one multipart request.
 
 ; Reject invalid descriptors before resetting subsystems or opening output.
 
-    CALL DR_VDESC                       ; Validate every descriptor field and part record.
+    CALL drDescOk                       ; Validate every descriptor field and part record.
     RET  C                              ; Configuration failure occurs before BEGIN.
 
 ; Reset the symbol table over the caller's half-open symbol arena.
 
-    LD   IX,(DR_DESC)                   ; Reload the immutable build descriptor.
-    LD   C,DR_DSBEG                     ; Select its symbol begin/end word pair.
-    CALL DR_RANGE                       ; Return symbol begin in HL and end in DE.
-    CALL SY_RESET                       ; Reset symbols in caller arena.
-    JP   C,.RSTFAIL                     ; Post-validation rejection is internal.
+    LD   IX,(drDesc)                    ; Reload the immutable build descriptor.
+    LD   C,drSymBeg                     ; Select its symbol begin/end word pair.
+    CALL drRange                        ; Return symbol begin in HL and end in DE.
+    CALL syReset                        ; Reset symbols in caller arena.
+    JP   C,.rstFail                     ; Post-validation rejection is internal.
 
 ; Reset the pending-reference table over its independent caller-owned arena.
 
-    LD   IX,(DR_DESC)                   ; Reload descriptor after symbol reset.
-    LD   C,DR_DPBEG                     ; Select its pending begin/end word pair.
-    CALL DR_RANGE                       ; Return pending begin in HL and end in DE.
-    CALL SY_PINIT                       ; Reset the pending arena's live-record cursor.
-    JP   C,.RSTFAIL                     ; Reject inconsistent resident state before BEGIN.
+    LD   IX,(drDesc)                    ; Reload descriptor after symbol reset.
+    LD   C,drRefBeg                     ; Select its pending begin/end word pair.
+    CALL drRange                        ; Return pending begin in HL and end in DE.
+    CALL syNoRefs                       ; Reset the pending arena's live-record cursor.
+    JP   C,.rstFail                     ; Reject inconsistent resident state before BEGIN.
 
 ; Give the output layer the target origin in HL and target extent in DE.
 
-    LD   IX,(DR_DESC)                   ; Reload the descriptor for target configuration.
-    LD   C,DR_DTBEG                     ; Select target origin and byte capacity.
-    CALL DR_RANGE                       ; Return origin in HL and capacity in DE.
-    CALL OU_RESET                       ; Reset output cursor and remaining capacity.
-    JP   C,.RSTFAIL                     ; A validated target must initialise successfully.
+    LD   IX,(drDesc)                    ; Reload the descriptor for target configuration.
+    LD   C,drOutBeg                     ; Select target origin and byte capacity.
+    CALL drRange                        ; Return origin in HL and capacity in DE.
+    CALL outReset                       ; Reset output cursor and remaining capacity.
+    JP   C,.rstFail                     ; A validated target must initialise successfully.
 
 ; All resident state is now valid. BEGIN transfers generation ownership to the
 ; host sink. Failure here needs no ABORT because no generation was opened.
 
-    LD   IX,(DR_DESC)                   ; BEGIN receives the original descriptor pointer.
-    CALL HS_BEG                         ; Ask the platform sink to open a generation.
-    JP   C,.BEGFAIL                     ; No generation exists when BEGIN itself fails.
+    LD   IX,(drDesc)                    ; BEGIN receives the original descriptor pointer.
+    CALL hsBegin                        ; Ask the platform sink to open a generation.
+    JP   C,.begFail                     ; No generation exists when BEGIN itself fails.
 
-; Set up the multipart loop state from the descriptor. DR_PLEFT counts down,
-; DR_PNEXT counts up and must match every record's stored ordinal.
+; Set up the multipart loop state from the descriptor. drLeft counts down,
+; drDueIdx counts up and must match every record's stored ordinal.
 
-    LD   IX,(DR_DESC)                   ; Recover the validated multipart description.
-    LD   A,(IX+DR_DPCNT)                ; Read the number of records still to assemble.
-    LD   (DR_PLEFT),A                   ; Seed the descending remaining-part counter.
-    LD   L,(IX+DR_DPART)                ; Read the part-table address low byte.
-    LD   H,(IX+DR_DPART+1)              ; Complete the first-record pointer.
-    LD   (DR_PCURS),HL                  ; Publish the current part-record cursor.
+    LD   IX,(drDesc)                    ; Recover the validated multipart description.
+    LD   A,(IX+drCount)                 ; Read the number of records still to assemble.
+    LD   (drLeft),A                     ; Seed the descending remaining-part counter.
+    LD   L,(IX+drParts)                 ; Read the part-table address low byte.
+    LD   H,(IX+drParts+1)               ; Complete the first-record pointer.
+    LD   (drCurRec),HL                  ; Publish the current part-record cursor.
     XOR  A                              ; The first dense ordinal is zero.
-    LD   (DR_PNEXT),A                   ; Publish the ordinal passed to the tokenizer.
-.PARTLOOP: ; Decode and assemble the next ordered source part.
+    LD   (drDueIdx),A                   ; Publish the ordinal passed to the tokenizer.
+.partLoop: ; Decode and assemble the next ordered source part.
 
 ; A zero remaining count means every declared part was assembled exactly once.
 
-    LD   A,(DR_PLEFT)                   ; Read the number of unassembled records.
+    LD   A,(drLeft)                     ; Read the number of unassembled records.
     OR   A                              ; Test the loop terminator without changing A.
-    JR   Z,.FINISH                      ; Finalise after consuming every declared part.
+    JR   Z,.finish                      ; Finalise after consuming every declared part.
 
 ; Decode the next five-byte part record. The cursor advances to the following
 ; record while HL receives source begin and DE retains source end.
 
-    LD   HL,(DR_PCURS)                  ; Address the current five-byte part record.
+    LD   HL,(drCurRec)                  ; Address the current five-byte part record.
     INC  HL                             ; Skip its already-validated ordinal.
     LD   E,(HL)                         ; Read source-begin low byte.
     INC  HL                             ; Advance to source-begin high byte.
@@ -223,108 +223,108 @@ DR_RUN: ; Validate, reset and assemble one multipart request.
     INC  HL                             ; Advance to source-end high byte.
     LD   D,(HL)                         ; Complete source end in DE.
     INC  HL                             ; Advance to the following part record.
-    LD   (DR_PCURS),HL                  ; Retain that next-record cursor.
-    POP  HL                             ; Restore source begin in TK_RESET's HL input.
+    LD   (drCurRec),HL                  ; Retain that next-record cursor.
+    POP  HL                             ; Restore source begin in tkReset's HL input.
 
 ; Reset the tokenizer to this part's ordinal and half-open source range.
 
-    LD   A,(DR_PNEXT)                   ; Supply the dense source-part ordinal.
-    CALL TK_RESET                       ; Bind tokenizer to A:HL..DE for this part.
-    JR   C,.TOKFAIL                     ; Tokenizer setup failure is an internal fault.
+    LD   A,(drDueIdx)                   ; Supply the dense source-part ordinal.
+    CALL tkReset                        ; Bind tokenizer to A:HL..DE for this part.
+    JR   C,.tokFail                     ; Tokenizer setup failure is an internal fault.
 
 ; Assemble statements until the tokenizer reports end of this part.
 
-    CALL DR_APART                       ; Assemble statements in this part.
-    JR   C,.SRCFAIL                     ; Preserve its source-facing failure detail.
+    CALL drDoPart                       ; Assemble statements in this part.
+    JR   C,.srcFail                     ; Preserve its source-facing failure detail.
 
 ; Advance both sides of the loop invariant: next expected ordinal, one fewer
 ; record remaining. Validation proved the record cursor stays valid.
 
-    LD   HL,DR_PNEXT                    ; Address the expected source ordinal.
+    LD   HL,drDueIdx                    ; Address the expected source ordinal.
     INC  (HL)                           ; Select the next dense ordinal.
-    LD   HL,DR_PLEFT                    ; Address the remaining-record counter.
+    LD   HL,drLeft                      ; Address the remaining-record counter.
     DEC  (HL)                           ; Account for the completed part.
-    JR   .PARTLOOP                      ; Decode the next record or finalise.
-.FINISH: ; Resolve final symbol state before COMMIT.
+    JR   .partLoop                      ; Decode the next record or finalise.
+.finish: ; Resolve final symbol state before COMMIT.
 
 ; Validate the last private scope without evicting it, then prove that no
 ; pending or undefined symbols remain before exposing the generation.
 
-    CALL DR_AFIN                        ; Validate pending and symbol state.
-    JR   C,.FINFAIL                     ; Classify undefined versus internal failure.
+    CALL drFinish                       ; Validate pending and symbol state.
+    JR   C,.finFail                     ; Classify undefined versus internal failure.
 
 ; COMMIT receives final cursor, remaining capacity, explicit high water and
 ; endpoint bits. Hosts no longer reconstruct geometry from output callbacks.
 
-    LD   IX,(DR_DESC)                   ; COMMIT receives the original build descriptor.
-    LD   HL,(OU_ADDR)                   ; Supply the final target cursor.
-    LD   DE,(OU_REM)                    ; Supply the target capacity left unused.
-    LD   BC,(OU_HIGH)                   ; Supply the low word of the high-water endpoint.
-    LD   A,(OU_FLAGS)                   ; Read cursor/high-water/target endpoint state.
-    AND  OU_FCUR+OU_FHIGH               ; Publish only the two COMMIT endpoint bits.
-    CALL HS_CMT                         ; Atomically publish the completed generation.
-    JR   C,.CMTFAIL                     ; Abort if the sink cannot commit it.
+    LD   IX,(drDesc)                    ; COMMIT receives the original build descriptor.
+    LD   HL,(outAddr)                   ; Supply the final target cursor.
+    LD   DE,(outLeft)                   ; Supply the target capacity left unused.
+    LD   BC,(outHigh)                   ; Supply the low word of the high-water endpoint.
+    LD   A,(outFlags)                   ; Read cursor/high-water/target endpoint state.
+    AND  outAtTop+outHiTop              ; Publish only the two COMMIT endpoint bits.
+    CALL hsCommit                       ; Atomically publish the completed generation.
+    JR   C,.cmtFail                     ; Abort if the sink cannot commit it.
 
 ; Carry clear is the sole success indication at the public boundary.
 
-    XOR  A                              ; Return DR_SOK and clear carry together.
+    XOR  A                              ; Return drOk and clear carry together.
     RET                                 ; The generation is now externally visible.
-.SRCFAIL: ; Translate a failed source statement.
+.srcFail: ; Translate a failed source statement.
 
-; DR_APART returns the source-facing statement detail in A.
+; drDoPart returns the source-facing statement detail in A.
 
-    LD   (DR_DETAI),A                   ; Retain the statement-layer error detail.
-    LD   A,DR_SSRC                      ; Classify it as a public source failure.
-    JR   .ABORT                         ; Discard the open output generation.
-.FINFAIL: ; Classify undefined-symbol or invariant failure.
+    LD   (drDetail),A                   ; Retain the statement-layer error detail.
+    LD   A,drBadSrc                     ; Classify it as a public source failure.
+    JR   .abort                         ; Discard the open output generation.
+.finFail: ; Classify undefined-symbol or invariant failure.
 
 ; Finalisation distinguishes an ordinary undefined symbol from a damaged
-; internal record. Its detailed status remains available in DR_DETAI.
+; internal record. Its detailed status remains available in drDetail.
 
-    LD   (DR_DETAI),A                   ; Retain finalisation's detailed status.
-    CP   ST_SUDEF                       ; Is this an undefined symbol?
-    LD   A,DR_SUNDE                     ; Prepare the public undefined-symbol category.
-    JR   Z,.ABORT                       ; Report it after discarding the generation.
-    LD   A,DR_SINT                      ; Other finalisation failures violate invariants.
-    JR   .ABORT                         ; Abort and return the internal category.
-.TOKFAIL: ; Report impossible tokenizer-reset failure.
+    LD   (drDetail),A                   ; Retain finalisation's detailed status.
+    CP   stUndef                        ; Is this an undefined symbol?
+    LD   A,drUndef                      ; Prepare the public undefined-symbol category.
+    JR   Z,.abort                       ; Report it after discarding the generation.
+    LD   A,drIntErr                     ; Other finalisation failures violate invariants.
+    JR   .abort                         ; Abort and return the internal category.
+.tokFail: ; Report impossible tokenizer-reset failure.
 
-; TK_RESET can fail only if resident state or its source contract is broken.
+; tkReset can fail only if resident state or its source contract is broken.
 
-    LD   (DR_DETAI),A                   ; Preserve the tokenizer-reset detail.
-    LD   A,DR_SINT                      ; Reset rejection after validation is internal.
-    JR   .ABORT                         ; Close the generation before returning.
-.CMTFAIL: ; Retain a failed COMMIT status.
+    LD   (drDetail),A                   ; Preserve the tokenizer-reset detail.
+    LD   A,drIntErr                     ; Reset rejection after validation is internal.
+    JR   .abort                         ; Close the generation before returning.
+.cmtFail: ; Retain a failed COMMIT status.
 
 ; A failed commit is still an output failure, and the generation remains open
 ; until ABORT gives the sink a chance to discard temporary state.
 
-    LD   (DR_DETAI),A                   ; Preserve the sink's COMMIT status.
-    LD   A,DR_SOUT                      ; Expose it as a public output failure.
-.ABORT: ; Abort once while preserving the original failure.
+    LD   (drDetail),A                   ; Preserve the sink's COMMIT status.
+    LD   A,drBadOut                     ; Expose it as a public output failure.
+.abort: ; Abort once while preserving the original failure.
 
-; HS_ABORT may change A and flags. Preserve the original public status across
-; the cleanup call, then force the error carry expected by DR_ASM callers.
+; hsAbort may change A and flags. Preserve the original public status across
+; the cleanup call, then force the error carry expected by drAsm callers.
 
     PUSH AF                             ; Save the original status across cleanup.
-    CALL HS_ABORT                       ; Ask the sink to discard the open generation.
+    CALL hsAbort                        ; Ask the sink to discard the open generation.
     POP  AF                             ; Restore the public status and prior flags.
     SCF                                 ; Force the driver's failure indication.
     RET                                 ; Return after exactly one abort.
-.BEGFAIL: ; Return a BEGIN failure without aborting.
+.begFail: ; Return a BEGIN failure without aborting.
 
 ; BEGIN itself failed, so no generation exists to abort.
 
-    LD   (DR_DETAI),A                   ; Retain the sink's BEGIN status.
-    LD   A,DR_SOUT                      ; Classify the failure at the public boundary.
+    LD   (drDetail),A                   ; Retain the sink's BEGIN status.
+    LD   A,drBadOut                     ; Classify the failure at the public boundary.
     SCF                                 ; Mark assembly as failed.
     RET                                 ; Return without calling ABORT.
-.RSTFAIL: ; Return a reset failure before BEGIN.
+.rstFail: ; Return a reset failure before BEGIN.
 
 ; Resident reset failure is classified as internal and also precedes BEGIN.
 
-    LD   (DR_DETAI),A                   ; Retain the resident subsystem's status.
-    LD   A,DR_SINT                      ; Classify impossible reset rejection internally.
+    LD   (drDetail),A                   ; Retain the resident subsystem's status.
+    LD   A,drIntErr                     ; Classify impossible reset rejection internally.
     SCF                                 ; Mark assembly as failed.
     RET                                 ; No generation exists to abort yet.
 
@@ -332,18 +332,18 @@ DR_RUN: ; Validate, reset and assemble one multipart request.
 ; Reload the immutable descriptor and require at least one part. A byte count
 ; naturally limits accepted builds to 255 records.
 
-DR_VDESC: ; Validate descriptor structure before opening output.
-    LD   IX,(DR_DESC)                   ; Recover the caller's immutable descriptor.
-    LD   A,(IX+DR_DPCNT)                ; Read its one-byte source-part count.
+drDescOk: ; Validate descriptor structure before opening output.
+    LD   IX,(drDesc)                    ; Recover the caller's immutable descriptor.
+    LD   A,(IX+drCount)                 ; Read its one-byte source-part count.
     OR   A                              ; Zero parts cannot form an assembly unit.
-    JP   Z,DR_ECNT                      ; Report the dedicated part-count detail.
+    JP   Z,drErrCnt                     ; Report the dedicated part-count detail.
 
 ; Seed the validation loop with the declared count and first-record address.
 
-    LD   (DR_PLEFT),A                   ; Seed the number of records left to validate.
-    LD   L,(IX+DR_DPART)                ; Read the part-table pointer low byte.
-    LD   H,(IX+DR_DPART+1)              ; Complete the first-record address.
-    LD   (DR_PCURS),HL                  ; Publish the validation cursor.
+    LD   (drLeft),A                     ; Seed the number of records left to validate.
+    LD   L,(IX+drParts)                 ; Read the part-table pointer low byte.
+    LD   H,(IX+drParts+1)               ; Complete the first-record address.
+    LD   (drCurRec),HL                  ; Publish the validation cursor.
 
 ; Prove base + count*5 fits in 16 bits. The loop may then walk
 ; exactly count records without its cursor wrapping through address zero.
@@ -358,20 +358,20 @@ DR_VDESC: ; Validate descriptor structure before opening output.
     ADD  HL,BC                          ; Add count once more: HL = count * 5.
     POP  DE                             ; Restore the part-table base in DE.
     ADD  HL,DE                          ; Compute the exclusive end of all part records.
-    JR   C,DR_ETAB                      ; Carry means table arithmetic wrapped past $FFFF.
+    JR   C,drErrTab                     ; Carry means table arithmetic wrapped past $FFFF.
 
 ; Every record must carry the ordinal implied by its position in the table.
 
     XOR  A                              ; The first record must carry ordinal zero.
-    LD   (DR_PNEXT),A                   ; Publish the expected ordinal.
-.PARTLOOP: ; Validate dense ordinals and source ranges.
-    LD   A,(DR_PLEFT)                   ; Read the number of unchecked records.
+    LD   (drDueIdx),A                   ; Publish the expected ordinal.
+.partLoop: ; Validate dense ordinals and source ranges.
+    LD   A,(drLeft)                     ; Read the number of unchecked records.
     OR   A                              ; Test whether table validation is complete.
-    JR   Z,.ARENAS                      ; Continue with the caller-owned arenas.
-    LD   HL,(DR_PCURS)                  ; Address the next five-byte part record.
-    LD   A,(DR_PNEXT)                   ; Recover the ordinal implied by table position.
+    JR   Z,.arenas                      ; Continue with the caller-owned arenas.
+    LD   HL,(drCurRec)                  ; Address the next five-byte part record.
+    LD   A,(drDueIdx)                   ; Recover the ordinal implied by table position.
     CP   (HL)                           ; Compare it with the record's stored ordinal.
-    JR   NZ,DR_EORD                     ; Reject missing, repeated or reordered ordinals.
+    JR   NZ,drErrIdx                    ; Reject missing, repeated or reordered ordinals.
 
 ; Decode source begin into DE and source end into BC, then publish the next
 ; record cursor. No source byte is read during descriptor validation.
@@ -385,7 +385,7 @@ DR_VDESC: ; Validate descriptor structure before opening output.
     INC  HL                             ; Advance to source-end high byte.
     LD   B,(HL)                         ; Complete source end in BC.
     INC  HL                             ; Advance to the following part record.
-    LD   (DR_PCURS),HL                  ; Publish the next validation cursor.
+    LD   (drCurRec),HL                  ; Publish the next validation cursor.
 
 ; A half-open source range is valid when end - begin does not borrow. Equality
 ; is permitted and represents an empty source part.
@@ -394,44 +394,44 @@ DR_VDESC: ; Validate descriptor structure before opening output.
     LD   L,C                            ; Complete the exclusive-end value.
     OR   A                              ; Clear carry before unsigned subtraction.
     SBC  HL,DE                          ; Measure end minus begin.
-    JR   C,DR_ESRC                      ; Borrow means range wraps backwards.
+    JR   C,drErrSrc                     ; Borrow means range wraps backwards.
 
 ; Advance the expected ordinal and remaining-record count together.
 
-    LD   HL,DR_PNEXT                    ; Address the next expected ordinal.
+    LD   HL,drDueIdx                    ; Address the next expected ordinal.
     INC  (HL)                           ; Advance the dense sequence by one.
-    LD   HL,DR_PLEFT                    ; Address the unchecked-record count.
+    LD   HL,drLeft                      ; Address the unchecked-record count.
     DEC  (HL)                           ; Account for the validated record.
-    JR   .PARTLOOP                      ; Validate the next part or leave the loop.
-.ARENAS: ; Validate symbol, pending and target arenas.
+    JR   .partLoop                      ; Validate the next part or leave the loop.
+.arenas: ; Validate symbol, pending and target arenas.
 
 ; Symbol and pending arenas are each ordinary non-wrapping half-open ranges.
 ; Empty arenas are valid. Capacity checks later reject insertions.
 
-    LD   IX,(DR_DESC)                   ; Reload the build descriptor.
-    LD   C,DR_DSBEG                     ; Select symbol-arena begin and end.
-    CALL DR_RANGE                       ; Decode the pair into HL and DE.
-    CALL DR_RNGOK                       ; Require a non-wrapping half-open range.
-    JR   C,DR_ESYM                      ; Report an invalid symbol arena.
-    LD   IX,(DR_DESC)                   ; Reload the descriptor after helper clobbers.
-    LD   C,DR_DPBEG                     ; Select pending-arena begin and end.
-    CALL DR_RANGE                       ; Decode the pair into HL and DE.
-    CALL DR_RNGOK                       ; Require another non-wrapping range.
-    JR   C,DR_EPEND                     ; Report an invalid pending arena.
+    LD   IX,(drDesc)                    ; Reload the build descriptor.
+    LD   C,drSymBeg                     ; Select symbol-arena begin and end.
+    CALL drRange                        ; Decode the pair into HL and DE.
+    CALL drSpanOk                       ; Require a non-wrapping half-open range.
+    JR   C,drErrSym                     ; Report an invalid symbol arena.
+    LD   IX,(drDesc)                    ; Reload the descriptor after helper clobbers.
+    LD   C,drRefBeg                     ; Select pending-arena begin and end.
+    CALL drRange                        ; Decode the pair into HL and DE.
+    CALL drSpanOk                       ; Require another non-wrapping range.
+    JR   C,drErrRef                     ; Report an invalid pending arena.
 
 ; The target descriptor uses origin plus a capacity, not begin and end. Accept
 ; a sum of exactly $10000, represented by carry with a wrapped result of zero,
 ; but reject every mathematical sum greater than $10000.
 
-    LD   IX,(DR_DESC)                   ; Reload the descriptor for target validation.
-    LD   C,DR_DTBEG                     ; Select target origin and capacity.
-    CALL DR_RANGE                       ; Return origin in HL and capacity in DE.
+    LD   IX,(drDesc)                    ; Reload the descriptor for target validation.
+    LD   C,drOutBeg                     ; Select target origin and capacity.
+    CALL drRange                        ; Return origin in HL and capacity in DE.
     ADD  HL,DE                          ; Compute the wrapped sixteen-bit exclusive end.
-    JR   NC,.RANGEOK                    ; No carry is an ordinary in-range sum.
+    JR   NC,.rangeOk                    ; No carry is an ordinary in-range sum.
     LD   A,H                            ; Carry is legal only at exact wrap.
     OR   L                              ; Combine both result bytes for that exact test.
-    JR   NZ,DR_ETGT                     ; Nonzero plus carry exceeds mathematical $10000.
-.RANGEOK: ; Accept the fully checked descriptor.
+    JR   NZ,drErrOut                    ; Nonzero plus carry exceeds mathematical $10000.
+.rangeOk: ; Accept the fully checked descriptor.
     XOR  A                              ; Return configuration success with carry clear.
     RET                                 ; All structural checks have passed.
 
@@ -440,7 +440,7 @@ DR_VDESC: ; Validate descriptor structure before opening output.
 ; return the first in HL and second in DE. Shared decoding makes
 ; all three range users agree on the descriptor layout.
 
-DR_RANGE: ; Decode two adjacent descriptor words.
+drRange: ; Decode two adjacent descriptor words.
     PUSH IX                             ; Copy the descriptor base without changing IX.
     POP  HL                             ; HL now addresses descriptor offset zero.
     LD   B,0                            ; Widen the byte field offset in C.
@@ -459,39 +459,39 @@ DR_RANGE: ; Decode two adjacent descriptor words.
 ;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,HL,DE
 ; Compute end - begin. No borrow means the half-open range does not wrap.
 
-DR_RNGOK: ; Check an ordinary half-open address range.
+drSpanOk: ; Check an ordinary half-open address range.
     EX   DE,HL                          ; Put exclusive end in HL and begin in DE.
     OR   A                              ; Clear carry before unsigned subtraction.
     SBC  HL,DE                          ; Compute end minus begin.
     RET  NC                             ; No borrow accepts empty or live ranges.
     SCF                                 ; Restore the helper's explicit failure contract.
     RET                                 ; Report a range that wraps backwards.
-DR_ECNT: ; Report an empty source-part list.
+drErrCnt: ; Report an empty source-part list.
 
 ; The following stubs translate one failed structural check into a stable
 ; configuration-detail value, then share the public failure return.
 
-    LD   A,DR_CPCNT                     ; Identify an empty source-part list.
-    JR   DR_ECFG                        ; Publish the common configuration failure.
-DR_ETAB: ; Report a wrapped part-record table.
-    LD   A,DR_CPTAB                     ; Identify wrapped part-table arithmetic.
-    JR   DR_ECFG                        ; Publish the common configuration failure.
-DR_EORD: ; Report a non-dense source ordinal.
-    LD   A,DR_CPORD                     ; Identify a non-dense part ordinal.
-    JR   DR_ECFG                        ; Publish the common configuration failure.
-DR_ESRC: ; Report a backwards source range.
-    LD   A,DR_CSRC                      ; Identify a backwards source range.
-    JR   DR_ECFG                        ; Publish the common configuration failure.
-DR_ESYM: ; Report a backwards symbol arena.
-    LD   A,DR_CSYM                      ; Identify a backwards symbol arena.
-    JR   DR_ECFG                        ; Publish the common configuration failure.
-DR_EPEND: ; Report a backwards pending arena.
-    LD   A,DR_CPEND                     ; Identify a backwards pending arena.
-    JR   DR_ECFG                        ; Publish the common configuration failure.
-DR_ETGT: ; Report target geometry beyond $10000.
-    LD   A,DR_CTGT                      ; Identify a target beyond mathematical $10000.
-DR_ECFG: ; Publish descriptor failure and detail.
-    LD   (DR_DETAI),A                   ; Retain the precise descriptor check that failed.
-    LD   A,DR_SCFG                      ; Return the broad public configuration category.
+    LD   A,drCfgCnt                     ; Identify an empty source-part list.
+    JR   drErrCfg                       ; Publish the common configuration failure.
+drErrTab: ; Report a wrapped part-record table.
+    LD   A,drCfgTab                     ; Identify wrapped part-table arithmetic.
+    JR   drErrCfg                       ; Publish the common configuration failure.
+drErrIdx: ; Report a non-dense source ordinal.
+    LD   A,drCfgIdx                     ; Identify a non-dense part ordinal.
+    JR   drErrCfg                       ; Publish the common configuration failure.
+drErrSrc: ; Report a backwards source range.
+    LD   A,drCfgSrc                     ; Identify a backwards source range.
+    JR   drErrCfg                       ; Publish the common configuration failure.
+drErrSym: ; Report a backwards symbol arena.
+    LD   A,drCfgSym                     ; Identify a backwards symbol arena.
+    JR   drErrCfg                       ; Publish the common configuration failure.
+drErrRef: ; Report a backwards pending arena.
+    LD   A,drCfgRef                     ; Identify a backwards pending arena.
+    JR   drErrCfg                       ; Publish the common configuration failure.
+drErrOut: ; Report target geometry beyond $10000.
+    LD   A,drCfgOut                     ; Identify a target beyond mathematical $10000.
+drErrCfg: ; Publish descriptor failure and detail.
+    LD   (drDetail),A                   ; Retain the precise descriptor check that failed.
+    LD   A,drBadCfg                     ; Return the broad public configuration category.
     SCF                                 ; Mark descriptor validation as failed.
     RET                                 ; No resident subsystem or sink was touched.

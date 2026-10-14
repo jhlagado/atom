@@ -1,124 +1,82 @@
-;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Return successful encoding length one.
+; Mnemonic ordinals are generated in compact-table order. Ordinals 1..34 are
+; core singletons; 35..69 form the dispatched instruction families.
 
-EN_D1: ; Return successful length one.
-    XOR  A                                                      ; Clear A and carry for success status.
-    INC  A                                                      ; Return encoded length one.
-    RET                                                         ; Finish with carry still clear.
+mneNop      EQU     1                               ; First singleton ordinal and first compact mnemonic row.
+mneRet      EQU     35                              ; First dispatched family ordinal, following the singletons.
+mneEx       EQU     36                              ; Exchange family ordinal.
+mneIm       EQU     37                              ; Interrupt-mode family ordinal.
+mneRst      EQU     38                              ; Restart-vector family ordinal.
+mneInc      EQU     39                              ; First INC/DEC ordinal.
+mneDec      EQU     40                              ; Last INC/DEC ordinal.
+mnePush     EQU     41                              ; First stack-family ordinal.
+mnePop      EQU     42                              ; Last stack-family ordinal.
+mneLd       EQU     43                              ; Load family ordinal.
+mneIn       EQU     44                              ; Port input family ordinal.
+mneOut      EQU     45                              ; Port output family ordinal.
+mneBit      EQU     46                              ; First bit-operation ordinal.
+mneRes      EQU     47                              ; Bit-reset ordinal within the bit family.
+mneSet      EQU     48                              ; Last bit-operation ordinal.
+mneRlc      EQU     49                              ; First rotate/shift ordinal.
+mneSrl      EQU     57                              ; Last rotate/shift ordinal, after the SLS alias.
+mneAdd      EQU     58                              ; First arithmetic/logical ordinal.
+mneAdc      EQU     59                              ; Add-with-carry ordinal.
+mneSub      EQU     60                              ; Subtract ordinal.
+mneSbc      EQU     61                              ; Subtract-with-carry ordinal.
+mneAnd      EQU     62                              ; Bitwise AND ordinal.
+mneXor      EQU     63                              ; Bitwise XOR ordinal.
+mneOr       EQU     64                              ; Bitwise OR ordinal.
+mneCp       EQU     65                              ; Last arithmetic/logical ordinal.
+mneJp       EQU     66                              ; Absolute-jump family ordinal.
+mneCall     EQU     67                              ; Call family ordinal.
+mneJr       EQU     68                              ; Relative-jump family ordinal.
+mneDjnz     EQU     69                              ; Counted relative-jump family ordinal.
+mneLast     EQU     mneDjnz                         ; Inclusive upper bound for supported mnemonic ordinals.
+mneBeg: ; Begin mnemonic recognition code.
 
-;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Return successful encoding length two.
+;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
+; Recognise a mnemonic of up to four characters. The table stores the first
+; packed word and the high byte of the padded second word. Its row
+; position plus one is the public mnemonic ordinal.
 
-EN_D2: ; Return successful length two.
-    LD   A,2                                                    ; Return encoded length two.
-    OR   A                                                      ; Clear carry and retain length.
-    RET                                                         ; Finish with carry clear.
-
-;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Return successful encoding length three.
-
-EN_D3: ; Return successful length three.
-    LD   A,3                                                    ; Return encoded length three.
-    OR   A                                                      ; Clear carry and retain length.
-    RET                                                         ; Finish with carry clear.
-
-;@ROUTINE OUT A,CARRY MAYBE-OUT ZERO CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Return successful encoding length four.
-
-EN_D4: ; Return successful length four.
-    LD   A,4                                                    ; Return encoded length four.
-    OR   A                                                      ; Clear carry and retain length.
-    RET                                                         ; Finish with carry clear.
-
-;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
-; Copy operand zero's word after one opcode byte.
-
-EN_V0AT1: ; Write operand zero at byte one.
-    LD   L,(IX+EN_VAL0)                                         ; Load operand zero low byte.
-    LD   H,(IX+EN_VAL0+1)                                       ; Load target high byte.
-    LD   (EN_TMP+1),HL                                          ; Store address after opcode.
-    JR   EN_D3                                                  ; Return length three.
-
-;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
-; Copy operand zero's word after a prefix/opcode pair.
-
-EN_V0AT2: ; Write operand zero at byte two.
-    LD   L,(IX+EN_VAL0)                                         ; Load operand zero low byte.
-    LD   H,(IX+EN_VAL0+1)                                       ; Load target high byte.
-    LD   (EN_TMP+2),HL                                          ; Store address after prefix/opcode.
-    JR   EN_D4                                                  ; Return length four.
-
-;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
-; Copy operand one's word after one opcode byte.
-
-EN_V1AT1: ; Write operand one at byte one.
-    LD   L,(IX+EN_VAL1)                                         ; Load operand one low byte.
-    LD   H,(IX+EN_VAL1+1)                                       ; Load target high byte.
-    LD   (EN_TMP+1),HL                                          ; Store address after opcode.
-    JR   EN_D3                                                  ; Return length three.
-
-;@ROUTINE IN IX OUT A,CARRY MAYBE-OUT ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
-; Copy operand one's word after a prefix/opcode pair.
-
-EN_V1AT2: ; Write operand one at byte two.
-    LD   L,(IX+EN_VAL1)                                         ; Load operand one low byte.
-    LD   H,(IX+EN_VAL1+1)                                       ; Load target high byte.
-    LD   (EN_TMP+2),HL                                          ; Store address after prefix/opcode.
-    JR   EN_D4                                                  ; Return length four.
-
-;@ROUTINE IN A
-; Stage the prefix for class A and preserve A for field arithmetic.
-
-EN_STAGE: ; Stage DD/FD while preserving class A.
-    PUSH AF                                                     ; Save the operand class.
-;@EXPECTOUT A
-    CALL EN_DDFD                                                ; Select the index prefix.
-    LD   (EN_TMP+0),A                                           ; Stage the selected index prefix.
-    POP  AF                                                     ; Restore class for register-field math.
-    RET                                                         ; Return with the original class in A.
-
-;@ROUTINE IN A OUT A CLOBBERS F
-; Map IX classes and even indexed-memory classes to DD; IY classes
-; and odd indexed-memory classes to FD. Validation guarantees A is prefixable.
-
-EN_DDFD: ; Map a validated index class to DD or FD.
-    CP   EN_IXH                                                 ; Index-half classes begin at IXH.
-    JR   C,.ORDINARY                                            ; Pair/memory classes use their family bit.
-    CP   EN_IXL+1                                               ; Check the end of IXH/IXL's class range.
-    JR   C,.PREFIXIX                                            ; IX halves always select DD.
-    CP   EN_IYH                                                 ; Check whether this is below the IY-half range.
-    JR   C,.ORDINARY                                            ; Other prefixable classes use their family tag.
-    CP   EN_IYL+1                                               ; Check the end of IYH/IYL's class range.
-    JR   C,.PREFIXIY                                            ; IY halves always select FD.
-.ORDINARY: ; Use the low family bit for pair and memory classes.
-    AND  1                                                      ; Even means IX; odd means IY.
-    JR   NZ,.PREFIXIY                                           ; Select FD for an odd IY-family class.
-.PREFIXIX: ; Return the DD prefix.
-    LD   A,$DD                                                  ; Return the IX prefix byte.
-    RET                                                         ; Finish prefix selection.
-.PREFIXIY: ; Return the FD prefix.
-    LD   A,$FD                                                  ; Return the IY prefix byte.
-    RET                                                         ; Finish prefix selection.
-EN_EMITE: ; End staged instruction emission.
-EN_CODEE: ; End executable encoder code.
-EN_IBEG: ; Begin immutable encoder data.
-EN_CTBEG: ; Begin irregular opcode tables.
-
-; Irregular opcodes. The first thirteen are direct bytes.
-; The remaining entries are ED suffixes.
-
-EN_OPTAB: ; Singleton opcodes followed by ED suffixes.
-    DB   $00,$F3,$FB,$37,$3F,$2F,$27,$D9,$76,$07,$0F,$17,$1F    ; Core opcodes.
-    DB   $44,$67,$6F,$A0,$B0,$A8,$B8,$A1,$B1,$A9,$B9,$A2        ; ED suffixes.
-    DB   $B2,$AA,$BA,$A3,$B3,$AB,$BB,$4D,$45                    ; INIR..RETN suffixes.
-EN_IMTAB:   DB      $46,$56,$5E                                 ; IM suffixes.
-EN_CTEND: ; End irregular opcode tables.
-EN_CNT      EQU     69                                          ; Number of mnemonic ordinals in the table.
+mneFind: ; Match the packed name against three-byte mnemonic rows.
+    LD   A,B                                        ; Check the text length before packing it.
+    CP   5                                          ; Four characters is the longest mnemonic.
+    JR   NC,.notFound                               ; Reject longer text without touching the table.
+    LD   DE,enTemp                                  ; Use private scratch for the packed name.
+    CALL nmPack                                     ; Validate and pack the case-folded text.
+    RET  C                                          ; Propagate an invalid length or character.
+    LD   IX,mneRows                                 ; Point at the first three-byte mnemonic entry.
+    LD   B,mneCount                                 ; Compare against every supported mnemonic.
+    LD   C,1                                        ; Entry zero represents mnemonic ordinal one.
+.loop: ; Compare all three distinguishing bytes in this mnemonic row.
+    LD   A,(enTemp+0)                               ; Read the first packed word's low byte.
+    CP   (IX+0)                                     ; Compare it with this table entry.
+    JR   NZ,.next                                   ; Skip the remaining comparisons on mismatch.
+    LD   A,(enTemp+1)                               ; Read the first packed word's high byte.
+    CP   (IX+1)                                     ; Compare the second byte of the packed name.
+    JR   NZ,.next                                   ; A mismatch rejects this candidate mnemonic.
+    LD   A,(enTemp+3)                               ; Read the padded word's high byte.
+    CP   (IX+2)                                     ; Compare its stored high byte with the entry.
+    JR   NZ,.next                                   ; Try the next mnemonic if this byte differs.
+    LD   A,C                                        ; The table position is the mnemonic ordinal.
+    OR   A                                          ; Clear carry to report a successful match.
+    RET                                             ; Return the ordinal in A.
+.next: ; Advance IX by a row and C by an ordinal.
+    INC  IX                                         ; Move from the low to high byte of the entry.
+    INC  IX                                         ; Move to the entry's distinguishing byte.
+    INC  IX                                         ; Advance to the next three-byte entry.
+    INC  C                                          ; Keep the ordinal aligned with the table row.
+    DJNZ .loop                                      ; Check the remaining mnemonic entries.
+.notFound: ; Return ordinal zero and carry set for an unknown mnemonic.
+    XOR  A                                          ; Return zero when no mnemonic matches.
+    SCF                                             ; Set carry to mark an unknown mnemonic.
+    RET                                             ; Return the unrecognised-name result.
+mneCount    EQU     69                                          ; Number of mnemonic ordinals in the table.
 
 ; Mnemonic table in ordinal order. Three-byte entries contain the
 ; first packed RADIX-40 word and the significant high byte of the second word.
 
-EN_TABLE: ; Packed mnemonic rows by ordinal.
+mneRows: ; Packed mnemonic rows by ordinal.
     DW   $59E8                                                  ; NOP name word.
     DB   $00                                                    ; NOP packed tail byte.
     DW   $1A68                                                  ; DI name word.
@@ -257,12 +215,6 @@ EN_TABLE: ; Packed mnemonic rows by ordinal.
     DB   $00                                                    ; JR packed tail byte.
     DW   $1A9E                                                  ; DJNZ name word.
     DB   $A2                                                    ; DJNZ packed tail byte.
-EN_TEND: ; End the compact mnemonic table.
-EN_IEND: ; End immutable encoder data.
-EN_COREE: ; End encoder code and immutable data.
-EN_WBEG: ; Begin shared encoder workspace.
+mneRowHi: ; End the compact mnemonic table.
 
-; Scratch: six bytes for packed names; first four also stage opcodes.
-
-EN_TMP:     DS      6                                           ; Packer scratch and opcode staging.
-EN_WEND: ; End shared encoder workspace.
+mneEnd: ; End mnemonic recognition code.

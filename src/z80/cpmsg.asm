@@ -2,21 +2,21 @@
 ; src/host/diagnostics.mjs by npm run build.
 ; Edit the messages there and rebuild.
 ;
-; MSG_IDX holds one sentence number per message number. MSG_TEXT holds
+; msgIdx holds one sentence number per message number. msgText holds
 ; the sentences in order, each ended by 0. Bytes 1, 2 and 3 inside a
 ; sentence stand for the symbol name, the signed value and the related
 ; line.
 
-MSG_NUM     EQU     69                                                          ; Message numbers in MSG_IDX.
-MSG_STACK   EQU     12                                                          ; The stack-overflow message.
+msgNum      EQU     69                                                          ; Message numbers in msgIdx.
+msgOver     EQU     12                                                          ; The stack-overflow message.
 
-MSG_IDX: ; Map each diagnostic number to its stored sentence.
+msgIdx: ; Map each diagnostic number to its stored sentence.
     DB   0,1,2,3,4,5,6,7,8,9,10,11,12,0,13,14                                   ; Sentence indices for messages 0-15.
     DB   15,16,17,18,19,0,9,20,21,0,22,0,23,24,25,26                            ; Sentence indices for messages 16-31.
     DB   27,28,0,0,0,29,30,31,32,33,34,0,0,0,0,0                                ; Sentence indices for messages 32-47.
     DB   0,35,36,37,38,39,40,41,42,43,0,0,44,0,45,34                            ; Sentence indices for messages 48-63.
     DB   0,46,0,47,43                                                           ; Sentence indices for messages 64-68.
-MSG_TEXT: ; Zero-terminated sentences with argument marker bytes.
+msgText: ; Zero-terminated sentences with argument marker bytes.
     DB   "internal error in Atom; please report it",0                           ; Diagnostic sentence 0.
     DB   "undefined symbol ",1,0                                                ; Diagnostic sentence 1.
     DB   "could not write the output",0                                         ; Diagnostic sentence 2.
@@ -67,4 +67,4 @@ MSG_TEXT: ; Zero-terminated sentences with argument marker bytes.
     DB   "too many forward references in one instruction",0                     ; Diagnostic sentence 45.
     DB   "program does not fit in the output range",0                           ; Diagnostic sentence 46.
     DB   "value ",2," is out of range for this operand",0                       ; Diagnostic sentence 47.
-MSG_TEND: ; First byte after the diagnostic text table.
+msgEnd: ; First byte after the diagnostic text table.

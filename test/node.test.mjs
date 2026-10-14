@@ -972,11 +972,11 @@ describe("Native object builder", () => {
     return {
       result,
       diagnostic: {
-        driverDetail: memory[census.symbols.DR_DETAI],
-        statementDetail: memory[census.symbols.ST_DETAI],
-        tokenizerStatus: memory[census.symbols.TK_ESTAT],
-        part: memory[census.symbols.ST_EPART],
-        offset: word(memory, census.symbols.ST_EOFF),
+        driverDetail: memory[census.symbols.drDetail],
+        statementDetail: memory[census.symbols.stDetail],
+        tokenizerStatus: memory[census.symbols.tkStatus],
+        part: memory[census.symbols.stAtPart],
+        offset: word(memory, census.symbols.stAtOff),
       },
       output: outputDelegate.bytes("out"),
       sourceOperations,
@@ -997,7 +997,7 @@ describe("Native object builder", () => {
         "ORG $8000",
         ";@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY",
         "PL_ENTRY:",
-        "JP NA_INIT",
+        "JP objInit",
       ].join("\n"),
     });
     assert.equal(harness.report.loadAddress, 0x8000);

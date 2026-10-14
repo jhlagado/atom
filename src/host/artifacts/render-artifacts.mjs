@@ -128,15 +128,31 @@ function classifySymbol(symbol, project) {
     ? "constant" : "label";
 }
 
+// Atom folds names to uppercase. Show each one as its definition spells it.
+function spelledName(symbol, project) {
+  const part = symbol.source === undefined
+    ? undefined
+    : project.parts.find(({ ordinal }) => ordinal === symbol.source.ordinal);
+  if (part === undefined) return symbol.name;
+  const bytes = part.originalBytes;
+  let end = symbol.source.offset;
+  while (end < bytes.length && /[A-Za-z0-9_.]/.test(String.fromCharCode(bytes[end]))) end += 1;
+  const spelled = decoder.decode(bytes.subarray(symbol.source.offset, end));
+  return spelled.toUpperCase() === symbol.name ? spelled : symbol.name;
+}
+
 function uniqueSymbols(generation, project) {
   const found = new Map();
   for (const symbol of generation.symbols ?? []) {
     const source = symbol.source;
     const key = `${symbol.name}\0${source?.ordinal ?? -1}\0${source?.offset ?? -1}\0${symbol.value}`;
-    if (!found.has(key)) found.set(key, Object.freeze({ ...symbol, kind: classifySymbol(symbol, project) }));
+    if (!found.has(key)) {
+      found.set(key, Object.freeze({ ...symbol, name: spelledName(symbol, project), kind: classifySymbol(symbol, project) }));
+    }
   }
+  const folded = (symbol) => symbol.name.toUpperCase();
   return [...found.values()].sort((left, right) =>
-    (left.name < right.name ? -1 : left.name > right.name ? 1 : 0) ||
+    (folded(left) < folded(right) ? -1 : folded(left) > folded(right) ? 1 : 0) ||
     (left.source?.ordinal ?? 0) - (right.source?.ordinal ?? 0) ||
     (left.source?.offset ?? 0) - (right.source?.offset ?? 0),
   );
@@ -185,7 +201,7 @@ export function atomRoutineSizes(project, generation, { fill = 0 } = {}) {
   const end = Math.max(...final.keys()) + 1;
   const labels = uniqueSymbols(generation, project)
     .filter((symbol) => symbol.kind === "label" && !symbol.name.startsWith(".") && symbol.value < end)
-    .sort((left, right) => left.value - right.value || (left.name < right.name ? -1 : 1));
+    .sort((left, right) => left.value - right.value || (left.name.toUpperCase() < right.name.toUpperCase() ? -1 : 1));
   return labels.map((symbol, index) => {
     const next = labels.slice(index + 1).find((later) => later.value > symbol.value);
     return { name: symbol.name, address: symbol.value, bytes: (next?.value ?? end) - symbol.value, source: symbol.source };

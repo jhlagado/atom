@@ -1,19 +1,7 @@
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
 import { writeIntelHex } from "../artifacts/render-artifacts.mjs";
 import { materializeAtomGeneration } from "../harness/native-atom-runner.mjs";
-
-const CODE_RANGE_NAMES = Object.freeze([
-  ["AtomEncoderCoreStart", "AtomEncoderCoreEnd"],
-  ["AtomSymbolCodeStart", "AtomSymbolCodeEnd"],
-  ["AtomTokenizerCodeStart", "AtomTokenizerCodeEnd"],
-  ["AtomExpressionCodeStart", "AtomExpressionCodeEnd"],
-  ["AtomPatchCodeStart", "AtomPatchCodeEnd"],
-  ["AtomParserCodeStart", "AtomParserCodeEnd"],
-  ["AtomOutputCodeStart", "AtomOutputCodeEnd"],
-  ["AtomStatementCodeStart", "AtomStatementCodeEnd"],
-  ["AtomDriverCodeStart", "AtomDriverCodeEnd"],
-  ["AtomHostServiceCodeStart", "AtomHostServiceCodeEnd"],
-]);
+import { nativeCodeRanges } from "../core/native-code-ranges.mjs";
 
 function fail(code, message, details = {}) {
   throw new AtomAssemblyError("self-host-core", code, message, details);
@@ -49,14 +37,10 @@ export function createSelfHostedAtomCore(source, generation) {
   if (!Number.isInteger(symbols.AtomHostResidentEnd)) {
     fail("missing-symbol", "self-host generation omits AtomHostResidentEnd");
   }
-  const codeRanges = CODE_RANGE_NAMES.map(([startName, endName]) => {
-    const start = symbols[startName];
-    const end = symbols[endName];
-    if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) {
-      fail("code-range", `self-host generation has an invalid ${startName}/${endName} range`);
-    }
-    return Object.freeze({ start, end });
-  });
+  const codeRanges = nativeCodeRanges(symbols);
+  if (codeRanges.some(({ start, end }) => end < start)) {
+    fail("code-range", "self-host generation has an invalid code range");
+  }
   const materialized = materializeAtomGeneration(generation);
   if (materialized.base !== 0 || materialized.end !== symbols.AtomHostResidentEnd) {
     fail("resident-extent", "self-host generation does not cover the resident Atom extent");

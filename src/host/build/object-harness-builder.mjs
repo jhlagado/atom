@@ -14,14 +14,14 @@ import {
   joinNativeCoreModules,
   readAssemblyModule,
   readNativeCoreModules,
-  replaceNativeSourceRead,
+  nativeSourceRead,
   setNativeCoreOrigin,
 } from "./z80-source-layout.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, "../../..");
 const nativeRoot = join(repositoryRoot, "src", "z80");
-const fixedWorkspacePrefixes = new Set(["EN", "SY", "TK", "EX", "PR", "OU", "ST", "DR", "NA"]);
+const fixedWorkspacePrefixes = new Set(["en", "sy", "tk", "ex", "pr", "out", "st", "dr", "obj"]);
 const gatewayBegin = ";@@ATOM_OBJECT_GATEWAY_BEGIN@@";
 const gatewayEnd = ";@@ATOM_OBJECT_GATEWAY_END@@";
 
@@ -31,13 +31,13 @@ function originSource(origin) {
 }
 
 function markAdapterWorkspace(adapterText) {
-  const startMatch = /^NA_CFG:[ \t]+DW[ \t]+0(?:[ \t]*;.*)?$/m.exec(adapterText);
+  const startMatch = /^objCfg:[ \t]+DW[ \t]+0(?:[ \t]*;.*)?$/m.exec(adapterText);
   assert.notEqual(startMatch, null, "native adapter workspace start changed");
   const start = startMatch.index;
-  const endMatch = /^NA_REND:(?:[ \t]*;.*)?$/m.exec(adapterText.slice(start));
+  const endMatch = /^objEnd:(?:[ \t]*;.*)?$/m.exec(adapterText.slice(start));
   assert.notEqual(endMatch, null, "native adapter workspace end changed");
   const end = start + endMatch.index;
-  return `${adapterText.slice(0, start)}NA_WBEG:\n${adapterText.slice(start, end)}NA_WEND:\n${adapterText.slice(end)}`;
+  return `${adapterText.slice(0, start)}objRamLo:\n${adapterText.slice(start, end)}objRamHi:\n${adapterText.slice(end)}`;
 }
 
 function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
@@ -47,7 +47,7 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
   let active;
   for (const line of sourceText.split("\n")) {
     const codeLine = line.replace(/;.*$/, "").trimEnd();
-    const start = /^([A-Z][A-Z0-9]*)_WBEG:$/.exec(codeLine);
+    const start = /^([a-z]{2,3})RamLo:$/.exec(codeLine);
     if (active === undefined && start !== null && fixedWorkspacePrefixes.has(start[1])) {
       active = start[1];
       assert.ok(!found.has(active), `duplicate ${active} fixed workspace`);
@@ -58,7 +58,7 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
       continue;
     }
     workspace.push(line);
-    if (codeLine === `${active}_WEND:`) active = undefined;
+    if (codeLine === `${active}RamHi:`) active = undefined;
   }
   assert.equal(active, undefined, "unterminated fixed workspace");
   assert.deepEqual(found, fixedWorkspacePrefixes, "native fixed-workspace markers changed");
@@ -68,10 +68,10 @@ function relocateFixedWorkspace(sourceText, workspaceOrigin, imageOrigin) {
   // ATOM's IMAGE stream is ascending. Emit low RAM before the high ROM bank.
   // These eight literal EQU declarations size the native workspace; moving
   // them emits no bytes and does not evaluate code-address expressions.
-  const required = new Set(["TK_RECB", "EX_VALB", "EX_VCAP", "EX_OPERB", "EX_OCAP", "PR_RCAP", "PR_BRB", "PR_PRB"]);
+  const required = new Set(["tkRecLen", "exValLen", "exValCap", "exOpLen", "exOpCap", "prRefCap", "prRawLen", "prPubLen"]);
   const constants = [];
   const remainder = code.filter((line) => {
-    const match = /^([A-Z_]+)[ \t]+EQU[ \t]+(.*)$/.exec(line);
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)[ \t]+EQU[ \t]+(.*)$/.exec(line);
     if (match === null || !required.has(match[1])) return true;
     const literal = match[2].replace(/;.*$/, "").trim();
     assert.match(literal, /^\d+$/, `workspace constant ${match[1]} is no longer a literal`);
@@ -92,11 +92,10 @@ async function linkedSource({
   preludeSource,
   postludeSource,
 }) {
-  const sourceReadLabel = sourceReadTarget ?? "NA_SREAD";
+  const sourceReadLabel = sourceReadTarget ?? "objFetch";
   let modules = await readNativeCoreModules(nativeRoot);
   modules = setNativeCoreOrigin(modules, originSource(origin));
-  modules = replaceNativeSourceRead(modules, sourceReadLabel);
-  const core = joinNativeCoreModules(modules, { includeHostServices: false });
+  const core = `${joinNativeCoreModules(modules)}\n${nativeSourceRead(sourceReadLabel)}`;
 
   const [sharedAbi, adapterText] = await Promise.all([
     readFile(fileURLToPath(import.meta.resolve("@jhlagado/z80-tool-services/native/z80-tool-services-v1.asmi")), "utf8"),
@@ -111,7 +110,7 @@ async function linkedSource({
   const replacementGateway = gatewaySource === undefined ? checkedGateway : `\n${gatewaySource}\n`;
   let adapter = `${adapterText.slice(0, gatewayStart)}${replacementGateway}${adapterText.slice(gatewayFinish)}`;
   if (workspaceOrigin !== undefined) adapter = markAdapterWorkspace(adapter);
-  let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${core}\n${sharedAbi}\n${adapter}${postludeSource === undefined ? "" : `\n${postludeSource}`}\nNP_END:\n`;
+  let atomSource = `${preludeSource === undefined ? "" : `${preludeSource}\n`}${core}\n${sharedAbi}\n${adapter}${postludeSource === undefined ? "" : `\n${postludeSource}`}\nnpEnd:\n`;
   if (workspaceOrigin !== undefined) atomSource = relocateFixedWorkspace(atomSource, workspaceOrigin, imageOrigin);
   return {
     sourceReadTarget: sourceReadLabel,
@@ -189,26 +188,29 @@ export async function buildNativeObjectHarness({
   });
   const debugMap = writeAtomD8(project, result.generation);
   const materialized = materializeAtomGeneration(result.generation, { base: 0 });
-  const symbols = Object.fromEntries(debugMap.symbols.flatMap((symbol) => {
-    const value = symbol.address ?? symbol.value;
-    return value === undefined ? [] : [[symbol.name.toUpperCase(), value]];
+  // Atom names are case-insensitive. Look them up as the source spells them.
+  const values = new Map(debugMap.symbols.flatMap((entry) => {
+    const value = entry.address ?? entry.value;
+    return value === undefined ? [] : [[entry.name.toUpperCase(), value]];
   }));
-  const residentBytes = symbols.NP_END - imageOrigin;
+  const symbol = (name) => values.get(name.toUpperCase());
+  const residentBytes = symbol("npEnd") - imageOrigin;
   assert.ok(residentBytes <= 0x4000, "named-object harness exceeds one 16 KiB bank");
   let bytes;
   let workspaceBytes;
   let fixedWorkspace;
   if (workspaceOrigin === undefined) {
-    assert.equal(materialized.end, symbols.NP_END);
-    bytes = materialized.bytes.slice(imageOrigin, symbols.NP_END);
+    assert.equal(materialized.end, symbol("npEnd"));
+    bytes = materialized.bytes.slice(imageOrigin, symbol("npEnd"));
     assert.equal(bytes.length, residentBytes);
   } else {
-    bytes = materialized.bytes.slice(imageOrigin, symbols.NP_END);
-    const workspaceEnd = symbols.NA_WEND;
-    assert.equal(symbols.EN_WBEG, workspaceOrigin);
+    bytes = materialized.bytes.slice(imageOrigin, symbol("npEnd"));
+    const workspaceEnd = symbol("objRamHi");
+    // The first area's workspace starts the relocated block.
+    assert.equal(Math.min(...[...fixedWorkspacePrefixes].map((prefix) => symbol(`${prefix}RamLo`))), workspaceOrigin);
     assert.ok(workspaceEnd > workspaceOrigin, "native fixed workspace is empty");
     assert.ok(
-      symbols.NP_END <= workspaceOrigin || workspaceEnd <= imageOrigin,
+      symbol("npEnd") <= workspaceOrigin || workspaceEnd <= imageOrigin,
       "native code and fixed workspace overlap",
     );
     workspaceBytes = materialized.bytes.slice(workspaceOrigin, workspaceEnd);
@@ -216,22 +218,22 @@ export async function buildNativeObjectHarness({
       fixedWorkspaceStart: workspaceOrigin,
       fixedWorkspaceEnd: workspaceEnd,
       fixedWorkspaceBytes: workspaceEnd - workspaceOrigin,
-      nativeCoreFixedWorkspaceBytes: symbols.NA_WBEG - workspaceOrigin,
-      adapterFixedWorkspaceBytes: workspaceEnd - symbols.NA_WBEG,
+      nativeCoreFixedWorkspaceBytes: symbol("objRamLo") - workspaceOrigin,
+      adapterFixedWorkspaceBytes: workspaceEnd - symbol("objRamLo"),
       workspaceSha256: createHash("sha256").update(workspaceBytes).digest("hex"),
     };
   }
   const nativeCoreBytes = workspaceOrigin === undefined
     ? (await loadNativeAtomCore()).residentExtentBytes
-    : symbols.DR_CEND - origin;
+    : symbol("drEnd") - origin;
   const proofSymbols = Object.fromEntries([
-    "DR_DETAI",
-    "ST_DETAI",
-    "ST_EPART",
-    "ST_EOFF",
-    "TK_ESTAT",
-    "NA_TRANS",
-  ].map((name) => [name, symbols[name]]));
+    "drDetail",
+    "stDetail",
+    "stAtPart",
+    "stAtOff",
+    "tkStatus",
+    "objXfer",
+  ].map((name) => [name, symbol(name)]));
   return {
     bytes,
     debugMap,
@@ -240,19 +242,19 @@ export async function buildNativeObjectHarness({
       version: 1,
       loadAddress: imageOrigin,
       ...(imageOrigin === origin ? {} : { coreOrigin: origin }),
-      assembleEntry: symbols.DR_ASM,
-      adapterInitEntry: symbols.NA_INIT,
-      gatewayEntry: symbols.NA_GATE,
-      sourceReadEntry: symbols.NA_SREAD,
-      configuredSourceReadEntry: symbols[linked.sourceReadTarget],
-      residentEnd: symbols.NP_END,
+      assembleEntry: symbol("drAsm"),
+      adapterInitEntry: symbol("objInit"),
+      gatewayEntry: symbol("objGate"),
+      sourceReadEntry: symbol("objFetch"),
+      configuredSourceReadEntry: symbol(linked.sourceReadTarget),
+      residentEnd: symbol("npEnd"),
       residentBytes,
       nativeCoreResidentBytes: nativeCoreBytes,
-      adapterResidentDeltaBytes: symbols.NA_REND - origin - nativeCoreBytes,
+      adapterResidentDeltaBytes: symbol("objEnd") - origin - nativeCoreBytes,
       platformPreludeBytes: origin - imageOrigin,
-      platformPostludeBytes: symbols.NP_END - symbols.NA_REND,
-      commonWorkspaceBytes: symbols.NA_WLEN,
-      transferBufferBytes: symbols.NA_XLEN,
+      platformPostludeBytes: symbol("npEnd") - symbol("objEnd"),
+      commonWorkspaceBytes: symbol("objSpace"),
+      transferBufferBytes: symbol("objChunk"),
       maximumSourceParts: 255,
       sourceNameTableBytes: 255 * 3,
       maximumObjectNameBytes: 255,

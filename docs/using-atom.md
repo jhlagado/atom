@@ -81,8 +81,12 @@ LD A,0
 %ENDIF
 ```
 
-Dependencies are assembled before their importer. Each source is assembled
-once, including repeated imports through other dependencies. Cycles are rejected.
+Includes are assembled depth first, in the order they are listed. Each
+included file's own includes come first, then the file itself, and the importer
+comes last. The result is the order you would get by pasting each file's text
+in at its first `%INCLUDE`. Each source is assembled once, including repeated
+imports through other dependencies. Cycles are rejected. CP/M and Node use the
+same order.
 `%INCLUDE` belongs in the header before ordinary assembler source. A condition
 that selects includes must close within that header.
 
@@ -225,3 +229,16 @@ The converter does not run AZM.
 `atom self-host` assembles the native sources shipped in the installed package.
 It writes `build/atom.bin`. Another output path can follow `self-host`.
 Project, target and definition options are disabled for this fixed source build.
+
+On CP/M, Atom can assemble its own `ATOM.COM`. Copy every file from `src/z80`
+and `ATOM.COM` to one drive, then run:
+
+```text
+A>ATOM CPM22 NEWATOM.COM
+```
+
+`cpm22.asm` lists the CP/M build in assembly order. `atom.asm` is the root of
+the native core that the Node host runs. Both include `core.asm`. The sources
+take about 1.1 MB, so the build needs a drive larger than an 8-inch floppy,
+such as a Triptych 2 MB disk. The result is byte-for-byte the `ATOM.COM` that
+`npm run build` produces.

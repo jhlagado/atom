@@ -50,6 +50,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "verify:build": "node scripts/build.mjs --check",
+    "verify:cpm-self-build": "node scripts/verify-cpm-self-build.mjs",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "pretest": "npm run verify:dependencies",
     "test": "node --test --test-concurrency=2 test/*.test.mjs",

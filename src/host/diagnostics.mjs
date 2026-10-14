@@ -1,11 +1,11 @@
 // Atom's diagnostic messages, shared by the Node host and the CP/M program.
 //
-// When an assembly fails, the native core's DR_DIAG routine reduces its nested
+// When an assembly fails, the native core's drDiag routine reduces its nested
 // status codes to one message number and publishes up to three arguments:
 //
 //   %S  the symbol whose record address is in AT_DSYM
 //   %D  the signed sixteen-bit value in AT_DVAL
-//   %L  the line of the related location in DR_RPART/DR_ROFF
+//   %L  the line of the related location in drAtPart/drAtOff
 //
 // Message numbers are dense. Each subsystem's status codes map to a block
 // that starts at the base below. driver.asm defines the same bases.

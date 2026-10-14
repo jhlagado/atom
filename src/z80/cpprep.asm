@@ -3,3 +3,5 @@
 
     %INCLUDE "ppctrl.asm"               ; Dispatch directives, manage conditional frames and read tokens.
     %INCLUDE "ppvalue.asm"              ; Decode values, manage definitions and filter source bytes.
+
+srcEnd: ; Exclusive end of source and preprocessing code.

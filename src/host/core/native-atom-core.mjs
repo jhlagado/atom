@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { AtomAssemblyError } from "../atom-assembly-error.mjs";
+import { nativeCodeRanges } from "./native-code-ranges.mjs";
 
 const artifactPath = fileURLToPath(new URL("../../../assets/native-core.json", import.meta.url));
 let cachedCore;
@@ -56,22 +57,7 @@ async function readNativeAtomCore() {
     bootstrap("resident-capacity", "native Atom host core exceeds one 16 KiB bank");
   }
 
-  const codeNames = [
-    ["AtomEncoderCoreStart", "AtomEncoderCoreEnd"],
-    ["AtomSymbolCodeStart", "AtomSymbolCodeEnd"],
-    ["AtomTokenizerCodeStart", "AtomTokenizerCodeEnd"],
-    ["AtomExpressionCodeStart", "AtomExpressionCodeEnd"],
-    ["AtomPatchCodeStart", "AtomPatchCodeEnd"],
-    ["AtomParserCodeStart", "AtomParserCodeEnd"],
-    ["AtomOutputCodeStart", "AtomOutputCodeEnd"],
-    ["AtomStatementCodeStart", "AtomStatementCodeEnd"],
-    ["AtomDriverCodeStart", "AtomDriverCodeEnd"],
-    ["AtomHostServiceCodeStart", "AtomHostServiceCodeEnd"],
-  ];
-  const codeRanges = Object.freeze(codeNames.map(([startName, endName]) => Object.freeze({
-    start: symbols[startName],
-    end: symbols[endName],
-  })));
+  const codeRanges = nativeCodeRanges(symbols);
   const codeBytes = codeRanges.reduce((sum, { start, end }) => sum + end - start, 0);
 
   return Object.freeze({

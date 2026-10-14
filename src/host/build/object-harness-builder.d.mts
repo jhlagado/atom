@@ -6,7 +6,7 @@ export type NativeObjectHarnessOptions = {
   /** Z80 source linked after the shared adapter and included in the resident account. */
   postludeSource?: string;
   gatewaySource?: string;
-  /** Z80 label called by the Atom core for each source byte. Defaults to NA_SREAD. */
+  /** Z80 label called by the Atom core for each source byte. Defaults to objFetch. */
   sourceReadTarget?: string;
   /** Unsupported by ATOM; a supplied profile is rejected rather than ignored. */
   registerContractsProfile?: never;

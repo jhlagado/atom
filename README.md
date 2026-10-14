@@ -23,6 +23,7 @@ also has a disk image that runs in Triptych.
 - [Using Atom](docs/using-atom.md): a first program, output files and CP/M usage
 - [The language](docs/language-reference.md): labels, expressions and directives
 - [The Node API](docs/programming-api.md): assembly from JavaScript
+- [Source map](docs/source-map.md): the Z80 source files in reading order
 
 ## Building
 

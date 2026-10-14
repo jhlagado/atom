@@ -2,7 +2,7 @@
   "format": "atom-native-object-harness-census",
   "version": 1,
   "loadAddress": 0,
-  "assembleEntry": 12075,
+  "assembleEntry": 12072,
   "adapterInitEntry": 13017,
   "gatewayEntry": 14128,
   "sourceReadEntry": 13408,
@@ -20,13 +20,13 @@
   "maximumObjectNameBytes": 255,
   "maximumSourceObjectBytes": 65535,
   "maximumOutputObjectBytes": 65535,
-  "sha256": "2625511e30cfbeabba81163b21bbf643e26629a08b21c6a04fc8218333b484e6",
+  "sha256": "93a2fd03a6df39e5161362a85eabc0c2294babe3c729d31d2ab5966cb82d3eed",
   "symbols": {
-    "DR_DETAI": 13006,
-    "ST_DETAI": 12061,
-    "ST_EPART": 12071,
-    "ST_EOFF": 12072,
-    "TK_ESTAT": 5294,
-    "NA_TRANS": 13252
+    "drDetail": 13003,
+    "stDetail": 12058,
+    "stAtPart": 12068,
+    "stAtOff": 12069,
+    "tkStatus": 1871,
+    "objXfer": 13252
   }
 }
