@@ -18,6 +18,9 @@ binHeld     EQU     binOwns                     ; Alias for the low resident bin
 pubLeft:   DW      0                                                ; Logical bytes remaining for final output rendering.
 pubOpen:   DB      0                                                ; Nonzero while the final-output temporary FCB is open.
 pubKept:   DB      0                                                ; Nonzero after old output moves to the backup name.
+symOn:     DB      0                                                ; Symbol file: zero none, one asked for, two written as $$S.
+symName:   DS      12                                               ; Requested symbol file's drive and 8.3 name.
+cpNameTo:  DW      cpPutCh                                          ; Routine that receives decoded symbol-name characters.
 pubKind:   DB      0                                                ; Output selector: zero COM, one BIN, two HEX, three ASO.
 asoOn:     DB      0                                                ; Nonzero while operation-spool dispatch is active.
 asoOpen:   DB      0                                                ; Nonzero while the writer owns an open spool FCB.

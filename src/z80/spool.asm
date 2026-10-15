@@ -5,5 +5,6 @@
     %INCLUDE "aso.asm"                  ; Spool Atom's operations to NAME.$$B.
     %INCLUDE "mat.asm"                  ; Replay the spool into COM, BIN or HEX.
     %INCLUDE "cpmhex.asm"               ; Write Intel HEX records.
+    %INCLUDE "cpmsym.asm"               ; Write the symbol file.
 
 asoEnd: ; Exclusive end of the spool and replay code.

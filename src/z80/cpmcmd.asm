@@ -18,15 +18,21 @@ cmdHelp: ; Print help without opening source or output files.
     LD   A,1                            ; Mark help-only success for cpEntry.
     OR   A                              ; Clear carry without losing the help marker.
     RET                                 ; Skip source discovery and assembly.
-cmdArgs: ; Parse one or two filename arguments.
+cmdArgs: ; Parse the source, output and symbol-file arguments.
+    XOR  A                              ; No symbol file unless one is named.
+    LD   (symOn),A                      ; Clear any request from an earlier command.
     CALL cmdName                        ; Parse the source argument as 8.3.
     JP   C,.badSrc                      ; Distinguish a bad source name.
     CALL cmdSkip                        ; Look for a second name.
     JR   Z,.oneName                     ; Derive the output name and type.
     CALL cmdName                        ; Validate the explicit output name.
     JP   C,.badOut                      ; Report malformed output fields separately.
+    CALL cmdSkip                        ; Look for a symbol-file name.
+    JR   Z,.gotNames                    ; Continue with the CCP's normalised FCBs.
+    CALL .symbols                       ; Parse and keep the symbol-file name.
+    RET  C                              ; Report an invalid symbol-file name.
     CALL cmdSkip                        ; Check for trailing text.
-    JP   NZ,.usage                      ; Reject a third argument or trailing junk.
+    JP   NZ,.usage                      ; Reject a fourth argument or trailing junk.
     JR   .gotNames                      ; Continue with the CCP's normalised FCBs.
 .oneName: ; Derive COM output from the sole source argument.
 
@@ -73,7 +79,7 @@ cmdArgs: ; Parse one or two filename arguments.
     LD   HL,pubName+9                   ; Reuse HL to test the ASO extension.
     LD   DE,cmdAso                      ; Compare with the serialized operation format.
     CALL .sameType                      ; Check all three ASO extension bytes.
-    JR   NZ,.badOut                     ; Reject any other output type.
+    JP   NZ,.badOut                     ; Reject any other output type.
     LD   A,3                            ; Assign format code three to ASO.
     JR   .format                        ; Save the format and check names.
 .hex: ; Select Intel HEX output.
@@ -94,13 +100,26 @@ cmdArgs: ; Parse one or two filename arguments.
     LD   HL,srcFcb                      ; Compare source and output identities.
     LD   DE,pubName                     ; Address the output's twelve-byte identity.
     CALL cmdSame                        ; Reject overwriting the file being assembled.
-    JR   Z,.clash                       ; Source and output must be distinct files.
+    JP   Z,.clash                       ; Source and output must be distinct files.
     CALL pubTemp                        ; Build the transaction's temporary filename.
     CALL .testWork                      ; Check for source collision or existing file.
     RET  C                              ; Stop on a temp-name conflict.
     CALL pubBak                         ; Build the transaction's backup filename.
     CALL .testWork                      ; Apply the same collision and existence checks.
-    RET                                 ; Return the final preflight status in carry.
+    RET  C                              ; Stop on a backup-name conflict.
+    LD   A,(symOn)                      ; Was a symbol file named?
+    OR   A                              ; Zero means no symbol file.
+    RET  Z                              ; Nothing more to check.
+    LD   HL,srcFcb                      ; The symbol file must not be the source.
+    LD   DE,symName                     ; Address the symbol file's identity.
+    CALL cmdSame                        ; Compare all twelve bytes.
+    JP   Z,.clash                       ; Never overwrite the source.
+    LD   HL,pubName                     ; Nor may it be the output.
+    LD   DE,symName                     ; Address the symbol file's identity again.
+    CALL cmdSame                        ; Compare all twelve bytes.
+    JP   Z,.clash                       ; Two results cannot share one file.
+    CALL symTemp                        ; Build the symbol file's work name.
+    JR   .testWork                      ; Check it like the other work names.
 
 ;@ROUTINE IN DE,HL OUT A,B,DE,HL,ZERO CLOBBERS CARRY,SIGN,PARITY,HALFCARRY
 ; Compare the three-byte output-type selectors at DE and HL.
@@ -115,6 +134,66 @@ cmdArgs: ; Parse one or two filename arguments.
     INC  HL                             ; Advance to the corresponding expected byte.
     DJNZ .typeByte                      ; Compare all three type bytes.
     RET                                 ; Return Z when every byte matched.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN B,HL OUT B,HL,CARRY CLOBBERS A,C,DE,ZERO,SIGN,PARITY,HALFCARRY
+; Copy the third argument into symName. Its type defaults to SYM and must be
+; SYM when given.
+
+.symbols: ; Parse and keep the symbol-file name.
+    PUSH HL                             ; Keep the name's first byte.
+    CALL cmdName                        ; Validate the 8.3 name and pass it.
+    POP  DE                             ; DE addresses the name's first byte.
+    JR   C,.badOut                      ; Report a malformed name.
+    PUSH HL                             ; Keep the tail position after the name.
+    PUSH BC                             ; Keep the remaining tail count.
+    OR   A                              ; Clear carry for the subtraction.
+    SBC  HL,DE                          ; L is the name's length.
+    LD   C,L                            ; C counts the bytes to copy.
+    LD   HL,symName                     ; Start with a blank current-drive name.
+    LD   (HL),0                         ; Drive zero is the current drive.
+    LD   B,11                           ; Clear the name and type fields.
+.blank: ; Fill one field byte with a space.
+    INC  HL                             ; Advance to the next field byte.
+    LD   (HL),' '                       ; CP/M pads names with spaces.
+    DJNZ .blank                         ; Clear all eleven bytes.
+    LD   HL,symName+1                   ; Copy the basename first.
+.copy: ; Copy one name byte.
+    LD   A,(DE)                         ; Read the next command-tail byte.
+    INC  DE                             ; Advance along the tail.
+    CP   '.'                            ; Does the type start here?
+    JR   NZ,.store                      ; No: keep the byte.
+    LD   HL,symName+9                   ; Write the type field next.
+    JR   .next                          ; The dot itself is not stored.
+.store: ; Store a name or type byte.
+    LD   (HL),A                         ; Keep the byte in its field.
+    INC  HL                             ; Advance within the field.
+.next: ; Count the byte just read.
+    DEC  C                              ; One fewer byte to copy.
+    JR   NZ,.copy                       ; Copy the rest of the name.
+    LD   A,(symName+9)                  ; Was a type given?
+    CP   ' '                            ; A space means none.
+    JR   NZ,.typed                      ; Check the type that was given.
+    LD   HL,cmdSym                      ; Default to SYM.
+    LD   DE,symName+9                   ; Point at the type field.
+    LD   BC,3                           ; A type is three bytes.
+    LDIR                                ; Supply the default type.
+    JR   .named                         ; The name is complete.
+.typed: ; Accept only the SYM type.
+    LD   HL,symName+9                   ; Address the given type.
+    LD   DE,cmdSym                      ; Compare it with SYM.
+    CALL .sameType                      ; Check all three bytes.
+    JR   Z,.named                       ; SYM is accepted.
+    POP  BC                             ; Restore the tail count.
+    POP  HL                             ; Restore the tail position.
+    JR   .badOut                        ; Any other type is an error.
+.named: ; Record that a symbol file was asked for.
+    LD   A,1                            ; One means requested.
+    LD   (symOn),A                      ; Write symbols at commit.
+    POP  BC                             ; Restore the tail count.
+    POP  HL                             ; Restore the tail position.
+    OR   A                              ; Clear carry for success.
+    RET                                 ; Return to the argument parser.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Prove the temporary name differs from the source and is not already present.

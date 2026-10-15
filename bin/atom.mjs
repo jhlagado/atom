@@ -33,7 +33,7 @@ Options:
   -h, --help               Show this help
   -V, --version            Show the Atom version
 
-Output suffixes: .bin .hex .com .lst .d8.json
+Output suffixes: .bin .hex .com .lst .sym .d8.json
 With no output, Atom writes build/<input>.bin.
 A .lst listing adds routine sizes and a report of JR and JP jumps to adjust.
 `;
@@ -44,6 +44,7 @@ const ATOM_OUTPUT_FORMATS = Object.freeze([
   { format: "hex", suffix: ".hex" },
   { format: "com", suffix: ".com" },
   { format: "lst", suffix: ".lst" },
+  { format: "sym", suffix: ".sym" },
 ]);
 
 function numberValue(text, name) {
@@ -204,6 +205,7 @@ function selectedBytes(selection, artifacts, materialized, entryAddress) {
     case "hex": return artifacts.hex;
     case "com": return writeAtomCom(materialized, { entryAddress });
     case "lst": return artifacts.listing;
+    case "sym": return artifacts.sym;
     case "d8": return artifacts.d8Text;
     default: throw new Error(`unsupported output format: ${selection.format}`);
   }

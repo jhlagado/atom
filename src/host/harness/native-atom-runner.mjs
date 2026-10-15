@@ -739,6 +739,19 @@ export function materializeAtomGeneration(
 
 const RADIX40 = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
+// Global names in symbol-table order: each record is added when its name is
+// first seen, as a definition or a forward reference. ATOM.COM's symbol file
+// uses this order, so Node's does too.
+function globalSymbolOrder(memory, symbols) {
+  const names = [];
+  const end = word(memory, symbols.AtomSymbolGlobalEnd);
+  for (let pointer = word(memory, symbols.AtomSymbolArenaBase); pointer < end; pointer += symbols.AtomSymbolRecordBytes) {
+    const name = unpackPackedSymbol(memory, pointer, symbols);
+    if (name !== undefined) names.push(name);
+  }
+  return Object.freeze(names);
+}
+
 function unpackPackedSymbol(memory, pointer, symbols) {
   if (pointer < 0 || pointer + symbols.AtomSymbolNameBytes > memory.length)
     return undefined;
@@ -1429,6 +1442,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       ...sinkState.generation,
       layout: Object.freeze(layout.slice()),
       symbols: uniqueDeclarations(declaredSymbols),
+      symbolOrder: globalSymbolOrder(memory, symbols),
     }),
     execution,
     native: result,

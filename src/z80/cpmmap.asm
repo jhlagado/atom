@@ -6,7 +6,7 @@
 ;
 ;    $0100     The entry jump, then the core and the resident adapter.
 ;    cpResEnd  The spool and replay code (spool.asm), the end of ATOM.COM.
-;    $5D00     cpWork. The writable areas start here. They are set up before
+;    $5E00     cpWork. The writable areas start here. They are set up before
 ;              use, so they take addresses but no bytes in the file.
 ;    $E200     The 512-byte private stack, from cpFloor up to cpStack.
 ;
@@ -15,9 +15,9 @@
 ;  memory:
 ;
 ;    Address   During assembly              During replay
-;    $5D00     Part-order page              Replay FCB, input record, state
-;    $5E00     Source cache record          Intel HEX output buffer
-;    $5E80     Source names, descriptors,   Output window, up to $E080
+;    $5E00     Part-order page              Replay FCB, input record, state
+;    $5F00     Source cache record          Intel HEX and symbol buffer
+;    $5F80     Source names, descriptors,   Output window, up to $E180
 ;              symbols, references and
 ;              the spool buffers
 ;
@@ -25,7 +25,7 @@
 ;  ATOM.COM and below cpWork, where the output window never reaches.
 
 cpCall5     EQU     $0005                       ; CP/M BDOS entry address.
-cpWork      EQU     $5D00                       ; First byte of transient writable arenas.
+cpWork      EQU     $5E00                       ; First byte of transient writable arenas.
 incOrder    EQU     cpWork                      ; Dependency-order table with one byte per part.
 incOEnd     EQU     incOrder+$100               ; Exclusive end of the 256-byte order page.
 srcCache    EQU     incOEnd                     ; 128-byte random-source DMA cache.

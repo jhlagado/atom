@@ -31,7 +31,8 @@ cpTens:    DW      10000,1000,100,10,1                              ; Descending
 msgHelp: ; Compact command syntax for help and argument errors.
     DB   13,10,'U','s','a','g','e',':',' ','A','T','O','M',' '      ; Syntax prefix.
     DB   '[','S','O','U','R','C','E',' '                            ; Optional source.
-    DB   '[','O','U','T','P','U','T',']',']',13,10,'$'              ; Optional output.
+    DB   '[','O','U','T','P','U','T',' '                            ; Optional output.
+    DB   '[','S','Y','M','B','O','L','S',']',']',']',13,10,'$'      ; Optional symbol file.
 msgSrc: ; Invalid source-filename diagnostic.
     DB   13,10,'I','n','v','a','l','i','d',' '                      ; Error prefix.
     DB   's','o','u','r','c','e',' ','n','a','m','e',13,10,'$'      ; Source name.
@@ -80,4 +81,5 @@ cmdAsm:    DB      'A','S','M'                                      ; Default so
 cmdCom:    DB      'C','O','M'                                      ; COM output extension selector.
 cmdBin:    DB      'B','I','N'                                      ; Raw binary output extension selector.
 cmdHex:    DB      'H','E','X'                                      ; Intel HEX output extension selector.
+cmdSym:    DB      'S','Y','M'                                      ; Symbol file extension.
 cmdAso:    DB      'A','S','O'                                      ; Serialised-operation output extension selector.

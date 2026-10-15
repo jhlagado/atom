@@ -45,6 +45,7 @@ atom main.asm build/main.bin build/main.hex build/main.lst
 | `.hex` | Intel HEX records with addresses and checksums |
 | `.com` | Flat binary for CP/M, loaded and entered at `$0100` |
 | `.lst` | Source lines, addresses, bytes and symbols |
+| `.sym` | Global symbols for CP/M debuggers such as SID and ZSID |
 | `.d8.json` | Source and symbol information for Debug80 |
 
 A listing also contains routine sizes and a jump report. The report identifies
@@ -170,6 +171,20 @@ HELLO FROM ATOM
 can be `.COM`, `.BIN`, `.HEX` or `.ASO`. BIN and COM contain the same flat bytes.
 ASO contains the ordered image and patch operations for a separate materialiser.
 It is not an executable command. `ATOM` alone prints the usage line.
+
+A third name asks for a symbol file:
+
+```text
+A>ATOM HELLO HELLO.COM HELLO.SYM
+```
+
+The type defaults to `.SYM` and cannot be anything else. Each line holds a
+global symbol's value in four hex digits, a space and its name, in the order
+Atom first met the names. Debuggers such as SID and ZSID load this format.
+Private labels are not included. The Node `.sym` output is byte-for-byte the
+same text. Atom writes the symbols to `HELLO.$$S` while it still has them,
+then renames that to `HELLO.SYM` once the output is published. A failed build
+leaves any earlier symbol file as it was.
 
 CP/M names are current-drive 8.3 names. Includes use quoted names such as
 `%INCLUDE "MATH.ASM"`. Directory paths, drive prefixes and wildcards are rejected.

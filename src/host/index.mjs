@@ -17,6 +17,7 @@ export {
   writeAtomCom,
   writeAtomD8,
   writeAtomListing,
+  writeAtomSym,
   writeIntelHex,
 } from "./artifacts/render-artifacts.mjs";
 export { publishAtomArtifacts } from "./artifacts/publish-artifacts.mjs";

@@ -338,6 +338,20 @@ export function writeAtomD8(
   };
 }
 
+// A CP/M symbol file for debuggers such as SID and ZSID: one global symbol per
+// line, four hex digits and the name, in symbol-table order, as ATOM.COM
+// writes it. CP/M text ends at the first ^Z.
+export function writeAtomSym(generation) {
+  const values = new Map();
+  for (const symbol of generation.symbols ?? []) {
+    if (!symbol.name.startsWith(".") && !values.has(symbol.name)) values.set(symbol.name, symbol.value);
+  }
+  const order = generation.symbolOrder ?? [...values.keys()];
+  const lines = order.filter((name) => values.has(name))
+    .map((name) => `${hex4(values.get(name) & 0xffff)} ${name}\r\n`);
+  return `${lines.join("")}\x1a`;
+}
+
 export function renderAtomArtifacts(result, options = {}) {
   const fill = options.fill ?? 0;
   const entryAddress = options.entryAddress ?? result.generation.target.start;
@@ -350,5 +364,6 @@ export function renderAtomArtifacts(result, options = {}) {
     listing: writeAtomListing(result.project, result.generation, { fill }),
     d8,
     d8Text: `${JSON.stringify(d8, null, 2)}\n`,
+    sym: writeAtomSym(result.generation),
   });
 }

@@ -50,7 +50,7 @@ harness.
 | `cpmcon.asm` | Prints to the console |
 | `cpmdata.asm`, `cpmsg.asm` | FCBs, console text and the generated message table |
 | `cpmstate.asm` | Resident state that must survive the output stage |
-| `spool.asm` (`aso.asm`, `mat.asm`, `cpmhex.asm`) | Spools Atom's output to `NAME.$$B`, then replays it into COM, BIN or HEX |
+| `spool.asm` (`aso.asm`, `mat.asm`, `cpmhex.asm`, `cpmsym.asm`) | Spools Atom's output to `NAME.$$B`, replays it into COM, BIN or HEX, and writes the symbol file |
 
 During output, the materialiser reuses the memory that held the symbol and
 source tables during assembly. `cpmmap.asm` shows which addresses change role,

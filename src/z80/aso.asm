@@ -342,6 +342,8 @@ asoSeal: ; Validate COMMIT geometry and seal the spool.
     JR   Z,.closeBad                    ; Let abort retry after close fails.
     XOR  A                              ; Clear the open flag after a successful close.
     LD   (asoOpen),A                    ; The spool can now be renamed transactionally.
+    CALL symWrite                       ; Write symbols before replay reuses their memory.
+    RET  C                              ; hsAbort removes a partial symbol file.
     LD   A,(pubKind)                    ; Is the spool the requested file?
     CP   3                              ; Explicit ASO needs no final-image conversion.
     JR   NZ,.replay                     ; COM, BIN and HEX replay to a temp.

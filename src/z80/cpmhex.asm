@@ -103,6 +103,12 @@ hexClose: ; Finish the HEX stream.
     POP  BC                                     ; Recover the count.
     INC  HL                                     ; Advance the cursor.
     DJNZ .eof                                   ; Queue the rest.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Pad the last CP/M record with $1A, write it and report any write error.
+; Any text file written through hexPut ends here.
+
+hexDone: ; Finish a text file written through hexPut.
 .pad: ; Fill the last record with CP/M end-of-file bytes.
     LD   A,(hexCnt)                             ; Bytes in the open record?
     OR   A                                      ; Zero means it was written.

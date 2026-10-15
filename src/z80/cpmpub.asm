@@ -109,7 +109,7 @@ pubSwap: ; Publish a completed temporary output using a backup.
     CALL cpBdos                                 ; Remove old output after commit.
     XOR  A                                      ; Clear transaction state.
     LD   (pubKept),A                            ; Clear the flag after attempting backup deletion.
-    RET                                         ; Report successful publication with carry clear.
+    JP   symShip                                ; Publish the symbol file too, if any.
 pubFail: ; Return publication failure for rollback.
     LD   A,1                                    ; Return failed-commit status.
     SCF                                         ; Mark the sink operation as failed.
@@ -158,6 +158,7 @@ hsAbort: ; Close and remove tentative files on assembly failure.
     LD   DE,cpFcb                               ; Pass the temporary FCB to CP/M.
     LD   C,cpErase                              ; Select CP/M delete-file function 19.
     CALL cpBdos                                 ; Delete uncommitted temp output.
+    CALL symDrop                                ; Delete an unpublished symbol file.
     LD   A,(matOwns)                            ; Is $$B still the spool?
     OR   A                                      ; Clear means $$B may hold the old output.
     CALL NZ,matDrop                             ; Let overlay remove only a private spool.

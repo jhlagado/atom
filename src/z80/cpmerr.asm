@@ -228,14 +228,19 @@ cpPutSym: ; Unpack and print the diagnostic symbol name.
     LD   A,(drSym)                              ; Is there a symbol?
     LD   HL,drSym+1                             ; Address the pointer's high byte.
     OR   (HL)                                   ; Zero means no symbol was recorded.
-    JR   NZ,.named                              ; Print the recorded name.
+    JR   NZ,cpPutNm                             ; Print the recorded name.
     LD   A,'?'                                  ; Show that the name is unknown.
     JP   cpPutCh                                ; Print it and return.
-.named: ; Print a validated symbol record.
+
+;@ROUTINE IN IX CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Decode the name in symbol record IX and send each character to the routine
+; in cpNameTo: the console, or the symbol file while one is being written.
+
+cpPutNm: ; Decode one symbol record's name.
     BIT  7,(IX+5)                               ; Is this a private name?
     JR   Z,.global                              ; No: print it as it is.
     LD   A,'.'                                  ; Private names begin with a period.
-    CALL cpPutCh                                ; Print it.
+    CALL .put                                   ; Send it.
 .global: ; Decode a global or private packed name.
     LD   L,(IX+0)                               ; Load the first packed word.
     LD   H,(IX+1)                               ; It holds characters one to three.
@@ -273,13 +278,17 @@ cpPutSym: ; Unpack and print the diagnostic symbol name.
     CP   27                                     ; Codes 1 to 26 are letters.
     JR   NC,.notAlpha                           ; Higher codes are digits or underscore.
     ADD  A,'A'-1                                ; Convert 1 to A.
-    JP   cpPutCh                                ; Print it and return.
+    JR   .put                                   ; Send it and return.
 .notAlpha: ; Convert a packed digit or underscore code.
     CP   37                                     ; Codes 27 to 36 are digits.
     JR   NC,.under                              ; Code 37 is the underscore.
     ADD  A,'0'-27                               ; Convert 27 to 0.
-    JP   cpPutCh                                ; Print it and return.
+    JR   .put                                   ; Send it and return.
 .under: ; Print packed underscore code 37.
     LD   A,'_'                                  ; Code 37 prints as an underscore.
-    JP   cpPutCh                                ; Print it and return.
+.put: ; Send one character to the routine in cpNameTo.
+    PUSH HL                                     ; Keep the decoder's remainder.
+    LD   HL,(cpNameTo)                          ; Fetch the destination routine.
+    EX   (SP),HL                                ; Restore HL and stack the routine.
+    RET                                         ; Enter it. It returns to our caller.
 
