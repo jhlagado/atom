@@ -403,6 +403,29 @@ ppStore: ; Append a complete name-and-value record.
 ; Mask inactive source bytes while preserving every CR/LF byte and offset.
 
 ppFilter: ; Filter one raw source byte without moving offsets.
+
+; Almost every byte is ordinary text in an active branch of a source with no
+; INCBIN rows to apply. Return those at once, before any state is saved.
+
+    CP   '%'                                        ; A percent may start a directive.
+    JR   Z,.full                                    ; Directives take the full path.
+    LD   E,A                                        ; Keep the byte.
+    LD   A,(ppActive)                               ; Is this branch active?
+    OR   A                                          ; Zero means inactive text.
+    JR   Z,.restore                                 ; Inactive text is masked below.
+    LD   A,(binReady)                               ; Has INCBIN rewriting started?
+    OR   A                                          ; Zero means no rows apply yet.
+    JR   Z,.plain                                   ; Return the byte unchanged.
+    LD   A,(binCount)                               ; Are there any INCBIN rows?
+    OR   A                                          ; Zero means nothing to rewrite.
+    JR   NZ,.restore                                ; Rows need the full path.
+.plain: ; Return an ordinary byte unchanged.
+    LD   A,E                                        ; Recover the byte.
+    OR   A                                          ; Clear carry and classify a zero byte.
+    RET                                             ; Return the source byte.
+.restore: ; Recover the byte for the full path.
+    LD   A,E                                        ; Recover the byte.
+.full: ; Save state and filter the byte in full.
     PUSH BC                                         ; The source-provider boundary preserves BC.
     PUSH IX                                         ; Definition lookup uses IX internally.
     LD   (ppPos),HL                                 ; Save the byte's source position.

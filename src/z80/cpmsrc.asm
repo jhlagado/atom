@@ -191,6 +191,26 @@ srcByte: ; Select a source part and apply preprocessing filters.
     POP  HL                             ; Restore the byte offset.
     POP  BC                             ; Restore the caller's parser state.
 .ready: ; Read from the already selected source part.
+
+; Most reads hit the cached record. Take the byte directly when they do, and
+; leave misses and end of file to srcRaw.
+
+    LD   A,(srcKey+1)                   ; Compare the cached record's high byte.
+    CP   H                              ; Same 256-byte page of the file?
+    JR   NZ,.slow                       ; No: load the record.
+    LD   A,L                            ; Align the offset to its record.
+    AND  $80                            ; Keep the record-boundary bit.
+    LD   E,A                            ; Hold the aligned low byte.
+    LD   A,(srcKey)                     ; Compare the cached record's low byte.
+    CP   E                              ; Same 128-byte record?
+    JR   NZ,.slow                       ; No: load the record.
+    LD   E,L                            ; Form the byte's address in the cache.
+    RES  7,E                            ; Keep its offset within the record.
+    LD   D,srcCache/256                 ; Select the cache page.
+    LD   A,(DE)                         ; Read the cached byte.
+    CP   $1A                            ; CP/M's end-of-text marker?
+    JP   NZ,ppFilter                    ; No: filter the byte.
+.slow: ; Read through the cache loader.
     PUSH BC                             ; Save parser BC across raw read.
     PUSH HL                             ; Preserve the source offset across cache lookup.
     CALL srcRaw                         ; Read one byte from the active source file.
