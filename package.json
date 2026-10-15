@@ -40,6 +40,7 @@
     "assets/atom-object-harness.bin",
     "bin",
     "docs/*.md",
+    "docs/images",
     "examples",
     "src/z80/*.asm",
     "src/host",
@@ -50,6 +51,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "verify:build": "node scripts/build.mjs --check",
+    "docs:records": "node scripts/generate-records-doc.mjs",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "pretest": "npm run verify:dependencies",
     "test": "node --test --test-concurrency=2 test/*.test.mjs",

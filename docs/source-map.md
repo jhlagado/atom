@@ -14,6 +14,8 @@ file opens with a short introduction to its stage.
 ## The core
 
 `core.asm` lists the core in the order a statement flows through it.
+[Records](records.md) describes the records each stage fills or reads, and
+follows one small program through all of them.
 
 | Stage | Files | What it does |
 | --- | --- | --- |

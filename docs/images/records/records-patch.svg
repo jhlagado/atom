@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="230" viewBox="0 0 720 230" role="img" aria-labelledby="figTitle figDesc">
+  <title id="figTitle">COUNT's address patched into the output</title>
+  <desc id="figDesc">The output bytes from $0100 before and after COUNT is defined. The two placeholder bytes at $0101 become 05 01, little-endian $0105.</desc>
+  <defs>
+    <style>
+    :root {
+      --ink:    #111417;
+      --ink-2:  #454b52;
+      --dim:    #8797a5;
+      --rule:   #c8ccd0;
+      --fill:   #ffffff;
+      --fill-2: #eef0f1;
+      --sig:    #14607e;
+      --sig-bg: #14607e1a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink:    #e6e8ea;
+        --ink-2:  #b3b9bf;
+        --dim:    #7d8890;
+        --rule:   #3d4348;
+        --fill:   #1c1f22;
+        --fill-2: #262a2e;
+        --sig:    #5fa8c6;
+        --sig-bg: #5fa8c626;
+      }
+    }
+
+    .bx    { fill: var(--fill);   stroke: var(--ink);  stroke-width: 1.5; }
+    .bx2   { fill: var(--fill-2); stroke: var(--ink);  stroke-width: 1.5; }
+    .bxq   { fill: var(--fill-2); stroke: var(--rule); stroke-width: 1.5; }
+    .bxs   { fill: var(--sig-bg); stroke: var(--sig);  stroke-width: 2; }
+    .sig   { fill: var(--sig);    stroke: var(--sig);  stroke-width: 1.5; }
+    .none  { fill: none;          stroke: var(--ink);  stroke-width: 1.5; }
+    .rule  { fill: none; stroke: var(--rule); stroke-width: 1; }
+    .dash  { fill: none; stroke: var(--dim);  stroke-width: 1.2; stroke-dasharray: 4 3; }
+    .sline { fill: none; stroke: var(--sig);  stroke-width: 2; }
+
+    .t     { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--ink); }
+    .ts    { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--ink-2); }
+    .tb    { font: 600 13px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--ink); }
+    .n     { font: 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink); }
+    .ns    { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink-2); }
+    .nb    { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink); }
+    .dim   { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; fill: var(--dim); }
+    .dimn  { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--dim); }
+    .cap   { font: 600 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+             fill: var(--sig); letter-spacing: .12em; }
+    .on-sig { fill: var(--sig); }
+    .on-dim { fill: var(--dim); }
+    .inv   { fill: var(--fill); }
+  </style>
+    <!-- markerUnits defaults to strokeWidth, which sizes every arrowhead by the
+         weight of the line carrying it. A 2px signal arrow then gets a head a
+         third larger than the 1.5px ink arrow beside it, and in a figure that
+         uses both the heads read as mismatched rather than as emphasis. Fixed
+         in user space so one arrowhead is one size everywhere. -->
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0,0.5 L10,5 L0,9.5 z" fill="var(--ink)"/>
+    </marker>
+    <marker id="arS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0,0.5 L10,5 L0,9.5 z" fill="var(--sig)"/>
+    </marker>
+    <marker id="arD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+      <path d="M0,0.5 L10,5 L0,9.5 z" fill="var(--dim)"/>
+    </marker>
+  </defs>
+  <text class="cap" x="60" y="22" text-anchor="start" xml:space="preserve">IMAGE  AS EMITTED</text>
+  <rect class="bx" x="60" y="50" width="64" height="30" rx="2"/>
+  <text class="t" x="92" y="69.5" text-anchor="middle" xml:space="preserve">3A</text>
+  <text class="dim" x="92" y="43" text-anchor="middle" xml:space="preserve">$0100</text>
+  <rect class="bxs" x="124" y="50" width="64" height="30" rx="2"/>
+  <text class="tb" x="156" y="69.5" text-anchor="middle" xml:space="preserve">00</text>
+  <text class="dim" x="156" y="43" text-anchor="middle" xml:space="preserve">$0101</text>
+  <rect class="bxs" x="188" y="50" width="64" height="30" rx="2"/>
+  <text class="tb" x="220" y="69.5" text-anchor="middle" xml:space="preserve">00</text>
+  <text class="dim" x="220" y="43" text-anchor="middle" xml:space="preserve">$0102</text>
+  <rect class="bx" x="252" y="50" width="64" height="30" rx="2"/>
+  <text class="t" x="284" y="69.5" text-anchor="middle" xml:space="preserve">18</text>
+  <text class="dim" x="284" y="43" text-anchor="middle" xml:space="preserve">$0103</text>
+  <rect class="bx" x="316" y="50" width="64" height="30" rx="2"/>
+  <text class="t" x="348" y="69.5" text-anchor="middle" xml:space="preserve">FB</text>
+  <text class="dim" x="348" y="43" text-anchor="middle" xml:space="preserve">$0104</text>
+  <rect class="bx" x="380" y="50" width="64" height="30" rx="2"/>
+  <text class="t" x="412" y="69.5" text-anchor="middle" xml:space="preserve">05</text>
+  <text class="dim" x="412" y="43" text-anchor="middle" xml:space="preserve">$0105</text>
+  <text class="ns" x="460" y="70" text-anchor="start" xml:space="preserve">LD A,($0000)  JR START  DB 5</text>
+  <text class="cap" x="60" y="132" text-anchor="start" xml:space="preserve">AFTER PATCH  $0101</text>
+  <rect class="bx" x="60" y="160" width="64" height="30" rx="2"/>
+  <text class="t" x="92" y="179.5" text-anchor="middle" xml:space="preserve">3A</text>
+  <text class="dim" x="92" y="153" text-anchor="middle" xml:space="preserve">$0100</text>
+  <rect class="bxs" x="124" y="160" width="64" height="30" rx="2"/>
+  <text class="tb" x="156" y="179.5" text-anchor="middle" xml:space="preserve">05</text>
+  <text class="dim" x="156" y="153" text-anchor="middle" xml:space="preserve">$0101</text>
+  <rect class="bxs" x="188" y="160" width="64" height="30" rx="2"/>
+  <text class="tb" x="220" y="179.5" text-anchor="middle" xml:space="preserve">01</text>
+  <text class="dim" x="220" y="153" text-anchor="middle" xml:space="preserve">$0102</text>
+  <rect class="bx" x="252" y="160" width="64" height="30" rx="2"/>
+  <text class="t" x="284" y="179.5" text-anchor="middle" xml:space="preserve">18</text>
+  <text class="dim" x="284" y="153" text-anchor="middle" xml:space="preserve">$0103</text>
+  <rect class="bx" x="316" y="160" width="64" height="30" rx="2"/>
+  <text class="t" x="348" y="179.5" text-anchor="middle" xml:space="preserve">FB</text>
+  <text class="dim" x="348" y="153" text-anchor="middle" xml:space="preserve">$0104</text>
+  <rect class="bx" x="380" y="160" width="64" height="30" rx="2"/>
+  <text class="t" x="412" y="179.5" text-anchor="middle" xml:space="preserve">05</text>
+  <text class="dim" x="412" y="153" text-anchor="middle" xml:space="preserve">$0105</text>
+  <text class="ns" x="460" y="180" text-anchor="start" xml:space="preserve">LD A,($0105)  JR START  DB 5</text>
+</svg>

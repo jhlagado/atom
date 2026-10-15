@@ -752,6 +752,16 @@ function globalSymbolOrder(memory, symbols) {
   return Object.freeze(names);
 }
 
+// The global symbol records' bytes, in table order, for traces.
+function globalSymbolRecords(memory, symbols) {
+  const records = [];
+  const end = word(memory, symbols.AtomSymbolGlobalEnd);
+  for (let pointer = word(memory, symbols.AtomSymbolArenaBase); pointer < end; pointer += symbols.AtomSymbolRecordBytes) {
+    records.push(Object.freeze({ address: pointer, bytes: memory.slice(pointer, pointer + symbols.AtomSymbolRecordBytes) }));
+  }
+  return Object.freeze(records);
+}
+
 function unpackPackedSymbol(memory, pointer, symbols) {
   if (pointer < 0 || pointer + symbols.AtomSymbolNameBytes > memory.length)
     return undefined;
@@ -1079,6 +1089,40 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let cycles = 0;
   const layout = [];
   const declaredSymbols = [];
+  // With options.trace, copy each record as the core produces it: every token,
+  // every committed instruction with its references, and the pending arena
+  // each time a definition resolves it.
+  const trace = options.trace === true ? [] : undefined;
+  let tokenSeen = false;
+  let lastToken;
+  const traceRecord = (stage, fields) => trace.push(Object.freeze({ stage, source: currentDiagnostic(), ...fields }));
+  const traceAt = (pc) => {
+    if (pc === symbols.AtomTokenizerNext) {
+      // tkNext publishes into the record, so it holds the previous token. The
+      // core enters tkNext more than once per token, so keep each one once.
+      const bytes = memory.slice(symbols.AtomTokenRecord, symbols.AtomTokenRecord + symbols.AtomTokenRecordBytes);
+      if (tokenSeen && bytes.some((byte) => byte !== 0) && !bytes.every((byte, index) => byte === lastToken?.[index])) {
+        traceRecord("token", { bytes });
+        lastToken = bytes;
+      }
+      tokenSeen = true;
+    } else if (pc === symbols.AtomParserCommit) {
+      const count = memory[symbols.AtomParserReferenceCount];
+      const references = [];
+      for (let index = 0; index < count; index += 1) {
+        const at = symbols.AtomParserReferences + index * symbols.AtomParserPublicReferenceBytes;
+        references.push(memory.slice(at, at + symbols.AtomParserPublicReferenceBytes));
+      }
+      traceRecord("instruction", { bytes: memory.slice(symbols.AtomParserScratch, symbols.AtomParserScratch + 10), references });
+    } else if (pc === symbols.AtomOutputResolveSymbol) {
+      const records = [];
+      const next = word(memory, symbols.AtomPendingNext);
+      for (let at = word(memory, symbols.AtomPendingArenaBase); at < next; at += symbols.AtomPendingRecordBytes) {
+        records.push(memory.slice(at, at + symbols.AtomPendingRecordBytes));
+      }
+      traceRecord("resolve", { symbol: runtime.cpu.ix, pending: records });
+    }
+  };
   const defaultSourceProvider = new MemorySourceByteProvider(
     snapshot.parts.map((part) => ({
       ordinal: part.ordinal,
@@ -1321,6 +1365,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
         );
       }
     }
+    if (trace !== undefined) traceAt(runtime.cpu.pc);
     const service = serviceAt.get(runtime.cpu.pc);
     if (service !== undefined) {
       const cause = invokeService(
@@ -1444,6 +1489,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       symbols: uniqueDeclarations(declaredSymbols),
       symbolOrder: globalSymbolOrder(memory, symbols),
     }),
+    ...(trace === undefined ? {} : { trace: Object.freeze([...trace, Object.freeze({ stage: "symbols", records: globalSymbolRecords(memory, symbols) })]) }),
     execution,
     native: result,
     core: Object.freeze({
