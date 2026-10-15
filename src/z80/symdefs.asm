@@ -104,26 +104,56 @@ syFind: ; Find an exact key within its global or current private interval.
     JR   Z,.noScope                     ; No scope means the lookup is invalid.
     LD   IX,(syFreeHi)                  ; Start at the first private record.
     LD   DE,(syLimit)                   ; Stop at the shared arena's exclusive end.
-    JR   .recLoop                       ; Enter the common record scan.
+    JR   .count                         ; Enter the common record scan.
 .global: ; Establish the permanent global interval.
     LD   IX,(syBase)                    ; Start at the first global record.
     LD   DE,(syFreeLo)                  ; Stop at the end of globals.
-.recLoop: ; Compare one eight-byte record per iteration.
-    CALL syAtEnd                        ; Has IX reached the interval end?
-    JR   Z,.notFound                    ; Exhaustion means the exact key is absent.
-    PUSH DE                             ; Save the interval end.
+.count: ; Count the records between IX and the exclusive end in DE.
+    PUSH IX                             ; Copy the first record address.
+    POP  HL                             ; HL is the interval start.
+    EX   DE,HL                          ; HL is the end and DE the start.
+    OR   A                              ; Clear carry for the subtraction.
+    SBC  HL,DE                          ; HL is the interval length in bytes.
+    JR   Z,.notFound                    ; An empty interval holds no key.
+    LD   B,3                            ; Divide by the eight-byte record size.
+.divide: ; Halve the length once.
+    SRL  H                              ; Shift the high byte right.
+    RR   L                              ; Carry into the low byte.
+    DJNZ .divide                        ; HL is now the record count.
+    LD   B,L                            ; B counts records within a pass.
+    LD   C,H                            ; C counts passes of up to 256 records.
+    LD   A,L                            ; A partial pass needs one more.
+    OR   A                              ; Is the low count zero?
+    JR   Z,.counted                     ; B=0 already means 256 records.
+    INC  C                              ; Count the partial pass.
+.counted: ; Keep the first key byte in A for a cheap first test.
+    LD   HL,(syInsKey)                  ; Address the search key.
+    LD   A,(HL)                         ; Most records differ in this byte.
+    LD   DE,syRecLen                    ; Step one record at a time.
+.recLoop: ; Test one record's first byte.
+    CP   (IX+0)                         ; Could this record match?
+    JR   Z,.firstOk                     ; Compare the whole key.
+.nextRec: ; Advance to the next record.
+    ADD  IX,DE                          ; Step over this record.
+    DJNZ .recLoop                       ; Continue within this pass.
+    DEC  C                              ; Count one finished pass.
+    JR   NZ,.recLoop                    ; Continue with the next pass.
+.notFound: ; Report interval exhaustion.
+    JP   syErrMis                       ; Return the shared not-found result.
+.firstOk: ; The first byte matches. Compare the rest of the key.
+    PUSH BC                             ; Save both record counts.
+    PUSH DE                             ; Save the record stride.
 ;@EXPECTOUT ZERO
     CALL .keyEq                         ; Compare this record's exact key.
-    POP  DE                             ; Restore the scan's exclusive end address.
+    POP  DE                             ; Restore the record stride.
+    POP  BC                             ; Restore the record counts.
     JR   Z,.found                       ; Return IX when all key bits match.
-    LD   BC,syRecLen                    ; Load the fixed symbol-record stride.
-    ADD  IX,BC                          ; Advance to the next record.
-    JR   .recLoop                       ; Continue until a match or interval end.
+    LD   HL,(syInsKey)                  ; Reload the first key byte.
+    LD   A,(HL)                         ; .keyEq used A.
+    JR   .nextRec                       ; Keep scanning.
 .found: ; IX identifies the exact live record.
     XOR  A                              ; Report lookup success with carry clear.
     RET                                 ; Preserve IX for the caller.
-.notFound: ; Report interval exhaustion.
-    JP   syErrMis                       ; Return the shared not-found result.
 .noScope: ; Report missing private scope.
     JP   syOrphan                       ; Return private-name-without-scope.
 
