@@ -8780,6 +8780,12 @@
       "module": "FE"
     },
     {
+      "original": "AtomFileAlias",
+      "short": "sfAlias",
+      "private": false,
+      "module": "FE"
+    },
+    {
       "original": "AtomFrontCodeStart",
       "short": "feBeg",
       "private": false,

@@ -81,6 +81,15 @@ Native assembly errors also expose `text`, `messageNumber` and, where applicable
 `symbol` and `relatedDiagnostic`. The full `message` includes the source position.
 Filesystem failures can surface the underlying Node error.
 
+## Macros
+
+`await expandAtomMacros(text, { name, include })` expands the macros in `.mac`
+source and returns `{ text }`, the Atom source to assemble. `name` is the
+file's name for `%LINE` markers, and `include(importer, specifier)` returns
+`{ name, text }` for a `%INCLUDE` of another `.mac` file. Errors are
+`AtomAssemblyError`s in the `macro` category. [ATOMPP](atompp.md) describes the
+macro language.
+
 ## Prepared source and native hosts
 
 `resolveAtomProject()` opens the entry file and returns the services Atom uses

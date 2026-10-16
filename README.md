@@ -24,6 +24,7 @@ also has a disk image that runs in Triptych.
 
 - [Using Atom](docs/using-atom.md): a first program, output files and CP/M usage
 - [The language](docs/language-reference.md): labels, expressions and directives
+- [ATOMPP](docs/atompp.md): macros, expanded before Atom assembles
 - [The Node API](docs/programming-api.md): assembly from JavaScript
 - [Source map](docs/source-map.md): the Z80 source files in reading order
 - [Records](docs/records.md): the records Atom's stages pass between them, with one program traced through all of them

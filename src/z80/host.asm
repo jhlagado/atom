@@ -113,6 +113,14 @@ sfPark: ; Keep a memory part's read state.
 sfBack: ; Restore a memory part's read state.
     RET                                 ; Nothing to keep.
 
+;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+; Memory parts have no names, so a %LINE keeps the part's own ordinal and
+; only sets the line.
+
+sfAlias: ; Name an alias of a memory part.
+    OR   A                              ; The part is its own alias.
+    RET                                 ; Return it with carry clear.
+
 ;@SERVICE IN B,HL OUT A,CARRY MAYBE-OUT HL CLOBBERS BC,DE,HALFCARRY,ZERO,SIGN,PARITY
 ; Open the binary file named by the B bytes at HL for INCBIN. Return its
 ; length in HL with A=0, or A nonzero when the length cannot be told. Fail

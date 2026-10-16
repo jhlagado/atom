@@ -224,11 +224,19 @@ on line 2:
 main.asm:2:6: undefined symbol MISSING
 ```
 
-Lines and columns start at one. Included-file errors name the included file.
+Lines and columns start at one. Included-file errors name the included file,
+and errors after a `%LINE` name the file and line it gives.
 A malformed `%` directive is reported at its line as an invalid source
 directive, and an unclosed `%IF` at the end of its file.
 A failed forward reference points to the instruction that used it and can also
 name the line that defined its target.
+
+## Macros
+
+Atom has no macros of its own. `atompp prog.mac` expands the macros in
+`prog.mac` and writes `prog.asm`, which Atom then assembles. Errors in the
+result name the lines of `prog.mac` and its macro files.
+[ATOMPP](atompp.md) describes the macro language.
 
 ## Converting older source
 

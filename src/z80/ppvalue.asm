@@ -651,3 +651,4 @@ ppKeyDef:    DB      'D','E','F','I','N','E'        ; Root numeric definition.
 ppKeyIf:     DB      'I','F'                        ; Conditional opener.
 ppKeyAlt:   DB      'E','L','S','E'                 ; Alternate branch.
 ppKeyEnd:    DB      'E','N','D','I','F'            ; Conditional closer.
+ppKeyLin:    DB      'L','I','N','E'                ; Line marker.

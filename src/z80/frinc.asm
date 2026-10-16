@@ -4,6 +4,12 @@
 ; assembled once, at its first include, which gives the order the text would
 ; have if every include were pasted in place. Nothing is read in advance.
 ;
+; %LINE "NAME",n says the next line is line n of NAME, so a tool that writes
+; Atom source, such as a macro expander, can point errors at its own input.
+; The file's part ends at the directive's line and continues under an alias:
+; another ordinal, named NAME, that reads the same file. Errors and pending
+; references in that part report the alias and the line it set.
+;
 ; HOST FILE SERVICES
 ; ------------------
 ;
@@ -21,6 +27,9 @@
 ;   sfPark   IN A=frame. Keep the current file's read state while an include
 ;            is assembled.
 ;   sfBack   IN A=frame. Restore that state.
+;   sfAlias  IN A=ordinal of the file being read, B,HL: the name's B bytes.
+;            OUT A=an ordinal that reports that name and reads file A.
+;            Carry: A is a message number.
 ;
 ; The platform defines feRamLo, where the front end's workspace begins, and
 ; incMax, the deepest include nesting it allows.
@@ -38,12 +47,14 @@ srcLost     EQU     79                  ; Could not read the source file.
 
 ; Workspace.
 
-incFrLen    EQU     6                   ; Frame: ordinal, resume offset, line, condition base.
+incFrLen    EQU     7                   ; Frame: file, shown ordinal, resume offset, line, condition base.
 incStack    EQU     feRamLo             ; The files waiting for their includes.
 incDepth    EQU     incStack+incFrLen*incMax ; Number of frames in use.
 incNext     EQU     incDepth+1          ; Included file tkOpen begins next, or $FF.
 srcPart     EQU     incNext+1           ; Ordinal of the file being read.
-incHead     EQU     srcPart+1           ; Nonzero while the file is still in its header.
+srcShow     EQU     srcPart+1           ; Ordinal the core reports: the file or its alias.
+incCont     EQU     srcShow+1           ; Nonzero when tkOpen continues the file under an alias.
+incHead     EQU     incCont+1           ; Nonzero while the file is still in its header.
 incErr      EQU     incHead+1           ; Message number of the first failure, or zero.
 incErrAt    EQU     incErr+1            ; Its part, offset and line.
 ppDepth     EQU     incErrAt+5          ; Number of open conditional frames.
@@ -69,13 +80,15 @@ ppSrcPtr    EQU     ppTemp+1            ; Directive cursor saved during token lo
 ppAfter     EQU     ppSrcPtr+2          ; Directive cursor saved after a validated value.
 ppValue     EQU     ppAfter+2           ; Unsigned sixteen-bit definition or condition value.
 ppLength    EQU     ppValue+2           ; Significant length of the staged definition name.
-ppStack     EQU     ppLength+1          ; Sixteen one-byte parent, condition and ELSE frames.
+ppNameLn    EQU     ppLength+1          ; Length of a directive's quoted name.
+ppStack     EQU     ppNameLn+1          ; Sixteen one-byte parent, condition and ELSE frames.
 ppLnMax     EQU     64                  ; Longest directive before its comment.
 ppLnBuf     EQU     ppStack+16          ; The directive line, ended by CR.
 incState    EQU     ppLnBuf+ppLnMax+1   ; Per file: 0 not begun, 1 open, 2 assembled.
 ppRecLen    EQU     20                  ; Definition record: length, 17 name bytes and value.
 ppDefMax    EQU     32                  ; Maximum distinct numeric definitions.
-ppDefBeg    EQU     incState+255        ; Beginning of the fixed-width definition table.
+incPhys     EQU     incState+255        ; Per ordinal: the file an alias reads, or $FF.
+ppDefBeg    EQU     incPhys+255         ; Beginning of the fixed-width definition table.
 ppToken     EQU     ppDefBeg+ppRecLen*ppDefMax ; Seventeen-byte uppercase directive or value token.
 ppName      EQU     ppToken+17          ; Separately staged padded definition name.
 ppWidth     EQU     17                  ; Maximum significant definition-name length.
@@ -95,6 +108,7 @@ incStart: ; Reset the include and condition state.
     LD   (ppDepth),A                    ; No condition is open.
     LD   (ppDefCnt),A                   ; No value is defined.
     LD   (incErr),A                     ; No failure yet.
+    LD   (incCont),A                    ; No alias is waiting.
     LD   HL,incState                    ; No file has begun.
     LD   B,255                          ; One state per possible ordinal.
 .state: ; Clear one file state.
@@ -102,6 +116,11 @@ incStart: ; Reset the include and condition state.
     INC  HL                             ; Advance.
     DJNZ .state                         ; Clear them all.
     DEC  A                              ; Form $FF.
+    LD   B,255                          ; incPhys follows: no ordinal is an alias.
+.alias: ; Mark one ordinal as a file.
+    LD   (HL),A                         ; $FF means not an alias.
+    INC  HL                             ; Advance.
+    DJNZ .alias                         ; Mark them all.
     LD   (incNext),A                    ; No include is waiting to begin.
     LD   (srcPart),A                    ; No file is being read.
     RET                                 ; The driver asks tkOpen for the first root.
@@ -117,6 +136,9 @@ tkOpen: ; Supply the next source part.
     LD   A,(incErr)                     ; Has a failure been recorded?
     OR   A                              ; Zero means none.
     JR   NZ,.fail                       ; Report it.
+    LD   A,(incCont)                    ; Does the file continue under an alias?
+    OR   A                              ; Zero means no.
+    JR   NZ,.cont                       ; Continue it.
     LD   A,(incNext)                    ; Is an include waiting to begin?
     CP   $FF                            ; $FF means none.
     JR   NZ,.child                      ; Begin it.
@@ -150,13 +172,24 @@ tkOpen: ; Supply the next source part.
     LD   A,$FF                          ; It begins now.
     LD   (incNext),A                    ; Nothing else is waiting to begin.
 .begin: ; Begin the part at its first byte.
-    LD   A,C                            ; Select the part.
+    LD   A,C                            ; The file reports itself.
+    LD   (srcShow),A                    ; Until a %LINE names an alias.
     CALL ppStart                        ; Reset the filter for its first byte.
     LD   A,C                            ; Return its ordinal.
     LD   HL,0                           ; It starts at offset zero.
     LD   DE,1                           ; On line one.
     OR   A                              ; Clear carry.
     RET                                 ; The driver assembles it.
+.cont: ; Continue the file under its alias at the %LINE line's end.
+    XOR  A                              ; The alias begins now.
+    LD   (incCont),A                    ; Nothing else is waiting.
+    LD   (ppMode),A                     ; The resume byte is that line's ending.
+    LD   (ppLastCr),A                   ; It has not been counted.
+    LD   A,(srcShow)                    ; Return the alias.
+    LD   HL,(ppPos)                     ; It resumes at the line ending.
+    LD   DE,(ppLine)                    ; On the line before the one %LINE set.
+    OR   A                              ; Clear carry.
+    RET                                 ; The driver continues the file.
 .noRoot: ; Finish, or report a root that cannot be named.
     OR   A                              ; A=0 means no root remains.
     JR   NZ,.lost                       ; Report the failure.
@@ -183,6 +216,7 @@ tkOpen: ; Supply the next source part.
 ; reads each byte once, in order.
 
 tkRead: ; Read and filter one source byte.
+    LD   A,(srcPart)                    ; An alias reads its file.
     CALL sfRead                         ; Read the byte from the host.
     JP   NC,ppFilter                    ; Filter it.
     PUSH BC                             ; Keep the caller's BC.
@@ -209,30 +243,8 @@ tkRead: ; Read and filter one source byte.
 ; message number in A.
 
 ppIncl: ; Start an included part.
-    LD   HL,(ppSrcPtr)                  ; Start after the INCLUDE keyword.
-.blank: ; Skip whitespace before the name.
-    CALL ppNext                         ; Read the next byte.
-    CP   ' '                            ; A space?
-    JR   Z,.blank                       ; Skip it.
-    CP   9                              ; A tab?
-    JR   Z,.blank                       ; Skip it.
-    CP   '"'                            ; The name must be quoted.
-    JR   NZ,.bad                        ; Reject anything else.
-    LD   (ppAfter),HL                   ; Keep the name's first byte.
-    LD   B,0                            ; Count its bytes.
-.name: ; Find the closing quote.
-    CALL ppNext                         ; Read the next byte.
-    CP   '"'                            ; The closing quote?
-    JR   Z,.named                       ; The name is complete.
-    CP   13                             ; The directive ended first?
-    JR   Z,.bad                         ; Reject an unclosed name.
-    INC  B                              ; Count the byte.
-    JR   .name                          ; Continue.
-.named: ; Check the name and the rest of the line.
-    LD   A,B                            ; An empty name names no file.
-    OR   A                              ; Zero bytes?
-    JR   Z,.bad                         ; Reject it.
-    LD   (ppTemp),A                     ; Keep the length.
+    CALL ppQName                        ; Read the quoted name.
+    JR   C,.bad                         ; Reject a malformed one.
     CALL ppEol                          ; Only whitespace may follow.
     JR   C,.bad                         ; Reject anything else.
     LD   A,(incHead)                    ; Includes belong to the header.
@@ -245,7 +257,7 @@ ppIncl: ; Start an included part.
     OR   A                              ; Zero means it is not.
     RET  Z                              ; Ignore it, with A=0 and carry clear.
     LD   HL,(ppAfter)                   ; Address the name.
-    LD   A,(ppTemp)                     ; Its length.
+    LD   A,(ppNameLn)                   ; Its length.
     LD   B,A                            ; In B.
     CALL sfOpen                         ; The host names the file.
     RET  C                              ; It cannot.
@@ -291,6 +303,106 @@ ppIncl: ; Start an included part.
     SCF                                 ; Carry marks the failure.
     RET                                 ; The filter records where it was.
 
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Apply %LINE "NAME",n: the next line is line n of NAME. An inactive one is
+; checked but ignored. Otherwise the file continues under an alias for NAME,
+; and A=1 ends the current part at this line's end. Carry reports a failure,
+; with its message number in A.
+
+ppSetLn: ; Name the lines that follow.
+    CALL ppQName                        ; Read the quoted name.
+    JP   C,ppErr                        ; Reject a malformed one.
+    CALL ppNext                         ; A comma separates the line number.
+    CP   ','                            ; Is it there?
+    JP   NZ,ppErr                       ; Reject anything else.
+    CALL ppGetTok                       ; Read the line number.
+    JP   C,ppErr                        ; It is required.
+    LD   (ppSrcPtr),HL                  ; Keep the cursor while it is evaluated.
+    CALL ppEval                         ; Convert it.
+    JP   C,ppErr                        ; Reject a bad number.
+    LD   A,H                            ; Line zero does not exist.
+    OR   L                              ; Is it zero?
+    JP   Z,ppErr                        ; Reject it.
+    DEC  HL                             ; This line's ending moves to line n.
+    LD   (ppValue),HL                   ; Keep it.
+    LD   HL,(ppSrcPtr)                  ; Resume after the number.
+    CALL ppEol                          ; Only whitespace may follow.
+    JP   C,ppErr                        ; Reject anything else.
+    LD   A,(ppActive)                   ; Is the directive active?
+    OR   A                              ; Zero means it is not.
+    RET  Z                              ; Ignore it, with A=0 and carry clear.
+    LD   HL,(ppAfter)                   ; Address the name.
+    LD   A,(ppNameLn)                   ; Its length.
+    LD   B,A                            ; In B.
+    LD   A,(srcPart)                    ; The alias reads this file.
+    CALL sfAlias                        ; The host names the alias.
+    RET  C                              ; It cannot.
+    LD   (srcShow),A                    ; Report the alias from now on.
+    LD   C,A                            ; Keep it.
+    LD   A,(srcPart)                    ; The file it reads.
+    CP   C                              ; Is the name the file's own?
+    JR   Z,.same                        ; Then it is not an alias.
+    LD   E,C                            ; Widen the alias ordinal.
+    LD   D,0                            ; Clear the high byte.
+    LD   HL,incPhys                     ; Address the alias table.
+    ADD  HL,DE                          ; Address this alias's entry.
+    LD   (HL),A                         ; It reads the current file.
+.same: ; Set the line and end the part.
+    LD   HL,(ppValue)                   ; The line before the next.
+    LD   (ppLine),HL                    ; Lines continue from there.
+    LD   A,1                            ; tkOpen continues the file.
+    LD   (incCont),A                    ; Under its alias.
+    OR   A                              ; A=1 with carry clear ends the part.
+    RET                                 ; The filter cuts it here.
+
+;@ROUTINE OUT CARRY,HL CLOBBERS A,B,ZERO,SIGN,PARITY,HALFCARRY
+; Read a quoted name after the directive's keyword. Keep its first byte in
+; ppAfter and its length in ppNameLn, and return HL after the closing quote.
+; Carry reports a missing, empty or unclosed name.
+
+ppQName: ; Read a directive's quoted name.
+    LD   HL,(ppSrcPtr)                  ; Start after the keyword.
+.blank: ; Skip whitespace before the name.
+    CALL ppNext                         ; Read the next byte.
+    CP   ' '                            ; A space?
+    JR   Z,.blank                       ; Skip it.
+    CP   9                              ; A tab?
+    JR   Z,.blank                       ; Skip it.
+    CP   '"'                            ; The name must be quoted.
+    JR   NZ,.bad                        ; Reject anything else.
+    LD   (ppAfter),HL                   ; Keep the name's first byte.
+    LD   B,0                            ; Count its bytes.
+.name: ; Find the closing quote.
+    CALL ppNext                         ; Read the next byte.
+    CP   '"'                            ; The closing quote?
+    JR   Z,.named                       ; The name is complete.
+    CP   13                             ; The directive ended first?
+    JR   Z,.bad                         ; Reject an unclosed name.
+    INC  B                              ; Count the byte.
+    JR   .name                          ; Continue.
+.named: ; Keep the name's length.
+    LD   A,B                            ; An empty name names nothing.
+    LD   (ppNameLn),A                   ; Keep the length.
+    OR   A                              ; Zero bytes?
+    RET  NZ                             ; Return carry clear.
+.bad: ; Reject the name.
+    SCF                                 ; Carry marks it malformed.
+    RET                                 ; The caller reports the directive.
+
+;@ROUTINE IN A OUT A CLOBBERS DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Return the file that ordinal A reads: A itself, or the file of an alias.
+
+incReal: ; Map an alias to its file.
+    LD   E,A                            ; Widen the ordinal.
+    LD   D,0                            ; Clear the high byte.
+    LD   HL,incPhys                     ; Address the alias table.
+    ADD  HL,DE                          ; Address this ordinal's entry.
+    LD   A,(HL)                         ; The file the alias reads.
+    CP   $FF                            ; $FF means it is not an alias.
+    RET  NZ                             ; Return the alias's file.
+    LD   A,E                            ; A is the file itself.
+    RET                                 ; Return it.
+
 ;@ROUTINE IN A OUT HL CLOBBERS DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Address the state of file A: 0 not begun, 1 open, 2 assembled.
 
@@ -316,8 +428,9 @@ incDone: ; Record that a file has been assembled.
 incFrame: ; Address one include frame.
     LD   E,A                            ; Keep the frame index.
     ADD  A,A                            ; Two bytes per frame index.
-    ADD  A,E                            ; Three.
-    ADD  A,A                            ; Six bytes per frame header.
+    ADD  A,A                            ; Four.
+    ADD  A,A                            ; Eight.
+    SUB  E                              ; Seven bytes per frame header.
     LD   E,A                            ; Widen the offset.
     LD   D,0                            ; Clear the high byte.
     LD   HL,incStack                    ; Address the frames.
@@ -335,6 +448,9 @@ incPush: ; Save the current file while its include is assembled.
     CALL incFrame                       ; Address its header.
     LD   A,(srcPart)                    ; The waiting file.
     LD   (HL),A                         ; Store its ordinal.
+    INC  HL                             ; Advance to the ordinal it reports.
+    LD   A,(srcShow)                    ; The file or its alias.
+    LD   (HL),A                         ; Store it.
     INC  HL                             ; Advance to the resume offset.
     LD   BC,(ppPos)                     ; It resumes at the byte being filtered.
     LD   (HL),C                         ; Store the offset's low byte.
@@ -366,6 +482,9 @@ incPop: ; Resume a file whose include has been assembled.
     CALL incFrame                       ; Address its header.
     LD   A,(HL)                         ; The file's ordinal.
     LD   (srcPart),A                    ; It is the current part again.
+    INC  HL                             ; Advance to the ordinal it reports.
+    LD   A,(HL)                         ; The file or its alias.
+    LD   (srcShow),A                    ; Report it again.
     INC  HL                             ; Advance to the resume offset.
     LD   C,(HL)                         ; Read its low byte.
     INC  HL                             ; Advance to its high byte.
@@ -389,7 +508,7 @@ incPop: ; Resume a file whose include has been assembled.
     LD   (ppDefOk),A                    ; No definition may follow an include.
     INC  A                              ; Form one.
     LD   (incHead),A                    ; The file is still in its header.
-    LD   A,(srcPart)                    ; Return the ordinal.
+    LD   A,(srcShow)                    ; Return the ordinal it reports.
     LD   H,B                            ; Return the resume offset.
     LD   L,C                            ; Complete it.
     LD   DE,(ppLine)                    ; Return its line.
@@ -407,7 +526,7 @@ incFail: ; Record a failure and where it happened.
     RET  NZ                             ; Keep the first.
     LD   A,L                            ; Recover the message.
     LD   (incErr),A                     ; Keep it.
-    LD   A,(srcPart)                    ; The part being read.
+    LD   A,(srcShow)                    ; The part being reported.
     LD   (incErrAt),A                   ; Keep it.
     LD   HL,(ppDirAt)                   ; Where the directive started.
     LD   (incErrAt+1),HL                ; Keep the offset.

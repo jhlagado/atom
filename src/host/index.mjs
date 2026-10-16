@@ -27,6 +27,7 @@ export {
   translateResolvedAtomProjectToAzm,
 } from "./translation/atom-to-azm.mjs";
 export { translateAzmSourceToAtom } from "./translation/azm-to-atom.mjs";
+export { expandAtomMacros } from "./macros/atompp.mjs";
 export { createSelfHostedAtomCore } from "./self-host/create-self-hosted-core.mjs";
 export {
   ATOM_TOOL_SERVICE,

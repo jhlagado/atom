@@ -182,5 +182,13 @@ lines and columns are unchanged, so diagnostics still refer to the original
 file. [Using Atom](using-atom.md#source-files-and-conditions) explains where the
 directives belong and the platform limits.
 
+`%LINE "FILE",n` says the next line is line n of `FILE`. Errors in the lines
+that follow name that file and line, until the file ends or another `%LINE`
+names something else. It is meant for tools that write Atom source, such as
+[ATOMPP](atompp.md), so Atom's errors point at the tool's input. It can appear
+anywhere, and is ignored inside an inactive branch. On CP/M the name must be an
+8.3 name.
+
 Atom has no macros, automatic branch promotion, forward equates, typed layouts,
-namespace imports or banked output. Includes import each source file once.
+namespace imports or banked output. [ATOMPP](atompp.md) expands macros before
+assembly. Includes import each source file once.

@@ -43,6 +43,18 @@ sfOpen: ; Return the ordinal of a named file.
     LD   A,incBad                       ; Reject a malformed name.
     RET                                 ; Carry is still set.
 
+;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Name the alias a %LINE gives the file being read. The name is a quoted
+; current-drive 8.3 name, kept in the same table as file names. The front end
+; records which file the alias reads.
+
+sfAlias: ; Return the ordinal for a %LINE name.
+    LD   DE,cpFcb                       ; Parse into the working FCB.
+    CALL srcName                        ; Validate the 8.3 name.
+    JP   NC,incFind                     ; Return its ordinal.
+    LD   A,ppBadDir                     ; Reject a malformed name.
+    RET                                 ; Carry is still set.
+
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Begin reading file A from its first byte. The entry check leaves the root
 ; open, so it is not opened again.

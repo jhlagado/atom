@@ -37,8 +37,8 @@ ppStart: ; Reset per-part state for a part's first byte.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Apply the directive captured in ppLnBuf. Carry means it failed, with its
-; message number in A. A=1 means an include ends this part here. A=0 means the
-; part continues.
+; message number in A. A=1 means an include or %LINE ends this part here.
+; A=0 means the part continues.
 
 ppApply: ; Apply one captured directive at its line's end.
     LD   A,(ppMode)                     ; The directive is complete.
@@ -67,6 +67,10 @@ ppApply: ; Apply one captured directive at its line's end.
     LD   B,6                            ; DEFINE has six letters.
     CALL ppMatch                        ; Reject any other six-byte token later.
     JR   Z,ppDefine                     ; Validate scope, name and value.
+    LD   HL,ppKeyLin                    ; Check for a line marker.
+    LD   B,4                            ; LINE has four letters.
+    CALL ppMatch                        ; Match the full keyword.
+    JP   Z,ppSetLn                      ; Name the lines that follow.
     XOR  A                              ; IF, ELSE and ENDIF close the definitions.
     LD   (ppDefOk),A                    ; No define may follow conditional logic.
     LD   HL,ppKeyEnd                    ; Check the five-byte closing directive.

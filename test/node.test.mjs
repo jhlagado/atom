@@ -1093,6 +1093,31 @@ describe("Source projects", () => {
     ].join("\n"));
   });
 
+  test("%LINE names the lines that follow, through includes and forward references", async (t) => {
+    const fail = async (files) => {
+      const root = await project(t, files);
+      return assembleAtomProject({ root, entry: "main.asm", target: { start: 0, capacity: 64 } }).then(
+        () => assert.fail("expected an error"),
+        (error) => error.message,
+      );
+    };
+    assert.equal(
+      await fail({ "main.asm": 'NOP\r\n%LINE "prog.mac",10\r\nNOP\r\n%LINE "lib.mac",3\r\n  LD BC,A\r\n' }),
+      "lib.mac:3:3: operands are not valid for this instruction",
+    );
+    assert.equal(
+      await fail({ "main.asm": '%LINE "prog.mac",1\n%INCLUDE "lib.asm"\nJP Missing\n', "lib.asm": "X EQU 1\n" }),
+      "prog.mac:2:4: undefined symbol MISSING",
+    );
+    const root = await project(t, { "main.asm": '%LINE "prog.mac",1\nStart: NOP\n%LINE "prog.mac",20\nJR Start\n' });
+    const result = await assembleAtomProject({ root, entry: "main.asm", target: { start: 0, capacity: 64 } });
+    assert.deepEqual(result.project.parts.map(({ logicalIdentity, aliasOf }) => [logicalIdentity, aliasOf]), [
+      ["main.asm", undefined],
+      ["prog.mac", 0],
+    ]);
+    assert.deepEqual([...materializeAtomGeneration(result.generation).bytes], [0x00, 0x18, 0xfd]);
+  });
+
   test("projects reject dependency escapes, cycles and invalid preprocessing", async (t) => {
     for (const [files, code, message, cause] of [
       [{ "main.asm": '%include "../outside.asm"\n' }, "missing-source", "main.asm:1:1: could not read the included file", "root-escape"],

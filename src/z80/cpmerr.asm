@@ -11,11 +11,17 @@ errWhere: ; Render source filename, line and byte column.
     LD   HL,incFound                            ; Read the count of known source names.
     CP   (HL)                                   ; Reject an impossible ordinal defensively.
     JR   NC,.badPart                            ; Retain the original numeric diagnostic.
+    CALL incReal                                ; A %LINE alias reads another file.
     CALL srcOpen                                ; Reopen its source to find the column.
     JR   C,.unread                              ; Name it and keep the offset.
     CALL errBack                                ; Find the failing byte's column.
     JR   C,.unread                              ; Report the raw offset on a read failure.
-    LD   HL,srcFcb                              ; Address the reopened file's 8.3 name.
+    LD   A,(stAtPart)                           ; Report the part's own name.
+    CALL incSlot                                ; Address it: the file's, or its alias's.
+    LD   DE,srcFcb+1                            ; Replace the reopened file's name.
+    LD   BC,11                                  ; Name and type.
+    LDIR                                        ; The column is already found.
+    LD   HL,srcFcb                              ; Address the reported 8.3 name.
     CALL cpPutFcb                               ; Print the physical source filename.
     LD   A,':'                                  ; Separate filename from line number.
     CALL cpPutCh                                ; Print the first colon.

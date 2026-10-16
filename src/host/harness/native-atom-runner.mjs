@@ -1261,6 +1261,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     runtime.cpu.pc = returnAddress;
   };
   let rootNext = 0;
+  const aliases = new Map();
   const identities = new Map(files.map((file) => [file.physicalPath ?? file, file.ordinal]));
   const setCarry = (carry) => {
     runtime.cpu.flags.C = carry ? 1 : 0;
@@ -1363,6 +1364,40 @@ export async function assembleResolvedAtomProject(project, options = {}) {
         if (ok) sourceReads += 1;
         runtime.cpu.a = ok ? response.value : MESSAGE.sourceLost;
         setCarry(!ok);
+      }
+      returnFromService();
+      continue;
+    }
+    if (runtime.cpu.pc === symbols.AtomFileAlias) {
+      // A %LINE names the lines that follow. The alias reports that name
+      // and shares the bytes of the file it reads, so columns still come
+      // from the file Atom assembled.
+      const physical = files[runtime.cpu.a];
+      const name = pair(runtime.cpu.h, runtime.cpu.l);
+      const label = String.fromCharCode(...memory.slice(name, name + runtime.cpu.b));
+      const key = `${runtime.cpu.a}\0${label}`;
+      let ordinal = aliases.get(key);
+      if (physical === undefined) {
+        runtime.cpu.a = MESSAGE.sourceLost;
+        setCarry(true);
+      } else if (ordinal === undefined && files.length >= NATIVE_ATOM_LIMITS.sourceParts) {
+        runtime.cpu.a = MESSAGE.tooManyFiles;
+        setCarry(true);
+      } else {
+        if (ordinal === undefined) {
+          ordinal = files.length;
+          files.push(Object.freeze({
+            ordinal,
+            bank: 0,
+            logicalIdentity: label,
+            originalBytes: physical.originalBytes,
+            compilerBytes: physical.compilerBytes,
+            aliasOf: physical.ordinal,
+          }));
+          aliases.set(key, ordinal);
+        }
+        runtime.cpu.a = ordinal;
+        setCarry(false);
       }
       returnFromService();
       continue;

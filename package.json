@@ -22,7 +22,8 @@
   "type": "module",
   "bin": {
     "atom": "bin/atom.mjs",
-    "azm-to-atom": "bin/azm-to-atom.mjs"
+    "azm-to-atom": "bin/azm-to-atom.mjs",
+    "atompp": "bin/atompp.mjs"
   },
   "exports": {
     ".": "./src/host/index.mjs",

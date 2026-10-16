@@ -784,6 +784,11 @@ test("CP/M rejects malformed and unsupported conditional directives before outpu
     "%DEFINE ABCDEFGHIJKLMNOPQR 1\r\n",
     "ORG $100\r\n%DEFINE LATE 1\r\n",
     `${Array.from({ length: 17 }, () => "%IF 1").join("\r\n")}\r\n${Array.from({ length: 17 }, () => "%ENDIF").join("\r\n")}\r\n`,
+    '%LINE "PROG.MAC"\r\n',
+    '%LINE "PROG.MAC" 3\r\n',
+    '%LINE "PROG.MAC",0\r\n',
+    '%LINE "PROG.MAC",3 EXTRA\r\n',
+    '%LINE "DIR/PROG.MAC",3\r\n',
   ];
 
   for (const source of sources) {
@@ -794,6 +799,16 @@ test("CP/M rejects malformed and unsupported conditional directives before outpu
     );
     assert.equal(result.outputFile, undefined);
   }
+});
+
+test("CP/M reports errors after %LINE in the named file", async () => {
+  const result = await runCpm22Atom(Buffer.from(
+    'ORG $100\r\n%LINE "PROG.MAC",10\r\nNOP\r\n%LINE "LIB.MAC",3\r\n  LD BC,A\r\n',
+    "ascii",
+  ));
+  assert.match(result.atomTranscript, /LIB\.MAC:3:3: operands are not valid for this instruction/, result.atomTranscript);
+  const forward = await runCpm22Atom(Buffer.from('ORG $100\r\n%LINE "PROG.MAC",10\r\nNOP\r\nJP MISSING\r\n', "ascii"));
+  assert.match(forward.atomTranscript, /PROG\.MAC:11:4: undefined symbol MISSING/, forward.atomTranscript);
 });
 
 test("CP/M INCBIN handles consecutive counts and a binary record boundary", async () => {
