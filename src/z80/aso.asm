@@ -235,7 +235,7 @@ asoPatch: ; Check PATCH geometry before writing a record.
 .bad: ; Reject invalid PATCH geometry.
     JP   asoFail                        ; Poison the writer after invalid PATCH input.
 
-;@ROUTINE IN A,BC,HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A,BC,HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Validate final geometry, append END and record padding, then publish ASO.
 
 asoSeal: ; Validate COMMIT geometry and seal the spool.

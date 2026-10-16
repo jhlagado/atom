@@ -113,8 +113,8 @@ binFile     EQU     binLen+2                    ; Eleven-byte normalised binary 
 binTemp     EQU     binFile+11                  ; Token byte or delimiter saved across checks.
 binFree     EQU     binTemp+1                   ; Address of the next unused binary metadata row.
 binFcb      EQU     binFree+2                   ; Independent 36-byte binary input FCB.
-binFEnd     EQU     binFcb+36                   ; Exclusive end of the binary input FCB.
-binRamHi    EQU     binFEnd                     ; Exclusive end of binary preflight and reader workspace.
+binFcbHi    EQU     binFcb+36                   ; Exclusive end of the binary input FCB.
+binRamHi    EQU     binFcbHi                    ; Exclusive end of binary preflight and reader workspace.
 cpSymBeg    EQU     binRamHi                    ; Beginning of the caller-owned symbol arena.
 cpSymEnd    EQU     cpSymBeg+$3000              ; Exclusive end of the twelve-KiB symbol arena.
 cpRefBeg    EQU     cpSymEnd                    ; Beginning of the pending-reference arena.

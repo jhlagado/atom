@@ -40,7 +40,7 @@ ppReset: ; Reset runtime conditions for a new source part.
     LD   (ppDirOff),HL                  ; A repeated peek must not apply IF twice.
     RET                                 ; Preserve the preflight definition table.
 
-;@ROUTINE IN HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Validate and apply one line-leading directive during graph preflight.
 ; HL enters after '%'. A=1 means an include is waiting for its child.
 
@@ -132,7 +132,7 @@ ppEndIf: ; Validate and close a preflight IF.
     LD   HL,(ppAfter)                   ; Resume after the validated directive line.
     RET                                 ; Continue scanning the current source.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; At runtime, apply conditional state once for a directive's source offset.
 
 ppApply: ; Replay a directive state change during source reads.
@@ -176,7 +176,7 @@ ppApply: ; Replay a directive state change during source reads.
     SCF                                 ; Report a source-read failure.
     RET                                 ; Never assemble with uncertain condition state.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one root definition. the name and value occupy separate work buffers.
 
 ppAddDef: ; Parse and insert a unique root definition.
@@ -205,7 +205,7 @@ ppAddDef: ; Parse and insert a unique root definition.
     LD   HL,(ppAfter)                   ; Restore next source position.
     RET                                 ; Carry reports a full definition table.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse an IF value, validate its line, then push the computed condition.
 
 ppPush: ; Evaluate an IF and validate its trailing text.

@@ -14,6 +14,8 @@
 ;  capacity in DE, high-water low word in BC and endpoint flags in A.
 ;  Bit 0 marks cursor $10000 and bit 1 marks high water $10000.
 ;  ABORT takes no inputs.
+;  BEGIN may clobber BC, DE and HL, and COMMIT also IX and IY. The core
+;  keeps nothing in them across these calls.
 ;
 ;  The separate NOPs preserve distinct hook addresses for host interception.
 ;  Without interception, hsFail returns A=$FF with carry set.
@@ -30,7 +32,7 @@ tkRead: ; Read one byte from the memory-backed source interval.
     OR   A                              ; Clear carry and classify zero.
     RET                                 ; Return without provider state.
 
-;@ROUTINE IN IX OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable BEGIN service entry and fail closed when unbound.
 
 hsBegin: ; Unbound BEGIN entry.
@@ -54,7 +56,7 @@ hsPatchB: ; Unbound byte-PATCH entry.
 hsPatchW: ; Unbound word-PATCH entry.
     NOP                                 ; PATCH-word hook. fall through unbound.
 
-;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable COMMIT service entry and fail closed when unbound.
 
 hsCommit: ; Unbound COMMIT entry.

@@ -27,7 +27,7 @@ outBeg: ; Begin the executable output module.
 ; relative displacement range.
 
 outFull     EQU     1                   ; Report that the target interval is too small.
-outBug      EQU     2                   ; Report an impossible internal state.
+outInvar    EQU     2                   ; Report an impossible internal state.
 outRange    EQU     3                   ; Report a concrete value outside its field range.
 outFar      EQU     4                   ; Report a relative target outside -128..127.
 outAtTop    EQU     1                   ; Cursor word zero can mean exclusive end $10000.
@@ -505,7 +505,7 @@ outDeny: ; Return a rejected sink operation.
     SCF                                 ; Mark the operation as failed.
     RET                                 ; Return the sink's status unchanged in A.
 outFault: ; Return an internal-consistency failure.
-    LD   A,outBug                       ; Select the invariant status code.
+    LD   A,outInvar                     ; Select the invariant status code.
     SCF                                 ; Mark the impossible state as failed.
     RET                                 ; Return for driver-level abort and diagnosis.
 

@@ -1,6 +1,6 @@
 ; The include graph: find every %INCLUDE and order the parts depth first.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Resolve the root source and its leading %INCLUDE graph. Names are retained
 ; as exact CP/M 8.3 identities, while descriptors are emitted in dependency-
 ; first order. No intermediate source-order file is involved.
@@ -125,7 +125,7 @@ incSort: ; Discover and order the complete include graph.
     RET                                 ; No partial descriptor set reaches the core.
 
 
-;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Scan and validate one source header. Mode zero discovers names. mode one
 ; reports A=1 when any dependency has not yet been emitted.
 

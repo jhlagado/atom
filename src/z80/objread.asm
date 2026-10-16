@@ -67,10 +67,10 @@ objInit: ; Validate and retain adapter configuration.
     JR   Z,.invalid                     ; Reject that incomplete configuration.
 
     XOR  A                              ; Zero marks closed handles and empty cache.
-    LD   (objIn),A                      ; Clear the source handle low byte.
-    LD   (objIn+1),A                    ; Clear the source handle high byte.
-    LD   (objOut),A                     ; Clear the output handle low byte.
-    LD   (objOut+1),A                   ; Clear the output handle high byte.
+    LD   (objSrcId),A                   ; Clear the source handle low byte.
+    LD   (objSrcId+1),A                 ; Clear the source handle high byte.
+    LD   (objOutId),A                   ; Clear the output handle low byte.
+    LD   (objOutId+1),A                 ; Clear the output handle high byte.
     LD   (objValid),A                   ; Invalidate any source-cache bytes.
     LD   A,$FF                          ; No source part has been opened yet.
     LD   (objHeld),A                    ; Record the invalid part sentinel.
@@ -261,7 +261,7 @@ objXfer: ; Transfer through the common 128-byte buffer.
 ; identity only after the provider accepts CLOSE.
 
 objClose: ; Close the current source handle.
-    LD   DE,(objIn)                     ; Load the current source handle.
+    LD   DE,(objSrcId)                  ; Load the current source handle.
     LD   A,D                            ; Begin checking whether the handle is zero.
     OR   E                              ; Z means no source object needs closing.
     RET  Z                              ; Treat an already-closed source as success.
@@ -271,8 +271,8 @@ objClose: ; Close the current source handle.
     CALL objHCall                       ; Submit CLOSE with the saved source handle.
     RET  C                              ; Keep the handle if CLOSE failed.
     XOR  A                              ; Prepare zero for the closed state.
-    LD   (objIn),A                      ; Clear the source handle low byte.
-    LD   (objIn+1),A                    ; Clear the source handle high byte.
+    LD   (objSrcId),A                   ; Clear the source handle low byte.
+    LD   (objSrcId+1),A                 ; Clear the source handle high byte.
     LD   (objValid),A                   ; Invalidate every byte in the shared cache.
     LD   A,$FF                          ; Mark that no source part owns the handle.
     LD   (objHeld),A                    ; Publish the invalid-part sentinel.
@@ -309,7 +309,7 @@ objMount: ; Open the named source for one part ordinal.
     LD   A,ZT_OPEN                      ; Choose the named-object OPEN operation.
     CALL objOpen                        ; Open this part's named source object.
     RET  C                              ; Do not publish a handle after a failed open.
-    LD   (objIn),DE                     ; Retain the provider's returned source handle.
+    LD   (objSrcId),DE                  ; Retain the provider's returned source handle.
     LD   A,(objPart)                    ; Recover the part associated with that handle.
     LD   (objHeld),A                    ; Associate handle with this part.
     XOR  A                              ; The new source has no cached bytes yet.
@@ -365,13 +365,13 @@ objFetch: ; Read a source byte through the shared cache.
 
     LD   IX,(objCfg)                    ; Reload the source provider selector.
     LD   C,(IX+objFrom)                 ; Select the provider that owns the open handle.
-    LD   DE,(objIn)                     ; Pass the current source handle to objSeek.
+    LD   DE,(objSrcId)                  ; Pass the current source handle to objSeek.
     LD   HL,(objWant)                   ; Seek to the exact requested logical offset.
     CALL objSeek                        ; Seek before refilling the cache.
     JR   C,.done                        ; Keep cache bounds on seek failure.
     LD   IX,(objCfg)                    ; objSeek clobbered IX. reload config.
     LD   C,(IX+objFrom)                 ; Select the source provider for the transfer.
-    LD   DE,(objIn)                     ; Pass the open object handle to objXfer.
+    LD   DE,(objSrcId)                  ; Pass the open object handle to objXfer.
     LD   B,objChunk                     ; Request up to 128 bytes.
     LD   A,ZT_READ                      ; Choose the named-object READ operation.
     CALL objXfer                        ; Refill from the requested byte.

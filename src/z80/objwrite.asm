@@ -9,7 +9,7 @@ objWrite: ; Require an exact output transfer count.
     LD   (objValid),A                   ; Invalidate cached source bytes.
     LD   IX,(objCfg)                    ; Load the configured output-service selector.
     LD   C,(IX+objSink)                 ; Select the output provider.
-    LD   DE,(objOut)                    ; Pass its open handle.
+    LD   DE,(objOutId)                  ; Pass its open handle.
     LD   A,ZT_WRITE                     ; Choose the named-object WRITE operation.
     CALL objXfer                        ; Write B bytes from the common transfer buffer.
     RET  C                              ; Propagate provider failure.
@@ -111,7 +111,7 @@ objToRel: ; Translate target address to output-relative offset.
 objPlace: ; Seek the current output object.
     LD   IX,(objCfg)                    ; Load adapter configuration.
     LD   C,(IX+objSink)                 ; Select the output provider.
-    LD   DE,(objOut)                    ; Supply its current handle to the seek helper.
+    LD   DE,(objOutId)                  ; Supply its current handle to the seek helper.
     JP   objSeek                        ; Reuse the common request and offset setup.
 
 ; Begin a tentative flat-image object. Capture the descriptor's target base,
@@ -128,9 +128,9 @@ hsBegin: ; Open one tentative output generation.
     PUSH HL                             ; Preserve the caller's address and byte values.
     PUSH IX                             ; Save the Atom descriptor pointer.
     PUSH IY                             ; Preserve IY across the named-object gateway.
-    LD   A,(objOut)                     ; Read the tentative output handle's low byte.
+    LD   A,(objOutId)                   ; Read the tentative output handle's low byte.
     LD   B,A                            ; Keep it while checking the high byte.
-    LD   A,(objOut+1)                   ; Read the tentative output handle's high byte.
+    LD   A,(objOutId+1)                 ; Read the tentative output handle's high byte.
     OR   B                              ; Nonzero means a generation is open.
     JR   NZ,.nested                     ; Reject a nested output generation.
     LD   L,(IX+11)                      ; Read the descriptor's target base, low byte.
@@ -144,7 +144,7 @@ hsBegin: ; Open one tentative output generation.
     LD   A,ZT_BEGIN                     ; Begin a tentative output object.
     CALL objOpen                        ; Open the uncommitted generation.
     JR   C,.done                        ; Restore caller state on failure.
-    LD   (objOut),DE                    ; Retain the tentative generation's handle.
+    LD   (objOutId),DE                  ; Retain the tentative generation's handle.
     LD   HL,0                           ; The new image begins at relative offset zero.
     LD   (objCur),HL                    ; Reset its append cursor.
     LD   (objOutHi),HL                  ; Reset its initialised high-water extent.
@@ -324,13 +324,13 @@ hsCommit: ; Materialise high water and commit the object.
     JR   C,.done                        ; Driver will abort tentative output.
     LD   IX,(objCfg)                    ; Load the output provider selector.
     LD   C,(IX+objSink)                 ; Select the provider that owns the generation.
-    LD   DE,(objOut)                    ; Supply the tentative output handle.
+    LD   DE,(objOutId)                  ; Supply the tentative output handle.
     LD   A,ZT_COM                       ; Choose the provider's atomic COMMIT operation.
     CALL objHCall                       ; Publish the completed object.
     JR   C,.done                        ; Preserve its failure status for the driver.
     XOR  A                              ; Clear handle and return status.
-    LD   (objOut),A                     ; Clear the committed handle's low byte.
-    LD   (objOut+1),A                   ; Allow a later BEGIN.
+    LD   (objOutId),A                   ; Clear the committed handle's low byte.
+    LD   (objOutId+1),A                 ; Allow a later BEGIN.
     RET                                 ; Publication succeeded.
 .done: ; Return a failed fill, close or commit.
     RET                                 ; Propagate fill, close or commit result.
@@ -350,7 +350,7 @@ hsAbort: ; Attempt source close and output abort.
     JR   NC,.sourceOk                   ; Continue directly when source close succeeded.
     LD   B,A                            ; Save its error during output abort.
 .sourceOk: ; Inspect the output handle after source cleanup.
-    LD   DE,(objOut)                    ; Read the tentative output handle.
+    LD   DE,(objOutId)                  ; Read the tentative output handle.
     LD   A,D                            ; Begin checking whether an output is open.
     OR   E                              ; Z means no output is open.
     JR   Z,.result                      ; Return the source-close result.
@@ -362,14 +362,14 @@ hsAbort: ; Attempt source close and output abort.
     POP  BC                             ; Restore the pending source-close result.
     JR   C,.outFail                     ; Abort failure takes precedence.
     XOR  A                              ; Prepare zero for the now-closed local handle.
-    LD   (objOut),A                     ; Clear accepted output handle.
-    LD   (objOut+1),A                   ; Clear the output handle high byte.
+    LD   (objOutId),A                   ; Clear accepted output handle.
+    LD   (objOutId+1),A                 ; Clear the output handle high byte.
     JR   .result                        ; Return any source-close failure saved in B.
 .outFail: ; Give output-abort failure precedence.
     LD   (objByte),A                    ; Save the abort failure.
     XOR  A                              ; Clear the local handle even when ABORT failed.
-    LD   (objOut),A                     ; Remove the stale output handle's low byte.
-    LD   (objOut+1),A                   ; Remove its high byte as well.
+    LD   (objOutId),A                   ; Remove the stale output handle's low byte.
+    LD   (objOutId+1),A                 ; Remove its high byte as well.
     LD   A,(objByte)                    ; Recover the abort failure.
     SCF                                 ; Return it as primary failure.
     JR   .done                          ; Restore caller registers.
@@ -409,8 +409,8 @@ hsEnd: ; End sink callbacks before adapter state.
 
 objCfg:     DW      0                   ; Caller-owned nine-byte configuration address.
 objWork:    DW      0                   ; Base of the 399-byte common request workspace.
-objIn:   DW      0                      ; Source handle, or zero when closed.
-objOut:   DW      0                     ; Tentative output handle, or zero.
+objSrcId:   DW      0                   ; Source handle, or zero when closed.
+objOutId:   DW      0                   ; Tentative output handle, or zero.
 objHeld:   DB      $FF                  ; Source part, or $FF when invalid.
 objPart:    DB      0                   ; Part staged across provider calls.
 objWant:     DW      0                  ; Requested source offset for a refill.

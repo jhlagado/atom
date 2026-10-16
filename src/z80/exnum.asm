@@ -303,5 +303,5 @@ exFail: ; Publish a part/offset diagnostic while retaining status A.
     POP  BC                             ; Restore caller BC.
     SCF                                 ; Fail while retaining status A.
     RET                                 ; Return category and positioned diagnostic.
-exRuleTo: ; End the expression rule-code measurement range.
+exRuleHi: ; End the expression rule-code measurement range.
 exEnd: ; End expression code and immutable tables.

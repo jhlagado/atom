@@ -1,4 +1,4 @@
-;@ROUTINE IN A OUT HL,CARRY CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A OUT HL,CARRY CLOBBERS A,BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert one token to a 16-bit value or look it up in the bounded table.
 
 ppEval: ; Decode a numeric literal or existing definition.
@@ -478,7 +478,7 @@ ppFilter: ; Filter one raw source byte without moving offsets.
     SCF                                             ; Carry reports the unavailable source byte.
     RET                                             ; Atom aborts without committing its output.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT CARRY
 ; Return a generic carry-set failure for malformed stack or value state.
 
 ppFail: ; Return failure for malformed condition or value state.

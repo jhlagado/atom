@@ -1,7 +1,7 @@
 ; The parser's operand-name table and its fixed workspace, which also holds
 ; the build and public reference records.
 
-prRuleTo: ; End parser rule code before its operand lookup table.
+prRuleHi: ; End parser rule code before its operand lookup table.
 prRomBeg: ; Begin immutable parser operand-name data.
 
 ; Sorted RADIX-40 operand-word table. Each three-byte entry contains one

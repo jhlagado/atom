@@ -1,4 +1,4 @@
-;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Decode the current part's exclusive logical end for binary preflight.
 
 binRange: ; Decode the current source descriptor end.
@@ -85,7 +85,7 @@ binToken: ; Collect a bounded uppercase source token.
     SCF                                 ; Tell the caller to ignore this unsupported name.
     RET                                 ; No partial token can equal the six-byte keyword.
 
-;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one quoted 8.3 binary name and a required numeric byte count.
 
 binArgs: ; Parse a quoted binary filename and required count.

@@ -4,7 +4,7 @@
 pubBeg: ; Beginning of spool and publication code.
 hsBeg: ; Beginning of replaceable CP/M output hooks.
 
-;@ROUTINE IN IX OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Begin a tentative ASO spool. Final output is published after COMMIT.
 
 hsBegin: ; Create a tentative ASO spool for this assembly.

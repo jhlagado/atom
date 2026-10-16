@@ -3707,7 +3707,7 @@
     },
     {
       "original": "AtomTokenizerRuleCodeEnd",
-      "short": "tkRuleTo",
+      "short": "tkRuleHi",
       "private": false,
       "module": "TK"
     },
@@ -5068,7 +5068,7 @@
     },
     {
       "original": "AtomExpressionRuleCodeEnd",
-      "short": "exRuleTo",
+      "short": "exRuleHi",
       "private": false,
       "module": "EX"
     },
@@ -6518,7 +6518,7 @@
     },
     {
       "original": "AtomParserRuleCodeEnd",
-      "short": "prRuleTo",
+      "short": "prRuleHi",
       "private": false,
       "module": "PR"
     },
@@ -6788,7 +6788,7 @@
     },
     {
       "original": "AtomOutputStatusInternal",
-      "short": "outBug",
+      "short": "outInvar",
       "private": false,
       "module": "OU"
     },

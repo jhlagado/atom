@@ -323,7 +323,7 @@ tkChar: ; Decode exactly one character between apostrophes.
     CP   $27                                                    ; Require immediate apostrophe.
     JP   NZ,tkErrLit                                            ; Reject extra payload/wrong delimiter.
     JP   tkPutLen                                               ; Publish decoded byte as number.
-tkRuleTo: ; End tokenizer rule-code measurement.
+tkRuleHi: ; End tokenizer rule-code measurement.
 
 ;@ROUTINE OUT A,B,HL
 ; Return the current token's lexeme pointer and raw length. This is
