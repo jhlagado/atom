@@ -1,16 +1,18 @@
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO,IX
 ; Before emitting an instruction byte, prove that the pending arena has room
 ; for every reference and that each symbol remains undefined. Each entry is
-; syRefLen (nine) bytes including its source position. refQueue allocates the
+; syRefLen (eleven) bytes including its source position. refQueue allocates the
 ; records after output accepts the instruction.
 
 refCheck: ; Preflight pending space and ensure referenced symbols are undefined.
     LD   A,(prPubCnt)                   ; Load the public-reference count.
     LD   B,A                            ; Retain the count for multiplication.
     ADD  A,A                            ; Form two bytes per reference.
+    LD   C,A                            ; Keep the two-byte multiple.
     ADD  A,A                            ; Form four bytes per reference.
     ADD  A,A                            ; Form eight bytes per reference.
-    ADD  A,B                            ; Reach the nine-byte record size.
+    ADD  A,C                            ; Form ten bytes per reference.
+    ADD  A,B                            ; Reach the eleven-byte record size.
     LD   B,A                            ; B is the complete pending requirement.
     LD   HL,(syRefEnd)                  ; Load the pending-arena exclusive end.
     LD   DE,(syRefCur)                  ; Load its next free address.
@@ -89,6 +91,11 @@ refQueue: ; Append pending references after the instruction bytes are accepted.
     INC  HL                             ; Advance to its high byte.
     LD   D,(HL)                         ; Complete the source offset.
     LD   (syAddOff),DE                  ; syAdd stores it with the record.
+    INC  HL                             ; Advance to the line.
+    LD   E,(HL)                         ; Load its low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   D,(HL)                         ; Complete the line.
+    LD   (syAddLn),DE                   ; syAdd stores it too.
     LD   A,(prField)                    ; Recover the encoded field offset.
     LD   HL,(prBasePC)                  ; Load the instruction start address.
     LD   E,A                            ; Extend the unsigned byte offset in DE.

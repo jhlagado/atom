@@ -57,6 +57,85 @@ stSkip: ; Reserve the DS interval without initialising its bytes.
     LD   HL,(stPadCnt)                  ; Supply the byte count to reserve.
     CALL outSkip                        ; Advance the cursor without IMAGE emission.
     JP   stOutOk                        ; Check output status and continue.
+stDoBin: ; Emit the bytes of a binary file.
+
+; INCBIN "name",count emits the file's first count bytes. Without a count it
+; emits the whole file, when the host can tell its length. The host opens the
+; file by name and supplies its bytes one at a time, so the core emits them as
+; ordinary IMAGE bytes.
+
+    LD   A,(tkRecord+tkKindAt)          ; Inspect the directive's first argument.
+    CP   tkStr                          ; Is it a quoted name?
+    JP   NZ,stStrErr                    ; Reject anything else.
+    LD   HL,(tkRecord+tkLexAt)          ; Address the name's opening quote.
+    INC  HL                             ; Skip it.
+    LD   A,(tkRecord+tkLenAt)           ; Read the quoted token's length.
+    SUB  2                              ; Exclude both quotes.
+    LD   B,A                            ; Pass the name's length.
+    CALL tkBin                          ; Open the file. HL is its length.
+    JR   C,.bad                         ; The host could not open it.
+    LD   (stBinAny),A                   ; Nonzero when the length is not known.
+    LD   (stBinMax),HL                  ; Keep the length.
+    LD   (stPadCnt),HL                  ; Assume the whole file.
+    CALL tkNext                         ; Consume the name.
+    JP   C,stLexErr                     ; Preserve a lexical failure.
+    CP   tkEol                          ; Is the count omitted?
+    JR   Z,.whole                       ; Yes: emit the whole file.
+    CP   tkComma                        ; Otherwise require a comma.
+    JP   NZ,stExtra                     ; Reject any other token.
+    CALL tkNext                         ; Consume it. Expose the count.
+    JP   C,stLexErr                     ; Preserve a lexical failure.
+    CALL stPcExpr                       ; Evaluate the count.
+    JP   C,stDirErr                     ; Preserve nested expression failure detail.
+    OR   A                              ; Is the count unresolved?
+    JP   NZ,stDirFwd                    ; INCBIN requires a count immediately.
+    LD   (stPadCnt),HL                  ; Keep the count.
+    LD   A,(tkRecord+tkKindAt)          ; Inspect the token after the count.
+    CP   tkEol                          ; INCBIN accepts no third argument.
+    JP   NZ,stExtra                     ; Reject any trailing token.
+    LD   A,(stBinAny)                   ; Can the host tell the file's length?
+    OR   A                              ; Zero means it can.
+    JR   NZ,.emit                       ; No: trust the count.
+    LD   HL,(stBinMax)                  ; Load the file's length.
+    LD   DE,(stPadCnt)                  ; Load the count.
+    OR   A                              ; Clear carry before length - count.
+    SBC  HL,DE                          ; Does the file hold that many bytes?
+    JR   C,.big                         ; No: reject the count.
+    JR   .emit                          ; Emit them.
+.whole: ; Emit the whole file.
+    LD   A,(stBinAny)                   ; Can the host tell the file's length?
+    OR   A                              ; Zero means it can.
+    JR   NZ,.count                      ; No: a count is required.
+.emit: ; Emit the file's bytes.
+
+; Preflight the full range so the byte loop cannot fail for capacity after
+; publishing only a prefix.
+
+    LD   HL,(stPadCnt)                  ; Supply the number of bytes.
+    CALL outCapOk                       ; Prove all bytes fit before the first write.
+    JP   C,stOutErr                     ; Preserve atomic capacity failure.
+.loop: ; Emit the next byte from the file.
+    LD   HL,(stPadCnt)                  ; Read the remaining byte count.
+    LD   A,H                            ; Fold the high count byte into the zero test.
+    OR   L                              ; Z means every byte was emitted.
+    JP   Z,stNext                       ; Finish the directive.
+    CALL tkBinRd                        ; Read the next byte from the file.
+    JR   C,.bad                         ; The host could not read it.
+    CALL outEmitB                       ; Publish it.
+    JP   C,stOutErr                     ; Preserve an unexpected sink failure.
+    LD   HL,(stPadCnt)                  ; Reload the remaining count.
+    DEC  HL                             ; Account for the byte just emitted.
+    LD   (stPadCnt),HL                  ; Persist the decremented count.
+    JR   .loop                          ; Emit the rest.
+.bad: ; Report a file the host could not open or read.
+    LD   A,stBinBad                     ; Detail: could not read the INCBIN file.
+    JP   stDirErr                       ; Return through the directive wrapper.
+.count: ; Report a missing count the host cannot supply.
+    LD   A,stBinCnt                     ; Detail: INCBIN needs a byte count here.
+    JP   stDirErr                       ; Return through the directive wrapper.
+.big: ; Report a count beyond the file's end.
+    LD   A,stBinBig                     ; Detail: the count is larger than the file.
+    JP   stDirErr                       ; Return through the directive wrapper.
 stPad: ; Calculate zero padding to the requested alignment boundary.
 
 ; ALIGN needs a positive 16-bit boundary. A nonzero extension or zero
@@ -108,7 +187,7 @@ stPad: ; Calculate zero padding to the requested alignment boundary.
     LD   HL,(stPadCnt)                  ; Supply the complete padding length.
     CALL outCapOk                       ; Preflight all padding before emitting any.
     JP   C,stOutErr                     ; Preserve atomic output failure.
-    JR   stFill                         ; Emit through the shared fill loop.
+    JP   stFill                         ; Emit through the shared fill loop.
 stDone: ; Return success for this part without closing private scope.
 
 ; EOF is a successful end of this source part, not the end of private scope or
@@ -118,13 +197,13 @@ stDone: ; Return success for this part without closing private scope.
     RET                                 ; Return control to the multipart driver.
 
 ;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE
-; Directive names have at most five characters. Pack the lexeme into the
+; Directive names have at most six characters. Pack the lexeme into the
 ; shared RADIX-40 scratch buffer for exact, case-insensitive comparison.
 
 stIsDir: ; Recognise a directive by exact packed-name comparison.
     LD   A,B                            ; Load the lexeme length for the bound check.
-    CP   6                              ; Is it at most five characters?
-    JR   NC,.notFound                   ; Six or more characters cannot match.
+    CP   7                              ; Is it at most six characters?
+    JR   NC,.notFound                   ; Seven or more characters cannot match.
     LD   DE,enTemp                      ; Select the shared four-byte packing buffer.
     CALL nmPack                         ; Pack case-insensitively into RADIX-40 words.
     RET  C                              ; Propagate a character or length rejection.
@@ -166,7 +245,8 @@ stIsDir: ; Recognise a directive by exact packed-name comparison.
     RET                                 ; Return to the statement classifier.
 .names: ; Packed directive names in one-based ordinal order.
 
-; Packed RADIX-40 forms of EQU, ORG, DB, DW, DS, CSTR, PSTR, ISTR and ALIGN.
+; Packed RADIX-40 forms of EQU, ORG, DB, DW, DS, CSTR, PSTR, ISTR, ALIGN and
+; INCBIN.
 
     DW   $21FD,$0000                    ; EQU
     DW   $6097,$0000                    ; ORG
@@ -177,17 +257,14 @@ stIsDir: ; Recognise a directive by exact packed-name comparison.
     DW   $670C,$7080                    ; PSTR
     DW   $3B4C,$7080                    ; ISTR
     DW   $0829,$2DF0                    ; ALIGN
+    DW   $3A73,$0DF6                    ; INCBIN
 
-;@ROUTINE OUT A CLOBBERS DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Consume one raw byte. The source service receives the original part
-; in A and offset in HL. Advance workspace only after
-; the read, leaving A as the consumed character.
+;@ROUTINE OUT A CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
+; Consume one raw string byte from the lexeme buffer, leaving it in A.
 
 stTake: ; Read and advance the raw quoted-string cursor.
-    LD   HL,(stStrPtr)                  ; Load the next logical source-byte offset.
-    LD   A,(stStrSrc)                   ; Supply its source-part ordinal.
-    CALL tkRead                         ; Fetch the byte through source service.
-    LD   HL,(stStrPtr)                  ; Reload the cursor after callback clobbering.
+    LD   HL,(stStrPtr)                  ; Load the next raw byte's address.
+    LD   A,(HL)                         ; Read the byte.
     INC  HL                             ; Advance to the following raw byte.
     LD   (stStrPtr),HL                  ; Persist the new cursor.
     LD   HL,stStrLen                    ; Address the raw-byte countdown.
@@ -219,6 +296,8 @@ stMark: ; Capture a stable token position before nested parsing.
     LD   (stAtPart),A                   ; Save it as the diagnostic part.
     LD   HL,(tkRecord+tkOffAt)          ; Read the token's zero-based source offset.
     LD   (stAtOff),HL                   ; Save it as the diagnostic byte position.
+    LD   HL,(tkRecord+tkLineAt)         ; Read the token's line.
+    LD   (stAtLine),HL                  ; Save it as the diagnostic line.
     RET                                 ; Return with the stable anchor recorded.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
@@ -232,6 +311,8 @@ stLexErr: ; Report lexical detail at the tokenizer's exact error position.
     LD   (stAtPart),A                   ; Replace the outer statement anchor with it.
     LD   HL,(tkErrOff)                  ; Load its exact failing byte offset.
     LD   (stAtOff),HL                   ; Preserve that offset for the driver.
+    LD   HL,(tkErrLn)                   ; Load its line.
+    LD   (stAtLine),HL                  ; Preserve the line too.
     LD   A,stBadLex                     ; Return the public lexical-failure category.
     SCF                                 ; Mark statement failure.
     RET                                 ; Return directly to the multipart driver.
@@ -379,10 +460,12 @@ stPadCnt    EQU     .union+6            ; DS/ALIGN remaining byte count.
 stFwdKey    EQU     .union+8            ; Saved unresolved packed-key pointer.
 stFwdSym    EQU     .union+10           ; Saved unresolved symbol-record pointer.
 stFwdAt     EQU     .union+12           ; Saved placeholder target address.
+stBinMax    EQU     stFwdKey            ; INCBIN file length.
+stBinAny    EQU     stFwdAt             ; Nonzero when the host cannot tell it.
 
 ; Raw quoted-string cursor, remaining raw bytes and decoded-byte count.
 
-stStrPtr    EQU     .union+14           ; String raw-source cursor.
+stStrPtr    EQU     .union+14           ; Address of the next raw string byte.
 stStrLen    EQU     .union+16           ; String raw bytes remaining.
 stStrCnt    EQU     .union+17           ; String decoded-byte count.
 
@@ -395,8 +478,6 @@ stStrFmt    EQU     .union+19           ; DB/CSTR/PSTR/ISTR mode selector.
 
 stAtPart:   DB      0                   ; Stable diagnostic source-part ordinal.
 stAtOff:    DW      0                   ; Stable zero-based source-byte offset.
+stAtLine:   DW      0                   ; Stable source line number.
 
-; Source part retained while a quoted string is decoded through tkRead.
-
-stStrSrc:   DB      0                   ; Source part used by raw string reads.
 stRamHi: ; End the fixed statement workspace extent.

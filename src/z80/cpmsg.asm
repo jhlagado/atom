@@ -7,7 +7,7 @@
 ; sentence stand for the symbol name, the signed value and the related
 ; line.
 
-msgNum      EQU     69                                                          ; Message numbers in msgIdx.
+msgNum      EQU     72                                                          ; Message numbers in msgIdx.
 msgOver     EQU     12                                                          ; The stack-overflow message.
 
 msgIdx: ; Map each diagnostic number to its stored sentence.
@@ -15,7 +15,7 @@ msgIdx: ; Map each diagnostic number to its stored sentence.
     DB   15,16,17,18,19,0,9,20,21,0,22,0,23,24,25,26                            ; Sentence indices for messages 16-31.
     DB   27,28,0,0,0,29,30,31,32,33,34,0,0,0,0,0                                ; Sentence indices for messages 32-47.
     DB   0,35,36,37,38,39,40,41,42,43,0,0,44,0,45,34                            ; Sentence indices for messages 48-63.
-    DB   0,46,0,47,43                                                           ; Sentence indices for messages 64-68.
+    DB   0,46,0,47,43,48,49,50                                                  ; Sentence indices for messages 64-71.
 msgText: ; Zero-terminated sentences with argument marker bytes.
     DB   "internal error in Atom; please report it",0                           ; Diagnostic sentence 0.
     DB   "undefined symbol ",1,0                                                ; Diagnostic sentence 1.
@@ -67,4 +67,7 @@ msgText: ; Zero-terminated sentences with argument marker bytes.
     DB   "too many forward references in one instruction",0                     ; Diagnostic sentence 45.
     DB   "program does not fit in the output range",0                           ; Diagnostic sentence 46.
     DB   "value ",2," is out of range for this operand",0                       ; Diagnostic sentence 47.
+    DB   "could not read the INCBIN file",0                                     ; Diagnostic sentence 48.
+    DB   "INCBIN needs a byte count here",0                                     ; Diagnostic sentence 49.
+    DB   "INCBIN count is larger than the file",0                               ; Diagnostic sentence 50.
 msgEnd: ; First byte after the diagnostic text table.

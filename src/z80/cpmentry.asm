@@ -42,11 +42,10 @@ cpEntry: ; Check memory and assemble one command.
     JR   C,.cmdFail                             ; Report a usage or filename error before I/O.
     OR   A                                      ; Test whether parsing selected help-only mode.
     JR   NZ,.ok                                 ; Help returns success without assembly.
-    CALL incSort                                ; Resolve includes and measure all parts.
-    JP   C,.fail                                ; Report source-graph failure.
+    CALL incStart                               ; Stream the root and its includes.
     LD   HL,asoCap                              ; All output modes cover $0100..$10000.
-    LD   (cpDesc+13),HL                         ; Install the selected target extent.
-    LD   IX,cpDesc                              ; Pass the measured source descriptor.
+    LD   (cpDesc+drOutCap),HL                   ; Install the selected target extent.
+    LD   IX,cpDesc                              ; Pass the build descriptor.
     CALL drAsm                                  ; Assemble all parts into the private operation spool.
     JR   C,.asmFail                             ; Leave the old output intact on failure.
     LD   DE,msgCrlf                             ; Lead the success message with a newline.
@@ -64,15 +63,20 @@ cpEntry: ; Check memory and assemble one command.
     JR   .leave                                 ; Check the stack guard, then warm boot.
 
 ; Assembly failures print FILE:line:column: message. An output failure names
-; the output file instead, and a failed INCBIN read names the binary file.
+; the output file instead.
 
-.asmFail: ; Select source, output or binary-input diagnostics.
+.asmFail: ; Select source or output diagnostics.
     PUSH AF                                     ; Save Atom's status while printing.
     LD   DE,msgCrlf                             ; Start the diagnostic on a fresh line.
     CALL cpPrint                                ; Separate it from the command echo.
-    LD   A,(binErr)                             ; Did an INCBIN read fail inside the sink?
-    OR   A                                      ; Zero means an ordinary assembler failure.
-    JR   NZ,.binFail                            ; Name the binary file that failed.
+    LD   HL,(incErr)                            ; Did the source front end fail?
+    LD   A,H                                    ; Test the message pointer.
+    OR   L                                      ; Zero means it did not.
+    JR   Z,.core                                ; Report Atom's own diagnostic.
+    POP  AF                                     ; Discard Atom's status.
+    CALL incShow                                ; Print the front end's failure.
+    JR   .fail                                  ; Return failure.
+.core: ; Report Atom's diagnostic.
     POP  AF                                     ; Recover Atom's public status.
     CP   drBadOut                               ; Did BEGIN or COMMIT reject the output?
     JR   Z,.outFail                             ; There is no source line to report.
@@ -88,14 +92,6 @@ cpEntry: ; Check memory and assemble one command.
     LD   HL,pubName                             ; Identify the selected output file.
     CALL cpPutFcb                               ; Print its CP/M filename.
     JR   .text                                  ; Explain the output failure.
-.binFail: ; Name the failed binary input.
-    POP  AF                                     ; Discard Atom's statement-facing status.
-    CALL errWhere                               ; Report the INCBIN statement's position.
-    CALL errSep                                 ; Separate the location from the message.
-    LD   HL,binFcb                              ; The dedicated FCB retains the binary filename.
-    CALL cpPutFcb                               ; Identify the failed binary input.
-    LD   DE,msgLoad                             ; Explain that its payload could not be read.
-    CALL cpPrint                                ; Finish the binary-source diagnostic.
 .fail: ; Select build-failure exit status.
     LD   A,1                                    ; Record status one for build failure.
 .leave: ; Check the stack guard before exiting.

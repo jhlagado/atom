@@ -395,18 +395,19 @@ tkTabEnd: ; Mark the end of tokenizer immutable tables.
 tkEnd: ; Mark the end of executable tokenizer code.
 tkRamLo: ; Begin fixed tokenizer workspace.
 
-; Absolute base used only by the checked memory-backed source provider.
+; Logical offset of the next unread source byte.
 
-tkSrcBeg:     DW      0                                         ; Absolute base of the checked memory source.
+tkHead:    DW      0                                            ; Offset of the next physical read.
 
-; Relative offset of the next unread source byte and validated part length.
+; The byte at tkHead once read, so a peek and the take after it cost one read.
 
-tkHead:    DW      0                                            ; Relative offset of the next physical read.
-tkSrcLen:   DW      0                                           ; Validated source-part byte length.
+tkHave:    DB      0                                            ; 0 nothing held, 1 a byte, 2 end of part.
+tkCur:     DB      0                                            ; The byte held for tkHead.
 
 ; Logical byte offset used for token starts and diagnostics.
 
 tkTokPos:     DW      0                                         ; Next token's logical source offset.
+tkLine:    DW      0                                            ; Line of the next unread byte.
 
 ; Current source-part ordinal supplied to every source-service call.
 
@@ -432,6 +433,7 @@ tkPrevCh:    DB      0                                          ; Most recently 
 ; Tentative token's starting logical offset, raw length and decoded value.
 
 tkMark:    DW      0                                            ; Tentative token's logical starting offset.
+tkMarkLn:   DW      0                                           ; Tentative token's line.
 tkLexLen:    DB      0                                          ; Accepted raw lexeme length or failure status.
 tkValue:    DW      0                                           ; Value or failure part/offset bytes.
 
@@ -439,15 +441,16 @@ tkValue:    DW      0                                           ; Value or failu
 
 tkDigits:    DB      0                                          ; Digit flag or remaining count.
 
-; On failure the temporary length/value/count cells become status, part and
-; offset storage. The public token record remains untouched.
+; On failure the tentative length becomes the status, and the failed token's
+; position is published. The public token record remains untouched.
 
 tkStatus    EQU     tkLexLen                                    ; Overlay lexical status on tentative length.
-tkErrPos    EQU     tkValue                                     ; Overlay failure part on value low byte.
-tkErrOff    EQU     tkValue+1                                   ; Offset spans value high byte and digit count.
+tkErrPos:   DB      0                                           ; Failed token's source part.
+tkErrOff:   DW      0                                           ; Failed token's offset.
+tkErrLn:    DW      0                                           ; Failed token's line.
 
 ; Published token record, followed by its 256-byte transient lexeme buffer.
 
-tkRecord:     DS      tkRecLen                                  ; Stable nine-byte public token record.
+tkRecord:     DS      tkRecLen                                  ; Stable eleven-byte public token record.
 tkLexBuf:     DS      256                                       ; Transient raw lexeme buffer.
 tkRamHi: ; End fixed tokenizer workspace.

@@ -42,68 +42,34 @@ srcCheck: ; Protect source names against output and work files.
     RET                                 ; Leave file creation to the caller's error path.
 
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Rebuild and open the ordinary input FCB from one retained name.
+;@ROUTINE IN A OUT A,CARRY,DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Rebuild and open the input FCB from one retained name. Carry reports a name
+; that aliases the output or a work file (DE=msgDup), or a file that cannot be
+; opened (DE=msgRead).
 
-srcOpen: ; Open the source named by its discovery ordinal.
+srcOpen: ; Open the source named by its ordinal.
     PUSH AF                             ; Save ordinal while clearing FCB.
     CALL srcWipe                        ; Reset the file-control block for this source.
     POP  AF                             ; Restore the source ordinal.
     CALL incSlot                        ; Address the source's eleven-byte name record.
     LD   DE,srcFcb+1                    ; Point past the drive byte to the 8.3 fields.
-    LD   B,11                           ; Copy the full 8.3 name.
-.copy: ; Copy the source name with the emitted marker removed.
-    LD   A,(HL)                         ; Read the next byte of the retained source name.
-    AND  $7F                            ; Clear the first byte's order bit.
-    LD   (DE),A                         ; Copy the ordinary name byte into the input FCB.
-    INC  HL                             ; Advance within the retained name record.
-    INC  DE                             ; Advance within the input FCB name fields.
-    DJNZ .copy                          ; Copy all eleven name and type bytes.
+    LD   BC,11                          ; Copy the full 8.3 name.
+    LDIR                                ; Copy the name into the input FCB.
     CALL srcCheck                       ; Protect output and transaction files.
     RET  C                              ; Reject a source/output alias.
     LD   DE,srcFcb                      ; Pass the prepared FCB to CP/M.
     LD   C,cpOpen                       ; Select the CP/M open-file service.
     CALL cpBdos                         ; Open the selected source file.
     INC  A                              ; Convert BDOS's $FF failure result to zero.
-    JR   Z,.fail                        ; Report an unavailable source by name.
+    JR   Z,.fail                        ; Report an unavailable source.
     LD   A,1                            ; Force the next cache refill.
     LD   (srcKey),A                     ; Aligned record offsets cannot equal one.
     XOR  A                              ; Return success with carry clear.
     RET                                 ; Leave the input FCB open.
-.fail: ; Report a failed source open by filename.
-    LD   HL,srcFcb                      ; Address the filename that failed to open.
-    CALL cpPutFcb                       ; Print its drive-independent 8.3 name.
+.fail: ; Report a failed source open.
     LD   DE,msgRead                     ; Select the source-open error message.
     SCF                                 ; Mark the open operation as failed.
-    RET                                 ; Return the message pointer with carry set.
-
-;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-; Return the next raw source byte and advance HL. Carry with A=0 means EOF or
-; an unsuccessful CP/M random read. Carry with A=2 means the 16-bit offset
-; wrapped. BC and DE survive for parsers.
-; A part is limited to 65,535 bytes so the next offset cannot wrap to zero.
-
-srcNext: ; Read a raw source byte and advance its logical offset.
-    PUSH BC                             ; Preserve the parser's byte-sized working values.
-    PUSH DE                             ; Save the parser's DE value.
-    PUSH HL                             ; Save the logical offset.
-    CALL srcRaw                         ; Read from the current CP/M record cache.
-    POP  HL                             ; Restore the logical offset.
-    POP  DE                             ; Restore the caller's DE value.
-    POP  BC                             ; Restore the caller's BC value.
-    RET  C                              ; Return EOF/read failure. keep HL.
-    LD   (srcTemp),A                    ; Save the byte while advancing the offset.
-    INC  HL                             ; Advance to the following offset.
-    LD   A,H                            ; Test the high byte of the advanced offset.
-    OR   L                              ; Zero means the 16-bit offset wrapped.
-    JR   Z,.tooLong                     ; Reject a part that would exceed 65,535 bytes.
-    LD   A,(srcTemp)                    ; Restore the byte read from the source.
-    OR   A                              ; Clear carry. set Z for byte zero.
-    RET                                 ; Return byte and advanced offset.
-.tooLong: ; Reject a source offset that wrapped to zero.
-    LD   A,2                            ; Distinguish offset overflow.
-    SCF                                 ; Report that the logical source offset wrapped.
-    RET                                 ; Return the overflow status to the resolver.
+    RET                                 ; The caller records the file's name.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Align the logical offset to its 128-byte CP/M record base. The cache
@@ -123,6 +89,23 @@ srcRaw: ; Read a source byte through the random-record cache.
     JR   Z,srcHit                       ; Reuse the cache when both bases match.
 srcMiss: ; Load the required random source record.
     LD   (srcKey),DE                    ; Store the aligned offset being loaded.
+
+; The record at $FF80 is the last a part may use. The filter checks each of
+; its bytes against the 65,535-byte limit.
+
+    LD   A,(ppMode)                     ; Clear the last-record bit.
+    AND  $FB                            ; Bit 2.
+    LD   B,A                            ; Keep the mode.
+    LD   A,D                            ; Is this record $FF80?
+    INC  A                              ; Its high byte is $FF.
+    JR   NZ,.mode                       ; No.
+    LD   A,E                            ; Its low byte is $80.
+    CP   $80                            ; Is it?
+    JR   NZ,.mode                       ; No.
+    SET  2,B                            ; Mark the last record.
+.mode: ; Publish the mode.
+    LD   A,B                            ; Recover it.
+    LD   (ppMode),A                     ; Keep it.
     RLC  E                              ; Move offset bit 7 into record bit 0.
     LD   A,D                            ; Load the offset high byte.
     ADD  A,A                            ; Shift its bits left one place.
@@ -150,51 +133,86 @@ srcHit: ; Select a byte within the cached source record.
     OR   A                              ; Clear carry. retain source byte.
     RET                                 ; Return the raw byte to the caller.
 srcFail: ; Return a failed random-read result.
+    LD   HL,1                           ; No record base is odd.
+    LD   (srcKey),HL                    ; The cache holds no record now.
 srcEof: ; Return text EOF at the SUB marker.
     XOR  A                              ; Return EOF or read failure.
     SCF                                 ; Carry reports that no source byte is available.
     RET                                 ; Share the no-byte result.
 
-;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-; Consume source bytes through the next CR, LF or end of file.
+;@ROUTINE IN B,DE,HL OUT A,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Store the B-byte name at HL as a current-drive 8.3 name in the FCB at DE.
+; Lowercase letters fold to uppercase. Carry reports an empty, overlong or
+; otherwise invalid name.
 
-srcSkip: ; Skip through the next physical line ending.
-    CALL srcNext                        ; Read the next byte in the current line.
-    RET  C                              ; Stop at EOF or offset overflow.
-    CP   13                             ; Test for a carriage return.
-    RET  Z                              ; Stop after consuming CR.
-    CP   10                             ; Test for a line feed.
-    JR   NZ,srcSkip                     ; Continue until LF or another CR.
-    RET                                 ; Stop after consuming LF.
+srcName: ; Parse a current-drive 8.3 name from memory into an FCB.
+    PUSH DE                             ; Keep the FCB address.
+    POP  IY                             ; IY writes the name.
+    LD   (IY+0),0                       ; Drive zero is the current drive.
+    LD   C,11                           ; Blank the name and type fields.
+.blank: ; Store one padding space.
+    INC  DE                             ; Advance to the next field byte.
+    LD   A,' '                          ; CP/M pads names with spaces.
+    LD   (DE),A                         ; Store it.
+    DEC  C                              ; Count it.
+    JR   NZ,.blank                      ; Blank all eleven bytes.
+    INC  IY                             ; IY writes the base name.
+    LD   D,8                            ; The base name holds eight characters.
+    LD   C,0                            ; Count characters in the current field.
+.byte: ; Inspect the next name byte.
+    LD   A,B                            ; Any bytes left?
+    OR   A                              ; Zero means the name has ended.
+    JR   Z,.done                        ; Check the final field.
+    LD   A,(HL)                         ; Read the byte.
+    INC  HL                             ; Advance past it.
+    DEC  B                              ; Count it.
+    CP   '.'                            ; Does the type start here?
+    JR   NZ,.data                       ; No: store the byte.
+    LD   A,D                            ; Only one dot, after the base name.
+    CP   8                              ; Still in the base name?
+    JR   NZ,.bad                        ; No: a second dot.
+    LD   A,C                            ; The base name must not be empty.
+    OR   A                              ; Zero characters so far?
+    JR   Z,.bad                         ; Reject a leading dot.
+    LD   A,8                            ; Skip the rest of the base field.
+    SUB  C                              ; Unused base bytes.
+    LD   E,A                            ; Widen the count.
+    LD   D,0                            ; DE is the distance to the type field.
+    ADD  IY,DE                          ; IY writes the type.
+    LD   D,3                            ; The type holds three characters.
+    LD   C,0                            ; Start counting them.
+    JR   .byte                          ; Read the type.
+.data: ; Fold, check and store one name byte.
+    CP   'a'                            ; Is it a lowercase letter?
+    JR   C,.cased                       ; No: keep it.
+    CP   'z'+1                          ; Test the upper bound.
+    JR   NC,.cased                      ; No: keep it.
+    AND  $DF                            ; Fold it to uppercase.
+.cased: ; Check and store the byte.
+    CALL cmdChar                        ; Is it allowed in a CP/M name?
+    JR   C,.bad                         ; No: reject the name.
+    INC  C                              ; Count it.
+    LD   E,A                            ; Keep it during the width check.
+    LD   A,D                            ; Load the field's width.
+    CP   C                              ; Has the field overflowed?
+    JR   C,.bad                         ; Yes: reject the name.
+    LD   (IY+0),E                       ; Store the byte.
+    INC  IY                             ; Advance within the field.
+    JR   .byte                          ; Continue.
+.done: ; Require a nonempty final field.
+    LD   A,C                            ; Characters in the last field.
+    OR   A                              ; Zero means empty.
+    RET  NZ                             ; Accept the name with carry clear.
+.bad: ; Reject the name.
+    SCF                                 ; Carry marks an invalid name.
+    RET                                 ; The FCB holds a partial name.
 
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-; Open a part on ordinal change, then return one source byte through the
-; 128-byte random-record cache. This is the core's source service. The
-; pre-scan proves each requested record exists until this command returns.
-; Preflight validates INCLUDE, DEFINE and conditional directives. A leading
-; percent becomes a semicolon so Atom reads the directive as a comment.
+; Atom's source-byte service on CP/M. Return the byte at offset HL of the
+; current part through the filter, or carry with A=0 at the part's end. The
+; core reads each byte once, in order. Most come from the cached record.
 
-tkRead: ; Atom's source-byte service on CP/M.
-srcByte: ; Select a source part and apply preprocessing filters.
-    LD   E,A                            ; Keep the resolved source-part ordinal.
-    LD   A,(srcPart)                    ; Read the ordinal of the open source file.
-    CP   E                              ; Compare it with the requested part.
-    JR   Z,.ready                       ; Reuse the file when ordinals match.
-    PUSH BC                             ; Preserve the caller's byte-sized parser state.
-    PUSH HL                             ; Save offset across file open.
-    LD   A,E                            ; Restore the requested resolved ordinal.
-    LD   (srcPart),A                    ; Record which resolved part is now active.
-    LD   D,incOrder/256                 ; Address the order table's fixed memory page.
-    LD   A,(DE)                         ; Map order to source ordinal.
-    CALL srcOpen                        ; Open the source named by that original ordinal.
-    CALL ppReset                        ; Start each source part outside a conditional.
-    POP  HL                             ; Restore the byte offset.
-    POP  BC                             ; Restore the caller's parser state.
-.ready: ; Read from the already selected source part.
-
-; Most reads hit the cached record. Take the byte directly when they do, and
-; leave misses and end of file to srcRaw.
-
+tkRead: ; Read one source byte on CP/M.
     LD   A,(srcKey+1)                   ; Compare the cached record's high byte.
     CP   H                              ; Same 256-byte page of the file?
     JR   NZ,.slow                       ; No: load the record.
@@ -210,41 +228,16 @@ srcByte: ; Select a source part and apply preprocessing filters.
     LD   A,(DE)                         ; Read the cached byte.
     CP   $1A                            ; CP/M's end-of-text marker?
     JP   NZ,ppFilter                    ; No: filter the byte.
+    JR   .end                           ; Yes: the part has ended.
 .slow: ; Read through the cache loader.
     PUSH BC                             ; Save parser BC across raw read.
     PUSH HL                             ; Preserve the source offset across cache lookup.
     CALL srcRaw                         ; Read one byte from the active source file.
     POP  HL                             ; Restore the source offset.
     POP  BC                             ; Restore the caller's parser state.
-    RET  C                              ; Return end-of-input or a failed read unchanged.
-    JP   ppFilter                       ; Filter directives and inactive lines.
-
-;@ROUTINE IN HL OUT A,ZERO CLOBBERS BC,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
-; Decide whether a percent character begins a recognised host directive.
-
-srcLead: ; Test whether percent follows only line indentation.
-    LD   A,H                            ; Test the current source offset's high byte.
-    OR   L                              ; Zero means the percent is the first source byte.
-    RET  Z                              ; Report line start when no preceding byte exists.
-    DEC  HL                             ; Begin scanning at the byte before the percent.
-.back: ; Scan preceding source bytes back to a line boundary.
-    PUSH HL                             ; Save the backward-scan cursor.
-    CALL srcRaw                         ; Read the preceding source byte.
-    POP  HL                             ; Restore the offset used for the backward scan.
-    CP   13                             ; Does percent follow CR?
-    JR   Z,.yes                         ; CR marks the start of a source line.
-    CP   10                             ; Check whether the percent follows a line feed.
-    JR   Z,.yes                         ; LF also marks the start of a source line.
-    CP   ' '                            ; Check for a space before the percent.
-    JR   Z,.prev                        ; Skip whitespace while scanning backwards.
-    CP   9                              ; Check for a horizontal tab.
-    RET  NZ                             ; Other prefix means ordinary text.
-.prev: ; Continue backwards over horizontal indentation.
-    LD   A,H                            ; Did whitespace reach offset zero?
-    OR   L                              ; No preceding non-space byte.
-    JR   Z,.yes                         ; Only spaces or tabs precede the percent.
-    DEC  HL                             ; Step back one source byte.
-    JR   .back                          ; Continue until line start or ordinary text.
-.yes: ; Accept a line-leading percent directive.
-    XOR  A                              ; Mark a line-leading percent.
-    RET                                 ; Return with carry clear.
+    JP   NC,ppFilter                    ; Filter the byte.
+.end: ; Finish the part.
+    PUSH BC                             ; ppEnd uses BC.
+    CALL ppEnd                          ; The part has ended.
+    POP  BC                             ; Restore the caller's parser state.
+    RET                                 ; Return carry with A=0.

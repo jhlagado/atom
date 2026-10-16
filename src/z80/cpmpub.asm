@@ -11,32 +11,10 @@ hsBegin: ; Create a tentative ASO spool for this assembly.
     JP   asoInit                                ; Start the ordered-operation writer.
 
 ;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Serialize one IMAGE or byte-PATCH value in the private CP/M operation spool.
+; Serialize one IMAGE byte in the private CP/M operation spool.
 
-hsByte: ; Serialise an IMAGE byte with optional INCBIN substitution.
-    LD   (binVal),A                             ; Retain Atom's fill byte while selecting a row.
-    LD   A,(binCount)                           ; Avoid dispatch cost for ordinary CP/M sources.
-    OR   A                                      ; A zero count means no INCBIN metadata exists.
-    JR   NZ,.binary                             ; Counted binary rows alone need sequential reads.
-    LD   A,(binVal)                             ; Restore the original Atom IMAGE fill byte.
-    JP   asoEmit                                ; Keep the no-INCBIN output path exactly intact.
-.binary: ; Read the binary payload for a matched statement.
-    PUSH BC                                     ; Keep the address-space class for asoEmit.
-    PUSH HL                                     ; Keep the logical target address for the sink.
-    LD   A,(stAtPart)                           ; Read this statement's resolved part ordinal.
-    LD   (binSPart),A                           ; Match the sink event to its preflight row.
-    LD   HL,(stAtOff)                           ; Read the exact IMAGE-producing source position.
-    LD   (binSPos),HL                           ; Retain it while BDOS uses the shared DMA page.
-    CALL binSink                                ; Swap in the next binary byte when anchors match.
-    JR   C,.binFail                             ; Preserve the source-aware failure for cpEntry.
-    POP  HL                                     ; Restore the logical IMAGE address.
-    POP  BC                                     ; Restore its address-space class.
-    LD   A,(binVal)                             ; Load either payload or original fill byte.
-    JP   asoEmit                                ; Append the selected value to the ASO stream.
-.binFail: ; Restore IMAGE inputs after binary-source failure.
-    POP  HL                                     ; Restore the caller's stack, then report failure.
-    POP  BC                                     ; Preserve the original address-class register.
-    RET                                         ; Return the failed sink status to Atom's driver.
+hsByte: ; Serialise an IMAGE byte.
+    JP   asoEmit                                ; Append it to the ASO stream.
 hsPatchB: ; Serialise one byte PATCH operation.
     JP   asoFixB                                ; Append the replacement byte to the spool.
 
@@ -49,29 +27,17 @@ hsPatchW: ; Serialise one little-endian word PATCH operation.
 ;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; COMMIT seals the operation stream and publishes its selected representation.
 
-hsCommit: ; Check binary completion and seal the operation stream.
+hsCommit: ; Close any INCBIN file and seal the operation stream.
     PUSH AF                                     ; Keep Atom's high-water flags and endpoint bit.
     PUSH BC                                     ; Preserve BC, the high-water endpoint low word.
     PUSH DE                                     ; Preserve DE, the remaining target capacity.
     PUSH HL                                     ; Preserve HL, the final target cursor.
-    PUSH IX                                     ; Preserve the descriptor geometry pointer.
-    CALL binCheck                               ; Do not publish until every payload is consumed.
-    JR   C,.partial                             ; Restore geometry before returning sink failure.
-    POP  IX                                     ; Restore the descriptor expected by asoSeal.
+    CALL binShut                                ; Close the last INCBIN file.
     POP  HL                                     ; Restore HL, the final target cursor.
     POP  DE                                     ; Restore DE, the remaining target capacity.
     POP  BC                                     ; Restore BC, the high-water endpoint low word.
     POP  AF                                     ; Restore the flags and Atom's endpoint marker.
     JP   asoSeal                                ; Seal, materialise if needed, and publish.
-.partial: ; Restore COMMIT inputs after incomplete binary output.
-    POP  IX                                     ; Restore every input even when validation fails.
-    POP  HL                                     ; Keep the caller's stack balanced for hsAbort.
-    POP  DE                                     ; Preserve caller-owned image geometry.
-    POP  BC                                     ; Restore its address pair.
-    POP  AF                                     ; Recover Atom's A before selecting sink status.
-    LD   A,1                                    ; Return the established nonzero failure status.
-    SCF                                         ; hsAbort will discard the tentative spool.
-    RET                                         ; No partial output may be committed.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Publish the closed temporary file: move an existing output to $$B, rename
@@ -120,14 +86,7 @@ pubFail: ; Return publication failure for rollback.
 ; final file aside, restore the backup. Cleanup tolerates early failure.
 
 hsAbort: ; Close and remove tentative files on assembly failure.
-    LD   A,(binHeld)                            ; See whether a binary include still owns an FCB.
-    OR   A                                      ; A clear flag needs no binary close operation.
-    JR   Z,.aso                                 ; Continue when no binary input is open.
-    LD   DE,binFcb                              ; Pass the dedicated payload FCB to CP/M.
-    LD   C,cpClose                              ; Select CP/M close-file function sixteen.
-    CALL cpBdos                                 ; Release the binary input before other cleanup.
-    XOR  A                                      ; Clear ownership even when CLOSE itself failed.
-    LD   (binHeld),A                            ; hsAbort must remain safe if called again.
+    CALL binShut                                ; Close any INCBIN file.
 .aso: ; Close the operation writer if it owns an FCB.
     LD   A,(asoOpen)                            ; Check whether an ASO temporary file is open.
     OR   A                                      ; A clear flag needs no ASO close operation.

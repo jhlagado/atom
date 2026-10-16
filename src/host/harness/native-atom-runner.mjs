@@ -18,15 +18,15 @@ import {
 } from "../providers/tool-service-gateway.mjs";
 import { createDebug80ExecutionAdapter } from "./z80-execution-adapter.mjs";
 
-// The core occupies the first 16 KiB. Its build descriptor, symbol arena,
-// pending-reference arena and source descriptors occupy separate RAM regions.
+// The core occupies the first 16 KiB. Its build descriptor, symbol arena and
+// pending-reference arena occupy separate RAM regions. Source parts are served
+// on request through tkOpen and tkRead, so no source sits in Z80 memory.
 // Output bytes go to the host sink, so assembled addresses do not name this RAM.
 const BUILD_DESCRIPTOR = 0x4000;
 const SYMBOL_START = 0x4100;
 const SYMBOL_END = 0xa000;
 const PENDING_START = 0xa000;
 const PENDING_END = 0xd000;
-const PART_DESCRIPTORS = 0xd000;
 const STACK_BEFORE = 0xfe00;
 const RETURN_SLOT = 0xfefd;
 const STACK_AFTER = 0xfeff;
@@ -36,7 +36,6 @@ const DEFAULT_NATIVE_MEMORY_LAYOUT = Object.freeze({
   symbolEnd: SYMBOL_END,
   pendingStart: PENDING_START,
   pendingEnd: PENDING_END,
-  partDescriptors: PART_DESCRIPTORS,
 });
 
 export const NATIVE_ATOM_LIMITS = Object.freeze({
@@ -67,7 +66,6 @@ const frozenBytes = (bytes) => Object.freeze(Array.from(bytes));
 
 const RUNNER_SYMBOL_NAMES = Object.freeze([
   "AtomAssemble",
-  "AtomDriverDescriptorParts",
   "AtomDriverDescriptorPendingEnd",
   "AtomDriverDescriptorPendingStart",
   "AtomDriverDescriptorSymbolEnd",
@@ -78,7 +76,7 @@ const RUNNER_SYMBOL_NAMES = Object.freeze([
   "AtomDiagnosticValue",
   "AtomDriverDetail",
   "AtomDriverMessage",
-  "AtomDriverPartDescriptorBytes",
+  "AtomDriverRelatedLine",
   "AtomDriverRelatedOffset",
   "AtomDriverRelatedPart",
   "AtomDriverStatusConfiguration",
@@ -101,6 +99,7 @@ const RUNNER_SYMBOL_NAMES = Object.freeze([
   "AtomSinkPatchWord",
   "AtomSourceReadByte",
   "AtomStatementDetail",
+  "AtomStatementErrorLine",
   "AtomStatementErrorOffset",
   "AtomStatementErrorPart",
   "AtomStatementStatusOutput",
@@ -115,6 +114,9 @@ const RUNNER_SYMBOL_NAMES = Object.freeze([
 
 const RUNNER_CODE_SYMBOL_NAMES = Object.freeze([
   "AtomAssemble",
+  "AtomBinaryOpen",
+  "AtomBinaryRead",
+  "AtomSourceOpenPart",
   "AtomOutputReserve",
   "AtomOutputSetOrigin",
   "AtomSinkAbort",
@@ -329,50 +331,20 @@ function snapshotProject(project) {
         `resolved Atom source part ${ordinal} exceeds Atom's 16-bit source-offset range`,
       );
     }
-    const binaryIncludes = part.binaryIncludes ?? [];
-    if (!Array.isArray(binaryIncludes)) {
-      fail(
-        "invalid-part",
-        `resolved Atom source part ${ordinal} has invalid binary includes`,
-      );
-    }
-    const sourceLines = new Set();
-    const frozenIncludes = binaryIncludes.map((include) => {
-      if (
-        include === null ||
-        typeof include !== "object" ||
-        !Number.isInteger(include.offset) ||
-        include.offset < 0 ||
-        include.offset >= part.originalBytes.length ||
-        !Number.isInteger(include.line) ||
-        include.line < 1 ||
-        !(include.bytes instanceof Uint8Array) ||
-        include.bytes.length > 0xffff ||
-        sourceLines.has(include.line)
-      ) {
-        fail(
-          "invalid-part",
-          `resolved Atom source part ${ordinal} has an invalid binary include`,
-        );
-      }
-      sourceLines.add(include.line);
-      return Object.freeze({
-        offset: include.offset,
-        line: include.line,
-        bytes: include.bytes.slice(),
-      });
-    });
     return Object.freeze({
       ordinal,
       bank: 0,
       logicalIdentity: part.logicalIdentity,
       originalBytes: part.originalBytes.slice(),
       compilerBytes: part.compilerBytes.slice(),
-      binaryIncludes: Object.freeze(frozenIncludes),
     });
   });
+  // INCBIN files are read when the core reaches them, through the resolver's
+  // reader, so the source is never scanned for them in advance.
   return Object.freeze({
     parts: Object.freeze(parts),
+    readBinary:
+      typeof project.readBinary === "function" ? project.readBinary : undefined,
   });
 }
 
@@ -418,10 +390,7 @@ function assertNonOverlapping(ranges) {
   }
 }
 
-function nativeMemoryLayout(
-  option = {},
-  { core, partCount, partDescriptorBytes },
-) {
+function nativeMemoryLayout(option = {}, { core }) {
   if (option === null || typeof option !== "object" || Array.isArray(option)) {
     fail("invalid-option", "nativeMemoryLayout must be an object");
   }
@@ -442,19 +411,7 @@ function nativeMemoryLayout(
       option.pendingEnd ?? DEFAULT_NATIVE_MEMORY_LAYOUT.pendingEnd,
       "nativeMemoryLayout.pendingEnd",
     ),
-    partDescriptors: memoryAddress(
-      option.partDescriptors ?? DEFAULT_NATIVE_MEMORY_LAYOUT.partDescriptors,
-      "nativeMemoryLayout.partDescriptors",
-    ),
   });
-  const partDescriptorEnd =
-    layout.partDescriptors + partCount * partDescriptorBytes;
-  if (partDescriptorEnd > STACK_BEFORE) {
-    fail(
-      "memory-map",
-      "native Atom part descriptors overlap the host stack canary",
-    );
-  }
   assertNonOverlapping([
     range(0, core.residentExtentBytes, "native Atom resident core"),
     range(
@@ -464,11 +421,6 @@ function nativeMemoryLayout(
     ),
     range(layout.symbolStart, layout.symbolEnd, "native Atom symbol arena"),
     range(layout.pendingStart, layout.pendingEnd, "native Atom pending arena"),
-    range(
-      layout.partDescriptors,
-      partDescriptorEnd,
-      "native Atom part descriptors",
-    ),
     range(STACK_BEFORE, STACK_AFTER + 1, "native Atom host stack canary"),
   ]);
   return layout;
@@ -801,19 +753,15 @@ function unpackSymbol(memory, pointer, symbols, layout) {
   return unpackPackedSymbol(memory, pointer, symbols);
 }
 
-function sourcePosition(part, offset) {
-  let line = 1;
-  let column = 1;
+// The core reports each position's line. The column is found by stepping back
+// from the offset to the start of its line, so no part is rescanned.
+function sourcePosition(part, offset, line) {
   const bounded = Math.min(offset, part.originalBytes.length);
-  for (let index = 0; index < bounded; index += 1) {
-    const byte = part.originalBytes[index];
-    if (byte === 0x0a) {
-      line += 1;
-      column = 1;
-    } else if (byte !== 0x0d) {
-      column += 1;
-    }
+  let start = bounded;
+  while (start > 0 && part.originalBytes[start - 1] !== 0x0a && part.originalBytes[start - 1] !== 0x0d) {
+    start -= 1;
   }
+  const column = bounded - start + 1;
   return Object.freeze({
     logicalIdentity: part.logicalIdentity,
     ordinal: part.ordinal,
@@ -846,11 +794,11 @@ function nativeFailure(
   const part = project.parts[result.part];
   const diagnostic =
     bridgeFailure?.diagnostic ??
-    (part === undefined ? undefined : sourcePosition(part, result.offset));
+    (part === undefined ? undefined : sourcePosition(part, result.offset, result.line));
   const relatedPart = result.relatedPart === 0xff ? undefined : project.parts[result.relatedPart];
   const relatedDiagnostic = relatedPart === undefined
     ? undefined
-    : sourcePosition(relatedPart, result.relatedOffset);
+    : sourcePosition(relatedPart, result.relatedOffset, result.relatedLine);
   const symbol = result.diagnosticSymbol === 0
     ? undefined
     : unpackSymbol(memory, result.diagnosticSymbol, symbols, memoryLayout);
@@ -965,11 +913,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       "native Atom resident extent overlaps its host descriptor region",
     );
   }
-  const memoryLayout = nativeMemoryLayout(options.nativeMemoryLayout, {
-    core,
-    partCount: snapshot.parts.length,
-    partDescriptorBytes: symbols.AtomDriverPartDescriptorBytes,
-  });
+  const memoryLayout = nativeMemoryLayout(options.nativeMemoryLayout, { core });
   const romRanges = [
     ...core.codeRanges.map(({ start, end }) => ({ start, end: end - 1 })),
   ];
@@ -991,26 +935,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   );
   memory.fill(0xa5, memoryLayout.symbolStart, memoryLayout.symbolEnd);
   memory.fill(0xa5, memoryLayout.pendingStart, memoryLayout.pendingEnd);
-  memory.fill(
-    0xa5,
-    memoryLayout.partDescriptors,
-    memoryLayout.partDescriptors +
-      snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes,
-  );
-  for (const part of snapshot.parts) {
-    const descriptor =
-      memoryLayout.partDescriptors +
-      part.ordinal * symbols.AtomDriverPartDescriptorBytes;
-    memory[descriptor] = part.ordinal;
-    writeWord(memory, descriptor + 1, 0);
-    writeWord(memory, descriptor + 3, part.compilerBytes.length);
-  }
-  memory[BUILD_DESCRIPTOR] = snapshot.parts.length;
-  writeWord(
-    memory,
-    BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorParts,
-    memoryLayout.partDescriptors,
-  );
   writeWord(
     memory,
     BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorSymbolStart,
@@ -1044,11 +968,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   const buildDescriptorBefore = memory.slice(
     BUILD_DESCRIPTOR,
     BUILD_DESCRIPTOR + symbols.AtomDriverDescriptorBytes,
-  );
-  const partDescriptorsBefore = memory.slice(
-    memoryLayout.partDescriptors,
-    memoryLayout.partDescriptors +
-      snapshot.parts.length * symbols.AtomDriverPartDescriptorBytes,
   );
 
   memory[STACK_BEFORE] = 0x87;
@@ -1129,23 +1048,17 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       bytes: part.compilerBytes,
     })),
   );
-  const binaryIncludes = new Map();
-  for (const part of snapshot.parts) {
-    for (const include of part.binaryIncludes) {
-      binaryIncludes.set(`${part.ordinal}:${include.line}`, {
-        bytes: include.bytes,
-        index: 0,
-        diagnostic: sourcePosition(part, include.offset),
-      });
-    }
-  }
   let sourceReads = 0;
   const currentDiagnostic = () => {
     const ordinal = memory[symbols.AtomStatementErrorPart];
     const part = snapshot.parts[ordinal];
     return part === undefined
       ? undefined
-      : sourcePosition(part, word(memory, symbols.AtomStatementErrorOffset));
+      : sourcePosition(
+          part,
+          word(memory, symbols.AtomStatementErrorOffset),
+          word(memory, symbols.AtomStatementErrorLine),
+        );
   };
   // A 16-bit zero can mean address zero or the exclusive endpoint $10000.
   // The native output flags distinguish the endpoint from an ordinary cursor.
@@ -1184,25 +1097,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
         kind: "image",
         action: () => {
           const address = pair(runtime.cpu.h, runtime.cpu.l);
-          const source = currentDiagnostic();
-          const binary = binaryIncludes.get(
-            `${source?.ordinal}:${source?.line}`,
-          );
-          if (binary !== undefined && binary.index >= binary.bytes.length) {
-            bridgeFailure ??= Object.freeze({
-              message:
-                "INCBIN emitted more bytes than its resolved binary input",
-              diagnostic: binary.diagnostic,
-            });
-            return ATOM_HOST_SINK_STATUS.BINARY_INCLUDE;
-          }
-          const byte =
-            binary === undefined ? runtime.cpu.a : binary.bytes[binary.index++];
           return toolServices.dispatch(ATOM_TOOL_SERVICE.image, {
             bank: runtime.cpu.c,
             address,
-            bytes: Object.freeze([byte]),
-            source,
+            bytes: Object.freeze([runtime.cpu.a]),
+            source: currentDiagnostic(),
           }).status;
         },
       }),
@@ -1238,17 +1137,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       Object.freeze({
         kind: "commit",
         action: () => {
-          const incompleteBinary = [...binaryIncludes.values()].find(
-            ({ bytes, index }) => index !== bytes.length,
-          );
-          if (incompleteBinary !== undefined) {
-            bridgeFailure ??= Object.freeze({
-              message:
-                "INCBIN emitted fewer bytes than its resolved binary input",
-              diagnostic: incompleteBinary.diagnostic,
-            });
-            return ATOM_HOST_SINK_STATUS.BINARY_INCLUDE;
-          }
           if (bridgeFailure !== undefined)
             return ATOM_HOST_SINK_STATUS.TARGET_RANGE;
           const geometryFlags = runtime.cpu.a;
@@ -1308,9 +1196,69 @@ export async function assembleResolvedAtomProject(project, options = {}) {
 
   // Intercept host-service entries, but execute parser and encoder instructions
   // on the emulated Z80. The sentinel is reached by the core's final RET.
+  // Parts are supplied in order, each from offset zero. A part ends where the
+  // source service reports that no byte remains.
+  let nextPart = 0;
+  let binary;
+  const returnFromService = () => {
+    const returnAddress = word(memory, runtime.cpu.sp);
+    runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
+    runtime.cpu.pc = returnAddress;
+  };
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
+    if (runtime.cpu.pc === symbols.AtomBinaryOpen) {
+      // INCBIN names a file relative to the part that contains it.
+      const name = pair(runtime.cpu.h, runtime.cpu.l);
+      const specifier = String.fromCharCode(
+        ...memory.slice(name, name + runtime.cpu.b),
+      );
+      const part = snapshot.parts[memory[symbols.AtomTokenSourcePart]];
+      binary = undefined;
+      try {
+        if (snapshot.readBinary !== undefined && part !== undefined) {
+          const file = await snapshot.readBinary(part.ordinal, specifier);
+          binary = { bytes: file.originalBytes, index: 0 };
+        }
+      } catch {
+        binary = undefined;
+      }
+      // A file too long for a 16-bit length needs an explicit count.
+      const length = binary?.bytes.length ?? 0;
+      runtime.cpu.a = binary === undefined || length > 0xffff ? 1 : 0;
+      runtime.cpu.h = (length >>> 8) & 0xff;
+      runtime.cpu.l = length & 0xff;
+      runtime.cpu.flags.C = binary === undefined ? 1 : 0;
+      returnFromService();
+      continue;
+    }
+    if (runtime.cpu.pc === symbols.AtomBinaryRead) {
+      const byte = binary?.bytes[binary.index];
+      if (byte !== undefined) binary.index += 1;
+      runtime.cpu.a = byte ?? 1;
+      runtime.cpu.flags.C = byte === undefined ? 1 : 0;
+      returnFromService();
+      continue;
+    }
+    if (runtime.cpu.pc === symbols.AtomSourceOpenPart) {
+      const part = snapshot.parts[nextPart];
+      runtime.cpu.a = part === undefined ? 0 : part.ordinal;
+      runtime.cpu.h = 0;
+      runtime.cpu.l = 0;
+      runtime.cpu.d = 0;
+      runtime.cpu.e = 1;
+      runtime.cpu.flags.C = part === undefined ? 1 : 0;
+      if (part !== undefined) nextPart += 1;
+      returnFromService();
+      continue;
+    }
     if (runtime.cpu.pc === symbols.AtomSourceReadByte) {
       const offset = pair(runtime.cpu.h, runtime.cpu.l);
+      if (offset >= (snapshot.parts[runtime.cpu.a]?.compilerBytes.length ?? 0)) {
+        runtime.cpu.a = 0;
+        runtime.cpu.flags.C = 1;
+        returnFromService();
+        continue;
+      }
       const response = toolServices.dispatch(ATOM_TOOL_SERVICE.sourceRead, {
         part: runtime.cpu.a,
         offset,
@@ -1423,12 +1371,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       "native Atom changed build descriptor bytes",
     ],
     [
-      partDescriptorsBefore.every(
-        (byte, index) => memory[memoryLayout.partDescriptors + index] === byte,
-      ),
-      "native Atom changed part descriptor bytes",
-    ],
-    [
       immutable.every(({ start, bytes }) =>
         bytes.every((byte, index) => memory[start + index] === byte),
       ),
@@ -1451,10 +1393,12 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     parserSymbolStatus: memory[symbols.AtomParserSymbolStatus],
     part: memory[symbols.AtomStatementErrorPart],
     offset: word(memory, symbols.AtomStatementErrorOffset),
+    line: word(memory, symbols.AtomStatementErrorLine),
     undefinedSymbol: word(memory, symbols.AtomDriverUndefinedSymbol),
     message: memory[symbols.AtomDriverMessage],
     relatedPart: memory[symbols.AtomDriverRelatedPart],
     relatedOffset: word(memory, symbols.AtomDriverRelatedOffset),
+    relatedLine: word(memory, symbols.AtomDriverRelatedLine),
     diagnosticSymbol: word(memory, symbols.AtomDiagnosticSymbol),
     diagnosticValue: (word(memory, symbols.AtomDiagnosticValue) << 16) >> 16,
   });

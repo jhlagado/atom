@@ -103,6 +103,11 @@ export const DIAGNOSTIC_MESSAGES = Object.freeze([
   INTERNAL,
   "value %D is out of range for this operand",
   "relative jump is out of range (offset %D)",
+
+  // 69-71: INCBIN.
+  "could not read the INCBIN file",
+  "INCBIN needs a byte count here",
+  "INCBIN count is larger than the file",
 ]);
 
 export const DIAGNOSTIC_STACK_OVERFLOW = 12;

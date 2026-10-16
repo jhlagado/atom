@@ -67,15 +67,16 @@ async function namesBetween(file, first, last) {
 // Each record's fields, with the EQU that must hold its offset or size.
 const RECORDS = [
   {
-    id: "token", title: "Token record", size: ["tkRecLen", 9], where: "tkRecord",
+    id: "token", title: "Token record", size: ["tkRecLen", 11], where: "tkRecord",
     writer: "the tokenizer (tkNext)", readers: "the statement layer, expressions and the parser",
     fields: [
       ["kind", 0, 1, "tkKindAt", "Token kind: name, number, punctuation, end of line"],
       ["part", 1, 1, "tkPartAt", "Source part the token came from"],
       ["offset", 2, 2, "tkOffAt", "Byte offset of the token in its part"],
-      ["lexeme", 4, 2, "tkLexAt", "Address of the token's text in the lexeme buffer"],
-      ["length", 6, 1, "tkLenAt", "Length of that text in bytes"],
-      ["value", 7, 2, "tkValAt", "A number's value"],
+      ["line", 4, 2, "tkLineAt", "Line of the token in its part, counting from one"],
+      ["lexeme", 6, 2, "tkLexAt", "Address of the token's text in the lexeme buffer"],
+      ["length", 8, 1, "tkLenAt", "Length of that text in bytes"],
+      ["value", 9, 2, "tkValAt", "A number's value"],
     ],
   },
   {
@@ -100,7 +101,7 @@ const RECORDS = [
     ],
   },
   {
-    id: "build", title: "Build reference", size: ["prRawLen", 13], where: "prRawRef",
+    id: "build", title: "Build reference", size: ["prRawLen", 15], where: "prRawRef",
     writer: "the parser, for an operand naming a later symbol", readers: "refBind",
     fields: [
       ["key", 0, 6, "prBKey", "The symbol's packed name"],
@@ -110,10 +111,11 @@ const RECORDS = [
       ["field", 9, 1, "prBField", "Offset of the patched bytes in the instruction"],
       ["part", 10, 1, "prBPart", "Source part of the reference"],
       ["source", 11, 2, "prBSrc", "Source offset of the reference"],
+      ["line", 13, 2, "prBLine", "Source line of the reference"],
     ],
   },
   {
-    id: "public", title: "Public reference", size: ["prPubLen", 9], where: "prPubRef",
+    id: "public", title: "Public reference", size: ["prPubLen", 11], where: "prPubRef",
     writer: "refBind, once the symbol has a record", readers: "refCheck and refQueue",
     fields: [
       ["symbol", 0, 2, "prRSym", "Address of the symbol's record"],
@@ -123,10 +125,11 @@ const RECORDS = [
       ["field", 5, 1, "prRField", "Offset of the patched bytes in the instruction"],
       ["part", 6, 1, "prRPart", "Source part of the reference"],
       ["source", 7, 2, "prRSrc", "Source offset of the reference"],
+      ["line", 9, 2, "prRLine", "Source line of the reference"],
     ],
   },
   {
-    id: "pending", title: "Pending record", size: ["syRefLen", 9], where: "the pending arena",
+    id: "pending", title: "Pending record", size: ["syRefLen", 11], where: "the pending arena",
     writer: "refQueue, through syAdd", readers: "outFixUp, when the symbol is defined",
     fields: [
       ["symbol", 0, 2, null, "Address of the symbol's record"],
@@ -135,20 +138,19 @@ const RECORDS = [
       ["addend", 5, 1, null, "Signed amount added to the symbol"],
       ["part", 6, 1, "syPart", "Source part of the reference"],
       ["source", 7, 2, "sySrcOff", "Source offset of the reference"],
+      ["line", 9, 2, "syLine", "Source line of the reference"],
     ],
   },
   {
-    id: "descriptor", title: "Build descriptor", size: ["drDscLen", 15], where: "the host's memory, passed in IX",
+    id: "descriptor", title: "Build descriptor", size: ["drDscLen", 12], where: "the host's memory, passed in IX",
     writer: "the host", readers: "the driver (drAsm)",
     fields: [
-      ["parts", 0, 1, "drCount", "Number of source parts"],
-      ["part table", 1, 2, "drParts", "Address of the five-byte part records"],
-      ["symbols", 3, 2, "drSymBeg", "Start of the symbol arena"],
-      ["symbols end", 5, 2, "drSymEnd", "End of the symbol arena"],
-      ["pending", 7, 2, "drRefBeg", "Start of the pending arena"],
-      ["pending end", 9, 2, "drRefEnd", "End of the pending arena"],
-      ["origin", 11, 2, "drOutBeg", "First output address"],
-      ["capacity", 13, 2, "drOutCap", "Output capacity in bytes"],
+      ["symbols", 0, 2, "drSymBeg", "Start of the symbol arena"],
+      ["symbols end", 2, 2, "drSymEnd", "End of the symbol arena"],
+      ["pending", 4, 2, "drRefBeg", "Start of the pending arena"],
+      ["pending end", 6, 2, "drRefEnd", "End of the pending arena"],
+      ["origin", 8, 2, "drOutBeg", "First output address"],
+      ["capacity", 10, 2, "drOutCap", "Output capacity in bytes"],
     ],
   },
 ];
@@ -229,7 +231,7 @@ function figures(trace) {
   out.push(figure({
     id: "token", height: 150,
     title: "The token record for $100",
-    desc: "Nine bytes: kind 4 for a number, part 0, offset 12, the lexeme's address and length, and the value $0100 stored low byte first.",
+    desc: "Eleven bytes: kind 4 for a number, part 0, offset 12, line 1, the lexeme's address and length, and the value $0100 stored low byte first.",
     body: [caption(60, 22, "TOKEN RECORD  $100  LINE 1"), recordRow({ x: 60, y: 46, record: byId.token, bytes: number.bytes, highlight: ["value"] })].join("\n"),
   }));
   out.push(figure({
@@ -241,7 +243,7 @@ function figures(trace) {
   out.push(figure({
     id: "instruction", height: 270,
     title: "LD A,(COUNT) as an instruction record and its reference",
-    desc: "The ten-byte record holds the mnemonic, the operand classes and a zero placeholder where COUNT's address will go. The nine-byte public reference points at COUNT's symbol record and says to patch a word at offset 1 of the instruction.",
+    desc: "The ten-byte record holds the mnemonic, the operand classes and a zero placeholder where COUNT's address will go. The eleven-byte public reference points at COUNT's symbol record and says to patch a word at offset 1 of the instruction.",
     body: [
       caption(60, 22, "INSTRUCTION RECORD  LD A,(COUNT)"),
       recordRow({ x: 60, y: 46, record: byId.instruction, bytes: instruction.bytes, highlight: ["value 1"] }),
@@ -252,7 +254,7 @@ function figures(trace) {
   out.push(figure({
     id: "pending", height: 150,
     title: "The pending record waiting for COUNT",
-    desc: `Nine bytes: COUNT's record address, the patch address ${hex4(word(resolve.pending[0], 2))}, a word patch with the anchor flag, addend 0 and the reference's source position.`,
+    desc: `Eleven bytes: COUNT's record address, the patch address ${hex4(word(resolve.pending[0], 2))}, a word patch with the anchor flag, addend 0 and the reference's source position and line.`,
     body: [caption(60, 22, "PENDING RECORD  UNTIL COUNT IS DEFINED"), recordRow({ x: 60, y: 46, record: byId.pending, bytes: resolve.pending[0], highlight: ["address"] })].join("\n"),
   }));
 

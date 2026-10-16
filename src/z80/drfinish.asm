@@ -53,6 +53,9 @@ drFinish: ; Check pending references and retained symbols.
     LD   L,(IY+syValLo)                 ; Recover the reference offset low byte.
     LD   H,(IY+syValHi)                 ; Complete the source offset in HL.
     LD   (stAtOff),HL                   ; Publish the exact byte offset within that part.
+    LD   L,(IX+syLine)                  ; Recover the reference's line from the anchor.
+    LD   H,(IX+syLine+1)                ; Complete it.
+    LD   (stAtLine),HL                  ; Publish the line too.
     XOR  A                              ; No nested statement detail applies here.
     LD   (stDetail),A                   ; Clear any detail left by the final statement.
 
@@ -227,7 +230,7 @@ drDiag: ; Translate nested statuses into diagnostic arguments.
     JR   Z,.lexical                     ; Use the tokenizer's own status.
     LD   B,drExMsg                      ; Select the expression block.
     LD   D,exIntErr+1                   ; It holds one message per expression status.
-    JR   .table                         ; Map the status.
+    JP   .table                         ; Map the status.
 .exSym: ; Read the expression symbol failure.
     LD   A,(exCause)                    ; Load the expression's symbol status.
     LD   E,A                            ; Decode it as a symbol failure.
@@ -280,6 +283,8 @@ drDiag: ; Translate nested statuses into diagnostic arguments.
     LD   (drAtPart),A                   ; Keep its source part.
     LD   DE,(stAtOff)                   ; Load its source offset.
     LD   (drAtOff),DE                   ; Keep it too.
+    LD   DE,(stAtLine)                  ; Load its line.
+    LD   (drAtLine),DE                  ; Keep it too.
     LD   E,(HL)                         ; Read the record's symbol pointer low byte.
     INC  HL                             ; Advance to its high byte.
     LD   D,(HL)                         ; Complete the symbol pointer.
@@ -293,6 +298,11 @@ drDiag: ; Translate nested statuses into diagnostic arguments.
     INC  HL                             ; Advance to its high byte.
     LD   D,(HL)                         ; Complete the offset.
     LD   (stAtOff),DE                   ; Publish the reference's position.
+    INC  HL                             ; Advance to its line.
+    LD   E,(HL)                         ; Read the line's low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   D,(HL)                         ; Complete the line.
+    LD   (stAtLine),DE                  ; Publish it too.
     JR   .set                           ; Publish the message selected in C.
 .outTab: ; Select output status or pending-capacity detail.
     LD   A,E                            ; Instruction output preflights pending space.
@@ -335,18 +345,6 @@ drRamLo: ; Beginning of writable driver state.
 
 drDesc:    DW      0                    ; Saved build-descriptor address.
 
-; Address of the next five-byte part record during validation or assembly.
-
-drCurRec:   DW      0                   ; Current source-part record address.
-
-; Number of part records still to validate or assemble.
-
-drLeft:   DB      0                     ; Remaining part-record count.
-
-; Dense ordinal expected for the current part record.
-
-drDueIdx:   DB      0                   ; Expected dense part ordinal.
-
 ; Subsystem or configuration detail associated with the public driver status.
 
 drDetail:   DB      0                   ; Nested status or configuration detail.
@@ -361,6 +359,7 @@ drAbsent:    DW      0                  ; Validated undefined-symbol record addr
 drMsg:     DB      0                    ; Message number from src/host/diagnostics.mjs.
 drAtPart:   DB      0                   ; Related location's source part, or $FF.
 drAtOff:    DW      0                   ; Related location's source offset.
+drAtLine:   DW      0                   ; Related location's line.
 drSym:     DW      0                    ; Symbol record named by the message, or zero.
 drVal:     DW      0                    ; Signed value quoted by the message.
 drRamHi: ; Exclusive end of writable driver state.

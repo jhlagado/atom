@@ -46,7 +46,7 @@ harness.
 | `cpmsrc.asm` | Opens source files and reads bytes through a 128-byte cache |
 | `cpminc.asm` | Finds `%INCLUDE` lines and orders the source parts depth first |
 | `cpprep.asm` (`ppctrl.asm`, `ppvalue.asm`) | Applies `%DEFINE` and `%IF` |
-| `cpmbin.asm` (`cpmbscan.asm`, `cpmbpars.asm`, `cpmbsink.asm`) | Finds, checks and streams `INCBIN` data |
+| `cpmbin.asm` | Opens and reads `INCBIN` files for the core |
 | `cpmpub.asm` | Receives Atom's output and publishes or rolls back the files |
 | `cpmerr.asm` | Finds the line and column of a failure and prints its message |
 | `cpmcon.asm` | Prints to the console |

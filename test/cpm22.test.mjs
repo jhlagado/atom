@@ -149,7 +149,7 @@ test("CP/M runtime arenas and the output window work without COM initialisation"
   assert.ok(cpmCensus.materializerScratchEnd <= cpmCensus.materializerWindowStart);
   assert.notEqual(cpmCensus.hexDmaAddress, cpmCensus.materializerRecordAddress);
   assert.ok(cpmCensus.hexDmaAddress + 128 <= cpmCensus.materializerWindowStart);
-  assert.equal(cpmCensus.materializerFcbAddress, cpmCensus.partOrderAddress);
+  assert.equal(cpmCensus.materializerFcbAddress, cpmCensus.includeStackAddress);
   assert.equal(cpmCensus.hexDmaAddress, cpmCensus.sourceCacheAddress);
   assert.equal(cpmCensus.materializerWindowStart, cpmCensus.sourceCacheAddress + 128);
 
@@ -827,7 +827,7 @@ test("CP/M INCBIN rejects missing counts and protects a prior output on late EOF
     Uint8Array.of(0xc9),
     { files: [["DATA.BIN", Uint8Array.of(1)]] },
   );
-  assert.match(missingCount.atomTranscript, /INPUT\.ASM:2:1\s+Invalid INCBIN/);
+  assert.match(missingCount.atomTranscript, /INPUT\.ASM:2:1: INCBIN needs a byte count here/);
   assert.equal(missingCount.outputFile?.bytes[0], 0xc9);
 
   const incomplete = await runCpm22Atom(
@@ -835,7 +835,7 @@ test("CP/M INCBIN rejects missing counts and protects a prior output on late EOF
     Uint8Array.of(0xc9),
     { files: [["DATA.BIN", new Uint8Array(128).fill(0x5a)]] },
   );
-  assert.match(incomplete.atomTranscript, /INPUT\.ASM:2:1: DATA\.BIN binary read failed/);
+  assert.match(incomplete.atomTranscript, /INPUT\.ASM:2:1: could not read the INCBIN file/);
   assert.deepEqual(incomplete.outputFile?.bytes.slice(0, 1), Uint8Array.of(0xc9));
   assert.equal(readCpm22File(incomplete.finalDisk, "OUTPUT.$$$"), undefined);
 });

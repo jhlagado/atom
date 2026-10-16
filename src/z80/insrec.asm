@@ -69,8 +69,8 @@ enNone      EQU     255                             ; Empty operand slot sentine
 ; public form uses a symbol-record pointer and omits build-only data.
 
 prRefCap    EQU     2                   ; At most two independently deferred fields per instruction.
-prRawLen    EQU     13                  ; Bytes in a private reference with its packed symbol key.
-prPubLen    EQU     9                   ; Bytes in a public reference with its symbol-record pointer.
+prRawLen    EQU     15                  ; Bytes in a private reference with its packed symbol key.
+prPubLen    EQU     11                  ; Bytes in a public reference with its symbol-record pointer.
 prBKey      EQU     0                   ; Packed six-byte key begins the private reference.
 prBAdd      EQU     6                   ; Signed addend byte within the private reference.
 prBOper     EQU     7                   ; Operand index byte within the private reference.
@@ -78,6 +78,7 @@ prBKind     EQU     8                   ; Transform kind byte within the private
 prBField    EQU     9                   ; Encoded field offset byte within the private reference.
 prBPart     EQU     10                  ; Diagnostic source-part byte within the private reference.
 prBSrc      EQU     11                  ; Diagnostic source-offset word within the private reference.
+prBLine     EQU     13                  ; Diagnostic line word within the private reference.
 prRSym      EQU     0                   ; Symbol pointer word begins the public reference.
 prRAdd      EQU     2                   ; Signed addend byte within the public reference.
 prROper     EQU     3                   ; Operand index byte within the public reference.
@@ -85,3 +86,4 @@ prRKind     EQU     4                   ; Final patch-kind byte within the publi
 prRField    EQU     5                   ; Encoded field offset byte within the public reference.
 prRPart     EQU     6                   ; Diagnostic source-part byte within the public reference.
 prRSrc      EQU     7                   ; Diagnostic source-offset word within the public reference.
+prRLine     EQU     9                   ; Diagnostic line word within the public reference.

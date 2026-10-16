@@ -177,7 +177,7 @@ refBind: ; Locate deferred fields and publish their symbol descriptions.
 .publish: ; Begin symbol insertion and reference-description publication.
 
 ; Capacity is now proved. Resolve or insert every key and construct the public
-; nine-byte descriptions in source operand order.
+; eleven-byte descriptions in source operand order.
 
     XOR  A                              ; Begin publication at reference zero.
     LD   (prRefIdx),A                   ; Publish the current build-record index.
@@ -235,7 +235,7 @@ refBind: ; Locate deferred fields and publish their symbol descriptions.
     LD   HL,prBAdd                      ; Load its trailing-field offset.
     ADD  HL,DE                          ; Address the copied tail at its addend.
     POP  DE                             ; Restore the public-copy destination.
-    LD   BC,7                           ; Seven trailing bytes remain.
+    LD   BC,9                           ; Nine trailing bytes remain.
     LDIR                                ; Copy addend, patch metadata and source.
     LD   HL,prRefIdx                    ; Address the publication scan index.
     INC  (HL)                           ; Advance to the next reference.
@@ -304,10 +304,10 @@ refFatal: ; Report a symbol failure after successful allocation preflight.
     JP   prAtRef                        ; Anchor it at the current reference.
 
 ;@ROUTINE IN A OUT HL CLOBBERS DE,A,F
-; Return public-reference address A. Two fixed nine-byte slots cover the
+; Return public-reference address A. Two fixed eleven-byte slots cover the
 ; parser reference capacity.
 
-refAddr: ; Address one of the two nine-byte public references.
+refAddr: ; Address one of the two eleven-byte public references.
     LD   HL,prPubRef                    ; Start at public record zero.
     OR   A                              ; Is record zero requested?
     RET  Z                              ; Return its address directly.

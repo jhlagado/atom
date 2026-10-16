@@ -1,10 +1,11 @@
 stPuts: ; Count decoded string bytes before preflight and emission.
 
-; First pass: count decoded bytes without emitting. The tokenizer has
-; validated the closing quote and token length. HL is the raw offset,
-; B the raw bytes remaining and C the decoded count.
+; The tokenizer has validated the string and kept its raw bytes, quotes
+; included, in its lexeme buffer. Decode from there, never from the source.
+; First count the decoded bytes. HL walks the raw content, B counts the raw
+; bytes remaining and C the decoded count.
 
-    LD   HL,(tkRecord+tkOffAt)          ; Start at the string token's opening quote.
+    LD   HL,(tkRecord+tkLexAt)          ; Address the string's opening quote.
     INC  HL                             ; Advance to its first raw content byte.
     LD   A,(tkRecord+tkLenAt)           ; Read the token's complete raw byte length.
     SUB  2                              ; Exclude the opening and closing quotes.
@@ -14,15 +15,8 @@ stPuts: ; Count decoded string bytes before preflight and emission.
     LD   A,B                            ; Test the remaining raw-byte count.
     OR   A                              ; Set Z after the final raw byte.
     JR   Z,.cntDone                     ; Finish the counting pass.
-
-; Read one raw byte through the source service. Preserve the offset across
-; the call because tkRead returns the byte in A but may clobber HL.
-
-    PUSH HL                             ; Save the offset across the callback.
-    LD   A,(tkRecord+tkPartAt)          ; Supply the string's source-part ordinal.
-    CALL tkRead                         ; Read the raw byte at that logical offset.
-    POP  HL                             ; Restore the current raw cursor.
-    INC  HL                             ; Advance past the consumed raw byte.
+    LD   A,(HL)                         ; Read one raw byte.
+    INC  HL                             ; Advance past it.
     DEC  B                              ; Remove it from the remaining raw count.
     CP   $5C                            ; Was the byte a backslash escape introducer?
     JR   NZ,.tally                      ; No: it decodes directly to one byte.
@@ -30,10 +24,7 @@ stPuts: ; Count decoded string bytes before preflight and emission.
 ; A backslash escape consumes at least one more raw character while still
 ; producing one byte. A hexadecimal escape consumes two further digits.
 
-    PUSH HL                             ; Save the cursor across the escape read.
-    LD   A,(tkRecord+tkPartAt)          ; Reuse the string's source-part ordinal.
-    CALL tkRead                         ; Read the character following the backslash.
-    POP  HL                             ; Restore the raw cursor.
+    LD   A,(HL)                         ; Read the character after the backslash.
     INC  HL                             ; Advance past the escape code.
     DEC  B                              ; Remove that code from the remaining count.
     CP   $78                            ; Does this begin a hexadecimal escape, \xHH?
@@ -43,37 +34,20 @@ stPuts: ; Count decoded string bytes before preflight and emission.
     DEC  B                              ; Remove the high digit from the raw count.
     DEC  B                              ; Remove the low digit from the raw count.
 .tally: ; Add one decoded byte to the string payload count.
-
-; Count the decoded byte represented by the raw character or complete escape.
-
     INC  C                              ; Count one decoded output byte.
     JR   .cntLoop                       ; Count the remaining encoded characters.
-.cntDone: ; Retain source position and length for the emission pass.
+.cntDone: ; Retain the raw content and length for emission.
 
-; Rewind to the first character and retain all source-service state needed by
-; the emission pass. Quotes themselves are excluded from stStrLen.
+; Rewind to the first character. Quotes themselves are excluded from stStrLen.
 
     LD   A,C                            ; Recover the decoded payload length.
     LD   (stStrCnt),A                   ; Preserve it for capacity and PSTR prefix.
-    LD   HL,(tkRecord+tkOffAt)          ; Rewind to the opening quote.
+    LD   HL,(tkRecord+tkLexAt)          ; Rewind to the opening quote.
     INC  HL                             ; Select the first raw content byte again.
-    LD   (stStrPtr),HL                  ; Initialise the emission-pass cursor.
-    LD   A,(tkRecord+tkPartAt)          ; Read the string's source-part ordinal.
-    LD   (stStrSrc),A                   ; Preserve it for all emission-pass reads.
+    LD   (stStrPtr),HL                  ; Initialise the emission cursor.
     LD   A,(tkRecord+tkLenAt)           ; Reload the complete raw token length.
     SUB  2                              ; Exclude both quote bytes again.
     LD   (stStrLen),A                   ; Initialise raw bytes remaining for emission.
-
-; Standalone strings occupy the rest of the statement. DB strings defer
-; delimiter checking so the data list can continue.
-
-    LD   A,(stStrFmt)                   ; Test whether this is embedded DB-string mode.
-    OR   A                              ; Mode zero keeps the data-list grammar active.
-    JR   Z,.capacity                    ; Delay delimiter handling for a DB string.
-    CALL stToken                        ; Consume a standalone string token.
-    JP   C,stLexErr                     ; Preserve a following tokenizer failure.
-    CP   tkEol                          ; Standalone string must finish the line.
-    JP   NZ,stExtra                     ; Reject any trailing token.
 .capacity: ; Calculate capacity for the selected string representation.
 
 ; Capacity is decoded payload length plus one byte for CSTR's terminator or
@@ -163,16 +137,24 @@ stPuts: ; Count decoded string bytes before preflight and emission.
 .strDone: ; Complete the representation or resume an inline DB list.
 
 ; DB mode returns to its comma/EOL grammar. CSTR appends a zero terminator.
-; PSTR and ISTR are already complete and advance directly to the next line.
+; A standalone string must then end its line. It is checked only now, because
+; reading the next token reuses the lexeme buffer that held the string. Any
+; error aborts the whole build, so the bytes already emitted are discarded.
 
     LD   A,(stStrFmt)                   ; Select completion behaviour by string format.
     OR   A                              ; Is this an inline DB string?
     JR   Z,.dbDone                      ; Yes: check the data-list delimiter.
     CP   1                              ; Is this zero-terminated CSTR mode?
-    JP   NZ,stNext                      ; PSTR and ISTR are already complete.
+    JR   NZ,.alone                      ; PSTR and ISTR are already complete.
     XOR  A                              ; Form CSTR's trailing zero byte.
     CALL outEmitB                       ; Publish the terminator reserved by preflight.
-    JP   stOutOk                        ; Check output status and continue.
+    JP   C,stOutErr                     ; Preserve any sink failure.
+.alone: ; Require the standalone string to end its line.
+    CALL stToken                        ; Consume the string token.
+    JP   C,stLexErr                     ; Preserve a following tokenizer failure.
+    CP   tkEol                          ; Standalone string must finish the line.
+    JP   NZ,stExtra                     ; Reject any trailing token.
+    JP   stNext                         ; Continue with the next statement.
 .dbDone: ; Consume a DB string token and inspect its list delimiter.
     CALL tkNext                         ; Consume the DB string token.
     JP   C,stLexErr                     ; Preserve a following tokenizer failure.

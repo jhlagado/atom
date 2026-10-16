@@ -126,6 +126,6 @@ prBasePC:   DW      0                   ; Logical instruction base while queuein
 ; the fixed 94-byte parser workspace.
 
 prRelVal:    DW      0                  ; Offset of a rejected relative jump.
-prRawRef:   DS      prRawLen*prRefCap   ; Two private thirteen-byte build records.
-prPubRef:   DS      prPubLen*prRefCap   ; Two public nine-byte reference records.
+prRawRef:   DS      prRawLen*prRefCap   ; Two private fifteen-byte build records.
+prPubRef:   DS      prPubLen*prRefCap   ; Two public eleven-byte reference records.
 prRamHi: ; End the fixed parser workspace extent.

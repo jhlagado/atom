@@ -64,6 +64,13 @@ prDefer: ; Build a private reference before any symbol-arena publication.
     LD   (DE),A                         ; Store the offset little-endian.
     INC  DE                             ; Advance to the high byte.
     LD   A,H                            ; Take the source offset's high byte.
+    LD   (DE),A                         ; Store it.
+    INC  DE                             ; Advance to the line.
+    LD   HL,(exSrcLn)                   ; Read the missing symbol's line.
+    LD   A,L                            ; Take its low byte.
+    LD   (DE),A                         ; Store the line little-endian.
+    INC  DE                             ; Advance to the high byte.
+    LD   A,H                            ; Take the line's high byte.
     LD   (DE),A                         ; Complete the build-reference record.
     LD   A,(prOpCnt)                    ; Recover the unresolved operand index.
     CALL prOpBit                        ; Convert it to a one-bit mask.
@@ -90,11 +97,11 @@ prDefer: ; Build a private reference before any symbol-arena publication.
 ; Return the address of build-reference A in DE. Each record is thirteen
 ; bytes. Capacity two needs only one conditional add.
 
-prRawPtr: ; Address one of the two thirteen-byte private references.
+prRawPtr: ; Address one of the two fifteen-byte private references.
     LD   DE,prRawRef                    ; Begin at build-reference record zero.
     OR   A                              ; Is record zero requested?
     RET  Z                              ; Return its base directly.
-    LD   HL,prRawLen                    ; Load the thirteen-byte record stride.
+    LD   HL,prRawLen                    ; Load the fifteen-byte record stride.
     ADD  HL,DE                          ; Advance to build-reference record one.
     EX   DE,HL                          ; Return its address in DE.
     RET                                 ; A cannot exceed one at this call site.

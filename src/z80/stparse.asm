@@ -13,7 +13,8 @@
 ; drDoPart / stNext assembles the current source part.
 ; tkReset must first select its part and range. At EOF, carry is clear and
 ; A = 0. On error, carry is set and A holds a statement status category.
-; stDetail holds the nested status. stAtPart/stAtOff hold the source location.
+; stDetail holds the nested status. stAtPart/stAtOff/stAtLine hold the source
+; location.
 ; Side effects: symbol declarations and IMAGE/PATCH output.
 ;
 ;  STATEMENT SHAPES
@@ -67,6 +68,9 @@ stJunk      EQU     $86                 ; Unexpected text after the operands.
 stDbOnly    EQU     $87                 ; Strings are only allowed in DB.
 stNoStr     EQU     $88                 ; Expected a quoted string.
 stNoHost    EQU     $89                 ; A % directive is not allowed here.
+stBinBad    EQU     $C5                 ; Could not read the INCBIN file.
+stBinCnt    EQU     $C6                 ; INCBIN needs a byte count here.
+stBinBig    EQU     $C7                 ; INCBIN count is larger than the file.
 
 ; Directive ordinals returned by stIsDir and used by the dispatch table.
 
@@ -79,7 +83,8 @@ stCstr      EQU     6                   ; Emit a zero-terminated string.
 stPstr      EQU     7                   ; Emit a length-prefixed string.
 stIstr      EQU     8                   ; Emit a string with bit 7 on its final byte.
 stAlign     EQU     9                   ; Advance to the next address boundary.
-stNumDir    EQU     9                   ; Number of recognised directive names.
+stIncBin    EQU     10                  ; Emit the bytes of a binary file.
+stNumDir    EQU     10                  ; Number of recognised directive names.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Assemble the current source part through its EOF token.
@@ -313,13 +318,13 @@ stDoEqu: ; Evaluate and declare an immediate EQU constant.
 .resolve: ; Resolve pending uses after the constant becomes defined.
     CALL outFixUp                       ; Resolve pending uses of the new constant.
     JR   stOutOk                        ; Check output status and continue.
-stDoDir: ; Dispatch the contiguous ORG through ALIGN ordinals.
+stDoDir: ; Dispatch the contiguous ORG through INCBIN ordinals.
 
 ; EQU is handled by the declaration grammar above. Subtracting stOrg maps the
-; remaining contiguous ordinals onto the eight-entry address table.
+; remaining contiguous ordinals onto the nine-entry address table.
 
-    SUB  stOrg                          ; Index ORG..ALIGN from zero.
-    CP   8                              ; Is this one of eight table entries?
+    SUB  stOrg                          ; Index ORG..INCBIN from zero.
+    CP   9                              ; Is this one of nine table entries?
     JP   NC,stUnexp                     ; Reject EQU or a corrupt/out-of-range ordinal.
     ADD  A,A                            ; Scale the index for a two-byte address entry.
     LD   L,A                            ; Place the scaled offset in HL.
@@ -333,11 +338,12 @@ stDoDir: ; Dispatch the contiguous ORG through ALIGN ordinals.
     JP   (HL)                           ; Dispatch without another comparison chain.
 .handlers: ; Little-endian handler addresses in directive ordinal order.
 
-; ORG, DB, DW, DS, CSTR, PSTR, ISTR and ALIGN handlers in ordinal order.
+; ORG, DB, DW, DS, CSTR, PSTR, ISTR, ALIGN and INCBIN handlers in ordinal order.
 
     DW   .doOrg,.doDb,.doDw,stDoDs      ; Numeric and storage directives.
     DW   stCMode,stPMode,stIMode        ; Three standalone string formats.
     DW   stPad                          ; Address-alignment directive.
+    DW   stDoBin                        ; Binary-file directive.
 .doOrg: ; Require a concrete origin and move the logical cursor.
 
 ; ORG requires one concrete expression and no trailing token. It changes the
@@ -505,6 +511,8 @@ stItem: ; Parse the next scalar or quoted-string data item.
     LD   C,A                            ; Place the addend in its ABI register.
     LD   HL,(exSrcOff)                  ; Supply the reference's source offset.
     LD   (syAddOff),HL                  ; syAdd stores it with the record.
+    LD   HL,(exSrcLn)                   ; Supply the reference's line.
+    LD   (syAddLn),HL                   ; syAdd stores it too.
     LD   A,(exSrcPos)                   ; Supply the reference's source-part ordinal.
     CALL syAdd                          ; Append the fully described pending record.
     JP   C,stSymErr                     ; Preserve capacity or invariant failure.

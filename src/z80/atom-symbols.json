@@ -3110,38 +3110,28 @@
       "module": "TK"
     },
     {
-      "original": "_AtomTokenRestoreBadSourceRange",
-      "short": ".unwind",
-      "private": true,
-      "module": "TK",
-      "scope": "ATOMTOKENIZERRESET"
+      "original": "AtomSourceOpenPart",
+      "short": "tkOpen",
+      "private": false,
+      "module": "TK"
     },
     {
-      "original": "_AtomTokenBadSourceRange",
-      "short": ".reversed",
-      "private": true,
-      "module": "TK",
-      "scope": "ATOMTOKENIZERRESET"
+      "original": "AtomBinaryOpen",
+      "short": "tkBin",
+      "private": false,
+      "module": "TK"
+    },
+    {
+      "original": "AtomBinaryRead",
+      "short": "tkBinRd",
+      "private": false,
+      "module": "TK"
     },
     {
       "original": "AtomTokenSourcePeek",
       "short": "tkPeek",
       "private": false,
       "module": "TK"
-    },
-    {
-      "original": "_AtomTokenSourcePeekByte",
-      "short": ".read",
-      "private": true,
-      "module": "TK",
-      "scope": "ATOMTOKENSOURCEPEEK"
-    },
-    {
-      "original": "_AtomTokenSourcePeekEof",
-      "short": ".eof",
-      "private": true,
-      "module": "TK",
-      "scope": "ATOMTOKENSOURCEPEEK"
     },
     {
       "original": "AtomTokenSourceTake",
@@ -3798,20 +3788,14 @@
       "module": "TK"
     },
     {
-      "original": "AtomTokenSourceBase",
-      "short": "tkSrcBeg",
-      "private": false,
-      "module": "TK"
-    },
-    {
       "original": "AtomTokenSourceCursor",
       "short": "tkHead",
       "private": false,
       "module": "TK"
     },
     {
-      "original": "AtomTokenSourceEnd",
-      "short": "tkSrcLen",
+      "original": "AtomTokenSourceLine",
+      "short": "tkLine",
       "private": false,
       "module": "TK"
     },
@@ -4220,13 +4204,6 @@
       "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
     },
     {
-      "original": "_AtomExpressionFunctionLookaheadByte",
-      "short": ".read",
-      "private": true,
-      "module": "EX",
-      "scope": "ATOMEXPRESSIONCLASSIFYFUNCTION"
-    },
-    {
       "original": "_AtomExpressionFunctionLookaheadSpace",
       "short": ".space",
       "private": true,
@@ -4350,8 +4327,14 @@
       "scope": "ATOMEXPRESSIONPARSEOPERATOR"
     },
     {
+      "original": "AtomExpressionPackName",
+      "short": "exIdent",
+      "private": false,
+      "module": "EX"
+    },
+    {
       "original": "AtomExpressionPrimaryName",
-      "short": "exName",
+      "short": "exLookup",
       "private": false,
       "module": "EX"
     },
@@ -7954,8 +7937,8 @@
       "module": "ST"
     },
     {
-      "original": "AtomStatementStringPart",
-      "short": "stStrSrc",
+      "original": "AtomStatementErrorLine",
+      "short": "stAtLine",
       "private": false,
       "module": "ST"
     },
@@ -8008,26 +7991,8 @@
       "module": "DR"
     },
     {
-      "original": "AtomDriverConfigPartCount",
-      "short": "drCfgCnt",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverConfigTableRange",
-      "short": "drCfgTab",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverConfigPartOrdinal",
-      "short": "drCfgIdx",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverConfigSourceRange",
-      "short": "drCfgSrc",
+      "original": "AtomDriverStatusSourceService",
+      "short": "drBadIn",
       "private": false,
       "module": "DR"
     },
@@ -8046,48 +8011,6 @@
     {
       "original": "AtomDriverConfigOutputRange",
       "short": "drCfgOut",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartCapacity",
-      "short": "drMaxCnt",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartDescriptorBytes",
-      "short": "drRecLen",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartOrdinal",
-      "short": "drRecIdx",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartStart",
-      "short": "drRecBeg",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartEnd",
-      "short": "drRecEnd",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverDescriptorPartCount",
-      "short": "drCount",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverDescriptorParts",
-      "short": "drParts",
       "private": false,
       "module": "DR"
     },
@@ -8168,13 +8091,6 @@
       "scope": "ATOMASSEMBLE"
     },
     {
-      "original": "AtomDriverInternalAbort",
-      "short": ".tokFail",
-      "private": true,
-      "module": "DR",
-      "scope": "ATOMASSEMBLE"
-    },
-    {
       "original": "AtomDriverCommitFailure",
       "short": ".cmtFail",
       "private": true,
@@ -8209,20 +8125,6 @@
       "module": "DR"
     },
     {
-      "original": "AtomDriverValidatePartLoop",
-      "short": ".partLoop",
-      "private": true,
-      "module": "DR",
-      "scope": "ATOMDRIVERVALIDATEDESCRIPTOR"
-    },
-    {
-      "original": "AtomDriverValidateArenas",
-      "short": ".arenas",
-      "private": true,
-      "module": "DR",
-      "scope": "ATOMDRIVERVALIDATEDESCRIPTOR"
-    },
-    {
       "original": "_AtomDriverTargetRangeOk",
       "short": ".rangeOk",
       "private": true,
@@ -8238,30 +8140,6 @@
     {
       "original": "AtomDriverValidateRange",
       "short": "drSpanOk",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverBadPartCount",
-      "short": "drErrCnt",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverBadPartTable",
-      "short": "drErrTab",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverBadPartOrdinal",
-      "short": "drErrIdx",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverBadSourceRange",
-      "short": "drErrSrc",
       "private": false,
       "module": "DR"
     },
@@ -8376,24 +8254,6 @@
       "module": "DR"
     },
     {
-      "original": "AtomDriverPartCursor",
-      "short": "drCurRec",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartsRemaining",
-      "short": "drLeft",
-      "private": false,
-      "module": "DR"
-    },
-    {
-      "original": "AtomDriverPartIndex",
-      "short": "drDueIdx",
-      "private": false,
-      "module": "DR"
-    },
-    {
       "original": "AtomDriverDetail",
       "short": "drDetail",
       "private": false,
@@ -8462,6 +8322,48 @@
     {
       "original": "AtomHostServiceCodeEnd",
       "short": "hsEnd",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostWorkspaceStart",
+      "short": "hsRamLo",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostSourceTable",
+      "short": "hsSrcTab",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostSourceCount",
+      "short": "hsSrcCnt",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostSourceIndex",
+      "short": "hsSrcIdx",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostSourceBase",
+      "short": "hsSrcBeg",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostSourceLength",
+      "short": "hsSrcLen",
+      "private": false,
+      "module": "HS"
+    },
+    {
+      "original": "AtomHostWorkspaceEnd",
+      "short": "hsRamHi",
       "private": false,
       "module": "HS"
     },
@@ -8630,6 +8532,12 @@
     {
       "original": "AtomDriverRelatedOffset",
       "short": "drAtOff",
+      "private": false,
+      "module": "DR"
+    },
+    {
+      "original": "AtomDriverRelatedLine",
+      "short": "drAtLine",
       "private": false,
       "module": "DR"
     },

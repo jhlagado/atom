@@ -17,12 +17,9 @@ const STATUS = Object.freeze({
   UNDEFINED: 3,
   OUTPUT: 4,
   INTERNAL: 5,
+  SOURCE_SERVICE: 6,
 });
 const CONFIG = Object.freeze({
-  PART_COUNT: 1,
-  TABLE_RANGE: 2,
-  PART_ORDINAL: 3,
-  SOURCE_RANGE: 4,
   SYMBOL_RANGE: 5,
   PENDING_RANGE: 6,
   OUTPUT_RANGE: 7,
@@ -139,10 +136,6 @@ test("current-scope private undefined references report their exact token", () =
 
 test("descriptor failures are preflighted before sink begin", () => {
   const cases = [
-    [[], { partCount: 0 }, CONFIG.PART_COUNT],
-    [[""], { partsPointer: 0xfffc }, CONFIG.TABLE_RANGE],
-    [["NOP\n"], { ordinals: [1] }, CONFIG.PART_ORDINAL],
-    [["NOP\n"], { reversedSourceIndex: 0 }, CONFIG.SOURCE_RANGE],
     [[""], { symbolStart: 0x9100, symbolEnd: 0x90ff }, CONFIG.SYMBOL_RANGE],
     [[""], { pendingStart: 0x9300, pendingEnd: 0x92ff }, CONFIG.PENDING_RANGE],
     [[""], { address: 0xfff0, capacity: 0x20 }, CONFIG.OUTPUT_RANGE],
@@ -165,6 +158,25 @@ test("descriptor failures are preflighted before sink begin", () => {
     });
     assert.deepEqual(h.operations(), []);
   }
+});
+
+test("a build with no source parts commits an empty generation", () => {
+  const result = h.assemble([]);
+  assert.equal(result.status, 0);
+  assert.equal(result.carry, 0);
+  assert.equal(h.lifecycle().committed, 1);
+  assert.deepEqual(h.operations(), []);
+});
+
+test("a failing source service aborts the open generation", () => {
+  const result = h.assemble(["NOP\n", "NOP\n"], { reversedSourceIndex: 1 });
+  assert.equal(result.status, STATUS.SOURCE_SERVICE);
+  assert.equal(result.carry, 1);
+  assert.equal(result.driverDetail, 1);
+  const lifecycle = h.lifecycle();
+  assert.equal(lifecycle.began, 1);
+  assert.equal(lifecycle.committed, 0);
+  assert.equal(lifecycle.aborted, 1);
 });
 
 test("part EOF cannot join tokens across adjacent parts", () => {
@@ -309,7 +321,7 @@ test("source errors abort without committing and a subsequent build succeeds", (
 test("symbol and pending-reference capacity fail at the first incomplete record", () => {
   for (const [source, option, size] of [
     ["Name EQU 1\nDB Name", "symbolBytes", 8],
-    ["DW Target\nTarget: NOP", "pendingBytes", 9],
+    ["DW Target\nTarget: NOP", "pendingBytes", 11],
   ]) {
     for (const bytes of [size - 1, size, size + 1]) {
       const result = h.assemble([source], { [option]: bytes });

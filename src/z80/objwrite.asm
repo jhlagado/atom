@@ -133,8 +133,8 @@ hsBegin: ; Open one tentative output generation.
     LD   A,(objOutId+1)                 ; Read the tentative output handle's high byte.
     OR   B                              ; Nonzero means a generation is open.
     JR   NZ,.nested                     ; Reject a nested output generation.
-    LD   L,(IX+11)                      ; Read the descriptor's target base, low byte.
-    LD   H,(IX+12)                      ; Complete the target-base address.
+    LD   L,(IX+drOutBeg)                ; Read the descriptor's target base, low byte.
+    LD   H,(IX+drOutBeg+1)              ; Complete the target-base address.
     LD   (objBase),HL                   ; Retain the absolute base used by objToRel.
     LD   IX,(objCfg)                    ; Switch IX to adapter configuration.
     LD   L,(IX+objName)                 ; Read output-name pointer, low byte.
@@ -407,7 +407,7 @@ hsEnd: ; End sink callbacks before adapter state.
 ; (part, base, length). Output cursor/high-water are relative to objBase. The
 ; remaining scratch words stage gaps, patch values, bytes and transfer counts.
 
-objCfg:     DW      0                   ; Caller-owned nine-byte configuration address.
+objCfg:     DW      0                   ; Caller-owned ten-byte configuration address.
 objWork:    DW      0                   ; Base of the 399-byte common request workspace.
 objSrcId:   DW      0                   ; Source handle, or zero when closed.
 objOutId:   DW      0                   ; Tentative output handle, or zero.
@@ -416,6 +416,8 @@ objPart:    DB      0                   ; Part staged across provider calls.
 objWant:     DW      0                  ; Requested source offset for a refill.
 objCache:   DW      0                   ; Logical offset of cached byte zero.
 objValid:    DB      0                  ; Number of valid cached bytes.
+objNextP:   DB      0                   ; Ordinal of the next part to supply.
+objFail:    DB      0                   ; Status of a failed source read, or zero.
 objBase:   DW      0                    ; Absolute target image base.
 objCur:   DW      0                     ; Relative append cursor.
 objOutHi:   DW      0                   ; Exclusive initialised high water.

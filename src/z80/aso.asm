@@ -18,8 +18,8 @@ asoInit: ; Open the spool and initialise ASO writer state.
     LD   (pubOpen),A                    ; The old RAM-output temp is not open.
     LD   (pubKept),A                    ; Publication has not moved the old output.
     LD   (matOwns),A                    ; No internal spool name is owned yet.
-    LD   L,(IX+11)                      ; Read the descriptor's target origin.
-    LD   H,(IX+12)                      ; Complete the origin address.
+    LD   L,(IX+drOutBeg)                ; Read the descriptor's target origin.
+    LD   H,(IX+drOutBeg+1)              ; Complete the origin address.
     LD   (asoOrg),HL                    ; Retain the ASO header's image origin.
     LD   (asoImEnd),HL                  ; No IMAGE bytes precede the origin.
     LD   A,(pubKind)                    ; Distinguish ASO from an internal spool.

@@ -14,7 +14,7 @@ import {
   joinNativeCoreModules,
   readAssemblyModule,
   readNativeCoreModules,
-  nativeSourceRead,
+  nativeSourceServices,
   setNativeCoreOrigin,
 } from "./z80-source-layout.mjs";
 
@@ -95,7 +95,7 @@ async function linkedSource({
   const sourceReadLabel = sourceReadTarget ?? "objFetch";
   let modules = await readNativeCoreModules(nativeRoot);
   modules = setNativeCoreOrigin(modules, originSource(origin));
-  const core = `${joinNativeCoreModules(modules)}\n${nativeSourceRead(sourceReadLabel)}`;
+  const core = `${joinNativeCoreModules(modules)}\n${nativeSourceServices({ open: "objNext", read: sourceReadLabel, binaryOpen: "objNoBin", binaryRead: "objNoBin" })}`;
 
   const [sharedAbi, adapterText] = await Promise.all([
     readFile(fileURLToPath(import.meta.resolve("@jhlagado/z80-tool-services/native/z80-tool-services-v1.asmi")), "utf8"),

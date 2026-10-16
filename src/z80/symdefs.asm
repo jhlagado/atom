@@ -24,9 +24,10 @@
 ;  For a defined symbol the word is its value. While unresolved it holds the
 ;  first-reference source offset until syDecl replaces it. Spare high bits in
 ;  the final name byte hold signed-equate, defined and private flags. Each
-;  pending record is nine bytes: symbol pointer, patch address, kind/anchor,
-;  signed addend, full source-part ordinal and the source offset of the
-;  reference, so a failed patch can name the instruction that made it.
+;  pending record is eleven bytes: symbol pointer, patch address,
+;  kind/anchor, signed addend, full source-part ordinal and the source offset
+;  and line of the reference, so a failed patch can name the instruction that
+;  made it.
 ;
 ;  Capacity checks occur before cursor publication. Scope changes are
 ;  transactional: undefined private labels or stale private pending references
@@ -38,10 +39,11 @@ syBeg: ; Begin executable symbol code.
 ; Symbol-record geometry and packed-name flag bits.
 
 syRecLen    EQU     8                   ; Bytes in one packed symbol record.
-syRefLen    EQU     9                   ; Bytes in one pending-reference record.
+syRefLen    EQU     11                  ; Bytes in one pending-reference record.
 syKindLo    EQU     $07                 ; Low bits carrying the pending patch kind.
 syPart      EQU     6                   ; Pending source-part byte offset.
 sySrcOff    EQU     7                   ; Pending reference source-offset word.
+syLine      EQU     9                   ; Pending reference line word.
 syAnchor    EQU     $80                 ; Pending diagnostic-anchor flag.
 syKeyLen    EQU     6                   ; Bytes occupied by one packed symbol key.
 syValLo     EQU     6                   ; Offset of the symbol value's low byte.

@@ -1,62 +1,74 @@
 ; CP/M implementation of Atom's source-level definitions and conditions.
 ;
-; The resolver evaluates directives before assembly to choose active includes.
-; The source-byte adapter repeats only the conditional state changes while the
-; tokenizer reads forward. Directive bytes become comments. inactive text
-; becomes spaces, with every original line ending and byte offset preserved.
-; Defines are numeric and case-insensitive. names hold up to 17 characters.
-; The native profile supports 32 definitions and 16 nested conditional levels.
+; The filter in ppvalue.asm captures each line-leading % directive as the
+; tokenizer reads it as a comment. At the line's end ppApply applies it: IF,
+; ELSE and ENDIF change which lines are active, DEFINE adds a root value and
+; INCLUDE starts another source part. Inactive text becomes spaces, with every
+; line ending and byte offset preserved. Defines are numeric and
+; case-insensitive. names hold up to 17 characters. The native profile
+; supports 32 definitions and 16 nested conditional levels.
 
-;@ROUTINE IN incIdx OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Reset conditional state for one resolver scan. Root rescans rebuild defines.
+;@ROUTINE IN A CLOBBERS A,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Begin filtering a part from its first byte. A is its ordinal. Only the root
+; header may define values. A child's conditions nest inside the condition
+; that was open at its include, which it cannot close.
 
-ppClear: ; Reset preflight conditions and root definitions.
-    XOR  A                              ; A is the empty conditional depth.
-    LD   (ppDepth),A                    ; Each source part starts outside a conditional.
-    INC  A                              ; Active source is the default branch.
-    LD   (ppActive),A                   ; No enclosing condition disables this file.
-    LD   A,(incIdx)                     ; Select the original source ordinal.
-    OR   A                              ; Only ordinal zero is the entry file.
-    JR   NZ,.notRoot                    ; Includes cannot define host values.
-    XOR  A                              ; Rebuild root definitions on each root scan.
-    LD   (ppDefCnt),A                   ; Reset definitions for each scan.
-    LD   A,1                            ; Definitions may begin in the root header.
-    LD   (ppDefOk),A                    ; Close the define header at its first boundary.
-    RET                                 ; Keep the empty table ready for root defines.
-.notRoot: ; Keep root definitions while scanning a dependency.
-    XOR  A                              ; A dependency cannot declare definitions.
-    LD   (ppDefOk),A                    ; Its conditions use the root's table only.
-    RET                                 ; Return with root values still available.
+ppStart: ; Reset per-part state for a part's first byte.
+    LD   (srcPart),A                    ; This part is now being read.
+    OR   A                              ; Is it the root, ordinal zero?
+    LD   A,0                            ; Prepare zero without changing Z.
+    JR   NZ,.child                      ; A child cannot define values.
+    INC  A                              ; The root header may.
+.child: ; Record whether definitions are allowed.
+    LD   (ppDefOk),A                    ; Definitions end at the first include or IF.
+    LD   A,(ppDepth)                    ; Conditions open at the include remain open.
+    LD   (ppBase),A                     ; This part's frames begin above them.
+    LD   A,1                            ; The part starts at a line start.
+    LD   (ppMode),A                     ; Not in a directive.
+    LD   (incHead),A                    ; Every part starts in its header.
+    XOR  A                              ; Clear the remaining part state.
+    LD   (ppLastCr),A                   ; No byte precedes the first.
+    LD   (ppEnded),A                    ; Its end has not been checked.
+    LD   (ppLine),A                     ; Lines count from one.
+    LD   (ppLine+1),A                   ; Clear the high byte.
+    INC  A                              ; Form one.
+    LD   (ppLine),A                     ; The first line.
+    RET                                 ; Filtering can begin.
 
-;@ROUTINE OUT A,CARRY CLOBBERS HL,ZERO,SIGN,PARITY,HALFCARRY
-; Reset per-part runtime state without clearing the definitions found earlier.
+;@ROUTINE OUT A,CARRY,DE CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Apply the directive captured in ppLnBuf. Carry means it was malformed, with
+; its message in DE. A=1 means an include ends this part here. A=0 means the
+; part continues.
 
-ppReset: ; Reset runtime conditions for a new source part.
-    XOR  A                              ; Clear conditional depth and select its base.
-    LD   (ppDepth),A                    ; Nested conditions never cross a source part.
-    INC  A                              ; The first line is active by default.
-    LD   (ppActive),A                   ; Show ordinary source until an IF disables it.
-    LD   HL,$FFFF                       ; Use a sentinel outside valid byte offsets.
-    LD   (ppDirOff),HL                  ; A repeated peek must not apply IF twice.
-    RET                                 ; Preserve the preflight definition table.
-
-;@ROUTINE IN HL OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Validate and apply one line-leading directive during graph preflight.
-; HL enters after '%'. A=1 means an include is waiting for its child.
-
-ppScan: ; Dispatch a line-leading preflight directive.
-    LD   (ppWord),HL                    ; Save the INCLUDE keyword position.
-    CALL ppGetTok                       ; Read the directive name into the shared buffer.
+ppApply: ; Apply one captured directive at its line's end.
+    LD   A,(ppMode)                     ; The directive is complete.
+    AND  $FD                            ; Clear the capture bit.
+    LD   (ppMode),A                     ; Later bytes are ordinary again.
+    LD   A,(ppCapLen)                   ; How did the capture end?
+    CP   $FE                            ; Overflow?
+    JP   Z,ppErr                        ; A directive must fit the buffer.
+    CP   $FF                            ; Already ended at its comment?
+    JR   Z,.ended                       ; Its CR is in place.
+    LD   E,A                            ; Index the byte after the directive.
+    LD   D,0                            ; Widen it.
+    LD   HL,ppLnBuf                     ; Address the buffer.
+    ADD  HL,DE                          ; Address the end.
+    LD   (HL),13                        ; End the directive with CR.
+.ended: ; Read the directive's keyword.
+    LD   HL,ppLnBuf                     ; Start after the '%'.
+    CALL ppGetTok                       ; Read the keyword.
     JP   C,ppErr                        ; Empty or overlong words are malformed.
-    LD   (ppSrcPtr),HL                  ; Save the source position while matching.
+    LD   (ppSrcPtr),HL                  ; Save the cursor while matching.
     LD   HL,ppKeyInc                    ; Select the longest supported directive.
     LD   B,7                            ; INCLUDE has seven letters.
     CALL ppMatch                        ; Compare case-folded token bytes.
-    JR   Z,ppIncl                       ; Reuse the established 8.3 include parser.
+    JP   Z,ppIncl                       ; Start the included part.
     LD   HL,ppKeyDef                    ; Check for a root numeric definition.
     LD   B,6                            ; DEFINE has six letters.
     CALL ppMatch                        ; Reject any other six-byte token later.
     JR   Z,ppDefine                     ; Validate scope, name and value.
+    XOR  A                              ; IF, ELSE and ENDIF close the definitions.
+    LD   (ppDefOk),A                    ; No define may follow conditional logic.
     LD   HL,ppKeyEnd                    ; Check the five-byte closing directive.
     LD   B,5                            ; ENDIF has five letters.
     CALL ppMatch                        ; Match the complete token, not a prefix.
@@ -71,22 +83,10 @@ ppScan: ; Dispatch a line-leading preflight directive.
     JR   Z,ppIf                         ; Evaluate and push a new condition.
 ppErr: ; Return invalid-directive detail.
     LD   DE,msgDir                      ; Select unsupported-directive detail.
-    SCF                                 ; Carry marks the incomplete source profile.
-    RET                                 ; No output generation has begun.
-ppIncl: ; Validate an include in the source header.
-    LD   A,(incHead)                    ; Includes belong to the leading header only.
-    OR   A                              ; Test whether ordinary source already began.
-    JR   Z,.late                        ; Reject late imports before opening files.
-    XOR  A                              ; Any include closes the definition preamble.
-    LD   (ppDefOk),A                    ; Defines must precede includes and conditions.
-    LD   HL,(ppWord)                    ; Restore the cursor immediately after '%'.
-    JP   incLine                        ; Parse its filename and active dependency.
-.late: ; Reject an include after ordinary source.
-    LD   DE,msgInc                      ; Select malformed-include detail.
-    SCF                                 ; Carry rejects the source before output starts.
-    RET                                 ; Return the include-specific message.
+    SCF                                 ; Carry marks the malformed directive.
+    RET                                 ; The filter records where it was.
 ppDefine: ; Validate an entry-header numeric definition.
-    LD   A,(incIdx)                     ; Only the entry source may define values.
+    LD   A,(srcPart)                    ; Only the entry source may define values.
     OR   A                              ; Source ordinal zero identifies the root.
     JP   NZ,ppErr                       ; Reject definitions in included files.
     LD   A,(incHead)                    ; Require the root's leading header.
@@ -98,83 +98,30 @@ ppDefine: ; Validate an entry-header numeric definition.
     LD   HL,(ppSrcPtr)                  ; Start after the DEFINE directive name.
     CALL ppAddDef                       ; Store one unique name and numeric value.
     JP   C,ppErr                        ; Select the public directive error on failure.
-    XOR  A                              ; Definitions do not defer an include part.
-    RET                                 ; Continue scanning this source file.
-ppIf: ; Evaluate and push a preflight IF.
-    XOR  A                              ; IF closes the definition preamble.
-    LD   (ppDefOk),A                    ; No define may appear after conditional logic.
+    XOR  A                              ; The part continues.
+    RET                                 ; Return carry clear.
+ppIf: ; Evaluate and push an IF.
     LD   HL,(ppSrcPtr)                  ; Start after the IF keyword.
     CALL ppPush                         ; Evaluate the condition and push its frame.
     JP   C,ppErr                        ; Select the public directive error on failure.
+    XOR  A                              ; The part continues.
     RET                                 ; Continue with the newly selected branch.
-ppElse: ; Validate and select a preflight ELSE.
-    XOR  A                              ; ELSE also closes the definition preamble.
-    LD   (ppDefOk),A                    ; Close define header, even when inactive.
+ppElse: ; Validate and select an ELSE.
     LD   HL,(ppSrcPtr)                  ; Start at the directive's trailing text.
-    CALL ppEol                          ; Require only whitespace or a comment.
+    CALL ppEol                          ; Require only whitespace.
     JP   C,ppErr                        ; Reject arguments after ELSE.
-    LD   (ppAfter),HL                   ; Save cursor while changing the branch.
     CALL ppFlip                         ; Validate and activate the alternate branch.
     JP   C,ppErr                        ; Report unmatched or duplicate ELSE consistently.
-    XOR  A                              ; ELSE is a consumed directive, not a dependency.
-    LD   HL,(ppAfter)                   ; Resume after the validated directive line.
+    XOR  A                              ; The part continues.
     RET                                 ; Continue with the new branch state.
-ppEndIf: ; Validate and close a preflight IF.
-    XOR  A                              ; ENDIF closes the definition preamble too.
-    LD   (ppDefOk),A                    ; Header state is tracked separately.
-    LD   HL,(ppSrcPtr)                  ; Validate the rest of the physical line.
+ppEndIf: ; Validate and close an IF.
+    LD   HL,(ppSrcPtr)                  ; Validate the rest of the line.
     CALL ppEol                          ; ENDIF accepts no arguments.
     JP   C,ppErr                        ; Reject extra words after ENDIF.
-    LD   (ppAfter),HL                   ; Save cursor before popping frame.
     CALL ppPop                          ; Restore the parent branch's activity.
     JP   C,ppErr                        ; Report an unmatched ENDIF consistently.
-    XOR  A                              ; No dependency is pending after ENDIF.
-    LD   HL,(ppAfter)                   ; Resume after the validated directive line.
-    RET                                 ; Continue scanning the current source.
-
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; At runtime, apply conditional state once for a directive's source offset.
-
-ppApply: ; Replay a directive state change during source reads.
-    LD   (ppWord),HL                    ; Save the cursor immediately after '%'.
-    CALL ppGetTok                       ; Read the keyword without changing source bytes.
-    JP   C,.changed                     ; Reject source that changed after preflight.
-    LD   (ppSrcPtr),HL                  ; Save the cursor before testing keywords.
-    LD   HL,ppKeyIf                     ; IF changes the active source state.
-    LD   B,2                            ; Match exactly the IF keyword.
-    CALL ppMatch                        ; Keep the source cursor in workspace.
-    JR   Z,.if                          ; Apply one frame for this offset.
-    LD   HL,ppKeyAlt                    ; ELSE selects the remaining branch.
-    LD   B,4                            ; Match exactly four letters.
-    CALL ppMatch                        ; Do not accept an ELSE-like prefix.
-    JR   Z,.else                        ; Validate and toggle the top frame.
-    LD   HL,ppKeyEnd                    ; ENDIF restores its parent's activity.
-    LD   B,5                            ; Match exactly five letters.
-    CALL ppMatch                        ; Keep IF stack boundaries explicit.
-    JR   Z,.endIf                       ; Pop one frame after checking arguments.
-    LD   A,0                            ; Other directives leave state unchanged.
-    OR   A                              ; Clear carry for the source-byte adapter.
-    RET                                 ; INCLUDE and DEFINE remain comments at runtime.
-.if: ; Evaluate the runtime IF condition.
-    LD   HL,(ppSrcPtr)                  ; Continue after the IF keyword.
-    CALL ppPush                         ; Repeat the same value and nesting rules.
-    RET                                 ; Carry means the source changed after preflight.
-.else: ; Validate the runtime ELSE line.
-    LD   HL,(ppSrcPtr)                  ; Check trailing text before state changes.
-    CALL ppEol                          ; An ELSE argument is never silently ignored.
-    JR   C,.changed                     ; Reject mutation after source preflight.
-    CALL ppFlip                         ; Toggle only a valid top-level frame.
-    RET                                 ; Preserve the condition result.
-.endIf: ; Validate the runtime ENDIF line.
-    LD   HL,(ppSrcPtr)                  ; Check the complete directive line first.
-    CALL ppEol                          ; ENDIF takes no operands.
-    JR   C,.changed                     ; Reject changed or malformed input.
-    CALL ppPop                          ; Restore the parent activity.
-    RET                                 ; Return the updated conditional state.
-.changed: ; Reject source changes after preflight.
-    LD   A,2                            ; Signal that the source changed after preflight.
-    SCF                                 ; Report a source-read failure.
-    RET                                 ; Never assemble with uncertain condition state.
+    XOR  A                              ; The part continues.
+    RET                                 ; Continue with the parent's activity.
 
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one root definition. the name and value occupy separate work buffers.
@@ -274,8 +221,10 @@ ppPush: ; Evaluate an IF and validate its trailing text.
 ; Validate ELSE and select parent-active AND NOT original-condition.
 
 ppFlip: ; Select the unused ELSE branch.
-    LD   A,(ppDepth)                    ; An ELSE needs one open IF frame.
-    OR   A                              ; Zero denotes an unmatched directive.
+    LD   A,(ppBase)                     ; This part's frames begin above its base.
+    LD   B,A                            ; Keep the base.
+    LD   A,(ppDepth)                    ; An ELSE needs one open IF frame of this part.
+    CP   B                              ; Equal means none is open here.
     JP   Z,ppFail                       ; Reject ELSE without IF.
     DEC  A                              ; Select the most recent frame.
     LD   C,A                            ; Keep its stack index in C.
@@ -300,8 +249,10 @@ ppFlip: ; Select the unused ELSE branch.
 ; Pop one condition and restore the activity of its enclosing parent.
 
 ppPop: ; Pop one frame and restore its parent activity.
-    LD   A,(ppDepth)                    ; An ENDIF needs an open frame.
-    OR   A                              ; Zero denotes an unmatched directive.
+    LD   A,(ppBase)                     ; This part's frames begin above its base.
+    LD   B,A                            ; Keep the base.
+    LD   A,(ppDepth)                    ; An ENDIF needs an open frame of this part.
+    CP   B                              ; Equal means none is open here.
     JP   Z,ppFail                       ; Reject ENDIF without IF.
     DEC  A                              ; Select the frame being closed.
     LD   C,A                            ; Keep its index while loading the frame.
@@ -316,16 +267,13 @@ ppPop: ; Pop one frame and restore its parent activity.
     XOR  A                              ; Return success with carry clear.
     RET                                 ; The stale byte is ignored beyond the new depth.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Mark every enclosing IF whose active header contains an include directive.
 
 ppMark: ; Mark open frames containing a header include.
     PUSH HL                             ; The include parser owns the source cursor.
-    LD   A,(ppDepth)                    ; No frame needs a marker outside conditionals.
-    OR   A                              ; Avoid touching the empty stack.
+    CALL ppOwn                          ; Address this part's open frames.
     JR   Z,.done                        ; Unconditional include needs no frame.
-    LD   B,A                            ; Visit every open frame.
-    LD   HL,ppStack                     ; Start with the outermost IF.
 .loop: ; Mark each enclosing frame.
     LD   A,(HL)                         ; Load this frame's packed state.
     OR   8                              ; Bit three means its include has not closed yet.
@@ -336,7 +284,7 @@ ppMark: ; Mark open frames containing a header include.
     POP  HL                             ; Restore the cursor following the include name.
     RET                                 ; The scanner checks these bits at source start.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Return carry when ordinary source begins inside a conditional include.
 
 ppScope: ; Check ordinary source against include-bearing IF frames.
@@ -344,11 +292,8 @@ ppScope: ; Check ordinary source against include-bearing IF frames.
     LD   A,(incHead)                    ; Restrict conditional imports to the header.
     OR   A                              ; A closed header cannot accept an import.
     JR   Z,.done                        ; Let the parser report a late import.
-    LD   A,(ppDepth)                    ; Closed frames no longer constrain source order.
-    OR   A                              ; An empty stack makes ordinary source safe.
-    JR   Z,.done                        ; Continue without scanning the table.
-    LD   B,A                            ; Examine the currently open frames.
-    LD   HL,ppStack                     ; Begin at the outermost conditional.
+    CALL ppOwn                          ; Address this part's open frames.
+    JR   Z,.done                        ; None constrains its source order.
 .loop: ; Inspect each still-open frame.
     BIT  3,(HL)                         ; Has this frame seen an include before ENDIF?
     JR   NZ,.bad                        ; Reject ordinary source inside header.
@@ -362,6 +307,32 @@ ppScope: ; Check ordinary source against include-bearing IF frames.
     POP  HL                             ; Keep the caller's logical source offset intact.
     RET                                 ; Return carry clear for ordinary source.
 
+
+;@ROUTINE OUT A,B,HL,CARRY,ZERO CLOBBERS DE,SIGN,PARITY,HALFCARRY
+; Address this part's open IF frames: those above its condition base. HL
+; is the first and B the count. Z means there are none.
+
+ppOwn: ; Address the current part's open conditional frames.
+    LD   A,(ppBase)                     ; Frames below the base belong to includers.
+    LD   E,A                            ; Index the part's first frame.
+    LD   D,0                            ; Widen it.
+    LD   HL,ppStack                     ; Address the stack.
+    ADD  HL,DE                          ; Address the part's first frame.
+    LD   A,(ppDepth)                    ; Count the part's frames.
+    SUB  E                              ; Depth less base.
+    LD   B,A                            ; Return the count.
+    RET                                 ; Z when it is zero.
+
+;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+; Return the directive byte at HL and advance HL. The captured line ends in
+; CR, so a parser never reads past it.
+
+ppNext: ; Read the next byte of the captured directive.
+    LD   A,(HL)                         ; Read the byte.
+    INC  HL                             ; Advance the cursor.
+    OR   A                              ; Clear carry.
+    RET                                 ; Return it.
+
 ;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Read one whitespace-delimited ASCII token, leaving its delimiter unread.
 
@@ -369,40 +340,31 @@ ppGetTok: ; Read one bounded uppercase token.
     XOR  A                              ; Begin with an empty token.
     LD   (ppTokLen),A                   ; Reset the bounded token length.
 .loop: ; Scan token characters or leading whitespace.
-    CALL srcNext                        ; Read the next raw source character.
-    JR   C,.eof                         ; EOF ends a complete trailing token.
+    CALL ppNext                         ; Read the next directive character.
     CP   ' '                            ; Horizontal spaces delimit tokens.
     JR   Z,.space                       ; Skip leading spaces or finish a token.
     CP   9                              ; Tabs have the same token-boundary meaning.
     JR   Z,.space                       ; Skip leading tabs or finish a token.
-    CP   ';'                            ; Semicolon begins a source comment.
-    JR   Z,.end                         ; Leave ';' for trailing-text validation.
-    CP   13                             ; CR terminates this physical line.
-    JR   Z,.end                         ; Leave CR for the line validator.
-    CP   10                             ; LF also terminates a directive line.
-    JR   Z,.end                         ; Preserve LF for the trailing validator.
+    CP   13                             ; CR ends the directive.
+    JR   Z,.end                         ; Leave it for the line validator.
     LD   B,A                            ; Keep the character while checking capacity.
     LD   A,(ppTokLen)                   ; Read the token length so far.
     CP   17                             ; The fixed token buffer holds at most 17 bytes.
     JR   NC,.bad                        ; Reject a token beyond the native limit.
     LD   C,A                            ; Use the current length as the array index.
-    LD   A,B                            ; Restore the source character.
+    LD   A,B                            ; Restore the character.
     CP   'a'                            ; Check for an ASCII lowercase letter.
     JR   C,.append                      ; Keep uppercase and punctuation unchanged.
     CP   'z'+1                          ; Check the exclusive lowercase upper bound.
     JR   NC,.append                     ; Leave bytes beyond 'z' unchanged.
     AND  $DF                            ; Fold lowercase ASCII to uppercase.
 .append: ; Append one normalised token byte.
-    LD   (ppTemp),A                     ; Save the normalised byte during indexing.
-    LD   (ppSrcPtr),HL                  ; Save the source cursor while indexing.
-    LD   A,C                            ; Load the token's current length.
-    LD   C,A                            ; Form its low-byte address offset.
+    PUSH HL                             ; Keep the directive cursor.
     LD   B,0                            ; The token index is less than eighteen.
     LD   HL,ppToken                     ; Select the fixed token buffer.
     ADD  HL,BC                          ; Address the next available byte.
-    LD   A,(ppTemp)                     ; Restore the normalised character.
-    LD   (HL),A                         ; Append it without changing source offsets.
-    LD   HL,(ppSrcPtr)                  ; Resume after the token byte just read.
+    LD   (HL),A                         ; Append the character.
+    POP  HL                             ; Restore the directive cursor.
     LD   A,(ppTokLen)                   ; Reload the stored token length.
     INC  A                              ; Count the character just appended.
     LD   (ppTokLen),A                   ; Publish the new bounded length.
@@ -413,24 +375,16 @@ ppGetTok: ; Read one bounded uppercase token.
     JR   Z,.loop                        ; Keep looking for the first token byte.
 .end: ; Leave the delimiter unread for its caller.
     DEC  HL                             ; Leave the delimiter for the next parser.
-    LD   A,(ppTokLen)                   ; Reject an empty token at comment or EOL.
+    LD   A,(ppTokLen)                   ; Reject an empty token at the line end.
     OR   A                              ; A zero length means a required value is absent.
     JR   Z,.bad                         ; Report the missing token.
     OR   A                              ; Clear carry and classify the token length.
     RET                                 ; HL still points at its first trailing delimiter.
-.eof: ; Complete a token at ordinary EOF.
-    OR   A                              ; A=0 is ordinary EOF. A=2 is source overflow.
-    JR   NZ,.bad                        ; Do not accept a wrapped source cursor.
-    LD   A,(ppTokLen)                   ; An EOF may finish a nonempty token.
-    OR   A                              ; Reject EOF before any required token.
-    JR   Z,.bad                         ; The caller will print a directive error.
-    OR   A                              ; Return the complete final token.
-    RET                                 ; The source cursor remains at EOF.
 .bad: ; Reject an absent or overlong token.
     SCF                                 ; Carry reports malformed or overlong input.
     RET                                 ; The caller selects the directive diagnostic.
 
-;@ROUTINE IN HL,B OUT A,ZERO CLOBBERS BC,DE,HL
+;@ROUTINE IN HL,B OUT A,ZERO CLOBBERS BC,DE,HL,CARRY,SIGN,PARITY,HALFCARRY
 ; Compare B token bytes with the uppercase word at HL.
 
 ppMatch: ; Match the complete uppercase directive keyword.
@@ -448,34 +402,17 @@ ppMatch: ; Match the complete uppercase directive keyword.
     XOR  A                              ; Return Z for a complete keyword match.
     RET                                 ; The caller can branch on exact equality.
 
-;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Accept end of line or a complete trailing comment.
+;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+; Accept only whitespace before the directive's end. A trailing comment was
+; left out when the directive was captured.
 
-ppEol: ; Validate whitespace, comment or line end.
-    CALL srcNext                        ; Inspect the byte after the final token.
-    JR   C,.eof                         ; EOF is a valid directive terminator.
+ppEol: ; Validate whitespace to the line end.
+    CALL ppNext                         ; Inspect the byte after the final token.
     CP   ' '                            ; Permit trailing horizontal whitespace.
     JR   Z,ppEol                        ; Skip another space.
     CP   9                              ; Permit trailing tabs as well.
     JR   Z,ppEol                        ; Skip another tab.
-    CP   ';'                            ; An ordinary semicolon begins a comment.
-    JR   Z,.comment                     ; Consume its remaining physical line.
-    CP   13                             ; Accept a carriage-return line ending.
-    JR   Z,.ok                          ; Leave the next LF for the outer scanner.
-    CP   10                             ; Accept LF-only source files.
-    JR   Z,.ok                          ; The next byte begins a new physical line.
+    CP   13                             ; The directive must end here.
+    RET  Z                              ; Accept it with carry clear.
     SCF                                 ; Any other byte is an extra argument.
-    RET                                 ; Reject it before the assembler processes it.
-.comment: ; Consume a trailing source comment.
-    CALL srcSkip                        ; Consume the validated trailing comment.
-    JR   C,.eof                         ; EOF is valid. overflow is not.
-    XOR  A                              ; The comment ended at a normal line break.
-    RET                                 ; Continue scanning the following line.
-.eof: ; Accept EOF unless the source offset overflowed.
-    OR   A                              ; A=0 means EOF. A=2 means offset overflow.
-    RET  Z                              ; Accept an ordinary end of file.
-    SCF                                 ; Reject a source offset that wrapped.
-    RET                                 ; Leave the caller's source scan failed.
-.ok: ; Accept a consumed line ending.
-    XOR  A                              ; A normal line ending is valid.
-    RET                                 ; HL points beyond the consumed line-ending byte.
+    RET                                 ; Reject it.

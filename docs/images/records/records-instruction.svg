@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="270" viewBox="0 0 720 270" role="img" aria-labelledby="figTitle figDesc">
   <title id="figTitle">LD A,(COUNT) as an instruction record and its reference</title>
-  <desc id="figDesc">The ten-byte record holds the mnemonic, the operand classes and a zero placeholder where COUNT's address will go. The nine-byte public reference points at COUNT's symbol record and says to patch a word at offset 1 of the instruction.</desc>
+  <desc id="figDesc">The ten-byte record holds the mnemonic, the operand classes and a zero placeholder where COUNT's address will go. The eleven-byte public reference points at COUNT's symbol record and says to patch a word at offset 1 of the instruction.</desc>
   <defs>
     <style>
     :root {
@@ -129,6 +129,10 @@
   <text class="t" x="405" y="195.5" text-anchor="middle" xml:space="preserve">1F</text>
   <rect class="bx" x="428" y="176" width="46" height="30" rx="2"/>
   <text class="t" x="451" y="195.5" text-anchor="middle" xml:space="preserve">00</text>
+  <rect class="bx" x="474" y="176" width="46" height="30" rx="2"/>
+  <text class="t" x="497" y="195.5" text-anchor="middle" xml:space="preserve">02</text>
+  <rect class="bx" x="520" y="176" width="46" height="30" rx="2"/>
+  <text class="t" x="543" y="195.5" text-anchor="middle" xml:space="preserve">00</text>
   <text class="dim" x="83" y="169" text-anchor="middle" xml:space="preserve">+0</text>
   <text class="dim" x="129" y="169" text-anchor="middle" xml:space="preserve">+1</text>
   <text class="dim" x="175" y="169" text-anchor="middle" xml:space="preserve">+2</text>
@@ -138,6 +142,8 @@
   <text class="dim" x="359" y="169" text-anchor="middle" xml:space="preserve">+6</text>
   <text class="dim" x="405" y="169" text-anchor="middle" xml:space="preserve">+7</text>
   <text class="dim" x="451" y="169" text-anchor="middle" xml:space="preserve">+8</text>
+  <text class="dim" x="497" y="169" text-anchor="middle" xml:space="preserve">+9</text>
+  <text class="dim" x="543" y="169" text-anchor="middle" xml:space="preserve">+10</text>
   <line class="rule" x1="64" y1="211" x2="148" y2="211"/>
   <text class="nb" x="106" y="226" text-anchor="middle" xml:space="preserve">symbol</text>
   <line class="rule" x1="156" y1="211" x2="194" y2="211"/>
@@ -152,4 +158,6 @@
   <text class="ns" x="359" y="242" text-anchor="middle" xml:space="preserve">part</text>
   <line class="rule" x1="386" y1="211" x2="470" y2="211"/>
   <text class="ns" x="428" y="226" text-anchor="middle" xml:space="preserve">source</text>
+  <line class="rule" x1="478" y1="211" x2="562" y2="211"/>
+  <text class="ns" x="520" y="242" text-anchor="middle" xml:space="preserve">line</text>
 </svg>

@@ -49,9 +49,9 @@ syDropOk: ; Prove every private symbol and pending pointer permits eviction.
     RET                                 ; Preserve both symbol and pending arenas.
 
 ;@ROUTINE IN A,IX,DE,BC OUT A,CARRY CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,ZERO
-; Append one nine-byte pending record. Inputs are IX=symbol, DE=logical patch
-; address, B=kind/anchor, C=signed addend, A=source-part ordinal and syAddOff=
-; the reference's source offset. Defined symbols are rejected because their
+; Append one eleven-byte pending record. Inputs are IX=symbol, DE=logical
+; patch address, B=kind/anchor, C=signed addend, A=source-part ordinal, and
+; syAddOff and syAddLn the reference's source offset and line. Defined symbols are rejected because their
 ; value should have been emitted directly.
 
 syAdd: ; Append a complete patch description for an undefined symbol.
@@ -90,6 +90,11 @@ syAdd: ; Append a complete patch description for an undefined symbol.
     LD   (HL),A                         ; Store the diagnostic source-part ordinal.
     INC  HL                             ; Advance to the source-offset field.
     LD   DE,(syAddOff)                  ; Load the reference's source offset.
+    LD   (HL),E                         ; Store its low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   (HL),D                         ; Store its high byte.
+    INC  HL                             ; Advance to the line field.
+    LD   DE,(syAddLn)                   ; Load the reference's line.
     LD   (HL),E                         ; Store its low byte.
     INC  HL                             ; Advance to its high byte.
     LD   (HL),D                         ; Store its high byte.
@@ -252,6 +257,7 @@ syRefBeg:   DW      0                   ; Base of the independent pending-record
 syRefEnd:    DW      0                  ; Exclusive end of pending capacity.
 syRefCur:    DW      0                  ; First free pending byte.
 syAddOff:    DW      0                  ; Source offset for the next syAdd record.
+syAddLn:    DW      0                   ; Source line for the next syAdd record.
 syNoDef:   DW      0                    ; Undefined private record at scope close.
 sySymPtr    EQU     syInsKey            ; Reuse key pointer during pending search.
 syRamHi: ; End fixed symbol and pending workspace.

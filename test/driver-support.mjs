@@ -40,7 +40,7 @@ const PROOF_SYMBOLS = Object.freeze({
   AtomDriverProofDescriptorStart: 0x8302,
   AtomDriverDescriptorBefore: 0x8302,
   AtomDriverBuildDescriptor: 0x8303,
-  AtomDriverPartDescriptors: 0x8312,
+  AtomDriverSourceTable: 0x8312,
   AtomDriverDescriptorAfter: 0x880d,
   AtomDriverProofDescriptorEnd: 0x880e,
   AtomDriverProofSymbolStart: 0x9000,
@@ -87,6 +87,7 @@ export async function createDriverHarness() {
     [symbols.AtomOutputWorkspaceStart, symbols.AtomOutputWorkspaceEnd],
     [symbols.AtomStatementWorkspaceStart, symbols.AtomStatementWorkspaceEnd],
     [symbols.AtomDriverWorkspaceStart, symbols.AtomDriverWorkspaceEnd],
+    [symbols.AtomHostWorkspaceStart, symbols.AtomHostWorkspaceEnd],
   ];
   const writable = new Uint8Array(memory.length);
   for (const [start, end] of [...workspace, [STACK_BEFORE + 1, STACK_AFTER]]) writable.fill(1, start, end);
@@ -283,26 +284,25 @@ export async function createDriverHarness() {
     const encoded = parts.map((part) => part instanceof Uint8Array ? part : new TextEncoder().encode(part));
     memory.fill(0xa5, symbols.AtomDriverSource, symbols.AtomDriverSourceLimit);
     memory.fill(0xa5, symbols.AtomDriverBuildDescriptor, symbols.AtomDriverDescriptorAfter);
+    // The memory host supplies each part from a table of begin/end pairs.
     let sourceCursor = symbols.AtomDriverSource;
-    const descriptorBase = options.partsPointer ?? symbols.AtomDriverPartDescriptors;
+    const table = symbols.AtomDriverSourceTable;
     for (const [index, bytes] of encoded.entries()) {
       assert.ok(sourceCursor + bytes.length <= symbols.AtomDriverSourceLimit, "driver proof source capacity");
       memory.set(bytes, sourceCursor);
-      const descriptor = descriptorBase + index * symbols.AtomDriverPartDescriptorBytes;
-      memory[descriptor] = options.ordinals?.[index] ?? index;
-      writeWord(memory, descriptor + 1, sourceCursor);
-      writeWord(memory, descriptor + 3, sourceCursor + bytes.length);
+      writeWord(memory, table + index * 4, sourceCursor);
+      writeWord(memory, table + index * 4 + 2, sourceCursor + bytes.length);
       sourceCursor += bytes.length;
     }
     if (options.reversedSourceIndex !== undefined) {
-      const descriptor = descriptorBase + options.reversedSourceIndex * symbols.AtomDriverPartDescriptorBytes;
-      const start = word(memory, descriptor + 1);
-      writeWord(memory, descriptor + 3, start - 1);
+      const pair = table + options.reversedSourceIndex * 4;
+      writeWord(memory, pair + 2, word(memory, pair) - 1);
     }
+    writeWord(memory, symbols.AtomHostSourceTable, table);
+    memory[symbols.AtomHostSourceCount] = encoded.length;
+    memory[symbols.AtomHostSourceIndex] = 0;
 
     const build = symbols.AtomDriverBuildDescriptor;
-    memory[build] = options.partCount ?? encoded.length;
-    writeWord(memory, build + symbols.AtomDriverDescriptorParts, descriptorBase);
     writeWord(memory, build + symbols.AtomDriverDescriptorSymbolStart, options.symbolStart ?? symbols.AtomDriverSymbolArena);
     writeWord(memory, build + symbols.AtomDriverDescriptorSymbolEnd, options.symbolEnd ?? (symbols.AtomDriverSymbolArena + (options.symbolBytes ?? 256)));
     writeWord(memory, build + symbols.AtomDriverDescriptorPendingStart, options.pendingStart ?? symbols.AtomDriverPendingArena);

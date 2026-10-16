@@ -4,18 +4,20 @@
 ;
 ;  PURPOSE
 ;  -------
-;  Pull one token at a time from a prepared source part. The interface uses
-;  a byte range and part ordinal, never a file. Every source byte is obtained
+;  Pull one token at a time from a source part. The interface uses a part
+;  ordinal and a logical offset, never a file. Every source byte is obtained
 ;  through tkRead, so the core can read memory, host-backed snapshots,
-;  banked storage or an operating-system adapter.
+;  banked storage or an operating-system adapter. A part ends where tkRead
+;  reports that no byte remains, so its length is never needed.
 ;
 ;  PUBLIC ENTRY POINTS
 ;  -------------------
 ;
-;  tkReset selects a source part at logical offset zero.
-;  Entry: A=part ordinal, HL=source begin, DE=exclusive source end.
-;  Success: carry clear, A=0, IX=token record.
-;  Error: carry set, A=tkBadLen for a reversed range. No state changes.
+;  tkReset selects a source part from a logical offset and line. A part
+;  resumed after an include starts past zero, so offsets and lines stay true
+;  to the file. CR, LF and CRLF each end one line.
+;  Entry: A=part ordinal, HL=starting logical offset, DE=starting line.
+;  Exit: IX=token record.
 ;
 ;  tkNext returns the next token from the selected part.
 ;  Success: carry clear, A=kind, IX=nine-byte token record.
@@ -29,9 +31,10 @@
 ;  +0   byte   token kind
 ;  +1   byte   source-part ordinal
 ;  +2   word   byte offset from the beginning of that part
-;  +4   word   pointer into tkLexBuf
-;  +6   byte   raw lexeme length
-;  +7   word   decoded numeric value, otherwise zero
+;  +4   word   line number, counting from one
+;  +6   word   pointer into tkLexBuf
+;  +8   byte   raw lexeme length
+;  +9   word   decoded numeric value, otherwise zero
 ;
 ;  Names keep their source capitalisation. Mnemonic, directive and symbol
 ;  consumers perform case folding while recognising or packing them.
@@ -47,11 +50,10 @@
 ;  SOURCE SERVICE SEAM
 ;  -------------------
 ;
-;  tkRead receives A=part ordinal and HL=logical byte offset. The checked
-;  core's implementation below reads the reset range directly. Platform builds
-;  replace only the explicitly marked body with a jump to their provider.
-;  Every offset below the validated part length must return successfully. This
-;  seam has no read-error channel: tkPeek reserves carry for end of part.
+;  tkRead receives A=part ordinal and HL=logical byte offset. It returns the
+;  byte with carry clear, or carry with A=0 when the part has no more bytes.
+;  The seam has no read-error channel. A host that cannot supply a byte ends
+;  the part, and reports why when the driver next calls tkOpen.
 
 tkBeg: ; Begin tokenizer code and constants.
 
@@ -90,50 +92,34 @@ tkNumBig    EQU     4                   ; Numeric value exceeds sixteen bits.
 tkStrCut    EQU     5                   ; Unterminated string literal.
 tkBadEsc    EQU     6                   ; Unsupported string or character escape.
 tkStrBig    EQU     7                   ; String lexeme exceeds its byte limit.
-tkBadLen    EQU     8                   ; Reversed source range supplied to reset.
+tkBadLen    EQU     8                   ; Unused. Keeps later statuses' numbers.
 tkHost      EQU     9                   ; Host directive reached native Atom.
 tkLitCut    EQU     10                  ; Unterminated character literal.
 tkBadLit    EQU     11                  ; Invalid character literal contents.
 
-; Nine-byte token-record field offsets and total size.
+; Eleven-byte token-record field offsets and total size. Part, offset and
+; line form one five-byte source position.
 
 tkKindAt    EQU     0                   ; Token-kind byte offset.
 tkPartAt    EQU     1                   ; Source-part ordinal byte offset.
 tkOffAt     EQU     2                   ; Source-relative token offset word.
-tkLexAt     EQU     4                   ; Lexeme-buffer pointer word.
-tkLenAt     EQU     6                   ; Raw lexeme-length byte.
-tkValAt     EQU     7                   ; Decoded numeric-value word.
-tkRecLen    EQU     9                   ; Total published token-record size.
+tkLineAt    EQU     4                   ; Token line-number word.
+tkLexAt     EQU     6                   ; Lexeme-buffer pointer word.
+tkLenAt     EQU     8                   ; Raw lexeme-length byte.
+tkValAt     EQU     9                   ; Decoded numeric-value word.
+tkRecLen    EQU     11                  ; Total published token-record size.
 
-;@ROUTINE IN A,HL,DE OUT A,IX,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO
-; Preserve proposed state until end - begin proves the half-open range does
-; not wrap. HL becomes the part length when subtraction succeeds.
+;@ROUTINE IN A,DE,HL OUT IX CLOBBERS A,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Bind part A from logical offset HL on line DE and clear the token state.
 
-tkReset: ; Reset the source interval and clear token state.
-    PUSH AF                             ; Save proposed part ordinal.
-    PUSH HL                             ; Preserve the proposed range start.
-    PUSH DE                             ; Save proposed exclusive end.
-    EX   DE,HL                          ; Put end in HL and start in DE.
-    OR   A                              ; Clear carry before subtraction.
-    SBC  HL,DE                          ; Calculate the proposed part length.
-    JR   C,.unwind                      ; Reject an end below the start atomically.
-
-; Commit the validated length, then recover end, begin and ordinal from stack.
-
-    LD   (tkSrcLen),HL                  ; Publish the validated source length.
-    POP  DE                             ; Restore caller's proposed end.
-    POP  HL                             ; Restore the memory base.
-    POP  AF                             ; Restore the source-part ordinal.
+tkReset: ; Select a source part and clear token state.
     LD   (tkPart),A                     ; Publish part for tokens and reads.
-    LD   (tkSrcBeg),HL                  ; Publish the memory-backed fallback base.
-
-; Both physical read position and logical diagnostic offset begin at zero.
-
-    XOR  A                              ; Clear offset and state bytes.
-    LD   (tkHead),A                     ; Clear the physical read cursor low byte.
-    LD   (tkHead+1),A                   ; Clear its high byte.
-    LD   (tkTokPos),A                   ; Clear diagnostic offset low byte.
-    LD   (tkTokPos+1),A                 ; Clear its high byte.
+    LD   (tkHead),HL                    ; Start the physical read cursor.
+    LD   (tkTokPos),HL                  ; Start the diagnostic offset.
+    LD   (tkLine),DE                    ; Start the line count.
+    XOR  A                              ; Clear the state bytes.
+    LD   (tkHave),A                     ; No byte has been read at the cursor.
+    LD   (tkPrevCh),A                   ; No byte precedes the part's first.
 
 ; No token has appeared on the line, no synthetic EOL is pending and no error
 ; or previous record kind survives into the new part.
@@ -143,42 +129,34 @@ tkReset: ; Reset the source interval and clear token state.
     LD   (tkStatus),A                   ; Clear the previous lexical error status.
     LD   (tkRecord+tkKindAt),A          ; Seed record with repeatable EOF.
     LD   IX,tkRecord                    ; Return the stable token-record address.
-    RET                                 ; Report reset success with carry clear.
-.unwind: ; Unwind a reversed proposed interval.
-
-; Restore the caller's proposed values without publishing any of them.
-
-    POP  DE                             ; Restore the proposed exclusive end.
-    POP  HL                             ; Restore the proposed start.
-    POP  AF                             ; Restore the proposed part ordinal.
-.reversed: ; Return the public bad-source-range status.
-    LD   A,tkBadLen                     ; Select the reversed-range diagnostic.
-    SCF                                 ; Mark reset as failed.
-    RET                                 ; Publish no state on failure.
+    RET                                 ; The part is selected.
 
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-; Compare the current relative cursor with the validated part length. Equality
-; is EOF. A greater cursor is impossible while tokenizer invariants hold.
+; Return the byte at the cursor, or carry at the end of the part. PEEK never
+; advances either cursor or copies the byte into the token buffer. The byte is
+; kept until the cursor moves, so each source byte is read from the host once.
 
 tkPeek: ; Read the current byte without consuming it.
-    LD   HL,(tkHead)                    ; Load the relative physical read cursor.
-    LD   DE,(tkSrcLen)                  ; Load the validated part length.
-    OR   A                              ; Clear carry before cursor-minus-length.
-    SBC  HL,DE                          ; Set zero exactly at end of part.
-    JR   Z,.eof                         ; Return EOF without a source read.
-    ADD  HL,DE                          ; Restore the relative cursor value in HL.
-.read: ; Invoke the configured source-byte provider.
-
-; The service receives part ordinal and logical offset. PEEK never advances
-; either cursor or copies the returned byte into the token buffer.
-
+    LD   A,(tkHave)                     ; Is the cursor's byte already held?
+    DEC  A                              ; One means a byte is held.
+    JR   Z,.byte                        ; Return it.
+    DEC  A                              ; Two means the part has ended.
+    JR   Z,.end                         ; Return the end again.
+    LD   HL,(tkHead)                    ; Load the physical read cursor.
     LD   A,(tkPart)                     ; Supply the current source-part ordinal.
-    CALL tkRead                         ; Read byte at A:HL without consuming it.
-    OR   A                              ; Clear carry, preserving the byte.
-    RET                                 ; Return the source byte in A.
-.eof: ; Report end of the current half-open interval.
-    SCF                                 ; Distinguish EOF from a real byte.
-    RET                                 ; Leave both source cursors unchanged.
+    CALL tkRead                         ; Read the byte, or carry at end of part.
+    LD   (tkCur),A                      ; Hold the byte.
+    LD   A,1                            ; One for a byte, two for the end.
+    ADC  A,0                            ; Add the end-of-part carry.
+    LD   (tkHave),A                     ; Record what the cursor holds.
+    JR   tkPeek                         ; Return it.
+.byte: ; Return the held byte.
+    LD   A,(tkCur)                      ; Load the byte.
+    OR   A                              ; Clear carry and classify zero.
+    RET                                 ; Return the source byte.
+.end: ; Report the end of the part.
+    SCF                                 ; Carry marks the end of the part.
+    RET                                 ; A is zero.
 
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; Preserve BC because callers often use it as a length, radix or loop counter.
@@ -195,9 +173,27 @@ tkTake: ; Consume one source byte into the tentative lexeme.
     LD   HL,(tkHead)                    ; Load the physical read cursor.
     INC  HL                             ; Advance to the next source byte.
     LD   (tkHead),HL                    ; Publish the new physical cursor.
+    XOR  A                              ; The next byte has not been read.
+    LD   (tkHave),A                     ; Forget the consumed byte.
     LD   HL,(tkTokPos)                  ; Load the logical diagnostic offset.
     INC  HL                             ; Advance its one-byte source position.
     LD   (tkTokPos),HL                  ; Publish the next token-start offset.
+
+; CR ends a line. LF ends one too, unless it completes a CRLF pair.
+
+    LD   A,D                            ; Inspect the consumed byte.
+    CP   13                             ; Is it CR?
+    JR   Z,.line                        ; CR always ends a line.
+    CP   10                             ; Is it LF?
+    JR   NZ,.same                       ; Other bytes stay on the line.
+    LD   A,(tkPrevCh)                   ; Did CR come just before it?
+    CP   13                             ; CRLF ends only one line.
+    JR   Z,.same                        ; Already counted at the CR.
+.line: ; Count one line ending.
+    LD   HL,(tkLine)                    ; Load the line count.
+    INC  HL                             ; The next byte starts a new line.
+    LD   (tkLine),HL                    ; Keep it.
+.same: ; The line count is current.
 
 ; Append at tkLexBuf + count. tkTake permits count wrap: token scanners
 ; reject byte 256 immediately afterwards, while comments discard the buffer.
@@ -237,6 +233,8 @@ tkStart: ; Capture a token start before scanning its contents.
     LD   (tkLexPtr),HL                  ; Save pointer for publication.
     LD   HL,(tkTokPos)                  ; Capture current source offset.
     LD   (tkMark),HL                    ; Save token's diagnostic start.
+    LD   HL,(tkLine)                    ; Capture its line.
+    LD   (tkMarkLn),HL                  ; Save it with the offset.
 
 ; Clear raw byte count, tentative length and decoded numeric value.
 
@@ -250,12 +248,14 @@ tkStart: ; Capture a token start before scanning its contents.
 ;@ROUTINE IN A OUT A,IX,CARRY CLOBBERS HL,SIGN,PARITY,HALFCARRY,ZERO
 ; Publish all record fields only after the scanner has accepted the token.
 
-tkCommit: ; Publish the accepted token's complete nine-byte record.
+tkCommit: ; Publish the accepted token's complete eleven-byte record.
     LD   (tkRecord+tkKindAt),A          ; Publish the accepted token kind.
     LD   A,(tkPart)                     ; Load the current source-part ordinal.
     LD   (tkRecord+tkPartAt),A          ; Publish the token's part identity.
     LD   HL,(tkMark)                    ; Load the saved tentative token offset.
     LD   (tkRecord+tkOffAt),HL          ; Publish its source-relative position.
+    LD   HL,(tkMarkLn)                  ; Load the token's line.
+    LD   (tkRecord+tkLineAt),HL         ; Publish it.
     LD   HL,(tkLexPtr)                  ; Load the tentative lexeme-buffer pointer.
     LD   (tkRecord+tkLexAt),HL          ; Publish the lexeme location.
     LD   A,(tkLexLen)                   ; Load the accepted raw lexeme length.
@@ -289,11 +289,15 @@ tkFail: ; Rewind failed scanning and publish the lexical diagnostic.
     LD   (tkStatus),A                   ; Publish the detailed lexical status.
     LD   HL,(tkMark)                    ; Reload token's first offset.
     LD   (tkHead),HL                    ; Rewind physical reads to that byte.
+    XOR  A                              ; The held byte belongs to the old cursor.
+    LD   (tkHave),A                     ; Forget it.
     LD   (tkTokPos),HL                  ; Rewind diagnostic offset too.
+    LD   (tkErrOff),HL                  ; Publish the error's offset.
+    LD   HL,(tkMarkLn)                  ; Reload the token's line.
+    LD   (tkLine),HL                    ; Rewind the line count.
+    LD   (tkErrLn),HL                   ; Publish the error's line.
     LD   A,(tkPart)                     ; Load the current part ordinal.
     LD   (tkErrPos),A                   ; Publish the error's source-part identity.
-    LD   HL,(tkMark)                    ; Reload the stable error offset.
-    LD   (tkErrOff),HL                  ; Publish its low and high bytes.
 
 ; Reload the saved status after using A for the part ordinal.
 

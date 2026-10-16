@@ -1,5 +1,4 @@
 import { createAtomSourceProfile } from "../atom/source-profile.mjs";
-import { lowerAtomBinaryIncludes } from "../atom/incbin.mjs";
 import {
   selectConcreteZ80AssemblerFlavour,
   Z80_ASSEMBLER_FLAVOUR,
@@ -56,5 +55,11 @@ export async function resolveAtomProject({
     placement: frozenPlacement,
     limits: frozenLimits,
   });
-  return lowerAtomBinaryIncludes(project, reader);
+  // The core asks for INCBIN files when it reaches them, naming the file
+  // relative to the part that contains the INCBIN.
+  return Object.freeze({
+    ...project,
+    readBinary: (ordinal, specifier) =>
+      reader.resolveDependency(project.parts[ordinal], specifier),
+  });
 }

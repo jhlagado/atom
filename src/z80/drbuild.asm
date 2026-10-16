@@ -9,9 +9,11 @@
 ;  assembles each ordered source part, performs the final symbol checks and
 ;  commits the generation.
 ;
-;  The driver does not read files. Each part record supplies an ordinal and a
-;  half-open source range. tkReset passes it to the tokenizer, whose
-;  byte service may be backed by memory, an emulator or a native host.
+;  The driver does not read files. It asks the host's tkOpen service for each
+;  source part as the previous one ends, and tkReset binds the tokenizer to it.
+;  A part ends where the host's tkRead service reports that no byte remains, so
+;  no part's length, order or count is known before assembly. The source is
+;  read once, as a stream.
 ;
 ;  PUBLIC ENTRY POINT
 ;  ------------------
@@ -19,28 +21,31 @@
 ;  drAsm assembles one ordered multipart source stream.
 ;    Entry: IX points to the build descriptor below.
 ;    Success: carry clear, A=0, generation committed.
-;    Failure: carry set, A=driver status. drDetail holds the subsystem or
-;             configuration detail. stAtPart/stAtOff locate source errors.
+;    Failure: carry set, A=driver status. drDetail holds the subsystem,
+;             configuration or host source-service detail. stAtPart, stAtOff
+;             and stAtLine locate source errors.
 ;             drMsg holds the message number from src/host/diagnostics.mjs,
-;             with its arguments in drSym, drVal and drAtPart/drAtOff.
+;             with its arguments in drSym, drVal and drAtPart/drAtOff/drAtLine.
 ;    State: resident assembler state is reset. A successful BEGIN ends in
 ;           a successful COMMIT or one ABORT. Failed COMMIT also needs ABORT.
 ;
 ;  BUILD DESCRIPTOR
 ;  ----------------
 ;
-;  +0   byte   number of source parts. zero is invalid
-;  +1   word   address of the first five-byte part record
-;  +3   word   beginning of caller-owned symbol arena
-;  +5   word   end of symbol arena, exclusive
-;  +7   word   beginning of caller-owned pending-reference arena
-;  +9   word   end of pending arena, exclusive
-;  +11  word   target origin
-;  +13  word   target extent in bytes
+;  +0   word   beginning of caller-owned symbol arena
+;  +2   word   end of symbol arena, exclusive
+;  +4   word   beginning of caller-owned pending-reference arena
+;  +6   word   end of pending arena, exclusive
+;  +8   word   target origin
+;  +10  word   target extent in bytes
 ;
-;  Each part record is: ordinal byte, source-begin word, source-end word.
-;  Ordinals must be the dense sequence 0, 1, ... count-1. Source ranges are
-;  half-open, so an empty part has begin = end.
+;  SOURCE SERVICES
+;  ---------------
+;
+;  tkOpen returns the next part: A = ordinal, HL = the logical offset where
+;  it starts and DE = the line it starts on, with carry clear. A part resumed
+;  after an include starts past offset zero and line one. Carry with A=0 means no part remains. Carry with A nonzero is a host
+;  failure, returned as drBadIn with that status in drDetail.
 ;
 ;  FAILURE OWNERSHIP
 ;  -----------------
@@ -60,20 +65,13 @@ drBadSrc    EQU     2                   ; A source statement was rejected.
 drUndef     EQU     3                   ; A referenced symbol remains undefined.
 drBadOut    EQU     4                   ; The output service rejected an operation.
 drIntErr    EQU     5                   ; A resident assembler invariant failed.
+drBadIn     EQU     6                   ; The host's source service failed.
 
 ; Configuration detail values stored in drDetail.
 
-drCfgCnt    EQU     1                   ; No source parts were supplied.
-drCfgTab    EQU     2                   ; The part-record table wraps address space.
-drCfgIdx    EQU     3                   ; A part record has the wrong ordinal.
-drCfgSrc    EQU     4                   ; A source range wraps address space.
 drCfgSym    EQU     5                   ; The symbol arena wraps address space.
 drCfgRef    EQU     6                   ; The pending arena wraps address space.
 drCfgOut    EQU     7                   ; The target range exceeds address space.
-
-; The ordinal is one byte, so a build can contain at most 255 parts.
-
-drMaxCnt    EQU     255                 ; Maximum count representable by one byte.
 
 ; Message numbers from src/host/diagnostics.mjs. The five subsystem blocks
 ; start at these bases. a test checks them against the shared message list.
@@ -90,24 +88,15 @@ drSymMsg    EQU     36                  ; First symbol message.
 drInsMsg    EQU     46                  ; First parser message.
 drOutMsg    EQU     64                  ; First output message.
 
-; Part-record size and field offsets.
-
-drRecLen    EQU     5                   ; Bytes in one source-part record.
-drRecIdx    EQU     0                   ; Part ordinal field.
-drRecBeg    EQU     1                   ; Source-range beginning field.
-drRecEnd    EQU     3                   ; Source-range exclusive-end field.
-
 ; Build-descriptor field offsets.
 
-drCount     EQU     0                   ; Source-part count.
-drParts     EQU     1                   ; Source-part table address.
-drSymBeg    EQU     3                   ; Symbol-arena beginning.
-drSymEnd    EQU     5                   ; Symbol-arena exclusive end.
-drRefBeg    EQU     7                   ; Pending-arena beginning.
-drRefEnd    EQU     9                   ; Pending-arena exclusive end.
-drOutBeg    EQU     11                  ; Target origin.
-drOutCap    EQU     13                  ; Target capacity in bytes.
-drDscLen    EQU     15                  ; Complete descriptor size.
+drSymBeg    EQU     0                   ; Symbol-arena beginning.
+drSymEnd    EQU     2                   ; Symbol-arena exclusive end.
+drRefBeg    EQU     4                   ; Pending-arena beginning.
+drRefEnd    EQU     6                   ; Pending-arena exclusive end.
+drOutBeg    EQU     8                   ; Target origin.
+drOutCap    EQU     10                  ; Target capacity in bytes.
+drDscLen    EQU     12                  ; Complete descriptor size.
 
 ;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Keep the descriptor address in resident workspace. Later subsystem calls are
@@ -144,15 +133,16 @@ drRun: ; Validate, reset and assemble one multipart request.
     LD   (drAtPart),A                   ; Clear the related location.
     INC  A                              ; Restore zero for the source location below.
 
-; Initialise source location to part zero, offset zero. Config errors
-; therefore have a deterministic location even though no source has been read.
+; Initialise source location to part zero, offset zero, line one. Config
+; errors therefore have a deterministic location even though no source has
+; been read.
 
-    LD   HL,stAtPart                    ; Address the contiguous part-and-offset location.
-    LD   (HL),A                         ; Default diagnostics to source part zero.
-    INC  HL                             ; Advance to the offset low byte.
-    LD   (HL),A                         ; Default the source offset low byte to zero.
-    INC  HL                             ; Advance to the offset high byte.
-    LD   (HL),A                         ; Complete the zero source offset.
+    LD   (stAtPart),A                   ; Default diagnostics to source part zero.
+    LD   L,A                            ; Form zero.
+    LD   H,A                            ; Complete it.
+    LD   (stAtOff),HL                   ; Default the source offset to zero.
+    INC  L                              ; Form one.
+    LD   (stAtLine),HL                  ; Default the line to one.
 
 ; Reject invalid descriptors before resetting subsystems or opening output.
 
@@ -190,61 +180,22 @@ drRun: ; Validate, reset and assemble one multipart request.
     CALL hsBegin                        ; Ask the platform sink to open a generation.
     JP   C,.begFail                     ; No generation exists when BEGIN itself fails.
 
-; Set up the multipart loop state from the descriptor. drLeft counts down,
-; drDueIdx counts up and must match every record's stored ordinal.
+.partLoop: ; Assemble the next source part the host supplies.
+    CALL tkOpen                         ; Ask the host for the next part.
+    JR   C,.noPart                      ; None remains, or the host failed.
+    CALL tkReset                        ; Bind the tokenizer to part A from offset HL.
 
-    LD   IX,(drDesc)                    ; Recover the validated multipart description.
-    LD   A,(IX+drCount)                 ; Read the number of records still to assemble.
-    LD   (drLeft),A                     ; Seed the descending remaining-part counter.
-    LD   L,(IX+drParts)                 ; Read the part-table address low byte.
-    LD   H,(IX+drParts+1)               ; Complete the first-record pointer.
-    LD   (drCurRec),HL                  ; Publish the current part-record cursor.
-    XOR  A                              ; The first dense ordinal is zero.
-    LD   (drDueIdx),A                   ; Publish the ordinal passed to the tokenizer.
-.partLoop: ; Decode and assemble the next ordered source part.
-
-; A zero remaining count means every declared part was assembled exactly once.
-
-    LD   A,(drLeft)                     ; Read the number of unassembled records.
-    OR   A                              ; Test the loop terminator without changing A.
-    JR   Z,.finish                      ; Finalise after consuming every declared part.
-
-; Decode the next five-byte part record. The cursor advances to the following
-; record while HL receives source begin and DE retains source end.
-
-    LD   HL,(drCurRec)                  ; Address the current five-byte part record.
-    INC  HL                             ; Skip its already-validated ordinal.
-    LD   E,(HL)                         ; Read source-begin low byte.
-    INC  HL                             ; Advance to source-begin high byte.
-    LD   D,(HL)                         ; Complete source begin in DE.
-    INC  HL                             ; Advance to source-end low byte.
-    PUSH DE                             ; Save source begin while DE receives source end.
-    LD   E,(HL)                         ; Read source-end low byte.
-    INC  HL                             ; Advance to source-end high byte.
-    LD   D,(HL)                         ; Complete source end in DE.
-    INC  HL                             ; Advance to the following part record.
-    LD   (drCurRec),HL                  ; Retain that next-record cursor.
-    POP  HL                             ; Restore source begin in tkReset's HL input.
-
-; Reset the tokenizer to this part's ordinal and half-open source range.
-
-    LD   A,(drDueIdx)                   ; Supply the dense source-part ordinal.
-    CALL tkReset                        ; Bind tokenizer to A:HL..DE for this part.
-    JR   C,.tokFail                     ; Tokenizer setup failure is an internal fault.
-
-; Assemble statements until the tokenizer reports end of this part.
+; Assemble statements until the host reports the end of this part.
 
     CALL drDoPart                       ; Assemble statements in this part.
     JR   C,.srcFail                     ; Preserve its source-facing failure detail.
-
-; Advance both sides of the loop invariant: next expected ordinal, one fewer
-; record remaining. Validation proved the record cursor stays valid.
-
-    LD   HL,drDueIdx                    ; Address the expected source ordinal.
-    INC  (HL)                           ; Select the next dense ordinal.
-    LD   HL,drLeft                      ; Address the remaining-record counter.
-    DEC  (HL)                           ; Account for the completed part.
-    JR   .partLoop                      ; Decode the next record or finalise.
+    JR   .partLoop                      ; Ask for the next part.
+.noPart: ; Finish, or report a failed source service.
+    OR   A                              ; A=0 means every part has been assembled.
+    JR   Z,.finish                      ; Finalise the generation.
+    LD   (drDetail),A                   ; Keep the host's status.
+    LD   A,drBadIn                      ; Classify it as a source-service failure.
+    JR   .abort                         ; Discard the open generation.
 .finish: ; Resolve final symbol state before COMMIT.
 
 ; Validate the last private scope without evicting it, then prove that no
@@ -287,13 +238,6 @@ drRun: ; Validate, reset and assemble one multipart request.
     JR   Z,.abort                       ; Report it after discarding the generation.
     LD   A,drIntErr                     ; Other finalisation failures violate invariants.
     JR   .abort                         ; Abort and return the internal category.
-.tokFail: ; Report impossible tokenizer-reset failure.
-
-; tkReset can fail only if resident state or its source contract is broken.
-
-    LD   (drDetail),A                   ; Preserve the tokenizer-reset detail.
-    LD   A,drIntErr                     ; Reset rejection after validation is internal.
-    JR   .abort                         ; Close the generation before returning.
 .cmtFail: ; Retain a failed COMMIT status.
 
 ; A failed commit is still an output failure, and the generation remains open
@@ -329,81 +273,9 @@ drRun: ; Validate, reset and assemble one multipart request.
     RET                                 ; No generation exists to abort yet.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,IX,SIGN,PARITY,HALFCARRY,HL,ZERO,IY
-; Reload the immutable descriptor and require at least one part. A byte count
-; naturally limits accepted builds to 255 records.
+; Validate the descriptor's arenas and target before opening output.
 
 drDescOk: ; Validate descriptor structure before opening output.
-    LD   IX,(drDesc)                    ; Recover the caller's immutable descriptor.
-    LD   A,(IX+drCount)                 ; Read its one-byte source-part count.
-    OR   A                              ; Zero parts cannot form an assembly unit.
-    JP   Z,drErrCnt                     ; Report the dedicated part-count detail.
-
-; Seed the validation loop with the declared count and first-record address.
-
-    LD   (drLeft),A                     ; Seed the number of records left to validate.
-    LD   L,(IX+drParts)                 ; Read the part-table pointer low byte.
-    LD   H,(IX+drParts+1)               ; Complete the first-record address.
-    LD   (drCurRec),HL                  ; Publish the validation cursor.
-
-; Prove base + count*5 fits in 16 bits. The loop may then walk
-; exactly count records without its cursor wrapping through address zero.
-
-    LD   C,A                            ; BC receives the unsigned part count.
-    LD   B,0                            ; Widen the count to sixteen bits.
-    PUSH HL                             ; Preserve the part-table base address.
-    LD   H,B                            ; Begin HL = count without another memory read.
-    LD   L,C                            ; Complete the sixteen-bit count in HL.
-    ADD  HL,HL                          ; Multiply count by two.
-    ADD  HL,HL                          ; Multiply count by four.
-    ADD  HL,BC                          ; Add count once more: HL = count * 5.
-    POP  DE                             ; Restore the part-table base in DE.
-    ADD  HL,DE                          ; Compute the exclusive end of all part records.
-    JR   C,drErrTab                     ; Carry means table arithmetic wrapped past $FFFF.
-
-; Every record must carry the ordinal implied by its position in the table.
-
-    XOR  A                              ; The first record must carry ordinal zero.
-    LD   (drDueIdx),A                   ; Publish the expected ordinal.
-.partLoop: ; Validate dense ordinals and source ranges.
-    LD   A,(drLeft)                     ; Read the number of unchecked records.
-    OR   A                              ; Test whether table validation is complete.
-    JR   Z,.arenas                      ; Continue with the caller-owned arenas.
-    LD   HL,(drCurRec)                  ; Address the next five-byte part record.
-    LD   A,(drDueIdx)                   ; Recover the ordinal implied by table position.
-    CP   (HL)                           ; Compare it with the record's stored ordinal.
-    JR   NZ,drErrIdx                    ; Reject missing, repeated or reordered ordinals.
-
-; Decode source begin into DE and source end into BC, then publish the next
-; record cursor. No source byte is read during descriptor validation.
-
-    INC  HL                             ; Advance past the ordinal to source begin.
-    LD   E,(HL)                         ; Read source-begin low byte.
-    INC  HL                             ; Advance to source-begin high byte.
-    LD   D,(HL)                         ; Complete source begin in DE.
-    INC  HL                             ; Advance to source-end low byte.
-    LD   C,(HL)                         ; Read source-end low byte.
-    INC  HL                             ; Advance to source-end high byte.
-    LD   B,(HL)                         ; Complete source end in BC.
-    INC  HL                             ; Advance to the following part record.
-    LD   (drCurRec),HL                  ; Publish the next validation cursor.
-
-; A half-open source range is valid when end - begin does not borrow. Equality
-; is permitted and represents an empty source part.
-
-    LD   H,B                            ; Copy source end from BC into HL.
-    LD   L,C                            ; Complete the exclusive-end value.
-    OR   A                              ; Clear carry before unsigned subtraction.
-    SBC  HL,DE                          ; Measure end minus begin.
-    JR   C,drErrSrc                     ; Borrow means range wraps backwards.
-
-; Advance the expected ordinal and remaining-record count together.
-
-    LD   HL,drDueIdx                    ; Address the next expected ordinal.
-    INC  (HL)                           ; Advance the dense sequence by one.
-    LD   HL,drLeft                      ; Address the unchecked-record count.
-    DEC  (HL)                           ; Account for the validated record.
-    JR   .partLoop                      ; Validate the next part or leave the loop.
-.arenas: ; Validate symbol, pending and target arenas.
 
 ; Symbol and pending arenas are each ordinary non-wrapping half-open ranges.
 ; Empty arenas are valid. Capacity checks later reject insertions.
@@ -466,23 +338,11 @@ drSpanOk: ; Check an ordinary half-open address range.
     RET  NC                             ; No borrow accepts empty or live ranges.
     SCF                                 ; Restore the helper's explicit failure contract.
     RET                                 ; Report a range that wraps backwards.
-drErrCnt: ; Report an empty source-part list.
+drErrSym: ; Report a backwards symbol arena.
 
 ; The following stubs translate one failed structural check into a stable
 ; configuration-detail value, then share the public failure return.
 
-    LD   A,drCfgCnt                     ; Identify an empty source-part list.
-    JR   drErrCfg                       ; Publish the common configuration failure.
-drErrTab: ; Report a wrapped part-record table.
-    LD   A,drCfgTab                     ; Identify wrapped part-table arithmetic.
-    JR   drErrCfg                       ; Publish the common configuration failure.
-drErrIdx: ; Report a non-dense source ordinal.
-    LD   A,drCfgIdx                     ; Identify a non-dense part ordinal.
-    JR   drErrCfg                       ; Publish the common configuration failure.
-drErrSrc: ; Report a backwards source range.
-    LD   A,drCfgSrc                     ; Identify a backwards source range.
-    JR   drErrCfg                       ; Publish the common configuration failure.
-drErrSym: ; Report a backwards symbol arena.
     LD   A,drCfgSym                     ; Identify a backwards symbol arena.
     JR   drErrCfg                       ; Publish the common configuration failure.
 drErrRef: ; Report a backwards pending arena.

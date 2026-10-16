@@ -2,9 +2,7 @@
 ; rename FCB overlays the input FCB after all source reads finish.
 
 cpFcbBeg: ; Beginning of descriptor and FCB writable storage.
-cpDesc: ; Fifteen-byte native multipart build descriptor.
-    DB   1                                                          ; Initial source-part count, replaced after include resolution.
-    DW   incDescs                                                   ; Address of the ordered five-byte source descriptors.
+cpDesc: ; Twelve-byte native build descriptor.
     DW   cpSymBeg,cpSymEnd                                          ; Half-open caller symbol-arena bounds.
     DW   cpRefBeg,cpRefEnd                                          ; Half-open pending-reference arena bounds.
     DW   cpTpa,asoCap                                               ; CP/M target origin and maximum byte capacity.
@@ -48,20 +46,6 @@ msgBusy: ; Reserved work-file collision diagnostic.
 msgInc: ; Malformed INCLUDE diagnostic.
     DB   13,10,'I','n','v','a','l','i','d',' '                      ; Error prefix.
     DB   '%','I','N','C','L','U','D','E',13,10,'$'                  ; Directive name.
-binKey: ; Exact uppercase binary directive spelling.
-    DB   'I','N','C','B','I','N'                                    ; Exact assembler operation token.
-msgBin: ; Malformed counted INCBIN diagnostic.
-    DB   13,10,'I','n','v','a','l','i','d',' '                      ; Error prefix.
-    DB   'I','N','C','B','I','N',13,10,'$'                          ; Native byte-count directive.
-msgFull: ; Native binary-include capacity diagnostic.
-    DB   13,10,'T','o','o',' ','m','a','n','y',' '                  ; Error prefix.
-    DB   'I','N','C','B','I','N',' ','f','i','l','e','s',13,10,'$'  ; Finish the binary-capacity message and BDOS string.
-msgSame: ; Binary input and output name-conflict suffix.
-    DB   ' ','c','o','n','f','l','i','c','t','s',' '                ; Name collision suffix.
-    DB   'w','i','t','h',' ','o','u','t','p','u','t',13,10,'$'      ; Finish the output-alias message and BDOS string.
-msgLoad: ; Binary payload-read failure suffix.
-    DB   ' ','b','i','n','a','r','y',' ','r','e','a','d',' '        ; Input failure.
-    DB   'f','a','i','l','e','d',13,10,'$'                          ; Finish the binary-read error and BDOS string.
 msgDir: ; Unsupported or malformed preprocessor directive diagnostic.
     DB   13,10,'I','n','v','a','l','i','d',' '                      ; Error prefix.
     DB   's','o','u','r','c','e',' '                                ; Describe the rejected construct.
@@ -69,6 +53,10 @@ msgDir: ; Unsupported or malformed preprocessor directive diagnostic.
 msgLoop: ; Include dependency-cycle diagnostic.
     DB   13,10,'I','n','c','l','u','d','e',' '                      ; Include prefix.
     DB   'c','y','c','l','e',13,10,'$'                              ; Cycle suffix.
+msgDeep: ; Include nesting diagnostic.
+    DB   13,10,'I','n','c','l','u','d','e','s',' '                  ; Include prefix.
+    DB   'n','e','s','t','e','d',' ','t','o','o',' '                ; Nesting.
+    DB   'd','e','e','p','l','y',13,10,'$'                          ; Finish the message.
 msgCap: ; Source-part capacity diagnostic.
     DB   13,10,'T','o','o',' ','m','a','n','y',' '                  ; Error prefix.
     DB   's','o','u','r','c','e','s',13,10,'$'                      ; Source count.
@@ -76,7 +64,6 @@ msgMem: ; Insufficient transient-memory diagnostic.
     DB   13,10                                                      ; Start the diagnostic on a new line.
     DB   "Insufficient transient memory"                            ; Explain the fixed-layout failure.
     DB   13,10,'$'                                                  ; End the line and BDOS string.
-incKey:    DB      'I','N','C','L','U','D','E'                      ; Exact uppercase include directive spelling.
 cmdAsm:    DB      'A','S','M'                                      ; Default source extension.
 cmdCom:    DB      'C','O','M'                                      ; COM output extension selector.
 cmdBin:    DB      'B','I','N'                                      ; Raw binary output extension selector.

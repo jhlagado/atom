@@ -399,86 +399,248 @@ ppStore: ; Append a complete name-and-value record.
     XOR  A                                          ; Return success with carry clear.
     RET                                             ; Preserve every existing definition.
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Mask inactive source bytes while preserving every CR/LF byte and offset.
+;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
+; Filter the source byte at offset HL. The core reads each byte once, in
+; order, so the filter is a state machine over the stream. It tracks line
+; starts and lines, turns a line-leading '%' into ';' while capturing the
+; directive, and applies the directive at the line's end. Inactive text
+; becomes spaces. Every line ending and byte offset is preserved. Carry with
+; A=0 ends the part: at an include, or after a failure recorded for tkOpen.
 
-ppFilter: ; Filter one raw source byte without moving offsets.
+ppFilter: ; Filter one source byte read in order.
 
-; Almost every byte is ordinary text in an active branch of a source with no
-; INCBIN rows to apply. Return those at once, before any state is saved.
+; Most bytes are ordinary text in the middle of an active line. Return those
+; at once, before any state is saved.
 
-    CP   '%'                                        ; A percent may start a directive.
-    JR   Z,.full                                    ; Directives take the full path.
+    CP   13                                         ; CR ends a line.
+    JR   Z,.full                                    ; Line ends take the full path.
+    CP   10                                         ; LF ends a line too.
+    JR   Z,.full                                    ; Take the full path.
     LD   E,A                                        ; Keep the byte.
+    LD   A,(ppMode)                                 ; At a line start or in a directive?
+    OR   A                                          ; Zero means neither.
+    JR   NZ,.restore                                ; Take the full path.
     LD   A,(ppActive)                               ; Is this branch active?
     OR   A                                          ; Zero means inactive text.
-    JR   Z,.restore                                 ; Inactive text is masked below.
-    LD   A,(binReady)                               ; Has INCBIN rewriting started?
-    OR   A                                          ; Zero means no rows apply yet.
-    JR   Z,.plain                                   ; Return the byte unchanged.
-    LD   A,(binCount)                               ; Are there any INCBIN rows?
-    OR   A                                          ; Zero means nothing to rewrite.
-    JR   NZ,.restore                                ; Rows need the full path.
-.plain: ; Return an ordinary byte unchanged.
     LD   A,E                                        ; Recover the byte.
-    OR   A                                          ; Clear carry and classify a zero byte.
+    JR   Z,.space                                   ; Mask inactive text.
+    OR   A                                          ; Clear carry and classify zero.
     RET                                             ; Return the source byte.
+.space: ; Return a space for inactive text.
+    LD   A,' '                                      ; Inactive source becomes whitespace.
+    OR   A                                          ; Clear carry.
+    RET                                             ; Its offset and column are kept.
 .restore: ; Recover the byte for the full path.
     LD   A,E                                        ; Recover the byte.
 .full: ; Save state and filter the byte in full.
     PUSH BC                                         ; The source-provider boundary preserves BC.
     PUSH IX                                         ; Definition lookup uses IX internally.
-    LD   (ppPos),HL                                 ; Save the byte's source position.
-    LD   (ppTemp),A                                 ; Keep the raw byte across directive detection.
-    CP   '%'                                        ; Only a line-leading percent starts a directive.
-    JR   NZ,.ordinary                               ; Ordinary bytes follow current activity.
-    PUSH HL                                         ; The line-prefix check scans backwards.
-    CALL srcLead                                    ; Ignore '%' in strings and expressions.
-    POP  HL                                         ; Restore the exact byte offset.
-    JR   NZ,.ordinary                               ; Return ordinary percent text unchanged.
-    LD   DE,(ppPos)                                 ; Compare with last directive offset.
-    LD   HL,(ppDirOff)                              ; A peek may request this byte again.
-    OR   A                                          ; Clear carry before the equality subtraction.
-    SBC  HL,DE                                      ; Has this source offset already changed state?
-    JR   Z,.comment                                 ; A repeated peek must not push twice.
-    LD   HL,(ppPos)                                 ; Restore the directive's source location.
-    INC  HL                                         ; Keyword text begins after the percent marker.
-    CALL ppApply                                    ; Apply IF/ELSE/ENDIF exactly once.
-    JR   C,.fail                                    ; A changed source cannot be filtered safely.
-    LD   HL,(ppPos)                                 ; Record the processed directive's offset.
-    LD   (ppDirOff),HL                              ; Skip matching tokenizer consume.
-.comment: ; Hide a processed directive behind a comment marker.
-    LD   A,';'                                      ; Atom skips this line as a comment.
-    JR   .done                                      ; Do not expose directive tokens to the core.
-.ordinary: ; Preserve active text or mask inactive text.
-    LD   A,(ppActive)                               ; Check whether this branch is active.
-    OR   A                                          ; An active branch preserves its exact source.
-    JR   NZ,.raw                                    ; Return the original byte unchanged.
-    LD   A,(ppTemp)                                 ; Restore the original byte for newline checks.
-    CP   13                                         ; CR remains visible to the Atom tokenizer.
-    JR   Z,.raw                                     ; Preserve the original line ending.
-    CP   10                                         ; LF is also preserved byte-for-byte.
-    JR   Z,.raw                                     ; Keep CRLF and LF line counts unchanged.
-    LD   A,' '                                      ; Inactive source becomes harmless whitespace.
-    JR   .done                                      ; Preserve its byte offset and column.
-.raw: ; Lower active INCBIN text after conditional filtering.
-    LD   HL,(ppPos)                                 ; Keep the source position with the byte.
-    LD   A,(ppTemp)                                 ; Restore the original active or line-end byte.
-    CALL binEdit                                    ; Lower an active INCBIN line to its DS form.
-    JR   C,.fail                                    ; A failed binary read aborts the generation.
-.done: ; Restore caller state after a filtered byte.
+    PUSH IY                                         ; Include names are parsed through IY.
+    LD   C,A                                        ; Keep the byte in C.
+    LD   (ppPos),HL                                 ; Keep its offset.
+    LD   A,(ppMode)                                 ; Is this the file's last possible record?
+    BIT  2,A                                        ; Bit 2 marks offsets $FF80 and above.
+    JR   Z,.inRange                                 ; Others are always in range.
+    LD   A,H                                        ; A part holds at most 65,535 bytes.
+    AND  L                                          ; Offset $FFFF would be byte 65,536.
+    INC  A                                          ; Zero only for $FFFF.
+    JP   Z,.tooLong                                 ; Reject the part.
+.inRange: ; Classify the byte.
+    LD   A,C                                        ; Recover the byte.
+    CP   13                                         ; CR?
+    JP   Z,.eol                                     ; End the line.
+    CP   10                                         ; LF?
+    JP   Z,.eol                                     ; End the line.
+    XOR  A                                          ; Any other byte ends a CRLF pair.
+    LD   (ppLastCr),A                               ; The previous byte is no longer CR.
+    LD   A,(ppMode)                                 ; Inspect the line state.
+    BIT  1,A                                        ; Capturing a directive?
+    JR   NZ,.capture                                ; Keep its bytes.
+    BIT  0,A                                        ; At the line's start?
+    JR   Z,.text                                    ; No: ordinary text.
+    LD   A,C                                        ; Leading whitespace keeps the line start.
+    CP   ' '                                        ; A space?
+    JR   Z,.text                                    ; Still at the start.
+    CP   9                                          ; A tab?
+    JR   Z,.text                                    ; Still at the start.
+    LD   A,(ppMode)                                 ; The line's first text has arrived.
+    AND  $FE                                        ; Clear the line-start bit.
+    LD   (ppMode),A                                 ; Later bytes are mid-line.
+    LD   A,C                                        ; Recover the byte.
+    CP   '%'                                        ; A directive?
+    JR   Z,.start                                   ; Capture it.
+    CP   ';'                                        ; A comment line?
+    JR   Z,.text                                    ; It leaves the header open.
+    LD   A,(ppActive)                               ; Inactive text leaves it open too.
+    OR   A                                          ; Zero means inactive.
+    JR   Z,.text                                    ; Mask it.
+    LD   A,(incHead)                                ; Is the header still open?
+    OR   A                                          ; Zero means it closed earlier.
+    JR   Z,.text                                    ; Return the byte.
+
+; Ordinary source closes the header. An IF that contains an include must
+; close inside the header, so no such IF may still be open here.
+
+    PUSH BC                                         ; Keep the byte.
+    CALL ppScope                                    ; Check the open IF frames.
+    POP  BC                                         ; Recover it.
+    JP   C,.badHead                                 ; Ordinary source inside one.
+    XOR  A                                          ; Close the header.
+    LD   (incHead),A                                ; Later includes are rejected.
+    LD   (ppDefOk),A                                ; Later definitions are too.
+.text: ; Return active text or mask inactive text.
+    LD   A,(ppActive)                               ; Is this branch active?
+    OR   A                                          ; Zero means inactive.
+    LD   A,C                                        ; Recover the byte.
+    JP   NZ,.done                                   ; Return active text unchanged.
+    LD   A,' '                                      ; Inactive text becomes a space.
+    JR   .done                                      ; Its offset is kept.
+.start: ; Begin capturing a directive.
+    LD   A,(ppMode)                                 ; Mark the directive.
+    OR   2                                          ; Bit 1 captures until the line ends.
+    LD   (ppMode),A                                 ; Keep the mode.
+    XOR  A                                          ; Nothing is captured yet.
+    LD   (ppCapLen),A                               ; Start at the buffer's first byte.
+    LD   HL,(ppPos)                                 ; Remember where it starts.
+    LD   (ppDirAt),HL                               ; Failures are reported here.
+    LD   HL,(ppLine)                                ; And on this line.
+    LD   (ppDirLn),HL                               ; Keep it.
+    LD   A,';'                                      ; Atom reads the directive as a comment.
+    JR   .done                                      ; Return it.
+.capture: ; Keep one directive byte.
+    LD   A,(ppCapLen)                               ; Bytes captured so far.
+    CP   $FE                                        ; Overflowed, or ended at a comment?
+    JR   NC,.text                                   ; Then this byte is not kept.
+    LD   E,A                                        ; Index the next free byte.
+    LD   D,0                                        ; Widen the index.
+    LD   HL,ppLnBuf                                 ; Address the buffer.
+    ADD  HL,DE                                      ; Address the free byte.
+    LD   A,C                                        ; Recover the byte.
+    CP   ';'                                        ; Does a comment start here?
+    JR   Z,.close                                   ; End the directive before it.
+    LD   (HL),A                                     ; Keep the byte.
+    LD   A,E                                        ; Count it.
+    INC  A                                          ; One more byte.
+    CP   ppLnMax                                    ; Is the buffer full?
+    JR   C,.kept                                    ; No: keep the count.
+    LD   A,$FE                                      ; Mark the overflow.
+.kept: ; Record the count.
+    LD   (ppCapLen),A                               ; Keep it.
+    JR   .text                                      ; Return the byte.
+.close: ; End the directive at its comment.
+    LD   (HL),13                                    ; End it with CR.
+    LD   A,$FF                                      ; The comment is not kept.
+    LD   (ppCapLen),A                               ; Mark the directive complete.
+    JR   .text                                      ; Return the semicolon.
+.eol: ; Finish a line.
+    LD   A,(ppMode)                                 ; Was a directive captured?
+    BIT  1,A                                        ; Bit 1 means yes.
+    JR   Z,.count                                   ; No: count the line.
+    PUSH BC                                         ; Keep the line ending.
+    CALL ppApply                                    ; Apply the directive.
+    POP  BC                                         ; Recover the line ending.
+    JR   C,.bad                                     ; A malformed directive ends the part.
+    OR   A                                          ; Does an include end it here?
+    JR   NZ,.cut                                    ; Yes: the parent resumes at this byte.
+.count: ; Count CR, LF or CRLF as one line ending.
+    LD   A,C                                        ; Recover the line ending.
+    CP   13                                         ; CR always ends a line.
+    JR   Z,.cr                                      ; Count it.
+    LD   A,(ppLastCr)                               ; Does this LF complete CRLF?
+    OR   A                                          ; Nonzero means it does.
+    JR   NZ,.lf                                     ; It was counted at the CR.
+    CALL .line                                      ; Count a lone LF.
+.lf: ; Forget the CR.
+    XOR  A                                          ; The pair is complete.
+    LD   (ppLastCr),A                               ; Clear the CR state.
+    JR   .bol                                       ; A new line starts.
+.cr: ; Count a CR.
+    CALL .line                                      ; Count it.
+    LD   A,1                                        ; Remember it for a following LF.
+    LD   (ppLastCr),A                               ; Keep the CR state.
+.bol: ; Start the next line.
+    LD   A,(ppMode)                                 ; Keep only the last-record bit.
+    AND  4                                          ; The directive is finished.
+    OR   1                                          ; The next byte starts a line.
+    LD   (ppMode),A                                 ; Keep the mode.
+    LD   A,C                                        ; Return the line ending unchanged.
+.done: ; Restore caller state and return the byte.
+    POP  IY                                         ; Restore the caller's second index register.
     POP  IX                                         ; Restore the caller's index register.
     POP  BC                                         ; Restore the parser's byte and loop state.
     OR   A                                          ; Clear carry and classify a zero byte.
     RET                                             ; Return the filtered source byte.
-.fail: ; Restore caller state and report a changed source.
-    POP  IX                                         ; Restore index state on a rejected source change.
-    POP  BC                                         ; Restore parser state before reporting failure.
-    LD   A,2                                        ; Distinguish a preflight/runtime mismatch.
-    SCF                                             ; Carry reports the unavailable source byte.
-    RET                                             ; Atom aborts without committing its output.
+.line: ; Count one line ending.
+    LD   HL,(ppLine)                                ; Load the line count.
+    INC  HL                                         ; The next byte starts a new line.
+    LD   (ppLine),HL                                ; Keep it.
+    RET                                             ; Return to the line-end code.
+.badHead: ; Reject ordinary source inside an include's IF.
+    LD   HL,(ppPos)                                 ; Report the ordinary source.
+    LD   (ppDirAt),HL                               ; At its offset.
+    LD   HL,(ppLine)                                ; And line.
+    LD   (ppDirLn),HL                               ; Keep both.
+    LD   DE,msgDir                                  ; The directive structure is malformed.
+.bad: ; Record a failure for tkOpen.
+    CALL incFail                                    ; Keep the first failure and where it was.
+.cut: ; End the part here.
+    POP  IY                                         ; Restore the caller's second index register.
+    POP  IX                                         ; Restore the caller's index register.
+    POP  BC                                         ; Restore the parser's byte and loop state.
+    XOR  A                                          ; A=0 with carry ends the part.
+    SCF                                             ; Carry marks the end.
+    RET                                             ; tkOpen supplies what comes next.
+.tooLong: ; Reject a part longer than 65,535 bytes.
+    LD   DE,msgRead                                 ; Report it as a failed read.
+    CALL incLost                                    ; Name the file.
+    JR   .cut                                       ; End the part.
 
-;@ROUTINE OUT CARRY
+;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; The part has no more bytes after offset HL. Apply a directive on its final
+; line, then require its conditions to be closed and mark the file finished.
+; An include on that final line ends the part first. It is checked when it
+; resumes at this offset. Always returns carry with A=0.
+
+ppEnd: ; Finish a part at its end of file.
+    PUSH IX                                         ; Definition lookup uses IX internally.
+    PUSH IY                                         ; Include names are parsed through IY.
+    LD   (ppPos),HL                                 ; An include resumes here.
+    LD   A,(ppEnded)                                ; Was the end already checked?
+    OR   A                                          ; Nonzero means yes.
+    JR   NZ,.end                                    ; Report the end again.
+    LD   A,(ppMode)                                 ; Was a directive being captured?
+    BIT  1,A                                        ; Bit 1 means yes.
+    JR   Z,.check                                   ; No: check the conditions.
+    CALL ppApply                                    ; Apply the final directive.
+    JR   C,.bad                                     ; Report a malformed one.
+    OR   A                                          ; Did it start an include?
+    JR   NZ,.end                                    ; Yes: finish this part later.
+.check: ; Require this part's conditions to be closed.
+    LD   A,(ppBase)                                 ; Conditions open at the include.
+    LD   B,A                                        ; Keep them.
+    LD   A,(ppDepth)                                ; Conditions open now.
+    CP   B                                          ; Every IF of this part must be closed.
+    JR   NZ,.open                                   ; Report an unclosed IF.
+    LD   A,1                                        ; The end has been checked.
+    LD   (ppEnded),A                                ; Do not check it twice.
+    CALL incDone                                    ; Mark the file finished.
+    JR   .end                                       ; End the part.
+.open: ; Report an IF still open at the end of the file.
+    LD   HL,(ppPos)                                 ; Report the end of the file.
+    LD   (ppDirAt),HL                               ; At its offset.
+    LD   HL,(ppLine)                                ; And line.
+    LD   (ppDirLn),HL                               ; Keep both.
+    LD   DE,msgDir                                  ; The conditions are malformed.
+.bad: ; Record a failure for tkOpen.
+    CALL incFail                                    ; Keep the first failure and where it was.
+.end: ; End the part.
+    POP  IY                                         ; Restore the caller's second index register.
+    POP  IX                                         ; Restore the caller's index register.
+    XOR  A                                          ; A=0 with carry ends the part.
+    SCF                                             ; Carry marks the end.
+    RET                                             ; tkOpen supplies what comes next.
+
+;@ROUTINE OUT CARRY CLOBBERS HALFCARRY
 ; Return a generic carry-set failure for malformed stack or value state.
 
 ppFail: ; Return failure for malformed condition or value state.

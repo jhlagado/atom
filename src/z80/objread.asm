@@ -2,13 +2,14 @@
 ; Atom adapter for Z80 Tool Services named-object ABI 1
 ;=============================================================================
 ;
-; The platform launcher calls objInit with IX pointing at a nine-byte
+; The platform launcher calls objInit with IX pointing at a ten-byte
 ; configuration block, then calls AtomAssemble normally. The request, name,
 ; and transfer workspace must remain visible while the platform gateway
 ; temporarily selects another bank.
 ;
 ; This adapter binds both sides of Atom's platform boundary. The source side
-; maps part ordinals to named objects. A 128-byte cache serves random reads.
+; supplies the named objects in table order, one part each, and a 128-byte
+; cache serves their bytes. A part ends where its object has no more bytes.
 ; The sink builds a tentative flat object: IMAGE appends and fills gaps,
 ; PATCH seeks within the initialised extent, and
 ; COMMIT/ABORT publish or discard the generation through the provider.
@@ -20,6 +21,7 @@
 ;   +4 output-name pointer
 ;   +6 output-name byte length
 ;   +7 common-workspace pointer
+;   +9 number of source parts
 ;
 ; Common workspace (399 bytes): request 0..15, copied name 16..270, transfer
 ; buffer 271..398. Object names are byte strings, not zero-terminated text.
@@ -30,7 +32,8 @@ objTable    EQU     2                   ; Offset of the source-name table pointe
 objName     EQU     4                   ; Config offset of the output-name pointer.
 objLen      EQU     6                   ; Config offset of the output-name byte length.
 objArea     EQU     7                   ; Config offset of the common-workspace pointer.
-objSize     EQU     9                   ; Total byte size of the configuration block.
+objParts    EQU     9                   ; Config offset of the source-part count.
+objSize     EQU     10                  ; Total byte size of the configuration block.
 
 objPath     EQU     16                  ; Workspace offset of the copied object name.
 objBuf      EQU     271                 ; Offset of the shared transfer buffer.
@@ -72,6 +75,8 @@ objInit: ; Validate and retain adapter configuration.
     LD   (objOutId),A                   ; Clear the output handle low byte.
     LD   (objOutId+1),A                 ; Clear the output handle high byte.
     LD   (objValid),A                   ; Invalidate any source-cache bytes.
+    LD   (objNextP),A                   ; The first part is supplied first.
+    LD   (objFail),A                    ; No source read has failed.
     LD   A,$FF                          ; No source part has been opened yet.
     LD   (objHeld),A                    ; Record the invalid part sentinel.
     XOR  A                              ; Return success with carry clear.
@@ -316,11 +321,48 @@ objMount: ; Open the named source for one part ordinal.
     LD   (objValid),A                   ; Force its first read through the provider.
     RET                                 ; Return success with carry clear.
 
+;@ROUTINE OUT A,CARRY,DE,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+; AtomSourceOpenPart replacement. Supply the next part in table order from
+; offset zero on line one, carry with A=0 when none remains, or carry with the status of a
+; source read that failed.
+
+objNext: ; Supply the next named source part.
+    LD   A,(objFail)                    ; Did a source read fail?
+    OR   A                              ; Zero means no failure.
+    JR   NZ,.fail                       ; Report the failed read.
+    LD   HL,(objCfg)                    ; Address the configuration.
+    LD   DE,objParts                    ; Select the part count.
+    ADD  HL,DE                          ; Address it.
+    LD   A,(objNextP)                   ; Select the next part.
+    CP   (HL)                           ; Is every part supplied?
+    JR   NC,.none                       ; Yes: report that none remains.
+    LD   HL,objNextP                    ; Address the part counter.
+    INC  (HL)                           ; Select the following part next time.
+    LD   HL,0                           ; Every named part starts at offset zero.
+    LD   DE,1                           ; It starts on line one.
+    OR   A                              ; Clear carry.
+    RET                                 ; Return the part in A.
+.none: ; Report that every part has been supplied.
+    XOR  A                              ; A=0 means none remains.
+.fail: ; Return the failure status in A.
+    SCF                                 ; Carry means no part was opened.
+    RET                                 ; The driver finishes or aborts.
+
+;@ROUTINE OUT A,CARRY
+; AtomBinaryOpen and AtomBinaryRead replacement. This harness supplies no
+; INCBIN files, so INCBIN fails as an unreadable file.
+
+objNoBin: ; Refuse an INCBIN file.
+    LD   A,ZT_INV                       ; Report the request as invalid.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The core reports the INCBIN line.
+
 ;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
 ; AtomSourceReadByte replacement. It keeps a 128-byte source cache and one
 ; readable object handle. A part change closes and reopens by name. A miss
 ; seeks to the requested offset and fills from there, so the assembler may
-; reread tokens without retaining a whole source part in Z80 memory.
+; reread tokens without retaining a whole source part in Z80 memory. An empty
+; read ends the part. A failed request also ends it, and objNext reports why.
 
 objFetch: ; Read a source byte through the shared cache.
     PUSH BC                             ; Preserve the caller's BC pair.
@@ -334,7 +376,7 @@ objFetch: ; Read a source byte through the shared cache.
     JR   Z,.have                        ; Reuse its handle.
     LD   A,B                            ; Pass the new part to the open helper.
     CALL objMount                       ; Open the requested source.
-    JR   C,.done                        ; Restore registers after failure.
+    JR   C,.fail                        ; Report the failed open.
 .have: ; Check the current part cache for this offset.
     LD   HL,(objWant)                   ; Load the requested logical source offset.
     LD   DE,(objCache)                  ; Load the cache's first offset.
@@ -360,25 +402,25 @@ objFetch: ; Read a source byte through the shared cache.
     JR   .done                          ; Restore caller registers and return this byte.
 .miss: ; Seek and refill on a cache miss.
 
-; Refill at the requested offset. An empty successful read is a storage
-; failure: the caller's part descriptor promised a byte here.
+; Refill at the requested offset. An empty successful read is the end of
+; the part.
 
     LD   IX,(objCfg)                    ; Reload the source provider selector.
     LD   C,(IX+objFrom)                 ; Select the provider that owns the open handle.
     LD   DE,(objSrcId)                  ; Pass the current source handle to objSeek.
     LD   HL,(objWant)                   ; Seek to the exact requested logical offset.
     CALL objSeek                        ; Seek before refilling the cache.
-    JR   C,.done                        ; Keep cache bounds on seek failure.
+    JR   C,.fail                        ; Keep cache bounds on seek failure.
     LD   IX,(objCfg)                    ; objSeek clobbered IX. reload config.
     LD   C,(IX+objFrom)                 ; Select the source provider for the transfer.
     LD   DE,(objSrcId)                  ; Pass the open object handle to objXfer.
     LD   B,objChunk                     ; Request up to 128 bytes.
     LD   A,ZT_READ                      ; Choose the named-object READ operation.
     CALL objXfer                        ; Refill from the requested byte.
-    JR   C,.done                        ; Do not publish a failed refill.
+    JR   C,.fail                        ; Do not publish a failed refill.
     LD   A,H                            ; Test the provider's result count.
     OR   L                              ; Z means it returned no bytes.
-    JR   Z,.short                       ; Descriptor promised a byte here.
+    JR   Z,.end                         ; The part has no more bytes.
     LD   A,L                            ; Use the result as cache length.
     LD   (objValid),A                   ; It fits the 128-byte cache.
     LD   HL,(objWant)                   ; Load the refill offset.
@@ -389,9 +431,11 @@ objFetch: ; Read a source byte through the shared cache.
     LD   A,(HL)                         ; Return the byte requested at the cache base.
     OR   A                              ; Clear carry and set Z according to that byte.
     JR   .done                          ; Restore caller registers before returning.
-.short: ; Reject a read that returned no promised byte.
-    LD   A,ZT_STORE                     ; Empty read violates the descriptor.
-    SCF                                 ; Distinguish failure from byte zero.
+.fail: ; Keep the failed request's status for objNext.
+    LD   (objFail),A                    ; objNext reports it to the driver.
+.end: ; End the part.
+    XOR  A                              ; A=0 with carry means no byte remains.
+    SCF                                 ; Carry marks the end of the part.
 .done: ; Restore caller registers after a source read.
     POP  IY                             ; Restore the caller's IY register.
     POP  IX                             ; Restore the caller's IX register.

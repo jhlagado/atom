@@ -29,14 +29,16 @@ exOpPart:   DB      0                   ; Current operator's source-part ordinal
 exOpOff:    DW      0                   ; Current operator's source-byte offset.
 exSaveOp:   DS      exOpLen             ; Saved incoming operator during reduction.
 
-; exIdPart/exIdOff hold the name being resolved and are dead once exName
+; exIdPart/exIdOff hold the name being resolved and are dead once exLookup
 ; returns, so multiply and divide reuse them. exSrcPos/exSrcOff hold the
 ; deferred symbol's anchor and are written only when a name becomes pending.
 
 exIdPart:   DB      0                   ; Current name's source-part ordinal.
 exIdOff:    DW      0                   ; Current name's source-byte offset.
+exIdLine:   DW      0                   ; Current name's line.
 exSrcPos:   DB      0                   ; Deferred symbol source-part ordinal.
 exSrcOff:    DW      0                  ; Deferred symbol source-byte offset.
+exSrcLn:    DW      0                   ; Deferred symbol line.
 exCause:   DB      0                    ; Nested symbol status for diagnostics.
 exRndCnt    EQU     exCause             ; Multiplication round count overlay.
 

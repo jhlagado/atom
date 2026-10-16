@@ -131,14 +131,13 @@ async function build() {
     "CP/M spool and replay code exceeds the loaded-code area",
   );
   assert.equal(
-    symbol("incOrder") & 0xff,
+    symbol("incStack") & 0xff,
     0,
-    "CP/M part-order table must begin on a page boundary",
+    "CP/M include page must begin on a page boundary",
   );
-  assert.equal(
-    symbol("incOEnd") - symbol("incOrder"),
-    256,
-    "CP/M part-order table must occupy one complete page",
+  assert.ok(
+    symbol("ppLnEnd") <= symbol("srcCache"),
+    "CP/M include frames and front-end state must fit their page",
   );
   assert.equal(
     symbol("srcCache") & 0xff,
@@ -151,18 +150,20 @@ async function build() {
     "CP/M source cache must occupy one 128-byte record",
   );
   assert.ok(
-    symbol("incOEnd") <= symbol("srcCache") &&
-      symbol("srcCEnd") <= symbol("incNames") &&
-      symbol("incNEnd") <= symbol("incDescs") &&
-      symbol("incDEnd") <= symbol("cpSymBeg") &&
+    symbol("srcCEnd") <= symbol("incNames") &&
+      symbol("incNEnd") <= symbol("incState") &&
+      symbol("incSEnd") <= symbol("incSaves") &&
+      symbol("incSvEnd") <= symbol("ppDefBeg") &&
+      symbol("incEnd") <= symbol("cpSymBeg") &&
       symbol("cpSymEnd") <= symbol("cpRefBeg") &&
-      symbol("cpRefEnd") <= symbol("asoFcb"),
+      symbol("cpRefEnd") <= symbol("asoFcb") &&
+      symbol("asoRec") + 128 <= symbol("matLimit"),
     "CP/M runtime data regions overlap or are out of order",
   );
   assert.equal(
     symbol("matFcb"),
-    symbol("incOrder"),
-    "CP/M materializer must reuse the dead part-order page only after assembly",
+    symbol("incStack"),
+    "CP/M materializer must reuse the include page only after assembly",
   );
   assert.equal(
     symbol("matRec"),
@@ -233,15 +234,10 @@ async function build() {
       returnAddress: symbol("cpExit"),
       inputFcbAddress: symbol("srcFcb"),
       sourceCacheAddress: symbol("srcCache"),
-      partOrderAddress: symbol("incOrder"),
-      partOrderEndAddress: symbol("incOEnd"),
+      includeStackAddress: symbol("incStack"),
       partNamesAddress: symbol("incNames"),
       partNamesEndAddress: symbol("incNEnd"),
-      partDescriptorsAddress: symbol("incDescs"),
-      partDescriptorsEndAddress: symbol("incDEnd"),
       binaryIncludeFcbAddress: symbol("binFcb"),
-      resolverStateAddress: symbol("incFound"),
-      resolverWorkspaceEndAddress: symbol("srcTemp") + 1,
       sourceCacheKeyAddress: symbol("srcKey"),
       sourceReadAddress: symbol("tkRead"),
       sourceCacheMissAddress: symbol("srcMiss"),

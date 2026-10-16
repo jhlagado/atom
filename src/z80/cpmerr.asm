@@ -1,33 +1,31 @@
 ; Diagnostics: locate a failure in its source file and print the message.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Map Atom's source ordinal to the retained CP/M filename, then reread only
-; the bytes before the failing position. If the file cannot be read, keep the
-; original byte offset instead of printing a guessed line or column.
+; Print FILE:line:column for the failure. Atom reports the line. The column
+; is found by reading back from the failing byte to the start of its line, so
+; the file is never read from its beginning. If those bytes cannot be read,
+; print the original byte offset instead of a guessed column.
 
 errWhere: ; Render source filename, line and byte column.
-    LD   A,(stAtPart)                           ; Select the failed dependency-order part.
-    LD   HL,cpDesc                              ; Read the count of valid part ordinals.
+    LD   A,(stAtPart)                           ; Select the failed source part.
+    LD   HL,incFound                            ; Read the count of known source names.
     CP   (HL)                                   ; Reject an impossible ordinal defensively.
     JR   NC,.badPart                            ; Retain the original numeric diagnostic.
-    LD   E,A                                    ; Index the dependency-order table.
-    LD   D,incOrder/256                         ; The table occupies one fixed page.
-    LD   A,(DE)                                 ; Recover the retained-name ordinal.
-    CALL srcOpen                                ; Reopen its source for position counting.
-    JR   C,.noOpen                              ; Its name was printed. retain the offset.
-    CALL errCount                               ; Convert the byte offset in this file.
+    CALL srcOpen                                ; Reopen its source to find the column.
+    JR   C,.unread                              ; Name it and keep the offset.
+    CALL errBack                                ; Find the failing byte's column.
     JR   C,.unread                              ; Report the raw offset on a read failure.
     LD   HL,srcFcb                              ; Address the reopened file's 8.3 name.
     CALL cpPutFcb                               ; Print the physical source filename.
     LD   A,':'                                  ; Separate filename from line number.
     CALL cpPutCh                                ; Print the first colon.
-    LD   HL,(errLine)                           ; Load the one-based source line.
+    LD   HL,(stAtLine)                          ; Load Atom's one-based source line.
     CALL cpPutNum                               ; Print it without leading zeroes.
     LD   A,':'                                  ; Separate line from source column.
     CALL cpPutCh                                ; Print the second colon.
     LD   HL,(errCol)                            ; Load the one-based byte column.
     JP   cpPutNum                               ; Finish the location and return.
-.unread: ; Use the filename when position counting failed.
+.unread: ; Use the filename when the column could not be found.
     LD   HL,srcFcb                              ; The filename remains in the opened FCB.
     CALL cpPutFcb                               ; Identify the unreadable source part.
 .noOpen: ; Print the raw-offset fallback prefix.
@@ -48,69 +46,34 @@ errWhere: ; Render source filename, line and byte column.
     LD   A,L                                    ; Select its remaining byte.
     JP   cpPutHex                               ; Finish the four-digit offset and return.
 
-;@ROUTINE OUT CARRY CLOBBERS A,BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Count physical line breaks and byte columns before the reported offset.
-; CRLF is one break. lone CR and lone LF are each one break. Counters start
-; at one, and zero represents the sole possible overflow value, 65,536.
+;@ROUTINE OUT CARRY CLOBBERS A,BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Count the bytes between the start of the failing line and the failing byte.
+; The column is one more than that count.
 
-errCount: ; Count physical lines up to the diagnostic offset.
-    LD   HL,1                                   ; Both positions are one-based.
-    LD   (errLine),HL                           ; Begin on the first source line.
-    LD   (errCol),HL                            ; Begin at its first byte column.
-    LD   HL,0                                   ; Scan from the first source byte.
-    LD   (errPos),HL                            ; Store the current zero-based offset.
-    XOR  A                                      ; No preceding byte was CR.
-    LD   (errSawCr),A                           ; Clear the CRLF state.
-.loop: ; Consume bytes before the failing position.
-    LD   HL,(errPos)                            ; Read the next byte offset.
-    LD   DE,(stAtOff)                           ; Read the failing offset as an exclusive end.
-    OR   A                                      ; Clear carry before comparing positions.
-    SBC  HL,DE                                  ; Stop before consuming the failing byte.
-    JR   Z,.done                                ; The counters now describe that byte.
-    LD   HL,(errPos)                            ; Address the current source byte.
-    CALL srcRaw                                 ; Read it through the existing CP/M cache.
-    RET  C                                      ; Changed or unreadable input needs a fallback.
-    LD   B,A                                    ; Preserve the byte across cursor update.
-    LD   HL,(errPos)                            ; Advance by exactly one source byte.
-    INC  HL                                     ; Move to the following zero-based offset.
-    LD   (errPos),HL                            ; Save the advanced cursor.
-    LD   A,B                                    ; Classify the byte just consumed.
-    CP   13                                     ; A carriage return always starts a new line.
-    JR   Z,.cr                                  ; Retain CR state for an optional following LF.
-    CP   10                                     ; A lone line feed also starts a new line.
-    JR   Z,.lf                                  ; Avoid double-counting CRLF.
-    XOR  A                                      ; Ordinary text ends CRLF lookbehind.
-    LD   (errSawCr),A                           ; The preceding byte is not CR.
-    LD   HL,(errCol)                            ; Move one byte to the right.
-    INC  HL                                     ; Advance the one-based column.
-    LD   (errCol),HL                            ; Keep its full 16-bit value.
-    JR   .loop                                  ; Continue toward the error offset.
-.cr: ; Count CR and retain CRLF state.
-    LD   A,1                                    ; Record a preceding CR.
-    LD   (errSawCr),A                           ; The next LF belongs to this break.
-    CALL .newLine                               ; Start the next line at column one.
-    JR   .loop                                  ; Continue after the CR byte.
-.lf: ; Count LF only when a preceding CR did not.
-    LD   A,(errSawCr)                           ; Check whether CR already advanced the line.
-    OR   A                                      ; Z means this LF is a lone break.
-    CALL Z,.newLine                             ; Count a lone LF exactly once.
-    XOR  A                                      ; The lookbehind ends at this LF.
-    LD   (errSawCr),A                           ; Clear it before another source byte.
-    JR   .loop                                  ; Continue after the LF byte.
-.done: ; Return the computed line and column.
-    OR   A                                      ; Return success with carry clear.
-    RET                                         ; Leave the computed line and column in RAM.
-
-;@ROUTINE CLOBBERS A,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Advance to a physical source line and reset its byte column.
-
-.newLine: ; Start a new source line at column one.
-    LD   HL,(errLine)                           ; Load the current line number.
-    INC  HL                                     ; Move to the next line.
-    LD   (errLine),HL                           ; Keep the complete 16-bit result.
-    LD   HL,1                                   ; The first byte has column one.
-    LD   (errCol),HL                            ; Reset the column for that line.
-    RET                                         ; Return to the source-byte classifier.
+errBack: ; Step back to find the failing byte's column.
+    LD   HL,(stAtOff)                           ; Start at the failing byte.
+    LD   BC,1                                   ; It is at least column one.
+.back: ; Step back over one byte of the same line.
+    LD   A,H                                    ; Has the scan reached the file's start?
+    OR   L                                      ; Zero means it has.
+    JR   Z,.done                                ; The line starts the file.
+    DEC  HL                                     ; Address the preceding byte.
+    PUSH HL                                     ; Keep its offset.
+    PUSH BC                                     ; Keep the column.
+    CALL srcRaw                                 ; Read it through the source cache.
+    POP  BC                                     ; Restore the column.
+    POP  HL                                     ; Restore the offset.
+    RET  C                                      ; An unreadable byte needs the fallback.
+    CP   13                                     ; Does a CR end the previous line?
+    JR   Z,.done                                ; Yes: the column is complete.
+    CP   10                                     ; Does an LF end it?
+    JR   Z,.done                                ; Yes: the column is complete.
+    INC  BC                                     ; One more byte precedes the failure.
+    JR   .back                                  ; Keep stepping back.
+.done: ; Keep the column.
+    LD   (errCol),BC                            ; Publish it.
+    OR   A                                      ; Clear carry for success.
+    RET                                         ; The column is known.
 
 ;@ROUTINE OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Print the ": " that separates a location from its message.
@@ -122,33 +85,16 @@ errSep: ; Print the separator after a source location.
     JP   cpPutCh                                ; Print it and return.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Print the line of the related location in drAtPart/drAtOff, such as the
-; label a failed forward jump refers to. Print ? when there is none.
+; Print the line of the related location, such as the label a failed forward
+; jump refers to. Atom reports it. Print ? when there is none.
 
-errRelLn: ; Print a related source line while preserving the primary offset.
+errRelLn: ; Print a related source line.
     LD   A,(drAtPart)                           ; Select the related source part.
-    LD   HL,cpDesc                              ; Read the count of valid part ordinals.
+    LD   HL,incFound                            ; Read the count of known source names.
     CP   (HL)                                   ; $FF and impossible ordinals both fail.
     JR   NC,.unknown                            ; No related location was recorded.
-    LD   HL,(stAtOff)                           ; errCount counts up to stAtOff.
-    PUSH HL                                     ; Keep the primary offset.
-    LD   HL,(drAtOff)                           ; Count up to the related offset instead.
-    LD   (stAtOff),HL                           ; Install it for errCount.
-    LD   E,A                                    ; Index the dependency-order table.
-    LD   D,incOrder/256                         ; The table occupies one fixed page.
-    LD   A,(DE)                                 ; Recover the retained-name ordinal.
-    CALL srcOpen                                ; Reopen that source file.
-    JR   C,.restore                             ; Fall back to ? if it cannot be read.
-    CALL errCount                               ; Find the related line.
-    JR   C,.restore                             ; Fall back to ? on a read failure.
-    LD   HL,(errLine)                           ; Load the related line number.
-    CALL cpPutNum                               ; Print it.
-    POP  HL                                     ; Recover the primary offset.
-    LD   (stAtOff),HL                           ; Restore it.
-    RET                                         ; The related line is printed.
-.restore: ; Restore the primary diagnostic offset after failed counting.
-    POP  HL                                     ; Recover the primary offset.
-    LD   (stAtOff),HL                           ; Restore it.
+    LD   HL,(drAtLine)                          ; Load the related line number.
+    JP   cpPutNum                               ; Print it.
 .unknown: ; Print the unknown-related-line marker.
     LD   A,'?'                                  ; Show that the line is unknown.
     JP   cpPutCh                                ; Print it and return.

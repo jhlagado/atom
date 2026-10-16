@@ -30,6 +30,9 @@ export async function readAssemblyModule(nativeRoot, name, parents = []) {
 }
 
 const sourceReadContract = ";@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY";
+const sourceOpenContract = ";@ROUTINE OUT A,CARRY,DE,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY";
+const binaryOpenContract = ";@ROUTINE IN B,HL OUT A,CARRY,HL CLOBBERS BC,DE,HALFCARRY,ZERO,SIGN,PARITY";
+const binaryReadContract = ";@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,HALFCARRY,ZERO,SIGN,PARITY";
 
 export async function readNativeCoreModules(nativeRoot) {
   return new Map(await Promise.all(NATIVE_CORE_MODULES.map(async (name) => [
@@ -46,11 +49,18 @@ export function setNativeCoreOrigin(modules, originLine) {
   return result;
 }
 
-// host.asm supplies the memory-backed tkRead. A platform build that omits
-// it binds the core's source service to its own reader.
-export function nativeSourceRead(target) {
-  assert.match(target, /^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*$/, "invalid source-read target label");
-  return `${sourceReadContract}\ntkRead: ; Read a source byte through the linked platform adapter.\nJP ${target} ; Return directly from the adapter to the tokenizer.\n`;
+// host.asm supplies the memory-backed source services. A platform build that
+// omits it binds the core's source and INCBIN services to its own adapter.
+export function nativeSourceServices({ open, read, binaryOpen, binaryRead }) {
+  for (const target of [open, read, binaryOpen, binaryRead]) {
+    assert.match(target, /^[A-Za-z_.$?@][A-Za-z0-9_.$?@]*$/, "invalid source-service target label");
+  }
+  const service = (contract, label, comment, target) =>
+    `${contract}\n${label}: ; ${comment}\nJP ${target} ; Return directly from the adapter.\n\n`;
+  return service(sourceOpenContract, "tkOpen", "Open the next source part through the linked platform adapter.", open) +
+    service(sourceReadContract, "tkRead", "Read a source byte through the linked platform adapter.", read) +
+    service(binaryOpenContract, "tkBin", "Open an INCBIN file through the linked platform adapter.", binaryOpen) +
+    service(binaryReadContract, "tkBinRd", "Read an INCBIN byte through the linked platform adapter.", binaryRead);
 }
 
 export function joinNativeCoreModules(modules) {

@@ -1,400 +1,398 @@
-; The include graph: find every %INCLUDE and order the parts depth first.
+; Includes as the stream reaches them. An active %INCLUDE in a file's header
+; ends that file's part at the include line. The file waits on a frame while
+; its include is assembled, then resumes from the same byte. Each file is
+; assembled once, at its first include, which gives the order the text would
+; have if every include were pasted in place. Nothing is read in advance.
+;
+; A frame keeps the waiting file's FCB and its cached record, so resuming it
+; reads nothing again.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Resolve the root source and its leading %INCLUDE graph. Names are retained
-; as exact CP/M 8.3 identities, while descriptors are emitted in dependency-
-; first order. No intermediate source-order file is involved.
+;@ROUTINE CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Prepare to stream the root source named in srcFcb.
 
-incSort: ; Discover and order the complete include graph.
-    XOR  A                              ; Start with no published descriptors or order.
-    LD   (cpDesc),A                     ; The native core must not see a stale part count.
-    LD   (incDone),A                    ; No source has reached dependency order yet.
-    LD   (incIdx),A                     ; Discovery begins at root ordinal zero.
-    INC  A                              ; The root itself is the first retained name.
-    LD   (incFound),A                   ; Record one known source part.
+incStart: ; Reset the include state for one command.
     LD   HL,srcFcb+1                    ; Skip the drive byte and retain the 8.3 name.
     LD   DE,incNames                    ; Store it in the root's ordinal-zero slot.
     LD   BC,11                          ; FCB name and type fields occupy eleven bytes.
-    LDIR                                ; Copy the root name into the resolver table.
-    LD   A,$FF                          ; Prepare the source-selection field for this run.
-    LD   (srcPart),A                    ; Clear any stale current-part selection.
+    LDIR                                ; Copy the root name into the name table.
+    LD   A,1                            ; One name is known.
+    LD   (incFound),A                   ; The root.
+    LD   (incState),A                   ; It is open, so including it is a cycle.
+    LD   (ppActive),A                   ; Source is active until an IF says otherwise.
+    XOR  A                              ; Clear the remaining state.
+    LD   (incDepth),A                   ; No file is waiting.
+    LD   (incNext),A                    ; tkOpen supplies the root first.
+    LD   (ppDepth),A                    ; No condition is open.
+    LD   (ppDefCnt),A                   ; No value is defined.
+    LD   H,A                            ; Form zero.
+    LD   L,A                            ; Complete it.
+    LD   (incErr),HL                    ; No failure yet.
+    DEC  A                              ; Form $FF.
+    LD   (srcPart),A                    ; No part is open.
+    LD   (incErrAt),A                   ; A failure has no position yet.
+    LD   (incErrNm),A                   ; Nor a file name.
+    RET                                 ; The driver asks tkOpen for the root.
 
-; First discover every exact name reachable from the root.
+;@ROUTINE OUT A,CARRY,DE,HL CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY
+; Atom's next-part service on CP/M. Return the next part: an include just
+; reached, or the file waiting for it, resumed where it stopped. Carry with
+; A=0 means every part has been assembled. Carry with A=1 is a failure,
+; recorded for cpEntry to print.
 
-.discover: ; Scan each discovered filename for dependencies.
-    XOR  A                              ; Mode zero records newly found include names.
-    LD   (incMode),A                    ; Discovery does not test dependency ordering.
-    LD   A,(incIdx)                     ; Select the next retained source name.
-    CALL incScan                        ; Read its leading header and visit its includes.
-; The scan helper reports malformed input, open failure or offset overflow.
-    JP   C,.fail                        ; Stop on any reported scan failure.
-    LD   HL,incIdx                      ; Advance the discovery cursor in place.
-    INC  (HL)                           ; Each retained name is scanned for dependencies.
-    LD   A,(incFound)                   ; New includes may have extended this count.
-    CP   (HL)                           ; Compare the next ordinal with the live count.
-    JR   NZ,.discover                   ; Scan every discovered source part.
+tkOpen: ; Supply the next source part.
+    LD   HL,(incErr)                    ; Has a failure been recorded?
+    LD   A,H                            ; Test the message pointer.
+    OR   L                              ; Zero means none.
+    JR   NZ,.fail                       ; Report it.
+    LD   A,(incNext)                    ; Is a part waiting to begin?
+    CP   $FF                            ; $FF means none.
+    JR   Z,.resume                      ; Resume a waiting file instead.
+    LD   C,A                            ; Keep its ordinal.
+    LD   A,$FF                          ; It begins now.
+    LD   (incNext),A                    ; Nothing else is waiting to begin.
+    LD   A,(srcPart)                    ; An include opened its file already.
+    CP   C                              ; The root has not been opened.
+    JR   Z,.begin                       ; Begin the open file.
+    LD   A,C                            ; Open the root.
+    PUSH BC                             ; srcOpen clobbers C.
+    CALL srcOpen                        ; Open its file.
+    POP  BC                             ; Recover the ordinal.
+    JR   C,.lost                        ; Report a file that cannot be read.
+.begin: ; Begin the part at its first byte.
+    LD   A,C                            ; Select the part.
+    CALL ppStart                        ; Reset the filter for its first byte.
+    LD   A,C                            ; Return its ordinal.
+    LD   HL,0                           ; It starts at offset zero.
+    LD   DE,1                           ; On line one.
+    OR   A                              ; Clear carry.
+    RET                                 ; The driver assembles it.
+.resume: ; Resume the file that included the part just finished.
+    LD   A,(incDepth)                   ; Is a file waiting?
+    OR   A                              ; Zero means none.
+    JP   NZ,incPop                      ; Resume it.
+    XOR  A                              ; A=0: every part is assembled.
+    SCF                                 ; Carry means no part was opened.
+    RET                                 ; The driver finishes.
+.lost: ; Record a root that cannot be opened.
+    CALL incLost                        ; Keep its name and message.
+.fail: ; Report the recorded failure.
+    LD   A,1                            ; A nonzero status.
+    SCF                                 ; Carry means no part was opened.
+    RET                                 ; The driver aborts the build.
 
-; Place each part after its includes, depth first, so parts reach Atom in
-; the order their text would appear if every include were pasted in place.
-; Each walk starts at the root and follows the first unplaced include until
-; it reaches a part whose includes are all placed. Bit 7 of the first
-; retained-name byte marks a placed part. Name comparisons and FCB
-; reconstruction mask it away. A walk longer than the part count must revisit
-; a part, which proves a cycle without recursion.
+;@ROUTINE OUT A,CARRY,DE CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Apply %INCLUDE "NAME". It belongs in the header. An inactive one is checked
+; but ignored, and a file already assembled is not assembled again. Otherwise
+; the current file waits on a frame and the included file opens. A=1 then
+; ends the current part at this line's end. Carry reports a malformed include,
+; a cycle or a file that cannot be read, with the message in DE.
 
-.place: ; Walk from the root to the next part to place.
-    XOR  A                              ; Start each walk at the root.
-    LD   (incIdx),A                     ; The root is ordinal zero.
-    LD   (incSteps),A                   ; No includes followed yet.
-.walk: ; Check whether the current part's includes are all placed.
-    LD   A,1                            ; Mode one checks whether the includes are ready.
-    LD   (incMode),A                    ; The scanner reports one for a pending child.
-    LD   A,(incIdx)                     ; Scan this part's include header.
-    CALL incScan                        ; A=0 means every include is already placed.
-    JP   C,.fail                        ; Preserve scanner errors as resolver failures.
-    OR   A                              ; Is an included child still unplaced?
-    JR   Z,.emit                        ; No: place this part now.
-    LD   HL,incSteps                    ; Count the include about to be followed.
-    INC  (HL)                           ; One more step from the root.
-    LD   A,(HL)                         ; Compare the walk with the part count.
-    LD   HL,incFound                    ; A longer walk must revisit a part.
-    CP   (HL)                           ; Steps at least the part count?
-    JR   NC,.cycle                      ; Report the include cycle.
-    LD   A,(incChild)                   ; Follow the first unplaced include.
-    LD   (incIdx),A                     ; Its includes are checked next.
-    JR   .walk                          ; Continue down the walk.
-.emit: ; Append the current part to the order.
-    LD   A,(incDone)                    ; Append at the next dependency-order position.
-    LD   E,A                            ; E is the byte offset into the order table.
-    LD   D,incOrder/256                 ; The table remains within its fixed page.
-    LD   A,(incIdx)                     ; Store this source's original ordinal.
-    LD   (DE),A                         ; Map output order to source identity.
-    CALL incSlot                        ; Recover the name after writing the order byte.
-    SET  7,(HL)                         ; Mark this name as placed for later scans.
-    LD   HL,incDone                     ; Point to the number of ordered source parts.
-    INC  (HL)                           ; Include the part just appended above.
-    LD   A,(incIdx)                     ; Was the root just placed?
-    OR   A                              ; The root follows all of its includes.
-    JR   NZ,.place                      ; Walk again for the next part.
-    JR   .build                         ; Every reachable part is now ordered.
-.cycle: ; A walk revisited a part.
-    LD   DE,msgLoop                     ; Select the include-cycle message.
-    JR   .fail                          ; Report it through the shared failure path.
+ppIncl: ; Start an included part.
+    LD   HL,(ppSrcPtr)                  ; Start after the INCLUDE keyword.
+.blank: ; Skip whitespace before the name.
+    CALL ppNext                         ; Read the next byte.
+    CP   ' '                            ; A space?
+    JR   Z,.blank                       ; Skip it.
+    CP   9                              ; A tab?
+    JR   Z,.blank                       ; Skip it.
+    CP   '"'                            ; The name must be quoted.
+    JR   NZ,.bad                        ; Reject anything else.
+    LD   (ppAfter),HL                   ; Keep the name's first byte.
+    LD   B,0                            ; Count its bytes.
+.name: ; Find the closing quote.
+    CALL ppNext                         ; Read the next byte.
+    CP   '"'                            ; The closing quote?
+    JR   Z,.named                       ; The name is complete.
+    CP   13                             ; The directive ended first?
+    JR   Z,.bad                         ; Reject an unclosed name.
+    INC  B                              ; Count the byte.
+    JR   .name                          ; Continue.
+.named: ; Store the name and check the rest of the line.
+    PUSH HL                             ; Keep the cursor after the quote.
+    LD   HL,(ppAfter)                   ; Address the name.
+    LD   DE,cpFcb                       ; Store it in the working FCB.
+    CALL srcName                        ; Validate the 8.3 name.
+    POP  HL                             ; Recover the cursor.
+    JR   C,.bad                         ; Reject a malformed name.
+    CALL ppEol                          ; Only whitespace may follow.
+    JR   C,.bad                         ; Reject anything else.
+    LD   A,(incHead)                    ; Includes belong to the header.
+    OR   A                              ; Zero means ordinary source has begun.
+    JR   Z,.bad                         ; Reject a late include.
+    XOR  A                              ; An include closes the definitions.
+    LD   (ppDefOk),A                    ; No define may follow it.
+    CALL ppMark                         ; Its IF must close inside the header.
+    LD   A,(ppActive)                   ; Is the include active?
+    OR   A                              ; Zero means it is not.
+    RET  Z                              ; Ignore it, with A=0 and carry clear.
+    CALL incFind                        ; Find or add its name.
+    RET  C                              ; Too many files.
+    LD   C,A                            ; Keep its ordinal.
+    CALL incStat                        ; Address its state.
+    LD   A,(HL)                         ; Read it.
+    CP   2                              ; Already assembled?
+    JR   Z,.skip                        ; Then it is not assembled again.
+    DEC  A                              ; One means it is still open.
+    JR   Z,.cycle                       ; Including it again is a cycle.
+    LD   A,(incDepth)                   ; Is there room for another frame?
+    CP   incMax                         ; The nesting limit.
+    JR   NC,.deep                       ; Report it.
+    PUSH BC                             ; Keep the ordinal.
+    CALL incPush                        ; Park the current file.
+    POP  BC                             ; Recover the ordinal.
+    LD   A,C                            ; Select the included file.
+    CALL incStat                        ; Address its state.
+    LD   (HL),1                         ; It is now open.
+    LD   A,C                            ; Open its file.
+    PUSH BC                             ; srcOpen clobbers C.
+    CALL srcOpen                        ; Its source is read from here.
+    POP  BC                             ; Recover the ordinal.
+    JR   C,.lost                        ; Report a file that cannot be read.
+    LD   A,C                            ; It begins at the next tkOpen.
+    LD   (incNext),A                    ; Keep it.
+    LD   (srcPart),A                    ; Its file is the one now open.
+    LD   A,1                            ; End the current part here.
+    OR   A                              ; Clear carry.
+    RET                                 ; The filter ends the part.
+.skip: ; Leave an assembled file alone.
+    XOR  A                              ; The part continues.
+    RET                                 ; Return carry clear.
+.bad: ; Report a malformed include.
+    LD   DE,msgInc                      ; Select the include message.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The filter records where it was.
+.cycle: ; Report an include of a file still open.
+    LD   DE,msgLoop                     ; Select the cycle message.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The filter records where it was.
+.deep: ; Report includes nested too deeply.
+    LD   DE,msgDeep                     ; Select the nesting message.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The filter records where it was.
+.lost: ; Report an included file that cannot be read.
+    LD   A,D                            ; A read failure names the file.
+    CP   HIGH(msgRead)                  ; Is DE msgRead?
+    JR   NZ,.unnamed                    ; Other failures have no name.
+    LD   A,E                            ; Compare the low byte too.
+    CP   LOW(msgRead)                   ; Is it msgRead?
+    JR   NZ,.unnamed                    ; No: no name.
+    PUSH DE                             ; incName uses DE.
+    CALL incName                        ; Keep the file's name.
+    POP  DE                             ; Restore the message.
+.unnamed: ; Return the failure.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The filter records where it was.
 
-; Measure the already validated parts in final order and build the ordinary
-; native five-byte descriptors. Each starts at logical zero and ends at the
-; measured 16-bit byte length. source storage itself remains in CP/M files.
+;@ROUTINE IN A OUT HL CLOBBERS DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Address the state of name A: 0 not begun, 1 open, 2 assembled.
 
-.build: ; Build source descriptors in dependency order.
-    XOR  A                              ; Start at the first dependency-ordered part.
-    LD   (incIdx),A                     ; This cursor indexes incOrder.
-    LD   HL,incDescs                    ; Point to the native part-descriptor array.
-    LD   (incDPtr),HL                   ; The append helper advances this pointer.
-.nextDesc: ; Select the next resolved source to measure.
-    LD   A,(incIdx)                     ; Select the next output-order position.
-    LD   E,A                            ; E indexes the one-byte order table.
-    LD   D,incOrder/256                 ; Address its fixed high-page storage.
-    LD   A,(DE)                         ; Recover the original discovery ordinal.
-    CALL srcOpen                        ; Reopen it before measuring its logical length.
-    JP   C,.fail                        ; Abort if the part cannot be reopened.
-    LD   HL,0                           ; Count source bytes from logical offset zero.
-.measure: ; Measure source bytes through EOF.
-    CALL srcNext                        ; Read a byte and advance logical offset HL.
-    JR   NC,.measure                    ; Carry clear means more source bytes remain.
-    OR   A                              ; A=0 means EOF/read failure. A=2 overflow.
-    JP   NZ,.ioFail                     ; Report a source length beyond the 16-bit range.
-    CALL incEmit                        ; Store this ordinal and measured [0,HL) range.
-    LD   HL,incIdx                      ; Advance the position in dependency order.
-    INC  (HL)                           ; The order table has one entry per retained name.
-    LD   A,(incFound)                   ; Compare with the total number of source parts.
-    CP   (HL)                           ; Continue while another descriptor remains.
-    JR   NZ,.nextDesc                   ; Measure the next dependency-ordered file.
-    LD   A,(incFound)                   ; Publish the final descriptor count to the core.
-    LD   (cpDesc),A                     ; Descriptors are complete and ready for assembly.
-    CALL binPrep                       ; Validate active binary includes before assembly.
-    JP   C,.fail                        ; Preflight failure forbids an output transaction.
-    XOR  A                              ; Return success with carry clear.
-    RET                                 ; Return after publishing the count.
-.ioFail: ; Name a source whose logical length overflowed.
-    LD   HL,srcFcb                      ; Identify the overlong source.
-    CALL cpPutFcb                       ; Print its parsed 8.3 name before the error text.
-    LD   DE,msgRead                     ; Select the source-read error text.
-.fail: ; Print resolver failure detail and return carry.
-    CALL cpPrint                        ; Print the error selected in DE.
-    SCF                                 ; Return failure to the command entry point.
-    RET                                 ; No partial descriptor set reaches the core.
+incStat: ; Address one name's include state.
+    LD   E,A                            ; Widen the ordinal.
+    LD   D,0                            ; Clear the high byte.
+    LD   HL,incState                    ; Address the state table.
+    ADD  HL,DE                          ; Address this name's state.
+    RET                                 ; Return it in HL.
 
+;@ROUTINE CLOBBERS A,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Mark the current part's file assembled.
 
-;@ROUTINE IN A OUT A,DE,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Scan and validate one source header. Mode zero discovers names. mode one
-; reports A=1 when any dependency has not yet been emitted.
+incDone: ; Record that a file has been assembled.
+    LD   A,(srcPart)                    ; Select the current file.
+    CALL incStat                        ; Address its state.
+    LD   (HL),2                         ; It is finished.
+    RET                                 ; Later includes of it are skipped.
 
-incScan: ; Scan one include header under preprocessor conditions.
-    CALL srcOpen                        ; Open the requested source part for scanning.
-    JR   C,.fail                        ; Stop if the FCB cannot be opened.
-    LD   A,1                            ; The header accepts directives until code begins.
-    LD   (incHead),A                    ; A source statement closes this header.
-    CALL ppClear                        ; Reset conditional state and root definitions.
-    LD   HL,0                           ; Begin at the first logical source byte.
-.line: ; Scan blank, comment or directive lines.
+;@ROUTINE IN A OUT HL,DE CLOBBERS A,B,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Address frame A's header in HL and its saved parent in DE.
 
-; Blank space, line endings and comment lines remain in the header. The first
-; ordinary source byte closes it permanently. a later percent directive fails.
+incFrame: ; Address one include frame.
+    LD   B,A                            ; Keep the frame index.
+    ADD  A,A                            ; Two bytes per frame index.
+    ADD  A,B                            ; Three.
+    ADD  A,A                            ; Six bytes per frame header.
+    LD   E,A                            ; Widen the offset.
+    LD   D,0                            ; Clear the high byte.
+    LD   HL,incStack                    ; Address the frames.
+    ADD  HL,DE                          ; Address this frame's header.
+    LD   DE,incSaves                    ; Address the saved parents.
+    INC  B                              ; Count the frame itself.
+.save: ; Step to this frame's saved parent.
+    DEC  B                              ; One fewer frame to pass.
+    RET  Z                              ; DE addresses it.
+    PUSH HL                             ; Keep the header address.
+    LD   HL,incSvLen                    ; One saved parent.
+    ADD  HL,DE                          ; Step past it.
+    EX   DE,HL                          ; DE is the next saved parent.
+    POP  HL                             ; Recover the header address.
+    JR   .save                          ; Continue.
 
-    CALL srcNext                        ; Read the byte at the current logical offset.
-    JR   C,.eof                         ; Carry marks EOF, failed read or offset overflow.
-    CP   ' '                            ; A space does not close the leading header.
-    JR   Z,.line                        ; Continue over horizontal whitespace.
-    CP   9                              ; Tabs are also header whitespace.
-    JR   Z,.line                        ; Test the next byte without advancing a line.
-    CP   13                             ; CR remains inside a blank header line.
-    JR   Z,.line                        ; LF is checked separately for CR/LF and LF files.
-    CP   10                             ; LF remains inside the leading header as well.
-    JR   Z,.line                        ; Continue scanning after the line ending.
-    CP   ';'                            ; Semicolon starts a source comment.
-    JR   Z,.skip                        ; Ignore the remainder of that physical line.
-    CP   '%'                            ; A percent byte may begin a host directive.
-    JR   Z,.percent                     ; Parse one while the header is still open.
-    LD   A,(incHead)                    ; Check whether the leading header is still open.
-    OR   A                              ; Body source closes the header permanently.
-    JR   Z,.body                        ; Closed header has no include scope.
-    CALL ppScope                        ; Reject open IF state at include.
-    JP   C,.invalid                     ; Preserve the required directive error.
-.body: ; Close the leading header at ordinary source.
-    XOR  A                              ; Any ordinary source byte closes the header.
-    LD   (incHead),A                    ; Later includes and definitions are invalid.
-    LD   (ppDefOk),A                    ; No definition may follow ordinary source.
-    LD   A,(ppActive)                   ; Determine whether this source line is selected.
-    OR   A                              ; Inactive source still closes the file header.
-    JR   Z,.skip                        ; Skip inactive source text.
-.skip: ; Consume the remainder of this source line.
-    CALL srcSkip                        ; Discard the rest of this physical line.
-    JR   NC,.line                       ; Carry clear means another line is available.
-    OR   A                              ; A=0 means EOF/read failure. A=2 wrap.
-    JR   Z,.complete                    ; Treat a zero status as the end of this source.
-    JR   .ioFail                        ; Reject a source offset outside the 16-bit range.
-.percent: ; Parse one line-leading host directive.
-    CALL ppScan                         ; Parse host preprocessing directives.
-    JR   C,.fail                        ; Parsing and file errors share this return path.
-    OR   A                              ; In ordering mode A=1 means a child is not ready.
-    JR   NZ,.done                       ; Stop so the caller can defer this source part.
-    JR   .line                          ; Continue through the remaining header lines.
-.eof: ; Distinguish ordinary EOF from offset overflow.
-    OR   A                              ; A=0 means EOF/read failure. A=2 overflow.
-    JR   NZ,.ioFail                     ; Reject a source offset that wrapped.
-.complete: ; Require all conditional frames to close at EOF.
-    LD   A,(ppDepth)                    ; Every conditional must be closed before EOF.
-    OR   A                              ; A remaining frame is an unterminated IF.
-    JR   NZ,.invalid                    ; Do not accept an incomplete conditional file.
-    XOR  A                              ; No unresolved dependencies remain.
-.done: ; Return dependency readiness in A.
-    RET                                 ; Preserve A for the discovery/order caller.
-.ioFail: ; Name a source whose scan overflowed.
-    LD   HL,srcFcb                      ; The current FCB names the open part.
-    CALL cpPutFcb                       ; Identify the file whose scan could not continue.
-    LD   DE,msgRead                     ; Select the source-read error message.
-    JR   .fail                          ; Return the read error through the shared exit.
-.invalid: ; Select invalid-source-directive detail.
-    LD   DE,msgDir                      ; Select syntax-error detail.
-.fail: ; Return an incomplete source-scan failure.
-    SCF                                 ; Carry marks failure regardless of text.
-    RET                                 ; Do not accept an incomplete dependency scan.
+;@ROUTINE CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Park the current file on a new frame: its ordinal, the offset of the byte
+; where it resumes, its line, its condition base, FCB and cached record.
 
-;@ROUTINE IN HL OUT A,DE,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Append the resolved ordinal and measured byte range to the descriptor table.
+incPush: ; Save the current file while its include is assembled.
+    LD   A,(incDepth)                   ; Select the next frame.
+    CALL incFrame                       ; Address its header and saved parent.
+    LD   A,(srcPart)                    ; The waiting file.
+    LD   (HL),A                         ; Store its ordinal.
+    INC  HL                             ; Advance to the resume offset.
+    LD   BC,(ppPos)                     ; It resumes at the byte being filtered.
+    LD   (HL),C                         ; Store the offset's low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   (HL),B                         ; Store it.
+    INC  HL                             ; Advance to the line.
+    LD   BC,(ppLine)                    ; The line of that byte.
+    LD   (HL),C                         ; Store the line's low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   (HL),B                         ; Store it.
+    INC  HL                             ; Advance to the condition base.
+    LD   A,(ppBase)                     ; The conditions open when the file began.
+    LD   (HL),A                         ; Store it.
+    LD   HL,srcFcb                      ; Save the open FCB.
+    LD   BC,36                          ; All of it.
+    LDIR                                ; Copy it to the saved parent.
+    LD   HL,srcKey                      ; Save the cache key.
+    LD   BC,2                           ; One word.
+    LDIR                                ; Copy it.
+    LD   HL,srcCache                    ; Save the cached record.
+    LD   BC,128                         ; One record.
+    LDIR                                ; Copy it.
+    LD   HL,incDepth                    ; Count the frame.
+    INC  (HL)                           ; It is in use.
+    RET                                 ; The included file can open.
 
-incEmit: ; Append a five-byte resolved source descriptor.
-    LD   DE,(incDPtr)                   ; Start the next five-byte descriptor.
-    LD   A,(incIdx)                     ; Assign the resolved-order ordinal.
-    LD   (DE),A                         ; Descriptor byte zero is that ordinal.
-    INC  DE                             ; Advance to the logical start low byte.
-    XOR  A                              ; Each part starts at logical zero.
-    LD   (DE),A                         ; Store the start low byte.
-    INC  DE                             ; Advance to the logical start high byte.
-    LD   (DE),A                         ; Store the start high byte.
-    INC  DE                             ; Advance to the exclusive end low byte.
-    LD   A,L                            ; HL holds the measured source length.
-    LD   (DE),A                         ; Store the low byte of the half-open end.
-    INC  DE                             ; Advance to the exclusive end high byte.
-    LD   A,H                            ; Complete the 16-bit source length.
-    LD   (DE),A                         ; Store the high byte of the half-open end.
-    INC  DE                             ; Point at the following descriptor slot.
-    LD   (incDPtr),DE                   ; Save the cursor for the next descriptor.
-    RET                                 ; Measure the next file after return.
+;@ROUTINE OUT A,CARRY,DE,HL CLOBBERS BC,ZERO,SIGN,PARITY,HALFCARRY
+; Resume the newest waiting file. Return its ordinal in A, the offset where it
+; resumes in HL and that byte's line in DE. Nothing is read from disk.
 
-;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Parse INCLUDE, one quoted current-drive 8.3 name and the rest of its line.
-; Discovery records the child. Ordering checks whether it was emitted.
+incPop: ; Resume a file whose include has been assembled.
+    LD   HL,incDepth                    ; Release the newest frame.
+    DEC  (HL)                           ; It is no longer in use.
+    LD   A,(HL)                         ; Select it.
+    CALL incFrame                       ; Address its header and saved parent.
+    PUSH HL                             ; Keep the header.
+    EX   DE,HL                          ; HL addresses the saved parent.
+    LD   DE,srcFcb                      ; Restore the FCB.
+    LD   BC,36                          ; All of it.
+    LDIR                                ; Copy it back.
+    LD   DE,srcKey                      ; Restore the cache key.
+    LD   BC,2                           ; One word.
+    LDIR                                ; Copy it back.
+    LD   DE,srcCache                    ; Restore the cached record.
+    LD   BC,128                         ; One record.
+    LDIR                                ; Copy it back.
+    POP  HL                             ; Recover the header.
+    LD   A,(HL)                         ; The file's ordinal.
+    LD   (srcPart),A                    ; It is the current part again.
+    INC  HL                             ; Advance to the resume offset.
+    LD   C,(HL)                         ; Read its low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   B,(HL)                         ; Read it.
+    INC  HL                             ; Advance to the line.
+    LD   E,(HL)                         ; Read the line's low byte.
+    INC  HL                             ; Advance to its high byte.
+    LD   D,(HL)                         ; Read it.
+    LD   (ppLine),DE                    ; Lines continue from there.
+    INC  HL                             ; Advance to the condition base.
+    LD   A,(HL)                         ; Read it.
+    LD   (ppBase),A                     ; Restore it.
+    XOR  A                              ; Clear the per-line state.
+    LD   (ppLastCr),A                   ; The resume byte is a line ending.
+    LD   (ppEnded),A                    ; The file's end is still ahead.
+    LD   (ppDefOk),A                    ; No definition may follow an include.
+    INC  A                              ; Form one.
+    LD   (incHead),A                    ; The file is still in its header.
+    LD   HL,(srcKey)                    ; Is the cached record the file's last?
+    LD   DE,$FF80                       ; Its key would be $FF80.
+    OR   A                              ; Clear carry for the comparison.
+    SBC  HL,DE                          ; Zero when it is.
+    LD   A,0                            ; Not in a directive, not at a line start.
+    JR   NZ,.mode                       ; Keep that.
+    LD   A,4                            ; Mark the last possible record.
+.mode: ; Restore the filter mode.
+    LD   (ppMode),A                     ; Keep it.
+    LD   A,(srcPart)                    ; Return the ordinal.
+    LD   H,B                            ; Return the resume offset.
+    LD   L,C                            ; Complete it.
+    LD   DE,(ppLine)                    ; Return its line.
+    OR   A                              ; Clear carry.
+    RET                                 ; The driver resumes the file.
 
-incLine: ; Parse one quoted leading INCLUDE directive.
-    LD   DE,incKey                      ; Point at the uppercase directive name.
-    LD   B,7                            ; Match all seven letters in INCLUDE.
-.keyByte: ; Compare each of the seven INCLUDE letters.
-    CALL srcNext                        ; Read the next directive-name byte.
-    JP   C,incBad                       ; A truncated name is not a directive.
-    CP   'a'                            ; Test whether ASCII lowercase folding applies.
-    JR   C,.keyCased                    ; Leave uppercase and punctuation unchanged.
-    CP   'z'+1                          ; Test the exclusive lowercase bound.
-    JR   NC,.keyCased                   ; Leave bytes beyond 'z' unchanged.
-    AND  $DF                            ; Fold lowercase ASCII to uppercase.
-.keyCased: ; Compare the case-folded keyword character.
-    EX   DE,HL                          ; Keep the source cursor in HL.
-    CP   (HL)                           ; Match the current byte against INCLUDE.
-    INC  HL                             ; Advance to the next byte of the directive name.
-    EX   DE,HL                          ; Restore HL as the source cursor.
-    JP   NZ,incBad                      ; Reject any mismatched directive byte.
-    DJNZ .keyByte                       ; Check the remaining keyword bytes.
-    CALL srcNext                        ; Read the delimiter after INCLUDE.
-    JP   C,incBad                       ; The keyword must have a following delimiter.
-    CP   ' '                            ; Accept an ordinary space before the filename.
-    JR   Z,.space                       ; Skip additional horizontal whitespace.
-    CP   9                              ; Also accept a horizontal tab as delimiter.
-    JP   NZ,incBad                      ; Require whitespace before the quote.
-.space: ; Find the quoted filename after the directive.
-    CALL srcNext                        ; Read past the current whitespace byte.
-    JP   C,incBad                       ; A filename must follow the delimiter.
-    CP   ' '                            ; Check for another space before the filename.
-    JR   Z,.space                       ; Continue across repeated spaces.
-    CP   9                              ; Check for a repeated tab.
-    JR   Z,.space                       ; Continue across repeated tabs.
-    CP   '"'                            ; The filename must begin with a double quote.
-    JP   NZ,incBad                      ; Reject unquoted include names.
-    CALL incWipe                        ; Prepare a blank current-drive filename.
-    PUSH IX                             ; Save the caller's index register.
-    CALL incName                        ; Store the quoted 8.3 name in the FCB.
-    POP  IX                             ; Restore the caller's index register.
-    RET  C                              ; Propagate an invalid or incomplete filename.
-.trailing: ; Validate text after the closing filename quote.
-    CALL srcNext                        ; Read the next byte after the closing quote.
-    JR   C,incEof                       ; Branch on EOF or offset overflow.
-    CP   ' '                            ; Permit spaces after the filename.
-    JR   Z,.trailing                    ; Skip trailing spaces.
-    CP   9                              ; Permit tabs after the filename.
-    JR   Z,.trailing                    ; Skip trailing tabs.
-    CP   ';'                            ; A semicolon starts a trailing comment.
-    JR   Z,incTail                      ; Validate the rest of the comment line.
-    CP   13                             ; Accept a CR line ending.
-    JR   Z,incLink                      ; The include name is complete.
-    CP   10                             ; Also accept an LF line ending.
-    JP   NZ,incBad                      ; Reject any other trailing byte.
-incLink: ; Deduplicate and order the selected include name.
+;@ROUTINE IN DE CLOBBERS A,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Record a front-end failure at the directive just applied. Only the first
+; failure is kept.
 
-; Deduplicate the eleven-byte CP/M name. Discovery adds missing names.
-; Ordering reports whether each child has already been emitted.
+incFail: ; Record a failure and where it happened.
+    LD   HL,(incErr)                    ; Is a failure already recorded?
+    LD   A,H                            ; Test the pointer.
+    OR   L                              ; Zero means none.
+    RET  NZ                             ; Keep the first.
+    LD   (incErr),DE                    ; Keep the message.
+    LD   A,(srcPart)                    ; The part being read.
+    LD   (incErrAt),A                   ; Keep it.
+    LD   HL,(ppDirAt)                   ; Where the directive started.
+    LD   (incErrAt+1),HL                ; Keep the offset.
+    LD   HL,(ppDirLn)                   ; And its line.
+    LD   (incErrAt+3),HL                ; Keep it.
+    RET                                 ; tkOpen reports the failure.
 
-    CALL ppMark                         ; Retain header IF state for import.
-    LD   A,(ppActive)                   ; Zero means validate, but do not import.
-    OR   A                              ; Zero means validate name only.
-    JR   Z,.ignored                     ; Do not open or order an inactive dependency.
+;@ROUTINE IN DE CLOBBERS A,BC,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Record a file that cannot be read. Its name is printed instead of a
+; position.
 
-    PUSH IX                             ; Save IX across name lookup.
-    PUSH HL                             ; Save the source cursor.
-    CALL incFind                        ; Reuse a known child or append its name.
-    POP  HL                             ; Restore the source cursor.
-    POP  IX                             ; Restore the caller's index register.
-    RET  C                              ; Return a name-capacity failure to the resolver.
-    PUSH HL                             ; Save cursor across child lookup.
-    CALL incPend                        ; Return the pending-child status.
-    POP  HL                             ; Restore cursor. preserve result flags.
-    RET                                 ; Return the pending-child status.
-.ignored: ; Skip importing a validated inactive dependency.
-    XOR  A                              ; An inactive import creates no pending child.
-    RET                                 ; Continue preflight with the next directive.
-incTail: ; Consume a validated include trailing comment.
-    CALL srcSkip                        ; Consume the trailing comment through line end.
-    JR   C,incEof                       ; Check the carried end status.
-    JR   incLink                        ; The include line has no more source text.
-incEof: ; Accept an include at ordinary EOF.
-    OR   A                              ; Zero means EOF. NZ means overflow.
-    JP   NZ,incBad                      ; Reject an offset that wrapped.
-    JR   incLink                        ; Accept the include at end of input.
-incBad: ; Return malformed-include detail.
-    LD   DE,msgInc                      ; Select the malformed-include message.
-    SCF                                 ; Mark the include directive as invalid.
-    RET                                 ; Return the message pointer and failure flag.
+incLost: ; Record a failed read and the file's name.
+    LD   HL,(incErr)                    ; Is a failure already recorded?
+    LD   A,H                            ; Test the pointer.
+    OR   L                              ; Zero means none.
+    RET  NZ                             ; Keep the first.
+    LD   (incErr),DE                    ; Keep the message.
+    PUSH DE                             ; incName uses DE.
+    CALL incName                        ; Keep the file's name.
+    POP  DE                             ; Restore the message.
+    RET                                 ; tkOpen reports the failure.
 
-;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Parse one quoted include filename into the working CP/M FCB.
+;@ROUTINE CLOBBERS A,BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Keep the name in srcFcb for the failure message.
 
-incName: ; Parse a quoted current-drive 8.3 include name.
-    LD   IX,cpFcb+1                     ; Begin writing the eight-byte base field.
-    LD   D,8                            ; Set the base-name capacity.
-    LD   C,0                            ; Count characters in the current name field.
-.byte: ; Inspect the next quoted filename byte.
-    CALL srcNext                        ; Read the next quoted filename byte.
-    JP   C,.bad                         ; Require a complete closing quote.
-    CP   '"'                            ; Check for the end of the filename.
-    JR   Z,.done                        ; Validate that the final field is nonempty.
-    CP   '.'                            ; Check for the single base/extension separator.
-    JR   NZ,.data                       ; Other bytes belong to the current field.
-    LD   A,D                            ; Read the active field's maximum width.
-    CP   8                              ; Dot is valid only after the base.
-    JP   NZ,.bad                        ; Reject repeated separators.
-    LD   A,C                            ; Read the number of base-name characters.
-    OR   A                              ; Set Z when the base field is empty.
-    JP   Z,.bad                         ; Require at least one base character.
-    LD   IX,cpFcb+9                     ; Continue writing at the three-byte type field.
-    LD   D,3                            ; Set the extension capacity.
-    LD   C,0                            ; Start the extension character count.
-    JR   .byte                          ; Read the first extension character.
-.data: ; Fold a filename byte before validation.
-    CP   'a'                            ; Test for an ASCII lowercase filename letter.
-    JR   C,.cased                       ; Keep non-lowercase bytes unchanged.
-    CP   'z'+1                          ; Test the lowercase upper bound.
-    JR   NC,.cased                      ; Keep bytes above 'z' unchanged.
-    AND  $DF                            ; Fold ASCII lowercase for lookup.
-.cased: ; Validate and store the normalised filename byte.
-    CALL cmdChar                        ; Reject characters outside the CP/M name set.
-    JP   C,.bad                         ; Carry marks a forbidden filename character.
-    INC  C                              ; Count this field's next byte.
-    LD   B,A                            ; Save byte during capacity check.
-    LD   A,D                            ; Load the active base or extension limit.
-    CP   C                              ; Compare limit with new length.
-    JP   C,.bad                         ; Reject a field wider than 8.3 allows.
-    LD   A,B                            ; Restore the normalised filename byte.
-    LD   (IX+0),A                       ; Store it in the current FCB name field.
-    INC  IX                             ; Advance to the next character slot.
-    JR   .byte                          ; Continue through the closing quote.
-.done: ; Require a nonempty final filename field.
-    LD   A,C                            ; Read the character count of the final field.
-    OR   A                              ; Set Z only when that field is empty.
-    RET  NZ                             ; Accept a nonempty base or extension field.
-.bad: ; Return malformed quoted-name detail.
-    LD   DE,msgInc                      ; Select the malformed-include message.
-    SCF                                 ; Mark the filename as invalid.
-    RET                                 ; Return failure to the directive parser.
+incName: ; Copy the failing file's name.
+    LD   HL,srcFcb                      ; Its drive and 8.3 name.
+    LD   DE,incErrNm                    ; The failure's name field.
+    LD   BC,12                          ; Drive and eleven name bytes.
+    LDIR                                ; Copy them.
+    RET                                 ; The name is kept.
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Visit a discovered include child when dependency scanning is active.
+;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+; Print a recorded front-end failure: FILE:line:column: message, or the
+; failing file's name and message when it could not be read.
 
-incPend: ; Report whether a discovered include child is pending.
-    LD   E,A                            ; Keep the child ordinal across the mode check.
-    LD   A,(incMode)                    ; Read whether this is discovery or ordering.
-    OR   A                              ; Discovery mode is zero.
-    RET  Z                              ; Discovery needs no pending-child result.
-    LD   A,E                            ; Restore the child's retained-name ordinal.
-    LD   (incChild),A                   ; Keep it for the ordering walk.
-    CALL incSlot                        ; Address its eleven-byte name record.
-    BIT  7,(HL)                         ; Test the emitted marker in the first name byte.
-    LD   A,0                            ; Zero means child already emitted.
-    RET  NZ                             ; An emitted child is ready.
-    INC  A                              ; One means child is still pending.
-    RET                                 ; Return one for a pending child.
+incShow: ; Print the recorded failure.
+    LD   A,(incErrAt)                   ; Is there a position?
+    CP   $FF                            ; $FF means none.
+    JR   Z,.noAt                        ; Print the name instead.
+    LD   (stAtPart),A                   ; Report the failure's part.
+    LD   HL,(incErrAt+1)                ; Its offset.
+    LD   (stAtOff),HL                   ; Through the usual diagnostic fields.
+    LD   HL,(incErrAt+3)                ; Its line.
+    LD   (stAtLine),HL                  ; Keep it.
+    CALL errWhere                       ; Print FILE:line:column.
+    CALL errSep                         ; Separate it from the message.
+.noAt: ; Print the failing file's name, if any.
+    LD   A,(incErrNm)                   ; Was a name recorded?
+    CP   $FF                            ; $FF means none.
+    JR   Z,.text                        ; Print the message alone.
+    LD   HL,incErrNm                    ; Address the name.
+    CALL cpPutFcb                       ; Print it.
+.text: ; Print the message.
+    LD   DE,(incErr)                    ; Address it.
+    LD   A,(DE)                         ; Does it start a new line?
+    CP   13                             ; CR LF leads a standalone message.
+    JR   NZ,.print                      ; No: print it all.
+    INC  DE                             ; Skip the CR.
+    INC  DE                             ; Skip the LF.
+.print: ; Print the message.
+    JP   cpPrint                        ; Print it and return.
 
-;@ROUTINE OUT A CLOBBERS B,DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Reset the working include FCB to a blank 8.3 filename.
-
-incWipe: ; Initialise a blank working include-name FCB.
-    LD   DE,cpFcb                       ; Address the temporary working FCB.
-    XOR  A                              ; Select the current drive.
-    LD   (DE),A                         ; Clear the explicit drive byte.
-    INC  DE                             ; Advance to the eleven-byte 8.3 name.
-    LD   B,11                           ; Clear all eight base and three extension bytes.
-    LD   A,' '                          ; CP/M represents unused name bytes with spaces.
-    CALL pubFill                        ; Fill the name and extension fields.
-    JP   pubClear                       ; Clear the remaining FCB control bytes.
-
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY,DE CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Find an exact retained name, or append it if capacity remains.
 
 incFind: ; Find or allocate an exact retained source name.
@@ -409,7 +407,6 @@ incFind: ; Find or allocate an exact retained source name.
     LD   B,11                           ; Compare the complete base and extension fields.
 .byte: ; Compare each of the eleven name bytes.
     LD   A,(HL)                         ; Read one byte from the retained name.
-    AND  $7F                            ; Ignore the emitted bit in the name.
     CP   (IX+0)                         ; Compare with the corresponding candidate byte.
     JR   NZ,.next                       ; Try the next ordinal on any mismatch.
     INC  HL                             ; Advance the retained-name cursor.
@@ -429,20 +426,24 @@ incFind: ; Find or allocate an exact retained source name.
     CP   255                            ; The byte-sized table has no ordinal 255 entry.
     JR   Z,.full                        ; Reject a 256th distinct source file.
     PUSH AF                             ; Save the new source ordinal.
+    CALL incStat                        ; Address its state.
+    LD   (HL),0                         ; It has not begun.
+    POP  AF                             ; Recover the ordinal.
+    PUSH AF                             ; Keep it for the return.
     CALL incSlot                        ; Address the next eleven-byte table slot.
     EX   DE,HL                          ; Put the slot destination in DE for LDIR.
     LD   HL,cpFcb+1                     ; Point to the normalised 8.3 name bytes.
     LD   BC,11                          ; Copy name and type, not drive.
     LDIR                                ; Store the new name in its ordinal slot.
-    LD   HL,incFound                    ; Address the count published to the resolver.
+    LD   HL,incFound                    ; Address the count of names.
     INC  (HL)                           ; Publish the completed name slot.
     POP  AF                             ; Return the allocated ordinal.
     OR   A                              ; Clear carry to mark successful insertion.
     RET                                 ; Return the new retained-name identity.
 .full: ; Reject an excess source part before writing the table.
     LD   DE,msgCap                      ; Select the part-capacity diagnostic.
-    SCF                                 ; Mark the resolver's name table as full.
-    RET                                 ; Return without changing the retained-name count.
+    SCF                                 ; Mark the name table as full.
+    RET                                 ; Return without changing the name count.
 
 ;@ROUTINE IN A OUT A,HL CLOBBERS DE,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert a source ordinal to its retained name-table entry address.
@@ -460,4 +461,3 @@ incSlot: ; Compute an eleven-byte source-name slot address.
     LD   DE,incNames                    ; Load the base of the retained-name table.
     ADD  HL,DE                          ; Convert the byte offset to the slot address.
     RET                                 ; Return this name-record address.
-

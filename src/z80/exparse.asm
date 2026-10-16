@@ -193,91 +193,43 @@ exQueue: ; Publish the checked addend and patch site through syAdd.
     LD   C,L                                            ; Put checked signed addend in C.
     LD   HL,(exSrcOff)                                  ; The deferred name is the reference.
     LD   (syAddOff),HL                                  ; syAdd stores it with the record.
+    LD   HL,(exSrcLn)                                   ; Its line.
+    LD   (syAddLn),HL                                   ; syAdd stores it too.
     JP   syAdd                                          ; Tail-call pending-record publication.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
-; Recognise LOW(...) and HIGH(...) without consuming the following token.
-; The packed RADIX-40 key must match the operator name exactly, and the next
-; non-space source byte must then be '('.
+;@ROUTINE OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Report whether the name packed into exRKey is LOW or HIGH, returning its
+; marker in A with carry clear. It is a function only if '(' follows, which
+; the caller checks once it has read the next token.
 
-exLowHi: ; Recognise the exact LOW/HIGH names followed by a parenthesis.
-; Length narrows candidates to three-character LOW or four-character HIGH.
-; C holds the marker until a match returns it in A.
-
-    LD   A,(tkRecord+tkLenAt)                           ; Read the candidate name's byte length.
+exLowHi: ; Recognise the exact LOW and HIGH names.
+    LD   A,(tkRecord+tkLenAt)                           ; Read the name's byte length.
     CP   3                                              ; Could it be LOW?
-    JR   Z,.lowName                                     ; Yes: select the LOW signature.
+    JR   Z,.low                                         ; Yes: compare with LOW.
     CP   4                                              ; Could it be HIGH?
-    JR   NZ,.notFunc                                    ; Other lengths are ordinary symbols.
-    LD   C,exUHigh                                      ; Select the HIGH unary marker.
-    LD   DE,$336F                                       ; Select the packed first word, HIG.
-    JR   .pack                                          ; Pack and compare the candidate.
-.lowName: ; Select LOW signature and marker.
-    LD   C,exULow                                       ; Select the LOW unary marker.
-    LD   DE,$4D6F                                       ; Select the packed LOW signature.
-.pack: ; Pack and compare the prospective function name.
+    JR   NZ,.no                                         ; Other lengths are ordinary symbols.
 
-; Pack the lexeme into exRKey and compare its first word with LOW or HIG.
-; A three-character name has an empty second word, so LOW is then exact.
-; HIGH also needs its second word, H, so that HIGX and similar stay symbols.
+; HIGH packs as HIG and then H, so HIGX and similar stay symbols.
 
-    PUSH DE                                             ; Preserve the selected packed signature.
-    PUSH BC                                             ; Preserve the marker and caller register B.
-    LD   HL,(tkRecord+tkLexAt)                          ; Load the candidate lexeme address.
-    LD   B,A                                            ; Supply its length to the RADIX-40 packer.
-    LD   DE,exRKey                                      ; Use result-key workspace as temporary output.
-    CALL nmPack                                         ; Pack case-insensitively for exact comparison.
-    POP  BC                                             ; Restore marker C and caller B.
-    POP  DE                                             ; Restore the selected signature.
-    JR   C,.notFunc                                     ; Invalid packed text is not a function name.
-    LD   HL,(exRKey)                                    ; Load the candidate's first packed word.
-    OR   A                                              ; Clear carry before subtraction.
-    SBC  HL,DE                                          ; Compare it with LOW or HIG.
-    JR   NZ,.notFunc                                    ; A mismatch leaves it as an ordinary name.
-    LD   A,C                                            ; Recover the selected unary marker.
-    CP   exUHigh                                        ; Only HIGH has a fourth character to check.
-    JR   NZ,.look                                       ; LOW is already an exact match.
-    LD   HL,(exRKey+2)                                  ; Load the candidate's second packed word.
+    LD   HL,(exRKey+2)                                  ; Load the second packed word.
     LD   DE,$3200                                       ; HIGH packs its final H as $3200.
     OR   A                                              ; Clear carry before subtraction.
-    SBC  HL,DE                                          ; Compare the fourth character exactly.
-    JR   NZ,.notFunc                                    ; HIGX and similar remain ordinary names.
-.look: ; Look ahead for the opening parenthesis.
-
-; tkHead starts immediately after the name. Read through horizontal space
-; directly so classification does not advance or overwrite tkRecord.
-
-    LD   HL,(tkHead)                                    ; Start lookahead immediately after the name.
-    LD   DE,(tkSrcLen)                                  ; Load the source part's exclusive end offset.
-.scan: ; Scan for opening parenthesis.
-    LD   A,H                                            ; Compare cursor and end high bytes first.
-    CP   D                                              ; Are they in the same 256-byte page?
-    JR   NZ,.read                                       ; No: the cursor has not reached the exact end.
-    LD   A,L                                            ; Compare their low bytes.
-    CP   E                                              ; Has lookahead reached the exclusive end?
-    JR   Z,.notFunc                                     ; Yes: no opening parenthesis follows.
-.read: ; Read the next function-lookahead source byte.
-    PUSH DE                                             ; Preserve source end across host access.
-    PUSH HL                                             ; Preserve cursor across host access.
-    LD   A,(tkPart)                                     ; Supply the active source-part ordinal.
-    CALL tkRead                                         ; Read without advancing tokenizer.
-    POP  HL                                             ; Restore the lookahead cursor.
-    POP  DE                                             ; Restore the source end.
-    CP   $20                                            ; Is this an ASCII space?
-    JR   Z,.space                                       ; Yes: skip it and continue looking.
-    CP   $09                                            ; Is this a horizontal tab?
-    JR   Z,.space                                       ; Yes: skip it too.
-    CP   $28                                            ; Is the next significant byte '('?
-    JR   NZ,.notFunc                                    ; No: treat the name as an ordinary symbol.
-    LD   A,C                                            ; Return the selected LOW/HIGH marker.
-    OR   A                                              ; Clear carry to report function recognition.
-    RET                                                 ; Leave the tokenizer record unchanged.
-.space: ; Skip one space or tab during function lookahead.
-    INC  HL                                             ; Advance past one horizontal-space byte.
-    JR   .scan                                          ; Inspect the next source byte.
-.notFunc: ; Treat name as an ordinary symbol.
-    SCF                                                 ; Report that the name is not a byte function.
-    RET                                                 ; Leave A unspecified for ordinary name.
+    SBC  HL,DE                                          ; Compare the fourth character.
+    JR   NZ,.no                                         ; Not HIGH.
+    LD   DE,$336F                                       ; Select the packed first word, HIG.
+    LD   A,exUHigh                                      ; Select the HIGH marker.
+    JR   .first                                         ; Compare the first word.
+.low: ; Select the LOW signature.
+    LD   DE,$4D6F                                       ; Select the packed LOW signature.
+    LD   A,exULow                                       ; Select the LOW marker.
+.first: ; Compare the first packed word.
+    LD   HL,(exRKey)                                    ; Load the first packed word.
+    OR   A                                              ; Clear carry, keeping the marker.
+    SBC  HL,DE                                          ; Compare it with LOW or HIG.
+    RET  Z                                              ; A match returns the marker.
+.no: ; Report an ordinary name.
+    SCF                                                 ; Carry means not LOW or HIGH.
+    RET                                                 ; Leave A unspecified.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Push unary or function marker A with the token position. These markers
@@ -348,14 +300,29 @@ exTerm: ; Parse a primary while exInTerm indicates a value is required.
     JR   .advance                                       ; Consume '$' and publish the value.
 .name: ; Distinguish a byte function from a symbol name.
 
-; LOW and HIGH are identified before symbol packing. Other names use the
-; symbol resolver, which may produce a concrete value or a deferred key.
+; LOW or HIGH is a function only when '(' follows it. The name is packed and
+; its position kept, then the next token decides. No byte is read ahead.
 
-    CALL exLowHi                                        ; Recognise LOW/HIGH only when followed by '('.
-    JR   NC,.function                                   ; Stack the function marker when recognised.
-    CALL exName                                         ; Resolve or defer an ordinary symbol name.
-    RET  C                                              ; Preserve packing, scope or tokenizer failure.
-    JR   .publish                                       ; Symbol parsing consumed the name.
+    CALL exIdent                                        ; Pack the name and keep its position.
+    RET  C                                              ; Preserve a naming failure.
+    CALL exLowHi                                        ; Is it LOW or HIGH?
+    JR   NC,.keep                                       ; Keep its marker.
+    XOR  A                                              ; Zero means an ordinary name.
+.keep: ; Advance past the name, keeping the marker.
+    PUSH AF                                             ; Keep the marker.
+    CALL exNext                                         ; Read the token after the name.
+    POP  BC                                             ; B is the marker. Flags are exNext's.
+    RET  C                                              ; Preserve a lexical failure.
+    LD   A,B                                            ; Was the name LOW or HIGH?
+    OR   A                                              ; Zero means an ordinary name.
+    JR   Z,.symbol                                      ; Resolve it.
+    LD   A,(tkRecord+tkKindAt)                          ; Read the token after the name.
+    CP   tkLParen                                       ; Does '(' follow?
+    JR   Z,.function                                    ; Yes: stack the function.
+.symbol: ; Resolve an ordinary name, already consumed.
+    CALL exLookup                                       ; Resolve or defer the packed name.
+    RET  C                                              ; Preserve a scope failure.
+    JR   .publish                                       ; Publish its value.
 .advance: ; Advance before value publication.
 
 ; Numbers and '$' consume the next token before publishing the value stack
@@ -375,17 +342,20 @@ exTerm: ; Parse a primary while exInTerm indicates a value is required.
     XOR  A                                              ; Switch to the operator grammar half.
     LD   (exInTerm),A                                   ; Record that one value is now available.
     RET                                                 ; Return to the main parse loop.
-.function: ; Stack LOW or HIGH and consume its function name.
+.function: ; Stack LOW or HIGH at the name's position.
 
-; Retain the LOW or HIGH marker, consume the name and feed the following '('
-; back through the same parenthesis path used for ordinary grouping.
+; The marker carries the name's position, then the '(' that follows takes the
+; ordinary parenthesis path.
 
-    CALL exUPush                                        ; Push LOW/HIGH at function name.
+    LD   A,B                                            ; Recover the marker.
+    LD   (exOper),A                                     ; Store it in the operator record.
+    LD   A,(exIdPart)                                   ; Position it at the name.
+    LD   (exOpPart),A                                   ; Store the name's part.
+    LD   HL,(exIdOff)                                   ; Load the name's offset.
+    LD   (exOpOff),HL                                   ; Complete the positioned record.
+    CALL exOpPush                                       ; Push the marker.
     RET  C                                              ; Preserve operator-stack capacity failure.
-    CALL exNext                                         ; Consume the function name.
-    RET  C                                              ; Preserve lexical failure before its argument.
-    LD   A,(tkRecord+tkKindAt)                          ; Read the required following token kind.
-    JR   .needOpen                                      ; Reuse ordinary opening-parenthesis handling.
+    JR   .open                                          ; Open the group at the '('.
 
 ;@ROUTINE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,IX,IY,SIGN,PARITY,HALFCARRY
 ; Parse the grammar half that follows a value. A recognised binary operator is
@@ -450,19 +420,28 @@ exInfix: ; Parse a binary operator, closing group or caller delimiter.
     XOR  A                                              ; Return zero to signal expression completion.
     RET                                                 ; Leave tkRecord on the caller's delimiter.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE,IY
-; Resolve the name while retaining its exact source position for symbol
-; diagnostics. The packed key stays in exRKey for a possible deferred result.
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+; Pack the current name into exRKey and keep its exact source position for
+; symbol diagnostics. The name stays the current token.
 
-exName: ; Resolve the current name while retaining its diagnostic position.
+exIdent: ; Pack the current name and keep its position.
     LD   A,(tkRecord+tkPartAt)                          ; Capture the name token's source-part ordinal.
     LD   (exIdPart),A                                   ; Hold it for this name's own failures.
     LD   HL,(tkRecord+tkOffAt)                          ; Capture the name token's source-byte offset.
     LD   (exIdOff),HL                                   ; Hold it until the name is resolved.
+    LD   HL,(tkRecord+tkLineAt)                         ; Capture the name token's line.
+    LD   (exIdLine),HL                                  ; Hold it with the offset.
     CALL tkText                                         ; Expose the current name text as HL/B.
     LD   DE,exRKey                                      ; Select the six-byte packed-key workspace.
     CALL nmPackId                                       ; Pack and validate the symbol name.
     JP   C,exSyFail                                     ; Wrap a naming or scope-independent failure.
+    RET                                                 ; The key is in exRKey.
+
+;@ROUTINE OUT A,CARRY CLOBBERS BC,HL,IX,ZERO,SIGN,PARITY,HALFCARRY,DE,IY
+; Resolve the name packed by exIdent, already consumed. The packed key stays
+; in exRKey for a possible deferred result.
+
+exLookup: ; Resolve the packed name at its saved position.
     LD   HL,exRKey                                      ; Supply the packed key for lookup.
     CALL syFind                                         ; Search current global/private symbol state.
     JR   C,.missing                                     ; Distinguish absence from other lookup errors.
@@ -487,7 +466,8 @@ exName: ; Resolve the current name while retaining its diagnostic position.
     JR   .finish                                        ; Store resolution state and consume the name.
 .defined: ; Publish a defined non-negative symbol value.
     CALL exStore                                        ; Store concrete zero-extended word.
-    JP   exNext                                         ; Consume the symbol token and return.
+    OR   A                                              ; Clear carry for success.
+    RET                                                 ; The value is published.
 .missing: ; Check why lookup failed.
 
 ; syFind errors other than not-found, such as a private name outside a global
@@ -503,18 +483,19 @@ exName: ; Resolve the current name while retaining its diagnostic position.
 ; Only this deferred name owns the saved anchor, so a defined name or a later
 ; concrete subexpression cannot move the undefined-symbol diagnostic.
 
-    LD   HL,exIdPart                                    ; Copy this name's part and offset...
+    LD   HL,exIdPart                                    ; Copy this name's position...
     LD   DE,exSrcPos                                    ; ...into the deferred symbol's anchor.
-    LD   BC,3                                           ; One part byte and one offset word.
+    LD   BC,5                                           ; Part byte, offset word and line word.
     LDIR                                                ; The anchor now names the pending symbol.
     XOR  A                                              ; Form a zero initial addend.
     LD   (exRVal),A                                     ; Clear addend low byte.
     LD   (exRVal+1),A                                   ; Clear addend middle byte.
     LD   (exRVal+2),A                                   ; Clear addend sign byte.
     INC  A                                              ; Select exFWord deferred state.
-.finish: ; Store resolution state and consume token.
+.finish: ; Store resolution state.
     LD   (exRForm),A                                    ; Record concrete/plain/LOW/HIGH result state.
-    JP   exNext                                         ; Consume the name and return.
+    OR   A                                              ; Clear carry for success.
+    RET                                                 ; The value is published.
 
 ;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,C,HL
 ; Map contiguous operator tokens to a packed byte. Its high nibble is

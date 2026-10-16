@@ -395,7 +395,16 @@ describe("Binary includes", () => {
     return root;
   }
 
-  test("INCBIN snapshots one confined binary and preserves native addresses", async (t) => {
+  async function assembleBytes(root) {
+    const result = await assembleAtomProject({
+      root,
+      entry: "main.asm",
+      target: { start: 0x4000, capacity: 0x100 },
+    });
+    return [...materializeAtomGeneration(result.generation).bytes];
+  }
+
+  test("INCBIN reads its file when assembly reaches it", async (t) => {
     const source = [
       "ORG 4000H",
       "JR AFTER",
@@ -408,42 +417,30 @@ describe("Binary includes", () => {
       "main.asm": source,
       "assets/payload.bin": Uint8Array.from([0xde, 0xad, 0xbe]),
     });
-    const project = await resolveAtomProject({ root, entry: "main.asm" });
-    const part = project.parts[0];
-    assert.equal(decoder.decode(part.originalBytes), source);
-    assert.equal(part.compilerBytes.length, part.originalBytes.length);
-    assert.match(decoder.decode(part.compilerBytes), /^DATA: DS 3,0\s*$/m);
-    assert.deepEqual(part.binaryIncludes.map(({ logicalIdentity, line, bytes }) => ({
-      logicalIdentity,
-      line,
-      bytes: [...bytes],
-    })), [{ logicalIdentity: "assets/payload.bin", line: 3, bytes: [0xde, 0xad, 0xbe] }]);
 
-    await fs.writeFile(path.join(root, "assets/payload.bin"), Uint8Array.from([1, 2, 3]));
-    const assembled = await assembleResolvedAtomProject(project, {
-      target: { start: 0x4000, capacity: 0x100 },
-    });
-    assert.deepEqual([...materializeAtomGeneration(assembled.generation).bytes], [
+    // Resolving the project reads only the source. The source is assembled
+    // as written: nothing is rewritten in advance.
+    const project = await resolveAtomProject({ root, entry: "main.asm" });
+    assert.equal(decoder.decode(project.parts[0].compilerBytes), source);
+    assert.deepEqual(await assembleBytes(root), [
       0x18, 0x03, 0xde, 0xad, 0xbe, 0x21, 0x02, 0x40,
     ]);
-    assert.equal(assembled.generation.finalCursor, 0x4008);
   });
 
-  test("INCBIN rejects malformed, escaping, missing, and oversized inputs", async (t) => {
+  test("INCBIN rejects malformed, escaping, missing and oversized inputs at its line", async (t) => {
     const cases = [
-      ['INCBIN payload.bin\n', {}, "preprocessing", "invalid-incbin"],
-      ['INCBIN "café.bin"\n', {}, "preprocessing", "invalid-incbin"],
-      ['INCBIN "../payload.bin"\n', {}, "dependency", "root-escape"],
-      ['INCBIN "missing.bin"\n', {}, "dependency", "missing-source"],
-      ['INCBIN "payload.bin", LENGTH\n', { "payload.bin": Uint8Array.of(1) }, "preprocessing", "invalid-incbin-count"],
-      ['INCBIN "payload.bin", 2\n', { "payload.bin": Uint8Array.of(1) }, "preprocessing", "incbin-size"],
-      ['INCBIN "large.bin"\n', { "large.bin": new Uint8Array(0x10000) }, "preprocessing", "incbin-size"],
+      ['INCBIN payload.bin\n', {}, "expected a quoted string"],
+      ['INCBIN "../payload.bin"\n', {}, "could not read the INCBIN file"],
+      ['INCBIN "missing.bin"\n', {}, "could not read the INCBIN file"],
+      ['INCBIN "payload.bin", LENGTH\n', { "payload.bin": Uint8Array.of(1) }, "symbol that is not defined yet"],
+      ['INCBIN "payload.bin", 2\n', { "payload.bin": Uint8Array.of(1) }, "INCBIN count is larger than the file"],
+      ['INCBIN "large.bin"\n', { "large.bin": new Uint8Array(0x10000) }, "INCBIN needs a byte count here"],
     ];
-    for (const [source, files, category, code] of cases) {
+    for (const [source, files, message] of cases) {
       const root = await projectRoot(t, { "main.asm": source, ...files });
       await assert.rejects(
-        () => resolveAtomProject({ root, entry: "main.asm" }),
-        (error) => error?.category === category && error?.code === code && error?.location?.line === 1,
+        () => assembleBytes(root),
+        (error) => error?.category === "source" && error.message.includes(message) && error.diagnostic?.line === 1,
         source,
       );
     }
@@ -451,27 +448,20 @@ describe("Binary includes", () => {
     const inactive = await projectRoot(t, {
       "main.asm": '%IF 0\nINCBIN "missing.bin"\n%ENDIF\nNOP\n',
     });
-    const result = await assembleAtomProject({
-      root: inactive,
-      entry: "main.asm",
-      target: { start: 0x4000, capacity: 1 },
-    });
-    assert.deepEqual([...materializeAtomGeneration(result.generation).bytes], [0x00]);
+    assert.deepEqual(await assembleBytes(inactive), [0x00]);
 
     const boundary = await projectRoot(t, {
-      "main.asm": 'INCBIN "empty.bin"\nINCBIN "maximum.bin"\n',
+      "main.asm": 'INCBIN "empty.bin"\nINCBIN "maximum.bin", 4\n',
       "empty.bin": new Uint8Array(0),
-      "maximum.bin": new Uint8Array(0xffff),
+      "maximum.bin": new Uint8Array(0xffff).fill(7),
     });
-    const project = await resolveAtomProject({ root: boundary, entry: "main.asm" });
-    assert.deepEqual(project.parts[0].binaryIncludes.map(({ bytes }) => bytes.length), [0, 0xffff]);
+    assert.deepEqual(await assembleBytes(boundary), [7, 7, 7, 7]);
 
     const countedPrefix = await projectRoot(t, {
       "main.asm": 'INCBIN "large.bin", 3\n',
       "large.bin": new Uint8Array(0x10000).fill(0x5a),
     });
-    const prefixProject = await resolveAtomProject({ root: countedPrefix, entry: "main.asm" });
-    assert.deepEqual([...prefixProject.parts[0].binaryIncludes[0].bytes], [0x5a, 0x5a, 0x5a]);
+    assert.deepEqual(await assembleBytes(countedPrefix), [0x5a, 0x5a, 0x5a]);
   });
 });
 
@@ -821,12 +811,11 @@ describe("Native object builder", () => {
   const encoder = new TextEncoder();
   const SOURCE_SELECTOR = 0x90;
   const OUTPUT_SELECTOR = 0x91;
-  const CONFIG = 0x3800;
-  const PART_TABLE = 0x3900;
-  const PART_NAMES = 0x3c00;
-  const OUTPUT_NAME = 0x3d00;
-  const BUILD = 0x3d20;
-  const DESCRIPTORS = 0x3d40;
+  const CONFIG = 0x3a00;
+  const PART_TABLE = 0x3b00;
+  const PART_NAMES = 0x3e00;
+  const OUTPUT_NAME = 0x3f00;
+  const BUILD = 0x3f20;
   const COMMON_WORKSPACE = 0x4400;
   const SYMBOLS = 0x5000;
   const PENDING = 0x8000;
@@ -911,27 +900,21 @@ describe("Native object builder", () => {
     putWord(memory, CONFIG + 4, OUTPUT_NAME);
     memory[CONFIG + 6] = 3;
     putWord(memory, CONFIG + 7, commonWorkspace);
+    memory[CONFIG + 9] = sources.length;
     memory.set(encoder.encode("out"), OUTPUT_NAME);
 
     for (let ordinal = 0; ordinal < sources.length; ordinal += 1) {
       memory[PART_NAMES + ordinal] = ordinal;
       putWord(memory, PART_TABLE + ordinal * 3, PART_NAMES + ordinal);
       memory[PART_TABLE + ordinal * 3 + 2] = 1;
-      const sourceLength = encoder.encode(sources[ordinal]).length;
-      const descriptor = DESCRIPTORS + ordinal * 5;
-      memory[descriptor] = ordinal;
-      putWord(memory, descriptor + 1, 0);
-      putWord(memory, descriptor + 3, sourceLength);
     }
 
-    memory[BUILD] = sources.length;
-    putWord(memory, BUILD + 1, DESCRIPTORS);
-    putWord(memory, BUILD + 3, symbolStart);
-    putWord(memory, BUILD + 5, symbolEnd);
-    putWord(memory, BUILD + 7, pendingStart);
-    putWord(memory, BUILD + 9, pendingEnd);
-    putWord(memory, BUILD + 11, options.targetStart ?? 0x100);
-    putWord(memory, BUILD + 13, options.targetCapacity ?? 0x4000);
+    putWord(memory, BUILD + 0, symbolStart);
+    putWord(memory, BUILD + 2, symbolEnd);
+    putWord(memory, BUILD + 4, pendingStart);
+    putWord(memory, BUILD + 6, pendingEnd);
+    putWord(memory, BUILD + 8, options.targetStart ?? 0x100);
+    putWord(memory, BUILD + 10, options.targetCapacity ?? 0x4000);
 
     const invoke = (entry, setup, maximum = 20_000_000) => {
       memory[stack] = RETURN_SENTINEL & 0xff;

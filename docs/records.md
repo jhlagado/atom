@@ -14,8 +14,9 @@ fails if any of them drift.
 
 ## How the records connect
 
-1. The **build descriptor** tells the driver where the source parts, the symbol
-   and pending arenas and the output range are.
+1. The **build descriptor** tells the driver where the symbol and pending
+   arenas and the output range are. The host supplies the source one part at a
+   time, as the driver asks for it.
 2. The tokenizer reads source bytes and publishes one **token record** at a
    time.
 3. Names are packed into RADIX-40 words. Each name the source uses gets a
@@ -36,16 +37,17 @@ fails if any of them drift.
 <!-- generated:layouts -->
 ### Token record
 
-9 bytes in tkRecord. Written by the tokenizer (tkNext). Read by the statement layer, expressions and the parser.
+11 bytes in tkRecord. Written by the tokenizer (tkNext). Read by the statement layer, expressions and the parser.
 
 | Offset | Size | Field | Meaning |
 | ---: | ---: | --- | --- |
 | 0 | 1 | kind (`tkKindAt`) | Token kind: name, number, punctuation, end of line |
 | 1 | 1 | part (`tkPartAt`) | Source part the token came from |
 | 2 | 2 | offset (`tkOffAt`) | Byte offset of the token in its part |
-| 4 | 2 | lexeme (`tkLexAt`) | Address of the token's text in the lexeme buffer |
-| 6 | 1 | length (`tkLenAt`) | Length of that text in bytes |
-| 7 | 2 | value (`tkValAt`) | A number's value |
+| 4 | 2 | line (`tkLineAt`) | Line of the token in its part, counting from one |
+| 6 | 2 | lexeme (`tkLexAt`) | Address of the token's text in the lexeme buffer |
+| 8 | 1 | length (`tkLenAt`) | Length of that text in bytes |
+| 9 | 2 | value (`tkValAt`) | A number's value |
 
 ### Symbol record
 
@@ -72,7 +74,7 @@ fails if any of them drift.
 
 ### Build reference
 
-13 bytes in prRawRef. Written by the parser, for an operand naming a later symbol. Read by refBind.
+15 bytes in prRawRef. Written by the parser, for an operand naming a later symbol. Read by refBind.
 
 | Offset | Size | Field | Meaning |
 | ---: | ---: | --- | --- |
@@ -83,10 +85,11 @@ fails if any of them drift.
 | 9 | 1 | field (`prBField`) | Offset of the patched bytes in the instruction |
 | 10 | 1 | part (`prBPart`) | Source part of the reference |
 | 11 | 2 | source (`prBSrc`) | Source offset of the reference |
+| 13 | 2 | line (`prBLine`) | Source line of the reference |
 
 ### Public reference
 
-9 bytes in prPubRef. Written by refBind, once the symbol has a record. Read by refCheck and refQueue.
+11 bytes in prPubRef. Written by refBind, once the symbol has a record. Read by refCheck and refQueue.
 
 | Offset | Size | Field | Meaning |
 | ---: | ---: | --- | --- |
@@ -97,10 +100,11 @@ fails if any of them drift.
 | 5 | 1 | field (`prRField`) | Offset of the patched bytes in the instruction |
 | 6 | 1 | part (`prRPart`) | Source part of the reference |
 | 7 | 2 | source (`prRSrc`) | Source offset of the reference |
+| 9 | 2 | line (`prRLine`) | Source line of the reference |
 
 ### Pending record
 
-9 bytes in the pending arena. Written by refQueue, through syAdd. Read by outFixUp, when the symbol is defined.
+11 bytes in the pending arena. Written by refQueue, through syAdd. Read by outFixUp, when the symbol is defined.
 
 | Offset | Size | Field | Meaning |
 | ---: | ---: | --- | --- |
@@ -110,21 +114,20 @@ fails if any of them drift.
 | 5 | 1 | addend | Signed amount added to the symbol |
 | 6 | 1 | part (`syPart`) | Source part of the reference |
 | 7 | 2 | source (`sySrcOff`) | Source offset of the reference |
+| 9 | 2 | line (`syLine`) | Source line of the reference |
 
 ### Build descriptor
 
-15 bytes in the host's memory, passed in IX. Written by the host. Read by the driver (drAsm).
+12 bytes in the host's memory, passed in IX. Written by the host. Read by the driver (drAsm).
 
 | Offset | Size | Field | Meaning |
 | ---: | ---: | --- | --- |
-| 0 | 1 | parts (`drCount`) | Number of source parts |
-| 1 | 2 | part table (`drParts`) | Address of the five-byte part records |
-| 3 | 2 | symbols (`drSymBeg`) | Start of the symbol arena |
-| 5 | 2 | symbols end (`drSymEnd`) | End of the symbol arena |
-| 7 | 2 | pending (`drRefBeg`) | Start of the pending arena |
-| 9 | 2 | pending end (`drRefEnd`) | End of the pending arena |
-| 11 | 2 | origin (`drOutBeg`) | First output address |
-| 13 | 2 | capacity (`drOutCap`) | Output capacity in bytes |
+| 0 | 2 | symbols (`drSymBeg`) | Start of the symbol arena |
+| 2 | 2 | symbols end (`drSymEnd`) | End of the symbol arena |
+| 4 | 2 | pending (`drRefBeg`) | Start of the pending arena |
+| 6 | 2 | pending end (`drRefEnd`) | End of the pending arena |
+| 8 | 2 | origin (`drOutBeg`) | First output address |
+| 10 | 2 | capacity (`drOutCap`) | Output capacity in bytes |
 <!-- end:layouts -->
 
 ## One program through every record
@@ -173,25 +176,65 @@ COUNT:  DB 5
 
 | Line | Kind | Text |
 | ---: | --- | --- |
-| 1 | `tkName` | `ORG` |
-| 1 | `tkNum` | $100 = $0100 |
+| 1 | `tkName` | `ORG $100
+START:  LD A,(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 1 | `tkNum` | $100
+START:  LD A,(COUNT)
+        JR START
+COUNT:  DB 5
+ = $0407 |
 | 1 | `tkEol` | end of line |
-| 2 | `tkName` | `START` |
-| 2 | `tkColon` | `:` |
-| 2 | `tkName` | `LD` |
-| 2 | `tkName` | `A` |
-| 2 | `tkComma` | `,` |
-| 2 | `tkLParen` | `(` |
-| 2 | `tkName` | `COUNT` |
-| 2 | `tkRParen` | `)` |
+| 2 | `tkName` | `START:  LD A,(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkColon` | `:  LD A,(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkName` | `LD A,(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkName` | `A,(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkComma` | `,(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkLParen` | `(COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkName` | `COUNT)
+        JR START
+COUNT:  DB 5
+` |
+| 2 | `tkRParen` | `)
+        JR START
+COUNT:  DB 5
+` |
 | 2 | `tkEol` | end of line |
-| 3 | `tkName` | `JR` |
-| 3 | `tkName` | `START` |
+| 3 | `tkName` | `JR START
+COUNT:  DB 5
+` |
+| 3 | `tkName` | `START
+COUNT:  DB 5
+` |
 | 3 | `tkEol` | end of line |
-| 4 | `tkName` | `COUNT` |
-| 4 | `tkColon` | `:` |
-| 4 | `tkName` | `DB` |
-| 4 | `tkNum` | 5 = $0005 |
+| 4 | `tkName` | `COUNT:  DB 5
+` |
+| 4 | `tkColon` | `:  DB 5
+` |
+| 4 | `tkName` | `DB 5
+` |
+| 4 | `tkNum` | 5
+ = $0107 |
 | 4 | `tkEol` | end of line |
 
 **Instruction records.** The parser commits one per instruction.
@@ -201,14 +244,14 @@ COUNT:  DB 5
 | 2 | `2B 07 32 FF 00 00 00 00 1F 00` | `mneLd` | `enRegA`, `enMemAbs`, `enNone` | 1 |
 | 3 | `44 36 FF FF FB FF 06 00 31 00` | `mneJr` | `enRel8`, `enNone`, `enNone` | 0 |
 
-**Public reference** for `LD A,(COUNT)`: `08 41 00 01 82 01 00 1F 00`.
+**Public reference** for `LD A,(COUNT)`: `08 41 00 01 82 01 00 1F 00 02 00`.
 
 **Definitions.** Each label resolves the pending records for its symbol.
 
 | Line | Symbol record | Pending records |
 | ---: | --- | --- |
 | 2 | $4100 | none |
-| 4 | $4108 | `08 41 01 01 82 00 00 1F 00` |
+| 4 | $4108 | `08 41 01 01 82 00 00 1F 00 02 00` |
 
 **Output.** IMAGE operations emit bytes as each line is assembled, and PATCH operations fill in later.
 
