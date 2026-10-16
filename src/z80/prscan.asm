@@ -275,7 +275,7 @@ prIsExpr: ; Classify non-name expression starters through carry.
     SCF                                 ; Reject every other token kind.
     RET                                 ; Return carry set for a non-starter.
 
-;@ROUTINE OUT A,IX,CARRY CLOBBERS BC,DE,HL,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Parse one selected operand. Short names first pass through the register and
 ; condition table. Other names and all numeric starters enter the expression
 ; evaluator. Parentheses select memory or port syntax.

@@ -1,6 +1,6 @@
 cmdBeg: ; Beginning of command-tail parsing code.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY FAIL-OUT DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Accept help, one source, or source plus output. One name selects the
 ; source and derives a COM output with the same basename. Names use CP/M 8.3.
 
@@ -135,8 +135,7 @@ cmdArgs: ; Parse the source, output and symbol-file arguments.
     DJNZ .typeByte                      ; Compare all three type bytes.
     RET                                 ; Return Z when every byte matched.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-;@ROUTINE IN B,HL OUT B,HL,CARRY CLOBBERS A,C,DE,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN B,HL OUT B,HL,CARRY FAIL-OUT DE CLOBBERS A,C,ZERO,SIGN,PARITY,HALFCARRY
 ; Copy the third argument into symName. Its type defaults to SYM and must be
 ; SYM when given.
 
@@ -195,7 +194,7 @@ cmdArgs: ; Parse the source, output and symbol-file arguments.
     OR   A                              ; Clear carry for success.
     RET                                 ; Return to the argument parser.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY FAIL-OUT DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Prove the temporary name differs from the source and is not already present.
 
 .testWork: ; Protect the source from reserved work-name collisions.
@@ -221,7 +220,7 @@ cmdArgs: ; Parse the source, output and symbol-file arguments.
     SCF                                 ; Refuse a colliding output or work filename.
     RET                                 ; Return the diagnostic address in DE.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY FAIL-OUT DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Require the auxiliary file named by cpFcb not to exist.
 
 .unused: ; Require the reserved transaction name to be unused.

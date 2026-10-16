@@ -13,9 +13,15 @@
 // CALL that clobbers a unit the caller still needs is a conflict, and a unit
 // needed on entry that is not an input is an undeclared input.
 //
-// Atom reports failure with carry set. On a path that returns with carry set
-// only CARRY is an output; the others are meaningless there, so they need not
-// survive to that exit.
+// Atom reports failure with carry set. In a routine that returns CARRY, a
+// path that returns with carry set is a failure, and there only CARRY is an
+// output; the others are meaningless there, so they need not
+// survive to that exit. A tail to a routine that always returns with carry
+// set, such as a shared error exit, is a failure path too.
+//
+// A MAYBE-OUT unit is meaningful only on the paths that say so, so a caller
+// that uses one depends on the callee for it and nothing earlier. A FAIL-OUT
+// unit, such as a message address, is meaningful only with carry set.
 //
 // A call to a label with no contract, such as a private subroutine, uses a
 // summary inferred from its body: what it reads first and what it may change.
@@ -26,7 +32,9 @@ import { buildProgram, changes } from "./program.mjs";
 const ORIGINAL = (unit) => `=${unit}`;
 const NAMES = { CF: "CARRY", ZF: "ZERO", SF: "SIGN", PF: "PARITY", HF: "HALFCARRY", IXH: "IX", IXL: "IX", IYH: "IY", IYL: "IY" };
 const FAILURE_OUT = new Set(["CF"]);
-const EVERYTHING = { in: new Set(), out: new Set(), maybe: new Set(UNITS), clobbers: new Set(), memory: [] };
+const EVERYTHING = { in: new Set(), out: new Set(), maybe: new Set(UNITS), fail: new Set(), clobbers: new Set(), memory: [] };
+// Units a caller cannot rely on whatever the path: MAYBE-OUT and FAIL-OUT.
+const signalled = (c) => new Set([...c.maybe, ...(c.fail ?? [])]);
 
 // Name units the way contracts write them.
 export function unitNames(units) {
@@ -144,6 +152,7 @@ export function checkProgram(root) {
   const findings = [];
   const seen = new Set();
   const inferred = new Map();
+  const failing = new Map();
 
   // The contract a call or tail to this statement relies on.
   const contractAt = (index) => {
@@ -165,6 +174,17 @@ export function checkProgram(root) {
     const summary = { in: result.inputs, out: result.always, maybe, clobbers: new Set(), memory: [] };
     inferred.set(index, summary);
     return summary;
+  };
+
+  // Does the routine at this label return with carry set on every path?
+  const fails = (index) => {
+    if (failing.has(index)) return failing.get(index) ?? false;
+    failing.set(index, null);
+    const s = statements[index];
+    const name = s.global ? s.label : `${s.scope}${s.label}`;
+    const result = analyse({ name, index, contract: s.contract ?? EVERYTHING, inferred: !s.contract });
+    failing.set(index, result.fails);
+    return result.fails;
   };
 
   // Apply a callee's contract: every unit it may change gets a new value.
@@ -221,11 +241,19 @@ export function checkProgram(root) {
     const flowTo = (from, to, state, how) => {
       if (to == null || to >= statements.length) return;
       const target = statements[to];
-      if (to !== routine.index && target.global && target.contract) {
+      if (to !== routine.index && target.contract && target.op !== "EQU") {
         const tail = cloneState(state);
         applyCall(tail, target.contract, where(statements[from]));
+        const targets = statements[from].dispatch?.targets;
+        if (targets && how === "jumps") {
+          // The routine picks one of the table's entries after doing what
+          // its contract says.
+          statements[from].dispatchVia = to;
+          for (const entry of targets) flowTo(from, entry, tail, "dispatches");
+          return;
+        }
         checkExit(statements[from], tail, `${how} to ${target.label}`);
-        exits.set(from, { kind: "tail", to, failure: state.carry === 1 });
+        exits.set(from, { kind: "tail", to, failure: state.carry === 1 || fails(to) });
         return;
       }
       succ.get(from).push(to);
@@ -280,6 +308,13 @@ export function checkProgram(root) {
           break;
         }
         case "ret":
+          if (s.dispatch?.targets) {
+            // RET to an address the routine pushed: a jump to one of them.
+            const jumped = cloneState(after);
+            if (jumped.stack?.length) jumped.stack.pop();
+            for (const entry of s.dispatch.targets) flowTo(index, entry, jumped, "jumps");
+            break;
+          }
           checkExit(s, after, "returns");
           exits.set(index, { kind: "ret", failure: after.carry === 1 });
           break;
@@ -291,8 +326,12 @@ export function checkProgram(root) {
           break;
         }
         case "indirect":
-          report("flow", "jumps through a register, which the checker cannot follow");
-          exits.set(index, { kind: "away" });
+          if (s.dispatch?.targets) {
+            for (const entry of s.dispatch.targets) flowTo(index, entry, after, "dispatches");
+          } else {
+            if (!s.dispatch) report("flow", "jumps through a register, which the checker cannot follow");
+            exits.set(index, { kind: "away" });
+          }
           break;
       }
     };
@@ -304,7 +343,11 @@ export function checkProgram(root) {
 
     // Backward liveness over the same graph.
     const contract = routine.contract;
-    const exitLive = routine.inferred ? new Set() : new Set([...contract.out, ...contract.maybe]);
+    const exitLive = routine.inferred ? new Set() : new Set(contract.out);
+    const failLive = routine.inferred ? new Set() : new Set([...FAILURE_OUT, ...(contract.fail ?? [])]);
+    // Carry is a failure signal only in a routine that returns it.
+    const signals = routine.inferred || contract.out.has("CF");
+    const liveAt = (exit) => (exit.failure && signals ? failLive : exitLive);
     const depth = (index) => states.get(index)?.stack?.length ?? null;
     const live = new Map();
     const order = [...states.keys()].sort((a, b) => b - a);
@@ -319,24 +362,26 @@ export function checkProgram(root) {
         for (const to of succ.get(index) ?? []) for (const u of live.get(to) ?? []) after.add(u);
         const exit = exits.get(index);
         if (exit?.kind === "ret" || exit?.kind === "away") {
-          for (const u of exitLive) if (!exit.failure || FAILURE_OUT.has(u)) after.add(u);
+          for (const u of liveAt(exit)) after.add(u);
         }
         const before = new Set(after);
         if (exit?.kind === "tail") {
           const callee = statements[exit.to].contract;
-          const needed = [...exitLive].filter((u) => !exit.failure || FAILURE_OUT.has(u));
-          const lost = needed.filter((u) => callee.clobbers.has(u) && !callee.out.has(u));
+          const needed = [...liveAt(exit)];
+          const passed = signalled(callee);
+          const lost = needed.filter((u) => callee.clobbers.has(u) && !callee.out.has(u) && !passed.has(u));
           if (lost.length) conflicts.set(where(s), { s, units: lost, callee: statements[exit.to].label });
-          for (const u of needed) if (!callee.out.has(u)) before.add(u);
+          for (const u of needed) if (!callee.out.has(u) && !passed.has(u)) before.add(u);
           for (const u of callee.in) before.add(u);
         }
         if (e) {
-          if (e.flow === "call" || e.flow === "callIf") {
-            const callee = contractAt(s.to);
+          if (e.flow === "call" || e.flow === "callIf" || s.dispatchVia != null) {
+            const callee = contractAt(s.dispatchVia ?? s.to);
             if (callee) {
-              const lost = [...after].filter((u) => callee.clobbers.has(u) && !callee.out.has(u) && !callee.maybe.has(u));
+              const passed = signalled(callee);
+              const lost = [...after].filter((u) => callee.clobbers.has(u) && !callee.out.has(u) && !passed.has(u));
               if (lost.length) conflicts.set(where(s), { s, units: lost, callee: e.target });
-              if (e.flow === "call") for (const u of callee.out) before.delete(u);
+              if (e.flow !== "callIf") for (const u of [...callee.out, ...passed]) before.delete(u);
               for (const u of callee.in) before.add(u);
             }
           }
@@ -385,7 +430,7 @@ export function checkProgram(root) {
       add("conflict", s, `needs ${unitNames(units)} after ${callee}, which clobbers it`);
     }
     const inputs = new Set([...(live.get(routine.index) ?? [])].filter((u) => UNITS.includes(u)));
-    const undeclared = [...inputs].filter((u) => !contract.in.has(u) && !contract.maybe.has(u));
+    const undeclared = [...inputs].filter((u) => !contract.in.has(u) && !signalled(contract).has(u));
     const firstRead = new Map();
     for (const index of [...states.keys()].sort((a, b) => a - b)) {
       const s = statements[index];
@@ -404,7 +449,9 @@ export function checkProgram(root) {
     if (through.length) {
       add("partial", statements[routine.index], `can return without setting ${unitNames(through)}, so it may be MAYBE-OUT`);
     }
-    return { changed, always: always ?? new Set(), inputs };
+    const ends = [...exits.values()];
+    const failsAlways = ends.length > 0 && ends.every((x) => x.kind !== "away" && x.failure);
+    return { changed, always: always ?? new Set(), inputs, fails: failsAlways };
   }
 
   // Contracts that allow more than the routine does.

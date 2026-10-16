@@ -157,8 +157,9 @@ export function effects(op, args) {
     case "XOR":
     case "CP": {
       const source = a.length === 2 ? y : x;
-      // XOR A, SUB A and CP A give the same result whatever A holds.
-      const self = source.name === "A" && (op === "XOR" || op === "SUB" || op === "CP");
+      // XOR A, SUB A and CP A give the same result whatever A holds, and
+      // SBC A,A depends only on carry.
+      const self = source.name === "A" && (op === "XOR" || op === "SUB" || op === "CP" || op === "SBC");
       if (!self) reads("A");
       if (!self) readOperand(source);
       if (op === "ADC" || op === "SBC") reads("CF");
@@ -167,7 +168,7 @@ export function effects(op, args) {
       if (op !== "CP" && !keep) writes("A");
       writes(ALL);
       if (op === "AND" || op === "OR" || op === "XOR") e.constant = ["CF", "HF"];
-      if (self) e.constant = op === "SUB" || op === "XOR" ? ["A", ...ALL] : ALL;
+      if (self && op !== "SBC") e.constant = op === "SUB" || op === "XOR" ? ["A", ...ALL] : ALL;
       break;
     }
     case "INC":

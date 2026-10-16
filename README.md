@@ -39,6 +39,8 @@ npm test
 ```
 
 `npm run verify:build` rebuilds and compares the checked-in native images.
+`npm run check:contracts` checks each routine's `;@ROUTINE` register contract
+against its code, and `npm test` fails if any contract is broken.
 `npm pack` creates an installable Node package.
 
 The release scripts prepare the CP/M downloads, Triptych disk and Pages site.

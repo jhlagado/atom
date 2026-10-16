@@ -16,7 +16,7 @@ srcWipe: ; Initialise a blank current-drive source FCB.
     CALL pubFill                        ; Fill the complete name/type area.
     JP   pubClear                       ; Clear the remaining FCB control fields.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY FAIL-OUT DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Reject output, temporary or backup names that collide with the source name.
 
 srcCheck: ; Protect source names against output and work files.
@@ -42,7 +42,7 @@ srcCheck: ; Protect source names against output and work files.
     RET                                 ; Leave file creation to the caller's error path.
 
 
-;@ROUTINE IN A OUT A,CARRY,DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A OUT A,CARRY FAIL-OUT DE CLOBBERS BC,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Rebuild and open the input FCB from one retained name. Carry reports a name
 ; that aliases the output or a work file (DE=msgDup), or a file that cannot be
 ; opened (DE=msgRead).

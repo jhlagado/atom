@@ -37,6 +37,7 @@ mneDisp: ; Select a handler from the table at DE using mnemonic A.
     LD   D,(HL)                                     ; Complete the 16-bit handler address in DE.
     EX   DE,HL                                      ; Put the handler address in the jump register.
     LD   A,B                                        ; Restore the mnemonic ordinal for the handler.
+;@DISPATCH
     JP   (HL)                                       ; Enter the selected family handler.
 .families: ; Exclusive cumulative ends for the non-singleton families.
 

@@ -25,6 +25,7 @@
 ;  State that must survive the handover lives in cpmstate.asm, inside
 ;  ATOM.COM and below cpWork, where the output window never reaches.
 
+;@ROUTINE IN C,DE OUT A CLOBBERS BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 cpCall5     EQU     $0005                       ; CP/M BDOS entry address.
 cpWork      EQU     $5E00                       ; First byte of transient writable arenas.
 incMax      EQU     8                           ; Deepest include nesting.

@@ -91,7 +91,7 @@ prAtTok: ; Select the current token as a diagnostic source anchor.
 prAtMnem: ; Select the saved mnemonic as a diagnostic source anchor.
     LD   HL,prMnPart                    ; Point at saved mnemonic part and offset.
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
+;@ROUTINE IN A,HL OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 ; Copy a contiguous part-and-offset triple into the parser error fields.
 ; Preserve the status in A and set carry.
 

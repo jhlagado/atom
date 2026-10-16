@@ -46,6 +46,7 @@ enCondOp: ; Combine condition field bits 3..5 with base B.
 enEncode: ; Dispatch an already validated instruction to its encoder.
     LD   A,(IX+enMnem)                  ; Read the ordinal already accepted by enCheck.
     LD   DE,.edTable                    ; Select the matching encoder-family table.
+;@DISPATCH .edTable
     JP   mneDisp                        ; Dispatch by ordinal and enter that family.
 .coreOp: ; Select direct/ED opcode.
 

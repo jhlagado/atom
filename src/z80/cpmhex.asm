@@ -4,7 +4,7 @@
 ; the source-cache page, which is free once assembly has finished. A failed
 ; record write sets hexErr, later bytes are dropped and hexClose reports it.
 
-;@ROUTINE IN C,DE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN C,DE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Route HEX record writes through the index-preserving BDOS wrapper.
 
 hexBdos: ; Enter BDOS for the Intel HEX record writer.
@@ -199,8 +199,7 @@ hexFlush: ; Write the buffered record.
     LD   (hexCnt),A                             ; Stop hexClose padding.
     RET                                         ; Return the failure through hexErr.
 
-;@ROUTINE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Discard a byte queued after a failed write.
+; hexPut's shared exit: discard a byte queued after a failed write.
 
 hexDrop: ; Drop the byte saved by hexPut.
     POP  AF                                     ; Discard the saved byte.

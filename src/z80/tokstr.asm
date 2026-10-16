@@ -91,7 +91,7 @@ tkErrSrc: ; Publish invalid-input-byte status.
     LD   A,tkBadSrc                     ; Select invalid-byte status.
     JP   tkFail                         ; Rewind and keep prior record.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY,A
+;@ROUTINE CLOBBERS A,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; Enter semicolon-comment consumption.
 
 tkSkip: ; Discard a semicolon comment up to the physical line boundary.

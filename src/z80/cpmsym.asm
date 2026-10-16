@@ -73,8 +73,8 @@ symWrite: ; Write the symbol table to the work file.
     LD   DE,cpFcb                       ; Pass the work file to CP/M.
     LD   C,cpClose                      ; Select close-file function 16.
     CALL cpBdos                         ; Close it.
-    INC  A                              ; $FF means the close failed.
-    RET  NZ                             ; Return carry clear on success.
+    ADD  A,1                            ; $FF carries: the close failed.
+    RET  NC                             ; Return carry clear on success.
 .fail: ; Report a failed symbol-file write.
     LD   HL,cpPutCh                     ; Send names to the console again.
     LD   (cpNameTo),HL                  ; Restore the name decoder.

@@ -93,7 +93,7 @@ objFill: ; Zero-fill forward from the output append cursor.
     XOR  A                              ; Return success with carry clear.
     RET                                 ; Cursor now equals the target.
 
-;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT CARRY,HL FAIL-OUT A CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert absolute target address HL to the flat output-relative offset.
 
 objToRel: ; Translate target address to output-relative offset.

@@ -334,7 +334,10 @@ syLabel: ; Define a global label and advance private scope atomically.
     JR   .validate                      ; Validate before committing value.
 .missing: ; Handle a missing or failed global lookup.
     CP   syMiss                         ; Is the key simply absent?
-    RET  NZ                             ; Propagate any other status in A.
+    JR   Z,.absent                      ; Yes: allocate it.
+    SCF                                 ; Any other status is a failure.
+    RET                                 ; Propagate it in A.
+.absent: ; Allocate a record for an absent key.
     LD   A,1                            ; Request a new global record.
     LD   (syInsFlg),A                   ; Preserve the allocation decision.
 .validate: ; Preflight eviction and allocation.

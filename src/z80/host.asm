@@ -113,7 +113,7 @@ sfPark: ; Keep a memory part's read state.
 sfBack: ; Restore a memory part's read state.
     RET                                 ; Nothing to keep.
 
-;@ROUTINE IN B,HL OUT A,CARRY,HL CLOBBERS BC,DE,HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE IN B,HL OUT A,CARRY MAYBE-OUT HL CLOBBERS BC,DE,HALFCARRY,ZERO,SIGN,PARITY
 ; Open the binary file named by the B bytes at HL for INCBIN. Return its
 ; length in HL with A=0, or A nonzero when the length cannot be told. Fail
 ; closed when unbound.
@@ -121,43 +121,43 @@ sfBack: ; Restore a memory part's read state.
 tkBin: ; Unbound INCBIN open entry.
     NOP                                 ; INCBIN open hook. fall through if unbound.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE OUT A,CARRY CLOBBERS BC,DE,HL,HALFCARRY,ZERO,SIGN,PARITY
 ; Return the next byte of the open binary file. Fail closed when unbound.
 
 tkBinRd: ; Unbound INCBIN read entry.
     NOP                                 ; INCBIN read hook. fall through if unbound.
 
-;@ROUTINE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE IN IX OUT A,CARRY CLOBBERS BC,DE,HL,HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable BEGIN service entry and fail closed when unbound.
 
 hsBegin: ; Unbound BEGIN entry.
     NOP                                 ; BEGIN hook. fall through if unbound.
 
-;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the IMAGE-byte entry. fail closed when unbound.
 
 hsByte: ; Unbound IMAGE-byte entry.
     NOP                                 ; IMAGE-byte hook. fall through unbound.
 
-;@ROUTINE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE IN A,C,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the PATCH-byte entry. fail closed when unbound.
 
 hsPatchB: ; Unbound byte-PATCH entry.
     NOP                                 ; PATCH-byte hook. fall through unbound.
 
-;@ROUTINE IN C,DE,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE IN C,DE,HL OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the PATCH-word entry. fail closed when unbound.
 
 hsPatchW: ; Unbound word-PATCH entry.
     NOP                                 ; PATCH-word hook. fall through unbound.
 
-;@ROUTINE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE IN A,BC,DE,HL,IX OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable COMMIT service entry and fail closed when unbound.
 
 hsCommit: ; Unbound COMMIT entry.
     NOP                                 ; COMMIT hook. fall through if unbound.
 
-;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
+;@SERVICE OUT A,CARRY CLOBBERS HALFCARRY,ZERO,SIGN,PARITY
 ; Reserve the replaceable ABORT entry and return the common unbound failure.
 
 hsAbort: ; Unbound ABORT entry.

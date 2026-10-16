@@ -279,7 +279,7 @@ stToken: ; Fetch a token and mirror its kind while retaining carry.
     LD   A,(tkRecord+tkKindAt)          ; Mirror its kind into the dispatch register.
     RET                                 ; Return kind and tokenizer carry.
 
-;@ROUTINE OUT A,HL,IX,CARRY CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,HL,CARRY MAYBE-OUT IX CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Expressions see the current output address in BC so '$' and relative forms
 ; have statement-accurate meaning.
 
@@ -287,7 +287,7 @@ stPcExpr: ; Evaluate with the current output cursor as dollar's value.
     LD   BC,(outAddr)                   ; Supply '$' as the current output address.
     JP   exDefer                        ; Parse without a new symbol reference.
 
-;@ROUTINE OUT CARRY CLOBBERS A,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE CLOBBERS A,HL
 ; Save the current token's part and start offset as the diagnostic
 ; location before a nested component advances the token stream.
 

@@ -395,7 +395,7 @@ asoSave: ; Flush one full physical record.
     SCF                                 ; Require the transaction abort path.
     RET                                 ; Return the BDOS status in A.
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Append one byte to the 128-byte physical record buffer.
 
 asoPut: ; Append one byte with bounded record indexing.
@@ -499,7 +499,7 @@ asoPad: ; Pad only the final partial physical record.
     XOR  A                              ; Return success after the record was flushed.
     RET                                 ; No logical ASO bytes follow END.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY
 ; Return a sticky write or validation failure to the native output driver.
 
 asoFail: ; Mark the transaction failed.

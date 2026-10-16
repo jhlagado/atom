@@ -1,4 +1,4 @@
-;@ROUTINE IN A OUT HL,CARRY CLOBBERS A,BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT HL,CARRY CLOBBERS A,BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Convert one token to a 16-bit value or look it up in the bounded table.
 
 ppEval: ; Decode a numeric literal or existing definition.
@@ -197,7 +197,7 @@ ppEval: ; Decode a numeric literal or existing definition.
     SCF                                             ; Carry signals an out-of-range decimal prefix.
     RET                                             ; Keep the caller's stack balanced.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT HL,CARRY CLOBBERS A,BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Find the token's uppercase name in the fixed twenty-byte definition records.
 
 ppFind: ; Find a name in twenty-byte definition records.
@@ -243,7 +243,7 @@ ppFind: ; Find a name in twenty-byte definition records.
     SCF                                             ; Carry tells the caller no value was found.
     RET                                             ; HL has no meaning on this path.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Validate a 1-17 character name and copy it to ppName.
 
 ppStage: ; Validate and stage the definition name.
@@ -303,7 +303,7 @@ ppBadId: ; Reject an invalid identifier.
     SCF                                             ; Carry marks invalid name syntax or length.
     RET                                             ; The source profile reports a directive error.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,ZERO,SIGN,PARITY,HALFCARRY
 ; Validate a lookup token without replacing the separately staged DEFINE name.
 
 ppValid: ; Validate a lookup token without changing staged name.
@@ -347,7 +347,7 @@ ppValid: ; Validate a lookup token without changing staged name.
     XOR  A                                          ; Clear carry for a valid lookup name.
     RET                                             ; Leave token bytes intact for table lookup.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE CLOBBERS A,B,DE,HL
 ; Copy a staged definition name to the query buffer for duplicate detection.
 
 ppCopy: ; Copy the staged name for duplicate lookup.
@@ -364,7 +364,7 @@ ppCopy: ; Copy the staged name for duplicate lookup.
     DJNZ .loop                                      ; Copy the complete padded name.
     RET                                             ; The value token is no longer needed.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Append one validated staged name and value to the bounded definition table.
 
 ppStore: ; Append a complete name-and-value record.

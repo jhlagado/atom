@@ -134,9 +134,167 @@ inner:
   );
 });
 
-test("Atom's own source can be checked", () => {
+test("a tail to a routine that always sets carry is a failure path", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE IN A OUT HL,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
+outer:
+    OR   A
+    JP   Z,fail
+    LD   HL,0
+    RET
+
+;@ROUTINE OUT CARRY CLOBBERS HALFCARRY
+fail:
+    SCF
+    RET
+`),
+    [],
+  );
+});
+
+test("carry set by chance is not a failure in a routine that does not return it", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+digit:
+    CP   10
+    JR   C,put
+    ADD  A,7
+;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+put:
+    RET
+`),
+    [],
+  );
+});
+
+test("a MAYBE-OUT unit comes from the callee, not from before the call", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE OUT A,HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+outer:
+    LD   HL,4
+    CALL inner
+    RET
+
+;@ROUTINE OUT A MAYBE-OUT HL CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+inner:
+    XOR  A
+    RET  Z
+    LD   HL,1
+    RET
+`),
+    [],
+  );
+});
+
+test("a FAIL-OUT unit need only be set when carry is set", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE IN A OUT CARRY FAIL-OUT DE CLOBBERS A,ZERO,SIGN,PARITY,HALFCARRY
+check:
+    OR   A
+    RET  NZ
+    LD   DE,0
+    SCF
+    RET
+`),
+    [],
+  );
+});
+
+test("a dispatch table is followed, and an unannotated one is reported", () => {
+  const body = (note) => `
+;@ROUTINE IN A OUT A CLOBBERS DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
+pick:
+    ADD  A,A
+    LD   L,A
+    LD   H,0
+    LD   DE,.table
+    ADD  HL,DE
+    LD   E,(HL)
+    INC  HL
+    LD   D,(HL)
+    EX   DE,HL
+${note}
+    JP   (HL)
+.table:
+    DW   .one,.two
+.one:
+    LD   A,1
+    RET
+.two:
+    LD   B,2
+    RET
+`;
+  assert.deepEqual(check(body(";@DISPATCH .table")), ["changes pick"]);
+  assert.deepEqual(check(body("")), ["flow pick"]);
+});
+
+test("a RET to a pushed address can name its targets", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+send:
+    PUSH HL
+    LD   HL,(target)
+    EX   (SP),HL
+;@DISPATCH TO show
+    RET
+
+;@ROUTINE IN A OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+show:
+    RET
+`),
+    [],
+  );
+});
+
+test("a contract before a local label belongs to that label", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE OUT A
+outer:
+    CALL .inner
+    LD   A,B
+    RET
+
+;@ROUTINE CLOBBERS B
+.inner:
+    LD   B,1
+    RET
+`),
+    ["changes outer", "conflict outer", "input outer"],
+  );
+});
+
+test("a service's stub body is not checked, but its callers are", () => {
+  assert.deepEqual(
+    check(`
+;@ROUTINE OUT A CLOBBERS CARRY,ZERO,SIGN,PARITY,HALFCARRY
+outer:
+    LD   B,3
+    CALL hook
+    LD   A,B
+    RET
+
+;@SERVICE OUT A,CARRY CLOBBERS B
+hook:
+    NOP
+    LD   C,0
+    SCF
+    SBC  A,A
+    RET
+`),
+    ["changes outer", "conflict outer"],
+  );
+});
+
+test("Atom's own source keeps every contract", () => {
   for (const root of ["cpm22.asm", "atom.asm", "nobj.asm"]) {
     const result = checkProgram(join(dirname(fileURLToPath(import.meta.url)), "..", "src", "z80", root));
     assert.ok(result.routines > 20, `${root} has routines`);
+    assert.deepEqual(result.findings.map((f) => `${f.at} ${f.routine}: ${f.message}`), [], root);
   }
 });

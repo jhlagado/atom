@@ -147,7 +147,7 @@ exFault: ; Report an inconsistent parser or stack state.
     LD   A,exIntErr                     ; Select the internal-invariant category.
     JP   exAtTok                        ; Fail at the current tokenizer position.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS BC,DE,HL,PARITY,HALFCARRY,SIGN,A
+;@ROUTINE CLOBBERS BC,DE,HL,PARITY,HALFCARRY
 ; Save the current operator record while precedence reduction overwrites
 ; exOper with older stack entries.
 
@@ -156,14 +156,14 @@ exStash: ; Save the incoming operator before older operators are reduced.
     LD   DE,exSaveOp                    ; Select incoming-operator save storage.
     JR   exOpCopy                       ; Copy the complete positioned record.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS BC,DE,HL,PARITY,HALFCARRY,SIGN,A
+;@ROUTINE CLOBBERS BC,DE,HL,PARITY,HALFCARRY
 ; Restore the saved incoming operator before pushing it.
 
 exFetch: ; Restore the incoming operator after precedence reduction.
     LD   HL,exSaveOp                    ; Select the saved incoming operator.
     LD   DE,exOper                      ; Restore it as the current record.
 
-;@ROUTINE IN HL,DE OUT CARRY,ZERO CLOBBERS BC,DE,HL,PARITY,HALFCARRY,SIGN,A
+;@ROUTINE IN HL,DE CLOBBERS BC,DE,HL,PARITY,HALFCARRY
 ; Copy one complete four-byte operator record from HL to DE.
 
 exOpCopy: ; Transfer a complete positioned operator from HL to DE.
@@ -366,6 +366,7 @@ exFold: ; Pop right then left and reduce into the result record.
     INC  HL                             ; Advance to the high byte.
     LD   D,(HL)                         ; Complete the handler address in DE.
     EX   DE,HL                          ; Put target in indirect-jump HL.
+;@DISPATCH .table
     JP   (HL)                           ; Dispatch to the concrete arithmetic kernel.
 
 ; Order matches exOpOr through exOpRem in the operator byte's low nibble.

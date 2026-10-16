@@ -330,7 +330,7 @@ drRange: ; Decode two adjacent descriptor words.
     EX   DE,HL                          ; Return first word in HL and second in DE.
     RET                                 ; The descriptor itself remains unchanged.
 
-;@ROUTINE IN HL,DE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,HL,DE
+;@ROUTINE IN HL,DE OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,HL,DE
 ; Compute end - begin. No borrow means the half-open range does not wrap.
 
 drSpanOk: ; Check an ordinary half-open address range.

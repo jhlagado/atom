@@ -44,6 +44,7 @@ cpPutCh: ; Print one console character with register preservation.
     PUSH DE                                                         ; Preserve the caller's DE pair.
     PUSH HL                                                         ; Preserve the caller's HL pair.
     LD   E,A                                                        ; Pass the requested character in E.
+    LD   D,A                                                        ; Function 2 ignores D. Define it anyway.
     LD   C,2                                                        ; Select CP/M console-output function 2.
     CALL cpBdos                                                     ; Write the character to the console.
     POP  HL                                                         ; Restore the caller's HL pair.

@@ -2,7 +2,7 @@
 
 cpBeg: ; Beginning of resident CP/M adapter code.
 
-;@ROUTINE IN C,DE OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN C,DE OUT A CLOBBERS BC,DE,HL,CARRY,ZERO,SIGN,PARITY,HALFCARRY
 ; CP/M standardises only the 8080 register set. Preserve the Z80 index
 ; registers promised by Atom's private tool-service client adapter.
 

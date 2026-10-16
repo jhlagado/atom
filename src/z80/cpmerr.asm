@@ -236,5 +236,6 @@ cpPutNm: ; Decode one symbol record's name.
     PUSH HL                                     ; Keep the decoder's remainder.
     LD   HL,(cpNameTo)                          ; Fetch the destination routine.
     EX   (SP),HL                                ; Restore HL and stack the routine.
+;@DISPATCH TO cpPutCh,symPut
     RET                                         ; Enter it. It returns to our caller.
 

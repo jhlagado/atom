@@ -348,7 +348,7 @@ objNext: ; Supply the next named source part.
     SCF                                 ; Carry means no part was opened.
     RET                                 ; The driver finishes or aborts.
 
-;@ROUTINE OUT A,CARRY
+;@ROUTINE OUT A,CARRY CLOBBERS HALFCARRY
 ; AtomBinaryOpen and AtomBinaryRead replacement. This harness supplies no
 ; INCBIN files, so INCBIN fails as an unreadable file.
 

@@ -88,7 +88,7 @@ exFWord     EQU     1                                   ; Plain deferred symbol 
 exFLow      EQU     2                                   ; LOW byte of a deferred symbol expression.
 exFHigh     EQU     3                                   ; HIGH byte of a deferred symbol expression.
 
-;@ROUTINE IN BC OUT A,HL,IX,CARRY CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN BC OUT A,HL,CARRY MAYBE-OUT IX CLOBBERS BC,DE,IY,ZERO,SIGN,PARITY,HALFCARRY
 ; Publish an unresolved symbol only after the full expression has
 ; passed syntax, forward-form and addend checks. This is the direct evaluator
 ; entry for callers that can commit immediately, where publication is immediate.
@@ -98,7 +98,7 @@ exParse: ; Evaluate with symbol publication after all checks pass.
     LD   (exDoPub),A                                    ; Record the direct-entry policy.
     JR   exEval                                         ; Join common parser initialisation.
 
-;@ROUTINE IN BC OUT A,HL,IX,CARRY CLOBBERS SIGN,PARITY,HALFCARRY,ZERO,BC,DE,IY
+;@ROUTINE IN BC OUT A,HL,CARRY MAYBE-OUT IX CLOBBERS SIGN,PARITY,HALFCARRY,ZERO,BC,DE,IY
 ; Parse without changing the symbol arena. The parser and statement layers use
 ; this entry to validate and reserve work before publication.
 
@@ -497,7 +497,7 @@ exLookup: ; Resolve the packed name at its saved position.
     OR   A                                              ; Clear carry for success.
     RET                                                 ; The value is published.
 
-;@ROUTINE OUT A,CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY,C,HL
+;@ROUTINE OUT CARRY CLOBBERS A,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Map contiguous operator tokens to a packed byte. Its high nibble is
 ; precedence and its low nibble is the reduction ordinal. Zero entries
 ; cover token kinds that are not binary expression operators.
@@ -531,7 +531,7 @@ exClass: ; Map a binary token to precedence and arithmetic operation.
 .table: ; Map token kinds to precedence and reduction.
     DB   $55,$56,$67,$68,$69,$32,$21,$10,0,0,$43,$44    ; Operator fields.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
+;@ROUTINE CLOBBERS A,HL
 ; Store the source position of the current operator beside its encoded byte.
 ; Arithmetic and forward-form failures later report this position.
 

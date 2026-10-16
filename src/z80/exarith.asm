@@ -306,7 +306,7 @@ exRem: ; Select remainder output from the shared division routine.
     LD   A,1                            ; Select remainder output mode.
     LD   (exDivSel),A                   ; Store the division/remainder selector.
 
-;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,SIGN,PARITY,HALFCARRY,ZERO
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY,ZERO
 ; Divide magnitudes with 24 rounds of restoring long division. exLAbs is the
 ; shifting dividend, exRAbs the divisor, exAccum the partial remainder and
 ; exQuot the quotient.

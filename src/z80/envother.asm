@@ -300,7 +300,7 @@ enIsPair: ; Test the contiguous BC..SP pair classes.
     CP   enRegSP+1                      ; Compare against the exclusive pair upper bound.
     RET                                 ; Carry accepts BC, DE, HL and SP.
 
-;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Preserve A while testing IXH/IXL/IYH/IYL through their shared bit pattern.
 
 enIsHalf: ; Test index-half classes while preserving A.
@@ -313,7 +313,7 @@ enIsHalf: ; Test index-half classes while preserving A.
     JR   Z,enYes                        ; Accept when the reduced pattern matched.
     JR   enNo                           ; Return carry clear for every other class.
 
-;@ROUTINE IN A OUT CARRY,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A OUT CARRY CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
 ; Carry set means displacement-bearing (IX+d) or (IY+d).
 
 enIsDisp: ; Test displacement-bearing IX/IY memory classes.

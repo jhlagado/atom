@@ -10,7 +10,7 @@ prEval: ; Evaluate at the instruction address with deferred symbols.
     CP   exPend                         ; Did a symbol remain unresolved?
     JR   Z,prDefer                      ; Build a private deferred reference.
 
-;@ROUTINE IN HL OUT CARRY,ZERO CLOBBERS DE,SIGN,PARITY,HALFCARRY,A
+;@ROUTINE IN HL OUT A,CARRY,ZERO CLOBBERS DE,SIGN,PARITY,HALFCARRY
 ; Store the concrete word in HL at the selected operand value pointer.
 
 prStore: ; Store a resolved or placeholder word in the selected value slot.

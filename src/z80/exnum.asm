@@ -1,7 +1,7 @@
 ; Numeric helpers: signed magnitudes, multiplication, division and the
 ; expression diagnostics.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS A,BC,DE,HL,IX,IY,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT CARRY,ZERO CLOBBERS A,BC,DE,HL,SIGN,PARITY,HALFCARRY
 ; Copy both signed operands to magnitude workspace, record their signs and
 ; negate negative inputs. Product/quotient sign is left XOR right.
 
@@ -33,21 +33,21 @@ exAbs: ; Copy operand magnitudes and retain the signs separately.
     OR   A                              ; Return carry clear with result sign in Z/NZ.
     RET                                 ; Leave both magnitude operands prepared.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A,BC,DE,IX,IY
+;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A
 ; Negate the normal result slot in place.
 
 exNeg: ; Negate the normal result record in place.
     LD   HL,exRVal                      ; Select the ordinary result value.
     JR   exNegHL                        ; Share 24-bit two's-complement negation.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A,BC,DE,IX,IY
+;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,SIGN,PARITY,HALFCARRY,A
 ; Negate the copied left magnitude in place.
 
 exNegL: ; Negate the left magnitude copy in place.
     LD   HL,exLAbs                      ; Select the copied left magnitude.
     JR   exNegHL                        ; Share 24-bit two's-complement negation.
 
-;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,A,BC,DE,IX,IY,SIGN,PARITY,HALFCARRY
+;@ROUTINE OUT CARRY,ZERO CLOBBERS HL,A,SIGN,PARITY,HALFCARRY
 ; Negate copied right magnitude through the shared 24-bit body.
 
 exNegR: ; Negate the right magnitude copy in place.
@@ -112,14 +112,14 @@ exAddUp: ; Add a magnitude to the product and return overflow in carry.
     LD   (HL),A                         ; Store the new high product byte.
     RET                                 ; Return carry as overflow beyond bit 23.
 
-;@ROUTINE OUT CARRY,ZERO MAYBE-OUT BC,DE CLOBBERS A,HL,SIGN,PARITY,HALFCARRY,IX,IY,BC,DE
+;@ROUTINE OUT CARRY CLOBBERS A,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Shift the multiplication multiplicand left by one bit.
 
 exDouble: ; Advance the multiplicand to its next binary place.
     LD   HL,exLAbs                      ; Select the multiplicand magnitude.
     JP   exSla24                        ; Tail-call one 24-bit left shift.
 
-;@ROUTINE OUT CARRY,ZERO MAYBE-OUT BC,DE CLOBBERS A,HL,SIGN,PARITY,HALFCARRY,IX,IY,BC,DE
+;@ROUTINE OUT CARRY CLOBBERS A,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Shift unsigned multiplier right. SRL clears the high sign bit, and the
 ; shared tail rotates carry through the low sixteen bits.
 
@@ -128,7 +128,7 @@ exHalve: ; Consume a multiplier bit with a logical right shift.
     LD   A,(HL)                         ; Load it for an unsigned shift.
     SRL  A                              ; Shift in zero and expose bit 0 in carry.
 
-;@ROUTINE IN A,HL OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN A,HL,CARRY OUT CARRY,ZERO CLOBBERS A,HL,SIGN,PARITY,HALFCARRY
 ; Store the already-shifted high byte in A, then rotate the two lower bytes at
 ; HL-1 and HL-2 through carry. Arithmetic right shift enters here too.
 
@@ -189,7 +189,7 @@ exSubDiv: ; Subtract the divisor from the current partial remainder.
     LD   (HL),A                         ; Store the new remainder high byte.
     RET                                 ; Return final subtraction flags.
 
-;@ROUTINE IN HL OUT CARRY,ZERO CLOBBERS A,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY,ZERO CLOBBERS SIGN,PARITY,HALFCARRY
 ; Expand the resolved word in HL into exRVal and clear both the 24-bit high
 ; byte and the deferred-state marker.
 
@@ -289,7 +289,7 @@ exAtSym: ; Select the saved symbol name as the diagnostic anchor.
 exAtLex: ; Select the tokenizer failure as the diagnostic anchor.
     LD   HL,tkErrPos                    ; Point at tokenizer failure location.
 
-;@ROUTINE IN A OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
+;@ROUTINE IN A,HL OUT A,CARRY CLOBBERS HL,HALFCARRY,ZERO,SIGN,PARITY
 ; Copy the contiguous part-and-offset triple at HL into the public expression
 ; error fields, preserve the status in A and set carry.
 

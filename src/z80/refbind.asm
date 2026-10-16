@@ -266,6 +266,8 @@ refBind: ; Locate deferred fields and publish their symbol descriptions.
     INC  (HL)                           ; Count one required eight-byte record.
     XOR  A                              ; Convert absence to preflight success.
     RET                                 ; Continue without mutating the arena.
+
+;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 refWrap: ; Wrap symbol detail as a parser failure at this reference.
     LD   (prSymDet),A                   ; Retain the nested symbol status.
     LD   A,prSymErr                     ; Select the parser symbol category.

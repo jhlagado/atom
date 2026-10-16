@@ -2,7 +2,7 @@
 ; the file's bytes through tkBin and tkBinRd. One file is open at a time,
 ; read sequentially through its own FCB and record buffer.
 
-;@ROUTINE IN B,HL OUT A,CARRY,HL CLOBBERS BC,DE,IY,HALFCARRY,ZERO,SIGN,PARITY
+;@ROUTINE IN B,HL OUT A,CARRY MAYBE-OUT HL CLOBBERS BC,DE,IY,HALFCARRY,ZERO,SIGN,PARITY
 ; Open the binary file named by the B bytes at HL. CP/M records file sizes in
 ; 128-byte units, so the exact length cannot be told: A=1 asks the core for an
 ; explicit count. A name that would alias the output or a work file fails.

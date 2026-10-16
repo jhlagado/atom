@@ -18,6 +18,7 @@ enCheck: ; Validate classes and return the exact encoded length.
     CP   mneLast+1                      ; Compare with the exclusive upper bound.
     JP   NC,.invalid                    ; Reject ordinals outside the supported set.
     LD   DE,.vdTable                    ; Select the validation-family address table.
+;@DISPATCH .vdTable
     JR   mneDisp                        ; Dispatch with the record's original ordinal.
 .vCore: ; Require no operands and select direct or ED length.
 

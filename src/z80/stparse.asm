@@ -335,6 +335,7 @@ stDoDir: ; Dispatch the contiguous ORG through INCBIN ordinals.
     INC  HL                             ; Advance to its high byte.
     LD   D,(HL)                         ; Complete the handler address in DE.
     EX   DE,HL                          ; Put the handler address in HL.
+;@DISPATCH .handlers
     JP   (HL)                           ; Dispatch without another comparison chain.
 .handlers: ; Little-endian handler addresses in directive ordinal order.
 
