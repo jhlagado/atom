@@ -42,13 +42,11 @@ hsCommit: ; Close any INCBIN file and seal the operation stream.
 ;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
 ; Publish the closed temporary file: move an existing output to $$B, rename
 ; the temporary file to the final name, then delete $$B. hsAbort restores
-; the old output if the second rename fails.
+; the old output if the second rename fails. No $$B exists here: a build
+; refuses to start beside one, and replay erases its spool before publishing.
 
 pubSwap: ; Publish a completed temporary output using a backup.
     CALL pubBak                                 ; Name the backup file for the selected output.
-    LD   DE,cpFcb                               ; Pass its FCB to the delete service.
-    LD   C,cpErase                              ; Select CP/M delete-file function 19.
-    CALL cpBdos                                 ; Remove any prior backup file.
     LD   HL,pubName                             ; Supply the current final name as rename source.
     LD   DE,cpFcb                               ; Supply the backup name as rename destination.
     CALL pubPair                                ; Build a CP/M rename FCB for the old output.

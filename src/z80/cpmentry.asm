@@ -46,6 +46,8 @@ cpEntry: ; Check memory and assemble one command.
     XOR  A                                      ; Check the root can be opened.
     CALL srcOpen                                ; Before any output is begun.
     JR   C,.noRoot                              ; Name it and stop.
+    LD   A,1                                    ; The root is open and unread.
+    LD   (srcFresh),A                           ; sfStart uses it as it is.
     CALL incStart                               ; Stream the root and its includes.
     LD   HL,asoCap                              ; All output modes cover $0100..$10000.
     LD   (cpDesc+drOutCap),HL                   ; Install the selected target extent.

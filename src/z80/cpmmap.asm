@@ -32,7 +32,8 @@ srcPage     EQU     cpWork                      ; CP/M source state. Replay reus
 incFound    EQU     srcPage                     ; Number of retained source names.
 srcRoot     EQU     incFound+1                  ; Nonzero once the root has been supplied.
 srcPos      EQU     srcRoot+1                   ; Logical offset saved during a cache lookup.
-srcPgEnd    EQU     srcPos+2                    ; Exclusive end of the CP/M source state.
+srcFresh    EQU     srcPos+2                    ; Nonzero while the root is open and unread.
+srcPgEnd    EQU     srcFresh+1                  ; Exclusive end of the CP/M source state.
 srcCache    EQU     cpWork+$100                 ; 128-byte random-source DMA cache.
 srcCEnd     EQU     srcCache+$80                ; Exclusive end of the source DMA cache.
 incNames    EQU     srcCEnd                     ; Eleven-byte retained CP/M source names.

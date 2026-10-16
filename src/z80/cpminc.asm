@@ -44,9 +44,19 @@ sfOpen: ; Return the ordinal of a named file.
     RET                                 ; Carry is still set.
 
 ;@ROUTINE IN A OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
-; Begin reading file A from its first byte.
+; Begin reading file A from its first byte. The entry check leaves the root
+; open, so it is not opened again.
 
 sfStart: ; Open a file for reading.
+    OR   A                              ; The root?
+    JR   NZ,.open                       ; No: open the file.
+    LD   HL,srcFresh                    ; Is the root still open from the entry check?
+    OR   (HL)                           ; Nonzero means it is.
+    LD   (HL),0                         ; Only the first start can use it.
+    JR   Z,.open                        ; No: open it.
+    XOR  A                              ; It is ready at its first byte.
+    RET                                 ; Carry is clear.
+.open: ; Open the file's FCB.
     CALL srcOpen                        ; Open its FCB.
     RET  NC                             ; Ready.
     LD   A,incLost                      ; It cannot be read.
