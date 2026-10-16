@@ -15,77 +15,31 @@
 ;  memory:
 ;
 ;    Address   During assembly              During replay
-;    $5E00     Include frames and state     Replay FCB, input record, state
+;    $5E00     Source state                 Replay FCB, input record, state
 ;    $5F00     Source cache record          Intel HEX and symbol buffer
-;    $5F80     Source names, saved parent   Output window, up to $E180
-;              records, symbols,
-;              references and the spool
-;              buffers
+;    $5F80     Source names, saved files,   Output window, up to $E180
+;              symbols, references, the
+;              spool buffers and the
+;              front end's workspace
 ;
 ;  State that must survive the handover lives in cpmstate.asm, inside
 ;  ATOM.COM and below cpWork, where the output window never reaches.
 
 cpCall5     EQU     $0005                       ; CP/M BDOS entry address.
 cpWork      EQU     $5E00                       ; First byte of transient writable arenas.
-incStack    EQU     cpWork                      ; Include frames: the parts waiting for their includes.
-incFrLen    EQU     6                           ; Frame: ordinal, resume offset, line, condition base.
 incMax      EQU     8                           ; Deepest include nesting.
-incFound    EQU     incStack+incFrLen*incMax    ; Number of retained source names.
-incDepth    EQU     incFound+1                  ; Number of frames in use.
-incNext     EQU     incDepth+1                  ; Part tkOpen supplies next, or $FF.
-srcPart     EQU     incNext+1                   ; Ordinal of the part being read.
-incHead     EQU     srcPart+1                   ; Nonzero while the part is still in its header.
-incErrAt    EQU     incHead+1                   ; A front-end failure's part, offset and line, or part $FF.
-incErrNm    EQU     incErrAt+5                  ; Drive and 8.3 name of a file that failed to read.
-srcPos      EQU     incErrNm+12                 ; Logical offset saved during a cache lookup.
-ppDepth     EQU     srcPos+2                    ; Number of open conditional frames.
-ppActive    EQU     ppDepth+1                   ; Activity of the currently selected branch.
-ppBase      EQU     ppActive+1                  ; Conditional depth when the current part began.
-ppDefOk     EQU     ppBase+1                    ; Nonzero while entry-header definitions remain legal.
-ppDefCnt    EQU     ppDefOk+1                   ; Number of complete numeric definitions.
-ppMode      EQU     ppDefCnt+1                  ; Bit 0 line start, bit 1 directive, bit 2 last record.
-ppLastCr    EQU     ppMode+1                    ; Nonzero when the previous byte was CR.
-ppEnded     EQU     ppLastCr+1                  ; Nonzero once the part's end has been checked.
-ppCapLen    EQU     ppEnded+1                   ; Directive bytes captured, $FE overflow, $FF done.
-ppLine      EQU     ppCapLen+1                  ; Line of the byte being filtered.
-ppDirAt     EQU     ppLine+2                    ; Offset of the directive's '%'.
-ppDirLn     EQU     ppDirAt+2                   ; Line of the directive.
-ppPos       EQU     ppDirLn+2                   ; Offset of the byte being filtered.
-ppTokLen    EQU     ppPos+2                     ; Significant byte length of the current token.
-ppRadix     EQU     ppTokLen+1                  ; Numeric radix selected for token conversion.
-ppFirst     EQU     ppRadix+1                   ; Token index of the first numeric digit.
-ppDigits    EQU     ppFirst+1                   ; Number of numeric digits excluding prefix or suffix.
-ppIndex     EQU     ppDigits+1                  ; Next digit index within numeric conversion.
-ppTemp      EQU     ppIndex+1                   ; Character or condition saved across helper calls.
-ppSrcPtr    EQU     ppTemp+1                    ; Directive cursor saved during token lookup.
-ppAfter     EQU     ppSrcPtr+2                  ; Directive cursor saved after a validated value.
-ppValue     EQU     ppAfter+2                   ; Unsigned sixteen-bit definition or condition value.
-ppLength    EQU     ppValue+2                   ; Significant length of the staged definition name.
-ppVarEnd    EQU     ppLength+1                  ; Exclusive end of scalar preprocessor workspace.
-ppStack     EQU     ppVarEnd                    ; Sixteen one-byte parent, condition and ELSE frames.
-ppLimit     EQU     ppStack+16                  ; Exclusive end of the conditional stack.
-ppLnMax     EQU     64                          ; Longest directive before its comment.
-ppLnBuf     EQU     ppLimit                     ; The directive line, ended by CR.
-ppLnEnd     EQU     ppLnBuf+ppLnMax+1           ; Exclusive end of the directive line.
+srcPage     EQU     cpWork                      ; CP/M source state. Replay reuses the page.
+incFound    EQU     srcPage                     ; Number of retained source names.
+srcRoot     EQU     incFound+1                  ; Nonzero once the root has been supplied.
+srcPos      EQU     srcRoot+1                   ; Logical offset saved during a cache lookup.
+srcPgEnd    EQU     srcPos+2                    ; Exclusive end of the CP/M source state.
 srcCache    EQU     cpWork+$100                 ; 128-byte random-source DMA cache.
 srcCEnd     EQU     srcCache+$80                ; Exclusive end of the source DMA cache.
 incNames    EQU     srcCEnd                     ; Eleven-byte retained CP/M source names.
 incNEnd     EQU     incNames+$AF5               ; Exclusive end of 255 retained-name slots.
-incState    EQU     incNEnd                     ; Per name: 0 not begun, 1 open, 2 finished.
-incSEnd     EQU     incState+255                ; Exclusive end of the name states.
-incSvLen    EQU     36+2+128                    ; Saved parent: FCB, cache key and cache record.
-incSaves    EQU     incSEnd                     ; One saved parent per include frame.
-incSvEnd    EQU     incSaves+incSvLen*incMax    ; Exclusive end of the saved parents.
-ppRecLen    EQU     20                          ; Definition record size: length, 17 name bytes and value.
-ppDefMax    EQU     32                          ; Maximum distinct native numeric definitions.
-ppDefBeg    EQU     incSvEnd                    ; Beginning of the fixed-width definition table.
-ppDefLen    EQU     ppRecLen*ppDefMax           ; Total bytes reserved for definition records.
-ppDefEnd    EQU     ppDefBeg+ppDefLen           ; Exclusive end of the definition table.
-ppToken     EQU     ppDefEnd                    ; Seventeen-byte uppercase directive or value token.
-ppTokEnd    EQU     ppToken+17                  ; Exclusive end of the token buffer.
-ppName      EQU     ppTokEnd                    ; Separately staged padded definition name.
-ppWidth     EQU     17                          ; Maximum significant definition-name length.
-incEnd      EQU     ppName+ppWidth              ; Exclusive end of include and preprocessor workspace.
+srcSvLen    EQU     36+2+128                    ; Saved file: FCB, cache key and cache record.
+srcSaves    EQU     incNEnd                     ; One saved file per include frame.
+incEnd      EQU     srcSaves+srcSvLen*incMax    ; Exclusive end of the source workspace.
 ; INCBIN reads one file at a time through its own FCB and record buffer, so
 ; binary reads never disturb the source cache.
 binRamLo    EQU     incEnd                      ; Beginning of the INCBIN reader's workspace.
@@ -102,13 +56,14 @@ cpRefEnd    EQU     cpRefBeg+$1000              ; Exclusive end of the four-KiB 
 asoBufs     EQU     cpRefEnd                    ; Beginning of assembly-phase ASO buffers.
 matLimit    EQU     cpWork+$8380                ; Exclusive ceiling of the replay output window.
 ; The operation writer owns high TPA buffers only during assembly. Once the
-; ASO file is closed, the include page becomes materialiser workspace.
+; ASO file is closed, the source page becomes materialiser workspace.
 asoFcb      EQU     asoBufs                     ; 36-byte FCB for the tentative operation stream.
 asoRun      EQU     asoFcb+36                   ; 128-byte buffer for one coalesced IMAGE run.
 asoRec      EQU     asoRun+128                  ; 128-byte physical ASO output record.
-matFcb      EQU     incStack                    ; Replay FCB overlaid on the finished include page.
+feRamLo     EQU     asoRec+128                  ; The source front end's workspace, below the replay ceiling.
+matFcb      EQU     srcPage                     ; Replay FCB overlaid on the finished source page.
 matRec      EQU     matFcb+36                   ; 128-byte replay input record after the replay FCB.
-matVars     EQU     matRec+128                  ; Beginning of replay scalar state in the include page.
+matVars     EQU     matRec+128                  ; Beginning of replay scalar state in the source page.
 matPtr      EQU     matVars+1                   ; Address of the next buffered ASO input byte.
 matHave     EQU     matVars+3                   ; Unread bytes in the physical ASO input record.
 matByte     EQU     matVars+4                   ; Decoded payload or temporary word low byte.

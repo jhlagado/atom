@@ -89,23 +89,6 @@ srcRaw: ; Read a source byte through the random-record cache.
     JR   Z,srcHit                       ; Reuse the cache when both bases match.
 srcMiss: ; Load the required random source record.
     LD   (srcKey),DE                    ; Store the aligned offset being loaded.
-
-; The record at $FF80 is the last a part may use. The filter checks each of
-; its bytes against the 65,535-byte limit.
-
-    LD   A,(ppMode)                     ; Clear the last-record bit.
-    AND  $FB                            ; Bit 2.
-    LD   B,A                            ; Keep the mode.
-    LD   A,D                            ; Is this record $FF80?
-    INC  A                              ; Its high byte is $FF.
-    JR   NZ,.mode                       ; No.
-    LD   A,E                            ; Its low byte is $80.
-    CP   $80                            ; Is it?
-    JR   NZ,.mode                       ; No.
-    SET  2,B                            ; Mark the last record.
-.mode: ; Publish the mode.
-    LD   A,B                            ; Recover it.
-    LD   (ppMode),A                     ; Keep it.
     RLC  E                              ; Move offset bit 7 into record bit 0.
     LD   A,D                            ; Load the offset high byte.
     ADD  A,A                            ; Shift its bits left one place.
@@ -123,6 +106,23 @@ srcMiss: ; Load the required random source record.
     CALL cpBdos                         ; Load the requested 128-byte source record.
     OR   A                              ; Zero means the random read succeeded.
     JR   NZ,srcFail                     ; Treat a BDOS read failure as no source byte.
+
+; A file may hold at most 65,535 bytes. If the record at $FF80 is full, the
+; file has a 65,536th byte.
+
+    LD   HL,(srcKey)                    ; Is this the last record a file may use?
+    LD   DE,$FF80                       ; Its key.
+    OR   A                              ; Clear carry for the comparison.
+    SBC  HL,DE                          ; Zero when it is.
+    JR   NZ,srcHit                      ; No: take the byte.
+    LD   A,(srcCache+$7F)               ; Does its final byte hold text?
+    CP   $1A                            ; ^Z means the file ended earlier.
+    JR   Z,srcHit                       ; Then it fits.
+    LD   HL,1                           ; No record base is odd.
+    LD   (srcKey),HL                    ; The cache holds no record now.
+    LD   A,srcLong                      ; The file is too long.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The front end reports it.
 srcHit: ; Select a byte within the cached source record.
     LD   HL,(srcPos)                    ; Restore the byte's logical offset.
     RES  7,L                            ; Keep its within-record offset in $00..$7F.
@@ -207,12 +207,12 @@ srcName: ; Parse a current-drive 8.3 name from memory into an FCB.
     SCF                                 ; Carry marks an invalid name.
     RET                                 ; The FCB holds a partial name.
 
-;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-; Atom's source-byte service on CP/M. Return the byte at offset HL of the
-; current part through the filter, or carry with A=0 at the part's end. The
-; core reads each byte once, in order. Most come from the cached record.
+;@ROUTINE IN A,HL OUT A,CARRY CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY
+; Return the byte at offset HL of the open file. Carry with A=0 at its end,
+; or with a message number when it cannot be read. Most bytes come from the
+; cached record.
 
-tkRead: ; Read one source byte on CP/M.
+sfRead: ; Read one byte of the open source file.
     LD   A,(srcKey+1)                   ; Compare the cached record's high byte.
     CP   H                              ; Same 256-byte page of the file?
     JR   NZ,.slow                       ; No: load the record.
@@ -227,17 +227,17 @@ tkRead: ; Read one source byte on CP/M.
     LD   D,srcCache/256                 ; Select the cache page.
     LD   A,(DE)                         ; Read the cached byte.
     CP   $1A                            ; CP/M's end-of-text marker?
-    JP   NZ,ppFilter                    ; No: filter the byte.
-    JR   .end                           ; Yes: the part has ended.
+    JR   Z,.end                         ; Yes: the file has ended.
+    OR   A                              ; Clear carry.
+    RET                                 ; Return the byte.
+.end: ; Report the end of the file.
+    XOR  A                              ; A=0 with carry is the end.
+    SCF                                 ; Carry marks it.
+    RET                                 ; The front end finishes the part.
 .slow: ; Read through the cache loader.
-    PUSH BC                             ; Save parser BC across raw read.
-    PUSH HL                             ; Preserve the source offset across cache lookup.
-    CALL srcRaw                         ; Read one byte from the active source file.
-    POP  HL                             ; Restore the source offset.
-    POP  BC                             ; Restore the caller's parser state.
-    JP   NC,ppFilter                    ; Filter the byte.
-.end: ; Finish the part.
-    PUSH BC                             ; ppEnd uses BC.
-    CALL ppEnd                          ; The part has ended.
-    POP  BC                             ; Restore the caller's parser state.
-    RET                                 ; Return carry with A=0.
+    PUSH BC                             ; Keep the caller's BC.
+    PUSH HL                             ; Keep the offset.
+    CALL srcRaw                         ; Read one byte from the open file.
+    POP  HL                             ; Restore the offset.
+    POP  BC                             ; Restore the caller's BC.
+    RET                                 ; Return the byte, the end or a failure.

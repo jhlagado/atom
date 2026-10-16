@@ -130,14 +130,13 @@ async function build() {
     symbol("asoEnd") <= symbol("cpWork"),
     "CP/M spool and replay code exceeds the loaded-code area",
   );
-  assert.equal(
-    symbol("incStack") & 0xff,
-    0,
-    "CP/M include page must begin on a page boundary",
+  assert.ok(
+    symbol("srcPgEnd") <= symbol("srcCache"),
+    "CP/M source state must fit its page",
   );
   assert.ok(
-    symbol("ppLnEnd") <= symbol("srcCache"),
-    "CP/M include frames and front-end state must fit their page",
+    symbol("feRamHi") <= symbol("matLimit"),
+    "CP/M front-end workspace must end below the replay ceiling",
   );
   assert.equal(
     symbol("srcCache") & 0xff,
@@ -151,19 +150,18 @@ async function build() {
   );
   assert.ok(
     symbol("srcCEnd") <= symbol("incNames") &&
-      symbol("incNEnd") <= symbol("incState") &&
-      symbol("incSEnd") <= symbol("incSaves") &&
-      symbol("incSvEnd") <= symbol("ppDefBeg") &&
-      symbol("incEnd") <= symbol("cpSymBeg") &&
+      symbol("incNEnd") <= symbol("srcSaves") &&
+      symbol("incEnd") <= symbol("binRamLo") &&
+      symbol("binRamHi") <= symbol("cpSymBeg") &&
       symbol("cpSymEnd") <= symbol("cpRefBeg") &&
       symbol("cpRefEnd") <= symbol("asoFcb") &&
-      symbol("asoRec") + 128 <= symbol("matLimit"),
+      symbol("asoRec") + 128 <= symbol("feRamLo"),
     "CP/M runtime data regions overlap or are out of order",
   );
   assert.equal(
     symbol("matFcb"),
-    symbol("incStack"),
-    "CP/M materializer must reuse the include page only after assembly",
+    symbol("srcPage"),
+    "CP/M materializer must reuse the source page only after assembly",
   );
   assert.equal(
     symbol("matRec"),
@@ -234,7 +232,7 @@ async function build() {
       returnAddress: symbol("cpExit"),
       inputFcbAddress: symbol("srcFcb"),
       sourceCacheAddress: symbol("srcCache"),
-      includeStackAddress: symbol("incStack"),
+      sourcePageAddress: symbol("srcPage"),
       partNamesAddress: symbol("incNames"),
       partNamesEndAddress: symbol("incNEnd"),
       binaryIncludeFcbAddress: symbol("binFcb"),

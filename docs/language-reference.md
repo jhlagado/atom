@@ -151,7 +151,7 @@ ordinary H register.
 | `CSTR "text"` | Emits a string followed by zero |
 | `PSTR "text"` | Emits the byte count followed by the string |
 | `ISTR "text"` | Emits a string with bit 7 set on its last byte |
-| `INCBIN "file",count` | Emits a prefix of a binary file |
+| `INCBIN "file",count` | Emits the first count bytes of a binary file |
 
 `ORG`, `DS` and `ALIGN` require resolved expressions. An already aligned address
 needs no padding and the boundary can be any positive value. An empty `ISTR`
@@ -168,16 +168,19 @@ DW $                   ; Emits 03 40.
 ```
 
 Strings decode `\0`, `\n`, `\r`, `\t`, `\'`, `\"`, `\\` and `\xHH` to bytes.
-`INCBIN` counts must be numeric literals. Node permits an omitted count to
+`INCBIN` reads its file when Atom reaches the statement. The count can be any
+expression that is resolved at that point. Node permits an omitted count to
 include the whole file. CP/M requires the count because its files occupy whole
 128-byte records.
 
-## Preprocessing and limits
+## Source directives and limits
 
-The host processes `%DEFINE`, `%INCLUDE`, `%IF`, `%ELSE` and `%ENDIF` before
-assembly. [Using Atom](using-atom.md#source-files-and-conditions) explains their
-placement and the platform limits. Preprocessing preserves source offsets,
-so diagnostics still refer to the original file.
+Atom applies `%DEFINE`, `%INCLUDE`, `%IF`, `%ELSE` and `%ENDIF` as it reads the
+source, so these directives do not cost another pass either. The assembler sees
+a directive line as a comment and an inactive branch as blank text. Offsets,
+lines and columns are unchanged, so diagnostics still refer to the original
+file. [Using Atom](using-atom.md#source-files-and-conditions) explains where the
+directives belong and the platform limits.
 
 Atom has no macros, automatic branch promotion, forward equates, typed layouts,
 namespace imports or banked output. Includes import each source file once.

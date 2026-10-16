@@ -42,6 +42,10 @@ cpEntry: ; Check memory and assemble one command.
     JR   C,.cmdFail                             ; Report a usage or filename error before I/O.
     OR   A                                      ; Test whether parsing selected help-only mode.
     JR   NZ,.ok                                 ; Help returns success without assembly.
+    CALL cpmStart                               ; Retain the root's name.
+    XOR  A                                      ; Check the root can be opened.
+    CALL srcOpen                                ; Before any output is begun.
+    JR   C,.noRoot                              ; Name it and stop.
     CALL incStart                               ; Stream the root and its includes.
     LD   HL,asoCap                              ; All output modes cover $0100..$10000.
     LD   (cpDesc+drOutCap),HL                   ; Install the selected target extent.
@@ -69,14 +73,6 @@ cpEntry: ; Check memory and assemble one command.
     PUSH AF                                     ; Save Atom's status while printing.
     LD   DE,msgCrlf                             ; Start the diagnostic on a fresh line.
     CALL cpPrint                                ; Separate it from the command echo.
-    LD   HL,(incErr)                            ; Did the source front end fail?
-    LD   A,H                                    ; Test the message pointer.
-    OR   L                                      ; Zero means it did not.
-    JR   Z,.core                                ; Report Atom's own diagnostic.
-    POP  AF                                     ; Discard Atom's status.
-    CALL incShow                                ; Print the front end's failure.
-    JR   .fail                                  ; Return failure.
-.core: ; Report Atom's diagnostic.
     POP  AF                                     ; Recover Atom's public status.
     CP   drBadOut                               ; Did BEGIN or COMMIT reject the output?
     JR   Z,.outFail                             ; There is no source line to report.
@@ -92,6 +88,13 @@ cpEntry: ; Check memory and assemble one command.
     LD   HL,pubName                             ; Identify the selected output file.
     CALL cpPutFcb                               ; Print its CP/M filename.
     JR   .text                                  ; Explain the output failure.
+.noRoot: ; Name a root source that cannot be opened.
+    LD   DE,msgCrlf                             ; Start the diagnostic on a fresh line.
+    CALL cpPrint                                ; Separate it from the command echo.
+    LD   HL,srcFcb                              ; The root's name.
+    CALL cpPutFcb                               ; Print it.
+    LD   DE,msgRead                             ; Explain that it cannot be read.
+    CALL cpPrint                                ; Finish the line.
 .fail: ; Select build-failure exit status.
     LD   A,1                                    ; Record status one for build failure.
 .leave: ; Check the stack guard before exiting.

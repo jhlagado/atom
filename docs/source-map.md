@@ -8,8 +8,8 @@ file opens with a short introduction to its stage.
 
 | File | Builds |
 | --- | --- |
-| `atom.asm` | The native core that the Node host runs: `core.asm` and `host.asm` |
-| `cpm22.asm` | `ATOM.COM` for CP/M 2.2: `cpmorg.asm`, `core.asm` and the CP/M adapter |
+| `atom.asm` | The native core that the Node host runs: `core.asm`, the source front end and `host.asm` |
+| `cpm22.asm` | `ATOM.COM` for CP/M 2.2: `cpmorg.asm`, `core.asm`, the CP/M adapter and the source front end |
 
 ## The core
 
@@ -31,9 +31,27 @@ follows one small program through all of them.
 | Statements | `stmts.asm`: `stparse.asm`, `ststring.asm`, `stdata.asm` | Assembles labels, equates, directives and instructions |
 | Driver | `driver.asm`: `drbuild.asm`, `drfinish.asm` | Runs every source part and the final checks |
 
-`host.asm` supplies the Node host's source reader and output services.
-`nobj.asm` (`objread.asm`, `objwrite.asm`) supplies them for the named-object
-harness.
+## The source front end
+
+`front.asm` sits between the core and a host's files, and both hosts use it.
+The core asks it for parts and bytes. It asks the host to open and read files
+by ordinal, and reads each byte once.
+
+| File | What it does |
+| --- | --- |
+| `frinc.asm` | Supplies parts to the core, starts each include at its `%INCLUDE` line and resumes the importer after it |
+| `ppvalue.asm` | Filters the byte stream: tracks lines, captures `%` directive lines and blanks inactive branches |
+| `ppctrl.asm` | Applies `%DEFINE`, `%IF`, `%ELSE` and `%ENDIF` |
+
+Each platform defines where the front end's workspace starts and how deeply
+includes nest: `hostmap.asm` for Node and `cpmmap.asm` for CP/M.
+
+## Hosts
+
+`host.asm` supplies the Node host's file and output services.
+`nobj.asm` (`objread.asm`, `objwrite.asm`) supplies the named-object harness.
+It gives the core its parts directly, without the front end, so its sources
+have no `%` directives.
 
 ## The CP/M adapter
 
@@ -44,8 +62,7 @@ harness.
 | `cpmentry.asm` | Checks memory, runs one command and leaves through warm boot |
 | `cpmcmd.asm` | Parses the command tail and checks filenames |
 | `cpmsrc.asm` | Opens source files and reads bytes through a 128-byte cache |
-| `cpminc.asm` | Finds `%INCLUDE` lines and orders the source parts depth first |
-| `cpprep.asm` (`ppctrl.asm`, `ppvalue.asm`) | Applies `%DEFINE` and `%IF` |
+| `cpminc.asm` | Names source files for the front end, and parks a file's read state while its include is read |
 | `cpmbin.asm` | Opens and reads `INCBIN` files for the core |
 | `cpmpub.asm` | Receives Atom's output and publishes or rolls back the files |
 | `cpmerr.asm` | Finds the line and column of a failure and prints its message |

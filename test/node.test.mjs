@@ -564,7 +564,7 @@ describe("Native execution", () => {
     );
     assert.deepEqual(error.diagnostic, {
       logicalIdentity: "bad.asm",
-      ordinal: 0,
+      ordinal: 1,
       offset: 0,
       line: 1,
       column: 1,
@@ -1048,33 +1048,34 @@ describe("Source projects", () => {
       "common;part.asm": 'ORG $4000\nDB 1\n',
     });
     const result = await assembleAtomProject({ root, entry: "main.asm", target: { start: 0x4000, capacity: 16 } });
-    assert.deepEqual(result.project.parts.map(({ logicalIdentity }) => logicalIdentity), ["common;part.asm", "a.asm", "b.asm", "main.asm"]);
+    assert.deepEqual(result.project.parts.map(({ logicalIdentity }) => logicalIdentity), ["main.asm", "a.asm", "common;part.asm", "b.asm"]);
     assert.deepEqual([...materializeAtomGeneration(result.generation).bytes], [1, 2, 3, 0xc9]);
-    for (const part of result.project.parts) {
-      assert.equal(part.compilerBytes.length, part.originalBytes.length);
-      for (let offset = 0; offset < part.originalBytes.length; offset += 1) {
-        if ([10, 13].includes(part.originalBytes[offset])) assert.equal(part.compilerBytes[offset], part.originalBytes[offset]);
-      }
-    }
   });
 
   test("projects reject dependency escapes, cycles and invalid preprocessing", async (t) => {
-    for (const [files, code] of [
-      [{ "main.asm": '%include "../outside.asm"\n' }, "root-escape"],
-      [{ "main.asm": '%include "a.asm"\n', "a.asm": '%include "main.asm"\n' }, "dependency-cycle"],
-      [{ "main.asm": '%include "missing.asm"\n' }, "missing-source"],
-      [{ "main.asm": '%if MISSING\nNOP\n%endif\n' }, "undefined-definition"],
-      [{ "main.asm": '%if 1\nNOP\n' }, "unterminated-conditional"],
-      [{ "main.asm": '%define V 1\n%define v 2\n' }, "duplicate-definition"],
+    for (const [files, code, message, cause] of [
+      [{ "main.asm": '%include "../outside.asm"\n' }, "missing-source", "main.asm:1:1: could not read the included file", "root-escape"],
+      [{ "main.asm": '%include "a.asm"\n', "a.asm": '%include "main.asm"\n' }, "dependency-cycle", "a.asm:1:1: include cycle"],
+      [{ "main.asm": '%include "missing.asm"\n' }, "missing-source", "main.asm:1:1: could not read the included file", "missing-source"],
+      [{ "main.asm": '%if MISSING\nNOP\n%endif\n' }, "directive", "main.asm:1:1: invalid source directive"],
+      [{ "main.asm": '%if 1\nNOP\n' }, "directive", "main.asm:3:1: invalid source directive"],
+      [{ "main.asm": '%define V 1\n%define v 2\n' }, "directive", "main.asm:2:1: invalid source directive"],
     ]) {
       const root = await project(t, files);
-      await assert.rejects(() => resolveAtomProject({ root, entry: "main.asm" }), (error) => error.code === code, code);
+      await assert.rejects(
+        () => assembleAtomProject({ root, entry: "main.asm", target: { start: 0x4000, capacity: 16 } }),
+        (error) => error.category === "source" && error.code === code && error.message === message && error.cause?.code === cause,
+        message,
+      );
     }
     const root = await project(t, { "main.asm": '%include "escape.asm"\n' });
     const outside = await fs.mkdtemp(path.join(os.tmpdir(), "atom-outside-"));
     t.after(() => fs.rm(outside, { recursive: true, force: true }));
     await fs.writeFile(path.join(outside, "part.asm"), "NOP\n");
     await fs.symlink(path.join(outside, "part.asm"), path.join(root, "escape.asm"));
-    await assert.rejects(() => resolveAtomProject({ root, entry: "main.asm" }), (error) => error.code === "root-escape");
+    await assert.rejects(
+      () => assembleAtomProject({ root, entry: "main.asm", target: { start: 0x4000, capacity: 16 } }),
+      (error) => error.code === "missing-source" && error.cause?.code === "root-escape",
+    );
   });
 });

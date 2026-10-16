@@ -43,23 +43,6 @@ msgDup: ; Source and output filename-conflict diagnostic.
     DB   'c','o','n','f','l','i','c','t',13,10,'$'                  ; Conflict suffix.
 msgBusy: ; Reserved work-file collision diagnostic.
     DB   " exists: erase it first",13,10,'$'                        ; Leftover work file.
-msgInc: ; Malformed INCLUDE diagnostic.
-    DB   13,10,'I','n','v','a','l','i','d',' '                      ; Error prefix.
-    DB   '%','I','N','C','L','U','D','E',13,10,'$'                  ; Directive name.
-msgDir: ; Unsupported or malformed preprocessor directive diagnostic.
-    DB   13,10,'I','n','v','a','l','i','d',' '                      ; Error prefix.
-    DB   's','o','u','r','c','e',' '                                ; Describe the rejected construct.
-    DB   'd','i','r','e','c','t','i','v','e',13,10,'$'              ; Finish the message.
-msgLoop: ; Include dependency-cycle diagnostic.
-    DB   13,10,'I','n','c','l','u','d','e',' '                      ; Include prefix.
-    DB   'c','y','c','l','e',13,10,'$'                              ; Cycle suffix.
-msgDeep: ; Include nesting diagnostic.
-    DB   13,10,'I','n','c','l','u','d','e','s',' '                  ; Include prefix.
-    DB   'n','e','s','t','e','d',' ','t','o','o',' '                ; Nesting.
-    DB   'd','e','e','p','l','y',13,10,'$'                          ; Finish the message.
-msgCap: ; Source-part capacity diagnostic.
-    DB   13,10,'T','o','o',' ','m','a','n','y',' '                  ; Error prefix.
-    DB   's','o','u','r','c','e','s',13,10,'$'                      ; Source count.
 msgMem: ; Insufficient transient-memory diagnostic.
     DB   13,10                                                      ; Start the diagnostic on a new line.
     DB   "Insufficient transient memory"                            ; Explain the fixed-layout failure.

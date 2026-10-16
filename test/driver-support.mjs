@@ -88,6 +88,7 @@ export async function createDriverHarness() {
     [symbols.AtomStatementWorkspaceStart, symbols.AtomStatementWorkspaceEnd],
     [symbols.AtomDriverWorkspaceStart, symbols.AtomDriverWorkspaceEnd],
     [symbols.AtomHostWorkspaceStart, symbols.AtomHostWorkspaceEnd],
+    [symbols.AtomFrontWorkspaceStart, symbols.AtomFrontWorkspaceEnd],
   ];
   const writable = new Uint8Array(memory.length);
   for (const [start, end] of [...workspace, [STACK_BEFORE + 1, STACK_AFTER]]) writable.fill(1, start, end);
@@ -336,6 +337,7 @@ export async function createDriverHarness() {
     memory[symbols.AtomDriverProofFailBegin] = options.failBegin ? 1 : 0;
     memory[symbols.AtomDriverProofFailCommit] = options.failCommit ? 1 : 0;
     memory[symbols.AtomDriverProofFailAfter] = options.failAfter ?? 0;
+    execute("AtomFrontStart", () => {}, "AtomFrontStart");
     return execute("AtomAssemble", (_memory, names, cpu) => {
       cpu.ix = names.AtomDriverBuildDescriptor;
     }, options.label ?? `AtomAssemble ${JSON.stringify(parts)}`);

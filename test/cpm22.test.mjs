@@ -149,7 +149,7 @@ test("CP/M runtime arenas and the output window work without COM initialisation"
   assert.ok(cpmCensus.materializerScratchEnd <= cpmCensus.materializerWindowStart);
   assert.notEqual(cpmCensus.hexDmaAddress, cpmCensus.materializerRecordAddress);
   assert.ok(cpmCensus.hexDmaAddress + 128 <= cpmCensus.materializerWindowStart);
-  assert.equal(cpmCensus.materializerFcbAddress, cpmCensus.includeStackAddress);
+  assert.equal(cpmCensus.materializerFcbAddress, cpmCensus.sourcePageAddress);
   assert.equal(cpmCensus.hexDmaAddress, cpmCensus.sourceCacheAddress);
   assert.equal(cpmCensus.materializerWindowStart, cpmCensus.sourceCacheAddress + 128);
 
@@ -789,7 +789,7 @@ test("CP/M rejects malformed and unsupported conditional directives before outpu
   for (const source of sources) {
     const result = await runCpm22Atom(Buffer.from(source, "ascii"));
     assert.ok(
-      /Invalid source directive/.test(result.atomTranscript),
+      /invalid source directive/.test(result.atomTranscript),
       `Expected rejection for ${JSON.stringify(source)}; received ${JSON.stringify(result.atomTranscript.slice(0, 96))}`,
     );
     assert.equal(result.outputFile, undefined);
@@ -856,7 +856,7 @@ test("the CP/M source reader accepts 65,535 bytes and rejects the next byte", as
   assert.match(accepted.atomTranscript, /OUTPUT\.COM written/);
   const prior = Uint8Array.from([0xc9]);
   const rejected = await runCpm22Atom(Buffer.concat([exact, Buffer.from("x")]), prior);
-  assert.match(rejected.atomTranscript, /INPUT\.ASM read failed/);
+  assert.match(rejected.atomTranscript, /INPUT\.ASM:\d+:\d+: source file is longer than 65,535 bytes/);
   assert.deepEqual(rejected.outputFile?.bytes.slice(0, prior.length), prior);
 });
 

@@ -172,7 +172,7 @@ test("a failing source service aborts the open generation", () => {
   const result = h.assemble(["NOP\n", "NOP\n"], { reversedSourceIndex: 1 });
   assert.equal(result.status, STATUS.SOURCE_SERVICE);
   assert.equal(result.carry, 1);
-  assert.equal(result.driverDetail, 1);
+  assert.equal(result.driverDetail, 79);
   const lifecycle = h.lifecycle();
   assert.equal(lifecycle.began, 1);
   assert.equal(lifecycle.committed, 0);

@@ -180,6 +180,12 @@ drDiag: ; Translate nested statuses into diagnostic arguments.
     LD   C,drMsgCfg                     ; Assume an invalid build description.
     CP   drBadCfg                       ; Was the descriptor rejected?
     JP   Z,.set                         ; Report the configuration failure.
+    CP   drBadIn                        ; Did the host's source service fail?
+    JR   NZ,.source                     ; No: look at the statement.
+    LD   A,(drDetail)                   ; Its status is a message number.
+    LD   C,A                            ; Report that message.
+    JP   .set                           ; At the position tkOpen published.
+.source: ; Classify the remaining statuses.
     LD   C,drMsgInt                     ; Anything other than a source error is internal.
     CP   drBadSrc                       ; Was a source statement rejected?
     JP   NZ,.set                        ; No: report an internal error.

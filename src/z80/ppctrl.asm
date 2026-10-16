@@ -35,9 +35,9 @@ ppStart: ; Reset per-part state for a part's first byte.
     LD   (ppLine),A                     ; The first line.
     RET                                 ; Filtering can begin.
 
-;@ROUTINE OUT A,CARRY,DE CLOBBERS BC,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
-; Apply the directive captured in ppLnBuf. Carry means it was malformed, with
-; its message in DE. A=1 means an include ends this part here. A=0 means the
+;@ROUTINE OUT A,CARRY CLOBBERS BC,DE,HL,IX,IY,ZERO,SIGN,PARITY,HALFCARRY
+; Apply the directive captured in ppLnBuf. Carry means it failed, with its
+; message number in A. A=1 means an include ends this part here. A=0 means the
 ; part continues.
 
 ppApply: ; Apply one captured directive at its line's end.
@@ -82,7 +82,7 @@ ppApply: ; Apply one captured directive at its line's end.
     CALL ppMatch                        ; Match the complete keyword.
     JR   Z,ppIf                         ; Evaluate and push a new condition.
 ppErr: ; Return invalid-directive detail.
-    LD   DE,msgDir                      ; Select unsupported-directive detail.
+    LD   A,ppBadDir                     ; Select unsupported-directive detail.
     SCF                                 ; Carry marks the malformed directive.
     RET                                 ; The filter records where it was.
 ppDefine: ; Validate an entry-header numeric definition.
@@ -333,7 +333,7 @@ ppNext: ; Read the next byte of the captured directive.
     OR   A                              ; Clear carry.
     RET                                 ; Return it.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,IX,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY,HL CLOBBERS BC,DE,IX,ZERO,SIGN,PARITY,HALFCARRY
 ; Read one whitespace-delimited ASCII token, leaving its delimiter unread.
 
 ppGetTok: ; Read one bounded uppercase token.

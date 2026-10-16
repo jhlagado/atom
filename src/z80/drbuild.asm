@@ -44,8 +44,10 @@
 ;
 ;  tkOpen returns the next part: A = ordinal, HL = the logical offset where
 ;  it starts and DE = the line it starts on, with carry clear. A part resumed
-;  after an include starts past offset zero and line one. Carry with A=0 means no part remains. Carry with A nonzero is a host
-;  failure, returned as drBadIn with that status in drDetail.
+;  after an include starts past offset zero and line one. Carry with A=0
+;  means no part remains. Carry with A nonzero is a failure: A is its message
+;  number and stAtPart, stAtOff and stAtLine its position. The driver returns
+;  drBadIn with that number in drDetail and drMsg.
 ;
 ;  FAILURE OWNERSHIP
 ;  -----------------

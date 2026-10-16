@@ -2,14 +2,15 @@
 ;  Fail-closed host-service defaults
 ;=============================================================================
 ;
-;  The core reads source through tkOpen and tkRead, binary files through
-;  tkBin and tkBinRd, and writes output through six service entries. A platform
-;  image omits this module and supplies those services at the same labels. The standalone version reads source from memory, and each output
+;  The front end reads source through the sfOpen, sfStart, sfRead, sfPark
+;  and sfBack file services, the core reads binary files through tkBin and
+;  tkBinRd, and output goes through six service entries. A platform image
+;  omits this module and supplies those services at the same labels. The standalone version reads source from memory, and each output
 ;  entry fails closed through one failure tail.
 ;
-;  Memory source: before drAsm, the caller points hsSrcTab at one begin/end
-;  word pair per part, stores the part count in hsSrcCnt and clears hsSrcIdx.
-;  tkOpen supplies those parts in order from offset zero.
+;  Memory source: before drAsm, the caller runs incStart, points hsSrcTab at
+;  one begin/end word pair per part, stores the part count in hsSrcCnt and
+;  clears hsSrcIdx. sfOpen supplies those parts in order, each as a root.
 ;
 ;  BEGIN receives IX = build descriptor. IMAGE/PATCH byte receive A = value,
 ;  C = output class and HL = address. PATCH word receives HL = value, DE =
@@ -25,15 +26,37 @@
 
 hsBeg: ; Beginning of replaceable host services.
 
-;@ROUTINE OUT A,CARRY,DE,HL CLOBBERS ZERO,SIGN,PARITY,HALFCARRY
-; Supply the next memory part from offset zero on line one, or carry with A=0 when none
-; remains. A range whose end is below its begin fails with A=1.
+;@ROUTINE IN B,HL OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Name a file for the front end. B=0 asks for the next memory part, each a
+; root assembled in table order. Memory parts have no names, so a named file
+; cannot be read.
 
-tkOpen: ; Open the next memory-backed source part.
+sfOpen: ; Return the next memory part.
+    LD   A,B                            ; Is this a request for a root?
+    OR   A                              ; Zero means yes.
+    JR   NZ,.named                      ; Memory parts have no names.
     LD   A,(hsSrcIdx)                   ; Select the next part.
     LD   HL,hsSrcCnt                    ; Compare with the number of parts.
     CP   (HL)                           ; Is every part supplied?
     JR   NC,.none                       ; Yes: report that none remains.
+    LD   HL,hsSrcIdx                    ; Address the part counter.
+    INC  (HL)                           ; Select the following part next time.
+    OR   A                              ; Clear carry.
+    RET                                 ; Return this part's ordinal.
+.none: ; Report that every part has been supplied.
+    XOR  A                              ; A=0 means none remains.
+    SCF                                 ; Carry means no part.
+    RET                                 ; Assembly can finish.
+.named: ; Refuse a named file.
+    LD   A,incLost                      ; It cannot be read.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The front end reports it.
+
+;@ROUTINE IN A OUT A,CARRY CLOBBERS DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+; Begin reading memory part A. A range whose end is below its begin cannot be
+; read.
+
+sfStart: ; Select a memory part.
     LD   L,A                            ; Index its begin/end pair.
     LD   H,0                            ; Widen the ordinal.
     ADD  HL,HL                          ; Two bytes per word.
@@ -53,27 +76,19 @@ tkOpen: ; Open the next memory-backed source part.
     SBC  HL,DE                          ; Measure the part.
     JR   C,.bad                         ; The range is reversed.
     LD   (hsSrcLen),HL                  ; Keep the part's length.
-    LD   HL,hsSrcIdx                    ; Address the part counter.
-    LD   A,(HL)                         ; Return this part's ordinal.
-    INC  (HL)                           ; Select the following part next time.
-    LD   HL,0                           ; Every memory part starts at offset zero.
-    LD   DE,1                           ; It starts on line one.
-    OR   A                              ; Clear carry.
-    RET                                 ; Return the part.
-.none: ; Report that every part has been supplied.
-    XOR  A                              ; A=0 means none remains.
-    SCF                                 ; Carry means no part was opened.
-    RET                                 ; Assembly can finish.
+    XOR  A                              ; Return success.
+    RET                                 ; The part is selected.
 .bad: ; Report a reversed source range.
-    LD   A,1                            ; A nonzero status is a failure.
-    SCF                                 ; Carry means no part was opened.
-    RET                                 ; The driver aborts the build.
+    LD   A,srcLost                      ; It cannot be read.
+    SCF                                 ; Carry marks the failure.
+    RET                                 ; The front end reports it.
 
-;@ROUTINE IN A,HL OUT A,CARRY,ZERO CLOBBERS DE,HL,SIGN,PARITY,HALFCARRY
-; Memory-backed source: return the byte at logical offset HL of the open part,
-; or carry with A=0 at its end.
+;@ROUTINE IN A,HL OUT A,CARRY CLOBBERS DE,ZERO,SIGN,PARITY,HALFCARRY
+; Return the byte at logical offset HL of the selected part, or carry with
+; A=0 at its end.
 
-tkRead: ; Read one byte from the memory-backed source interval.
+sfRead: ; Read one byte from the memory-backed source interval.
+    PUSH HL                             ; Keep the offset.
     LD   DE,(hsSrcLen)                  ; Load the part's length.
     OR   A                              ; Clear carry before offset - length.
     SBC  HL,DE                          ; Is the offset inside the part?
@@ -82,12 +97,21 @@ tkRead: ; Read one byte from the memory-backed source interval.
     LD   DE,(hsSrcBeg)                  ; Load the part's memory base.
     ADD  HL,DE                          ; Translate offset to memory address.
     LD   A,(HL)                         ; Fetch the immutable source byte.
-    OR   A                              ; Clear carry and classify zero.
+    POP  HL                             ; Restore the offset.
+    OR   A                              ; Clear carry.
     RET                                 ; Return the byte.
 .end: ; Report the end of the part.
+    POP  HL                             ; Restore the offset.
     XOR  A                              ; A=0 with carry means no byte remains.
     SCF                                 ; Carry marks the end of the part.
-    RET                                 ; Leave the cursor where it is.
+    RET                                 ; The front end finishes the part.
+
+;@ROUTINE IN A
+; Memory parts keep no read state, so parking and resuming one does nothing.
+
+sfPark: ; Keep a memory part's read state.
+sfBack: ; Restore a memory part's read state.
+    RET                                 ; Nothing to keep.
 
 ;@ROUTINE IN B,HL OUT A,CARRY,HL CLOBBERS BC,DE,HALFCARRY,ZERO,SIGN,PARITY
 ; Open the binary file named by the B bytes at HL for INCBIN. Return its

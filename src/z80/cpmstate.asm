@@ -11,7 +11,6 @@ srcKey      EQU     pubPos                                          ; Alias for 
 ; Replay may overwrite the binary FCB, so its ownership flag stays in the low
 ; resident workspace for abort cleanup.
 binHeld:   DB      0                                                ; Nonzero while an INCBIN file is open.
-incErr:    DW      0                                                ; Front-end failure message, checked after replay too.
 pubLeft:   DW      0                                                ; Logical bytes remaining for final output rendering.
 pubOpen:   DB      0                                                ; Nonzero while the final-output temporary FCB is open.
 pubKept:   DB      0                                                ; Nonzero after old output moves to the backup name.

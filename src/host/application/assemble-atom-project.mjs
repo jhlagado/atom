@@ -17,25 +17,17 @@ export async function assembleAtomProject({
   if (limits === null || typeof limits !== "object" || Array.isArray(limits)) {
     throw new AtomAssemblyError("configuration", "invalid-limits", "native Atom limits must be an object");
   }
-  // Resolve includes and preprocessing before native execution so source
-  // positions refer to the same immutable snapshots throughout assembly.
-  const project = await resolveAtomProject({
-    root,
-    entry,
-    assembler,
-    definitions,
-    placement,
-    limits: {
-      ...limits,
-      maxParts: Math.min(limits.maxParts ?? NATIVE_ATOM_LIMITS.sourceParts, NATIVE_ATOM_LIMITS.sourceParts),
-      maxBank: 0,
-    },
-  });
-  const assembled = await assembleResolvedAtomProject(project, {
+  // Open the entry. Included files are opened as the front end reaches them,
+  // and the project reports every file the assembly read.
+  const entryProject = await resolveAtomProject({ root, entry, assembler, definitions });
+  const assembled = await assembleResolvedAtomProject(entryProject, {
     target,
     maxInstructions,
     maxCycles,
     sink,
   });
-  return Object.freeze({ project, ...assembled });
+  if (assembled.parts.length > Math.min(limits.maxParts ?? NATIVE_ATOM_LIMITS.sourceParts, NATIVE_ATOM_LIMITS.sourceParts)) {
+    throw new AtomAssemblyError("configuration", "part-capacity", "the project reads more source files than its limit");
+  }
+  return Object.freeze({ project: Object.freeze({ parts: assembled.parts }), ...assembled });
 }

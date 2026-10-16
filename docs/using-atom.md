@@ -82,12 +82,11 @@ LD A,0
 %ENDIF
 ```
 
-Includes are assembled depth first, in the order they are listed. Each
-included file's own includes come first, then the file itself, and the importer
-comes last. The result is the order you would get by pasting each file's text
-in at its first `%INCLUDE`. Each source is assembled once, including repeated
-imports through other dependencies. Cycles are rejected. CP/M and Node use the
-same order.
+Atom assembles an included file when it reaches the `%INCLUDE`, then carries on
+with the importer's next line. The result is the order you would get by pasting
+each file's text in at its first `%INCLUDE`. Each source is assembled once,
+including repeated imports through other dependencies. Cycles are rejected.
+CP/M and Node share the code that does this, so they use the same order.
 `%INCLUDE` belongs in the header before ordinary assembler source. A condition
 that selects includes must close within that header.
 
@@ -107,8 +106,8 @@ atom -DDEBUG=0 main.asm build/main.bin
 
 Include paths are relative to their source file. Source and binary paths must
 stay inside the project root and match the filesystem's exact spelling.
-Node snapshots the files before assembly, so edits during a build do not change
-its input.
+Atom reads each file once, when it reaches it. Nothing is scanned ahead, so
+avoid editing a project's files while it builds.
 
 For binary data, `INCBIN` emits a file's bytes:
 
@@ -116,8 +115,9 @@ For binary data, `INCBIN` emits a file's bytes:
 FONT: INCBIN "font.bin", 2048
 ```
 
-The count selects a prefix of the file. On Node, omitting it includes the whole
-file. CP/M requires a count because file lengths are recorded in 128-byte units.
+The count selects a prefix of the file and can be any expression already
+resolved. On Node, omitting it includes the whole file. CP/M requires a count
+because file lengths are recorded in 128-byte units.
 
 ## Desktop project files
 
@@ -190,11 +190,11 @@ CP/M names are current-drive 8.3 names. Includes use quoted names such as
 `%INCLUDE "MATH.ASM"`. Directory paths, drive prefixes and wildcards are rejected.
 Include and definition names are case-insensitive.
 
-The native preprocessor accepts 32 numeric definitions with names up to 17
-characters and 16 levels of conditions. A condition is a literal or a previously
+Atom accepts 32 numeric definitions with names up to 17 characters and 16
+levels of conditions on both hosts. A condition is a literal or a previously
 defined name. Values accept decimal, `$` hexadecimal, `%` binary and Intel `H`
-or `B` suffixes. Up to 32 active `INCBIN` statements are allowed. Each needs an
-explicit count and a current-drive 8.3 filename.
+or `B` suffixes. Includes nest up to eight files deep. Each CP/M `INCBIN` needs
+an explicit count and a current-drive 8.3 filename.
 
 A build accepts up to 255 source files of at most 65,535 bytes each.
 The CP/M assembler requires BDOS at `$E400` or higher. It checks that boundary
@@ -225,6 +225,8 @@ main.asm:2:6: undefined symbol MISSING
 ```
 
 Lines and columns start at one. Included-file errors name the included file.
+A malformed `%` directive is reported at its line as an invalid source
+directive, and an unclosed `%IF` at the end of its file.
 A failed forward reference points to the instruction that used it and can also
 name the line that defined its target.
 

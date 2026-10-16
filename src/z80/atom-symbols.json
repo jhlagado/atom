@@ -8706,6 +8706,90 @@
       "short": "refEnd",
       "private": false,
       "module": "PR"
+    },
+    {
+      "original": "AtomFrontStart",
+      "short": "incStart",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontPart",
+      "short": "srcPart",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontWorkspaceStart",
+      "short": "feRamLo",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontWorkspaceEnd",
+      "short": "feRamHi",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontDefinitions",
+      "short": "ppDefBeg",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontDefinitionCount",
+      "short": "ppDefCnt",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontDefinitionCapacity",
+      "short": "ppDefMax",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFileOpen",
+      "short": "sfOpen",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFileStart",
+      "short": "sfStart",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFileRead",
+      "short": "sfRead",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFilePark",
+      "short": "sfPark",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFileBack",
+      "short": "sfBack",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontCodeStart",
+      "short": "feBeg",
+      "private": false,
+      "module": "FE"
+    },
+    {
+      "original": "AtomFrontCodeEnd",
+      "short": "feEnd",
+      "private": false,
+      "module": "FE"
     }
   ]
 }

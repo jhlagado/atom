@@ -438,15 +438,6 @@ ppFilter: ; Filter one source byte read in order.
     PUSH IY                                         ; Include names are parsed through IY.
     LD   C,A                                        ; Keep the byte in C.
     LD   (ppPos),HL                                 ; Keep its offset.
-    LD   A,(ppMode)                                 ; Is this the file's last possible record?
-    BIT  2,A                                        ; Bit 2 marks offsets $FF80 and above.
-    JR   Z,.inRange                                 ; Others are always in range.
-    LD   A,H                                        ; A part holds at most 65,535 bytes.
-    AND  L                                          ; Offset $FFFF would be byte 65,536.
-    INC  A                                          ; Zero only for $FFFF.
-    JP   Z,.tooLong                                 ; Reject the part.
-.inRange: ; Classify the byte.
-    LD   A,C                                        ; Recover the byte.
     CP   13                                         ; CR?
     JP   Z,.eol                                     ; End the line.
     CP   10                                         ; LF?
@@ -494,7 +485,7 @@ ppFilter: ; Filter one source byte read in order.
     LD   A,C                                        ; Recover the byte.
     JP   NZ,.done                                   ; Return active text unchanged.
     LD   A,' '                                      ; Inactive text becomes a space.
-    JR   .done                                      ; Its offset is kept.
+    JP   .done                                      ; Its offset is kept.
 .start: ; Begin capturing a directive.
     LD   A,(ppMode)                                 ; Mark the directive.
     OR   2                                          ; Bit 1 captures until the line ends.
@@ -506,7 +497,7 @@ ppFilter: ; Filter one source byte read in order.
     LD   HL,(ppLine)                                ; And on this line.
     LD   (ppDirLn),HL                               ; Keep it.
     LD   A,';'                                      ; Atom reads the directive as a comment.
-    JR   .done                                      ; Return it.
+    JP   .done                                      ; Return it.
 .capture: ; Keep one directive byte.
     LD   A,(ppCapLen)                               ; Bytes captured so far.
     CP   $FE                                        ; Overflowed, or ended at a comment?
@@ -516,8 +507,21 @@ ppFilter: ; Filter one source byte read in order.
     LD   HL,ppLnBuf                                 ; Address the buffer.
     ADD  HL,DE                                      ; Address the free byte.
     LD   A,C                                        ; Recover the byte.
+    CP   '"'                                        ; A quote opens or closes a name?
+    JR   NZ,.semi                                   ; No: check for a comment.
+    LD   A,(ppMode)                                 ; Bit 2 marks a quoted name.
+    XOR  4                                          ; Enter or leave it.
+    LD   (ppMode),A                                 ; Keep the mode.
+    LD   A,C                                        ; Recover the quote.
+    JR   .keep                                      ; Keep it.
+.semi: ; A semicolon outside quotes starts a comment.
     CP   ';'                                        ; Does a comment start here?
-    JR   Z,.close                                   ; End the directive before it.
+    JR   NZ,.keep                                   ; No: keep the byte.
+    LD   A,(ppMode)                                 ; Inside a quoted name?
+    BIT  2,A                                        ; Bit 2 means yes.
+    LD   A,C                                        ; Recover the semicolon.
+    JR   Z,.close                                   ; No: end the directive before it.
+.keep: ; Keep one byte of the directive.
     LD   (HL),A                                     ; Keep the byte.
     LD   A,E                                        ; Count it.
     INC  A                                          ; One more byte.
@@ -559,10 +563,8 @@ ppFilter: ; Filter one source byte read in order.
     LD   A,1                                        ; Remember it for a following LF.
     LD   (ppLastCr),A                               ; Keep the CR state.
 .bol: ; Start the next line.
-    LD   A,(ppMode)                                 ; Keep only the last-record bit.
-    AND  4                                          ; The directive is finished.
-    OR   1                                          ; The next byte starts a line.
-    LD   (ppMode),A                                 ; Keep the mode.
+    LD   A,1                                        ; The directive is finished.
+    LD   (ppMode),A                                 ; The next byte starts a line.
     LD   A,C                                        ; Return the line ending unchanged.
 .done: ; Restore caller state and return the byte.
     POP  IY                                         ; Restore the caller's second index register.
@@ -580,8 +582,8 @@ ppFilter: ; Filter one source byte read in order.
     LD   (ppDirAt),HL                               ; At its offset.
     LD   HL,(ppLine)                                ; And line.
     LD   (ppDirLn),HL                               ; Keep both.
-    LD   DE,msgDir                                  ; The directive structure is malformed.
-.bad: ; Record a failure for tkOpen.
+    LD   A,ppBadDir                                 ; The directive structure is malformed.
+.bad: ; Record failure A for tkOpen.
     CALL incFail                                    ; Keep the first failure and where it was.
 .cut: ; End the part here.
     POP  IY                                         ; Restore the caller's second index register.
@@ -590,12 +592,8 @@ ppFilter: ; Filter one source byte read in order.
     XOR  A                                          ; A=0 with carry ends the part.
     SCF                                             ; Carry marks the end.
     RET                                             ; tkOpen supplies what comes next.
-.tooLong: ; Reject a part longer than 65,535 bytes.
-    LD   DE,msgRead                                 ; Report it as a failed read.
-    CALL incLost                                    ; Name the file.
-    JR   .cut                                       ; End the part.
 
-;@ROUTINE IN HL OUT A,CARRY CLOBBERS BC,DE,HL,ZERO,SIGN,PARITY,HALFCARRY
+;@ROUTINE IN HL OUT A,CARRY,ZERO CLOBBERS BC,DE,HL,SIGN,PARITY,HALFCARRY
 ; The part has no more bytes after offset HL. Apply a directive on its final
 ; line, then require its conditions to be closed and mark the file finished.
 ; An include on that final line ends the part first. It is checked when it
@@ -630,8 +628,8 @@ ppEnd: ; Finish a part at its end of file.
     LD   (ppDirAt),HL                               ; At its offset.
     LD   HL,(ppLine)                                ; And line.
     LD   (ppDirLn),HL                               ; Keep both.
-    LD   DE,msgDir                                  ; The conditions are malformed.
-.bad: ; Record a failure for tkOpen.
+    LD   A,ppBadDir                                 ; The conditions are malformed.
+.bad: ; Record failure A for tkOpen.
     CALL incFail                                    ; Keep the first failure and where it was.
 .end: ; End the part.
     POP  IY                                         ; Restore the caller's second index register.

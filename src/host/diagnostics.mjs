@@ -108,6 +108,16 @@ export const DIAGNOSTIC_MESSAGES = Object.freeze([
   "could not read the INCBIN file",
   "INCBIN needs a byte count here",
   "INCBIN count is larger than the file",
+
+  // 72-79: source files, includes and % directives.
+  "invalid source directive",
+  "invalid %INCLUDE",
+  "include cycle",
+  "includes are nested too deeply",
+  "too many source files",
+  "could not read the included file",
+  "source file is longer than 65,535 bytes",
+  "could not read the source file",
 ]);
 
 export const DIAGNOSTIC_STACK_OVERFLOW = 12;

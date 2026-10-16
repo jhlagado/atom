@@ -12,6 +12,7 @@ const CODE_RANGE_NAMES = Object.freeze([
   ["AtomOutputCodeStart", "AtomOutputCodeEnd"],
   ["AtomStatementCodeStart", "AtomStatementCodeEnd"],
   ["AtomDriverCodeStart", "AtomDriverCodeEnd"],
+  ["AtomFrontCodeStart", "AtomFrontCodeEnd"],
   ["AtomHostServiceCodeStart", "AtomHostServiceCodeEnd"],
 ]);
 

@@ -5,7 +5,8 @@
 ; The CP/M adapter wraps the platform-neutral core. Atom itself makes no
 ; filesystem calls. The adapter does five jobs around it:
 ;   1. Parse the command tail and choose COM, BIN or Intel HEX output.
-;   2. Find leading %INCLUDE directives and order the source parts.
+;   2. Name source files for the front end, which follows %INCLUDE as the
+;      stream reaches it.
 ;   3. Serve source bytes from CP/M files through a 128-byte cache.
 ;   4. Spool Atom's IMAGE and PATCH operations to NAME.$$B, then replay
 ;      them into the output through a fixed window in the TPA.
@@ -24,8 +25,8 @@
     %INCLUDE "cpmentry.asm"             ; Check memory, run one command and exit.
     %INCLUDE "cpmcmd.asm"               ; Parse the command tail and validate CP/M filenames.
     %INCLUDE "cpmsrc.asm"               ; Open source files and read cached bytes.
-    %INCLUDE "cpminc.asm"               ; Find includes and order the source parts.
-    %INCLUDE "cpprep.asm"               ; Apply %DEFINE and %IF to source bytes.
+    %INCLUDE "cpminc.asm"               ; Name source files and park them during includes.
+    %INCLUDE "front.asm"                ; Apply includes, conditions and definitions.
     %INCLUDE "cpmbin.asm"               ; Find, validate and stream INCBIN data.
     %INCLUDE "cpmpub.asm"               ; Bind output services and publish or roll back files.
     %INCLUDE "cpmerr.asm"               ; Locate and print diagnostics.

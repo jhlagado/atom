@@ -287,6 +287,40 @@ function nativeCoreOption(value, parseImage) {
   });
 }
 
+// Front-end failure messages from src/host/diagnostics.mjs.
+const MESSAGE = Object.freeze({
+  directive: 72,
+  include: 73,
+  includeCycle: 74,
+  includeDepth: 75,
+  tooManyFiles: 76,
+  includeLost: 77,
+  sourceTooLong: 78,
+  sourceLost: 79,
+});
+
+// Write the project's definitions into the front end's table: a length byte,
+// the upper-case name padded with spaces to 17 bytes and a 16-bit value.
+function seedDefinitions(memory, symbols, definitions) {
+  const entries = Object.entries(definitions);
+  if (entries.length > symbols.AtomFrontDefinitionCapacity) {
+    fail("definition-capacity", `Atom accepts at most ${symbols.AtomFrontDefinitionCapacity} definitions`);
+  }
+  entries.forEach(([name, value], index) => {
+    const upper = name.toUpperCase();
+    if (!/^[A-Z][A-Z0-9_]{0,16}$/.test(upper)) fail("invalid-definition", `invalid definition name ${name}`);
+    if (!Number.isInteger(value) || value < 0 || value > 0xffff) {
+      fail("invalid-definition", `definition ${name} must be a number from 0 through 65535`);
+    }
+    const record = symbols.AtomFrontDefinitions + index * 20;
+    memory[record] = upper.length;
+    for (let at = 0; at < 17; at += 1) memory[record + 1 + at] = at < upper.length ? upper.charCodeAt(at) : 0x20;
+    memory[record + 18] = value & 0xff;
+    memory[record + 19] = value >>> 8;
+  });
+  memory[symbols.AtomFrontDefinitionCount] = entries.length;
+}
+
 function snapshotProject(project) {
   // Copy caller-owned bytes before execution. Original and preprocessed source
   // have equal lengths so a native byte offset still locates the original text.
@@ -317,15 +351,15 @@ function snapshotProject(project) {
       part.bank !== 0 ||
       typeof part.logicalIdentity !== "string" ||
       !(part.originalBytes instanceof Uint8Array) ||
-      !(part.compilerBytes instanceof Uint8Array) ||
-      part.originalBytes.length !== part.compilerBytes.length
+      !((part.compilerBytes ?? part.originalBytes) instanceof Uint8Array) ||
+      part.originalBytes.length !== (part.compilerBytes ?? part.originalBytes).length
     ) {
       fail(
         "invalid-part",
         `resolved Atom source part ${ordinal} is not a flat, equal-length native part`,
       );
     }
-    if (part.compilerBytes.length > NATIVE_ATOM_LIMITS.sourceBytes) {
+    if (part.originalBytes.length > NATIVE_ATOM_LIMITS.sourceBytes) {
       fail(
         "source-capacity",
         `resolved Atom source part ${ordinal} exceeds Atom's 16-bit source-offset range`,
@@ -336,15 +370,20 @@ function snapshotProject(project) {
       bank: 0,
       logicalIdentity: part.logicalIdentity,
       originalBytes: part.originalBytes.slice(),
-      compilerBytes: part.compilerBytes.slice(),
+      compilerBytes: (part.compilerBytes ?? part.originalBytes).slice(),
+      physicalPath: part.physicalPath,
     });
   });
   // INCBIN files are read when the core reaches them, through the resolver's
   // reader, so the source is never scanned for them in advance.
+  // Included files are opened when the front end reaches them.
   return Object.freeze({
     parts: Object.freeze(parts),
     readBinary:
       typeof project.readBinary === "function" ? project.readBinary : undefined,
+    openFile:
+      typeof project.openFile === "function" ? project.openFile : undefined,
+    definitions: Object.freeze({ ...(project.definitions ?? {}) }),
   });
 }
 
@@ -854,8 +893,24 @@ function nativeFailure(
       ...(symbol === undefined ? {} : { symbol }),
     });
   }
+  if (result.status === symbols.AtomDriverStatusSourceService) {
+    const code = SOURCE_SERVICE_CODES.get(result.message);
+    if (code !== undefined) return new AtomAssemblyError("source", code, located(text), { ...common, text });
+  }
   return new AtomAssemblyError("native", "internal", located(text), { ...common, text });
 }
+
+// The front end's failures are faults in the source project, not in Atom.
+const SOURCE_SERVICE_CODES = new Map([
+  [MESSAGE.directive, "directive"],
+  [MESSAGE.include, "include"],
+  [MESSAGE.includeCycle, "dependency-cycle"],
+  [MESSAGE.includeDepth, "include-depth"],
+  [MESSAGE.tooManyFiles, "source-capacity"],
+  [MESSAGE.includeLost, "missing-source"],
+  [MESSAGE.sourceTooLong, "source-too-long"],
+  [MESSAGE.sourceLost, "source-read"],
+]);
 
 function invokeService(runtime, kind, action, trace) {
   const { status, cause } = invokeOneByteStatus(action, {
@@ -974,6 +1029,20 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   memory[RETURN_SLOT] = RETURN_SENTINEL & 0xff;
   memory[RETURN_SLOT + 1] = RETURN_SENTINEL >>> 8;
   memory[STACK_AFTER] = 0x78;
+
+  // The front end streams the project's files. Reset it, then give it the
+  // project's definitions, as a root %DEFINE would.
+  const files = [...snapshot.parts];
+  runtime.cpu.sp = RETURN_SLOT;
+  runtime.cpu.pc = symbols.AtomFrontStart;
+  runtime.cpu.halted = false;
+  for (let steps = 0; runtime.cpu.pc !== RETURN_SENTINEL; steps += 1) {
+    if (steps > 100_000) fail("front-start", "native Atom front end did not start");
+    runtime.step();
+  }
+  seedDefinitions(memory, symbols, snapshot.definitions);
+  memory[RETURN_SLOT] = RETURN_SENTINEL & 0xff;
+  memory[RETURN_SLOT + 1] = RETURN_SENTINEL >>> 8;
   runtime.cpu.sp = RETURN_SLOT;
   runtime.cpu.pc = symbols.AtomAssemble;
   runtime.cpu.ix = BUILD_DESCRIPTOR;
@@ -1051,7 +1120,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   let sourceReads = 0;
   const currentDiagnostic = () => {
     const ordinal = memory[symbols.AtomStatementErrorPart];
-    const part = snapshot.parts[ordinal];
+    const part = files[ordinal];
     return part === undefined
       ? undefined
       : sourcePosition(
@@ -1205,18 +1274,93 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
     runtime.cpu.pc = returnAddress;
   };
+  let rootNext = 0;
+  const identities = new Map(files.map((file) => [file.physicalPath ?? file, file.ordinal]));
+  const setCarry = (carry) => {
+    runtime.cpu.flags.C = carry ? 1 : 0;
+  };
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
+    if (runtime.cpu.pc === symbols.AtomFileOpen) {
+      // B=0 asks for the next root. Otherwise the B bytes at HL name a file
+      // relative to the one being read.
+      if (runtime.cpu.b === 0) {
+        const root = snapshot.parts[rootNext];
+        if (root !== undefined) rootNext += 1;
+        runtime.cpu.a = root === undefined ? 0 : root.ordinal;
+        setCarry(root === undefined);
+      } else {
+        const name = pair(runtime.cpu.h, runtime.cpu.l);
+        const specifier = String.fromCharCode(...memory.slice(name, name + runtime.cpu.b));
+        const importer = files[memory[symbols.AtomFrontPart]];
+        let opened;
+        try {
+          if (snapshot.openFile !== undefined && importer !== undefined) {
+            opened = await snapshot.openFile(importer, specifier);
+          }
+        } catch (error) {
+          serviceException ??= error;
+          opened = undefined;
+        }
+        const known = opened === undefined ? undefined : identities.get(opened.physicalPath ?? opened);
+        if (opened === undefined) {
+          runtime.cpu.a = MESSAGE.includeLost;
+          setCarry(true);
+        } else if (known !== undefined) {
+          runtime.cpu.a = known;
+          setCarry(false);
+        } else if (files.length >= NATIVE_ATOM_LIMITS.sourceParts) {
+          runtime.cpu.a = MESSAGE.tooManyFiles;
+          setCarry(true);
+        } else {
+          const ordinal = files.length;
+          files.push(Object.freeze({
+            ordinal,
+            bank: 0,
+            logicalIdentity: opened.logicalIdentity,
+            originalBytes: opened.originalBytes,
+            compilerBytes: opened.originalBytes,
+            physicalPath: opened.physicalPath,
+          }));
+          identities.set(opened.physicalPath ?? opened, ordinal);
+          runtime.cpu.a = ordinal;
+          setCarry(false);
+        }
+      }
+      returnFromService();
+      continue;
+    }
+    if (runtime.cpu.pc === symbols.AtomFileStart) {
+      const file = files[runtime.cpu.a];
+      const tooLong = file !== undefined && file.originalBytes.length > NATIVE_ATOM_LIMITS.sourceBytes;
+      runtime.cpu.a = file === undefined ? MESSAGE.sourceLost : tooLong ? MESSAGE.sourceTooLong : 0;
+      setCarry(file === undefined || tooLong);
+      returnFromService();
+      continue;
+    }
+    if (runtime.cpu.pc === symbols.AtomFileRead) {
+      const offset = pair(runtime.cpu.h, runtime.cpu.l);
+      const byte = files[runtime.cpu.a]?.originalBytes[offset];
+      if (byte !== undefined) sourceReads += 1;
+      runtime.cpu.a = byte ?? 0;
+      setCarry(byte === undefined);
+      returnFromService();
+      continue;
+    }
+    if ((runtime.cpu.pc === symbols.AtomFilePark || runtime.cpu.pc === symbols.AtomFileBack)) {
+      returnFromService();
+      continue;
+    }
     if (runtime.cpu.pc === symbols.AtomBinaryOpen) {
       // INCBIN names a file relative to the part that contains it.
       const name = pair(runtime.cpu.h, runtime.cpu.l);
       const specifier = String.fromCharCode(
         ...memory.slice(name, name + runtime.cpu.b),
       );
-      const part = snapshot.parts[memory[symbols.AtomTokenSourcePart]];
+      const part = files[memory[symbols.AtomTokenSourcePart]];
       binary = undefined;
       try {
         if (snapshot.readBinary !== undefined && part !== undefined) {
-          const file = await snapshot.readBinary(part.ordinal, specifier);
+          const file = await snapshot.readBinary(part, specifier);
           binary = { bytes: file.originalBytes, index: 0 };
         }
       } catch {
@@ -1237,43 +1381,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       runtime.cpu.a = byte ?? 1;
       runtime.cpu.flags.C = byte === undefined ? 1 : 0;
       returnFromService();
-      continue;
-    }
-    if (runtime.cpu.pc === symbols.AtomSourceOpenPart) {
-      const part = snapshot.parts[nextPart];
-      runtime.cpu.a = part === undefined ? 0 : part.ordinal;
-      runtime.cpu.h = 0;
-      runtime.cpu.l = 0;
-      runtime.cpu.d = 0;
-      runtime.cpu.e = 1;
-      runtime.cpu.flags.C = part === undefined ? 1 : 0;
-      if (part !== undefined) nextPart += 1;
-      returnFromService();
-      continue;
-    }
-    if (runtime.cpu.pc === symbols.AtomSourceReadByte) {
-      const offset = pair(runtime.cpu.h, runtime.cpu.l);
-      if (offset >= (snapshot.parts[runtime.cpu.a]?.compilerBytes.length ?? 0)) {
-        runtime.cpu.a = 0;
-        runtime.cpu.flags.C = 1;
-        returnFromService();
-        continue;
-      }
-      const response = toolServices.dispatch(ATOM_TOOL_SERVICE.sourceRead, {
-        part: runtime.cpu.a,
-        offset,
-      });
-      if (response.status !== 0 || response.value === undefined) {
-        throw runtimeFailure(
-          "source-read",
-          "native Atom tool services rejected a source byte",
-        );
-      }
-      const returnAddress = word(memory, runtime.cpu.sp);
-      runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
-      runtime.cpu.pc = returnAddress;
-      runtime.cpu.a = response.value;
-      runtime.cpu.flags.C = 0;
       continue;
     }
     if (runtime.cpu.pc === symbols.AtomOutputSetOrigin) {
@@ -1405,7 +1512,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   if (result.carry !== 0 || result.status !== symbols.AtomDriverStatusOk) {
     throw nativeFailure(
       result,
-      snapshot,
+      { parts: files },
       memory,
       symbols,
       memoryLayout,
@@ -1434,6 +1541,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       symbolOrder: globalSymbolOrder(memory, symbols),
     }),
     ...(trace === undefined ? {} : { trace: Object.freeze([...trace, Object.freeze({ stage: "symbols", records: globalSymbolRecords(memory, symbols) })]) }),
+    parts: Object.freeze(files.slice()),
     execution,
     native: result,
     core: Object.freeze({

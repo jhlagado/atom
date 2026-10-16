@@ -27,9 +27,10 @@ await publishAtomOutputFiles([
 ]);
 ```
 
-`root` is an absolute directory and `entry` is relative to it. Assembly resolves
-includes, evaluates conditions and snapshots source and binary files.
-`definitions: { DEBUG: 1 }` supplies command definitions.
+`root` is an absolute directory and `entry` is relative to it. Atom reads the
+entry as a stream and opens each included or `INCBIN` file when it reaches it,
+so every source byte is read once. `definitions: { DEBUG: 1 }` supplies command
+definitions.
 
 Rendering returns `bin` as a `Uint8Array`, `hex` and `listing` as strings,
 `d8` as an object and `d8Text` as its JSON text. The optional `fill` byte supplies
@@ -57,12 +58,16 @@ default. `maxInstructions` and `maxCycles` change those limits.
 
 ## Results and errors
 
-The result includes the prepared `project`, assembled `generation`, `execution`
-statistics and `native` status. The generation contains emitted image bytes,
+The result includes the `project`, assembled `generation`, `execution`
+statistics and `native` status. `project.parts` lists every source file Atom
+read, in the order it reached them, with the entry first. The generation contains emitted image bytes,
 forward-reference patches, symbols and placement information.
 
-Preparation throws `SourcePreparationError` and assembly throws
-`AtomAssemblyError`. Each has a category and code. Preparation positions are in
+Opening the entry throws `SourcePreparationError` and assembly throws
+`AtomAssemblyError`. Each has a category and code. Errors in includes and `%`
+directives are assembly errors in the `source` category. When the host refused
+an include, for example because it escapes the project root, `cause` holds the
+host's own error. Preparation positions are in
 `location` and assembly positions are in `diagnostic`. Both use `logicalIdentity` for the
 filename and one-based `line` and `column` values. Source-part `ordinal` and
 byte `offset` are zero-based.
@@ -73,9 +78,10 @@ Filesystem failures can surface the underlying Node error.
 
 ## Prepared source and native hosts
 
-`resolveAtomProject()` prepares files without assembling them.
-`assembleResolvedAtomProject()` runs an already prepared project. Hosts supplying
-source from another medium can use this pair of interfaces separately.
+`resolveAtomProject()` opens the entry file and returns the services Atom uses
+to open the rest. It reads nothing else. `assembleResolvedAtomProject()` runs
+that project. Hosts supplying source from another medium can provide their own
+`openFile` and `readBinary` services in place of the resolved ones.
 
 For a Z80 Tool Services host, the native harness builder is available through
 its package subpath:

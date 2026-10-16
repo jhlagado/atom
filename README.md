@@ -1,8 +1,10 @@
 # Atom
 
-Atom is a single-pass Z80 assembler written in Z80. It runs on CP/M 2.2 and
-as a desktop command through a Z80 emulator. Both use the same assembler
-core.
+Atom is a single-pass Z80 assembler written in Z80. It reads each source byte
+once, in order, including the bytes of included files, and patches forward
+references rather than reading the source again. It runs on CP/M 2.2 and as a
+desktop command through a Z80 emulator. Both use the same assembler core and
+the same source front end.
 
 On the desktop, Node.js 20 or later is required:
 
