@@ -22,6 +22,7 @@ import {
   publishAtomOutputFiles,
   renderAtomArtifacts,
   resolveAtomProject,
+  translateResolvedAtomProjectToAzm,
   writeAtomCom,
 } from "../src/host/index.mjs";
 import { createFlatImageAtomSink } from "../src/host/harness/flat-image-atom-sink.mjs";
@@ -663,15 +664,24 @@ describe("Named object adapter", () => {
       ["source/0.asm", encoder.encode(source)],
       ["build/program.bin", encoder.encode("old")],
     ]));
-    const toolProfile = createNamedObjectAtomAdapter({
+    const adapter = createNamedObjectAtomAdapter({
       provider,
       sourceNames: ["source/0.asm"],
       outputName: "build/program.bin",
     });
+    let providerReads = 0;
+    const toolProfile = {
+      ...adapter,
+      sourceRead: (request) => {
+        providerReads += 1;
+        return adapter.sourceRead(request);
+      },
+    };
     const result = await assembleResolvedAtomProject(project(source), {
       target: { start: 0x4000, capacity: 0x100 },
       toolProfile,
     });
+    assert.equal(providerReads, encoder.encode(source).length);
 
     assert.deepEqual([...provider.bytes("build/program.bin")], [
       0x18, 0x02, 0x00, 0x00, 0x00, 0x1a, 0x7f, 0x80, 0xff,
@@ -1050,6 +1060,37 @@ describe("Source projects", () => {
     const result = await assembleAtomProject({ root, entry: "main.asm", target: { start: 0x4000, capacity: 16 } });
     assert.deepEqual(result.project.parts.map(({ logicalIdentity }) => logicalIdentity), ["main.asm", "a.asm", "common;part.asm", "b.asm"]);
     assert.deepEqual([...materializeAtomGeneration(result.generation).bytes], [1, 2, 3, 0xc9]);
+  });
+
+  test("AZM translation follows the source Atom assembled, includes in place", async (t) => {
+    const root = await project(t, {
+      "main.asm": '%DEFINE FAST 1\n%INCLUDE "lib.asm"\nORG $4000\nStart:\n%IF FAST\n  LD A,LOW(.x)\n.x: RET\n%ELSE\n  NOP\n%ENDIF\n',
+      "lib.asm": "LIMIT EQU 4\n",
+    });
+    const result = await assembleAtomProject({ root, entry: "main.asm", target: { start: 0x4000, capacity: 16 } });
+    assert.deepEqual(result.project.segments, [
+      { part: 0, start: 0, end: 33 },
+      { part: 1, start: 0, end: 12 },
+      { part: 0, start: 33, end: 102 },
+    ]);
+    assert.equal(translateResolvedAtomProjectToAzm(result.project), [
+      "; Atom source part 0: main.asm",
+      ";DEFINE FAST 1",
+      ';INCLUDE "lib.asm"',
+      "; Atom source part 1: lib.asm",
+      "LIMIT: .equ 4",
+      "; Atom source part 0: main.asm",
+      ".org $4000",
+      "Start:",
+      ";IF FAST",
+      "  LD A,LSB(_x)",
+      "_x: RET",
+      ";ELSE",
+      "     ",
+      ";     ",
+      "            .end",
+      "",
+    ].join("\n"));
   });
 
   test("projects reject dependency escapes, cycles and invalid preprocessing", async (t) => {

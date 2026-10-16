@@ -60,7 +60,12 @@ default. `maxInstructions` and `maxCycles` change those limits.
 
 The result includes the `project`, assembled `generation`, `execution`
 statistics and `native` status. `project.parts` lists every source file Atom
-read, in the order it reached them, with the entry first. The generation contains emitted image bytes,
+read, in the order it reached them, with the entry first. Each part's
+`compilerBytes` is the file as Atom saw it, with directive lines as comments
+and inactive branches blank. `project.segments` gives the order in which Atom
+read each stretch of each file, so an included file sits where its `%INCLUDE`
+was. `translateResolvedAtomProjectToAzm(result.project)` uses both to write
+the assembled source in AZM syntax. The generation contains emitted image bytes,
 forward-reference patches, symbols and placement information.
 
 Opening the entry throws `SourcePreparationError` and assembly throws

@@ -116,12 +116,15 @@ export function translateAtomLineToAzm(line) {
   return `${source}${comment}`;
 }
 
+// Translate the source an assembly read, as the core saw it: directive lines
+// are comments and inactive branches are blank. With the result's segments,
+// each stretch of each file appears in the order Atom assembled it, so an
+// included file sits where its %INCLUDE was.
 export function translateResolvedAtomProjectToAzm(project) {
   if (project === null || typeof project !== "object" || !Array.isArray(project.parts)) {
     fail("project", "resolved Atom project must contain ordered parts");
   }
-  const output = [];
-  for (const [index, part] of project.parts.entries()) {
+  project.parts.forEach((part, index) => {
     if (
       part?.ordinal !== index ||
       typeof part.logicalIdentity !== "string" ||
@@ -129,13 +132,24 @@ export function translateResolvedAtomProjectToAzm(project) {
     ) {
       fail("part", `resolved Atom part ${index} is invalid`);
     }
-    let text;
     try {
-      text = decoder.decode(part.compilerBytes);
+      decoder.decode(part.compilerBytes);
     } catch (cause) {
       fail("encoding", `Atom part ${part.logicalIdentity} is not UTF-8`, { cause });
     }
-    output.push(`; Atom source part ${index}: ${part.logicalIdentity}`);
+  });
+  const segments = project.segments ??
+    project.parts.map((part, index) => ({ part: index, start: 0, end: part.compilerBytes.length }));
+  const output = [];
+  for (const { part, start, end } of segments) {
+    const bytes = project.parts[part]?.compilerBytes;
+    if (bytes === undefined || !(start >= 0 && start <= end && end <= bytes.length)) {
+      fail("segment", "Atom source segment is outside its part");
+    }
+    // A file resumed after an include begins with the end of its %INCLUDE line.
+    let text = decoder.decode(bytes.subarray(start, end)).replace(/(\r\n|\n|\r)$/, "");
+    if (start > 0) text = text.replace(/^(\r\n|\n|\r)/, "");
+    output.push(`; Atom source part ${part}: ${project.parts[part].logicalIdentity}`);
     for (const line of text.split(/\r\n|\n|\r/)) output.push(translateAtomLineToAzm(line));
   }
   output.push("            .end", "");

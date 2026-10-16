@@ -29,5 +29,5 @@ export async function assembleAtomProject({
   if (assembled.parts.length > Math.min(limits.maxParts ?? NATIVE_ATOM_LIMITS.sourceParts, NATIVE_ATOM_LIMITS.sourceParts)) {
     throw new AtomAssemblyError("configuration", "part-capacity", "the project reads more source files than its limit");
   }
-  return Object.freeze({ project: Object.freeze({ parts: assembled.parts }), ...assembled });
+  return Object.freeze({ project: Object.freeze({ parts: assembled.parts, segments: assembled.segments }), ...assembled });
 }

@@ -1,5 +1,4 @@
 import {
-  MemorySourceByteProvider,
   invokeOneByteStatus,
   materializeTargetImage,
   renderTargetBinary,
@@ -370,7 +369,7 @@ function snapshotProject(project) {
       bank: 0,
       logicalIdentity: part.logicalIdentity,
       originalBytes: part.originalBytes.slice(),
-      compilerBytes: (part.compilerBytes ?? part.originalBytes).slice(),
+      compilerBytes: part.originalBytes.slice(),
       physicalPath: part.physicalPath,
     });
   });
@@ -1111,12 +1110,6 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       traceRecord("resolve", { symbol: runtime.cpu.ix, pending: records });
     }
   };
-  const defaultSourceProvider = new MemorySourceByteProvider(
-    snapshot.parts.map((part) => ({
-      ordinal: part.ordinal,
-      bytes: part.compilerBytes,
-    })),
-  );
   let sourceReads = 0;
   const currentDiagnostic = () => {
     const ordinal = memory[symbols.AtomStatementErrorPart];
@@ -1136,17 +1129,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     sink,
     sourceRead:
       profile?.sourceRead ??
-      (({ part, offset }) => {
-        const value = defaultSourceProvider.read(part, offset);
-        if (value === undefined) {
-          throw runtimeFailure(
-            "source-read",
-            "native Atom requested a source byte outside the resolved part",
-          );
-        }
-        sourceReads += 1;
-        return value;
-      }),
+      (({ part, offset }) => files[part]?.originalBytes[offset]),
   });
   const serviceAt = new Map([
     [
@@ -1267,8 +1250,11 @@ export async function assembleResolvedAtomProject(project, options = {}) {
   // on the emulated Z80. The sentinel is reached by the core's final RET.
   // Parts are supplied in order, each from offset zero. A part ends where the
   // source service reports that no byte remains.
-  let nextPart = 0;
   let binary;
+  // The byte tkRead returned for each offset: the source as the core saw it.
+  // Segments record the order the core read each stretch of each file.
+  let pendingRead;
+  const segments = [];
   const returnFromService = () => {
     const returnAddress = word(memory, runtime.cpu.sp);
     runtime.cpu.sp = (runtime.cpu.sp + 2) & 0xffff;
@@ -1280,6 +1266,28 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     runtime.cpu.flags.C = carry ? 1 : 0;
   };
   while (runtime.cpu.pc !== RETURN_SENTINEL) {
+    if (runtime.cpu.pc === symbols.AtomSourceReadByte) {
+      pendingRead = {
+        returnPc: word(memory, runtime.cpu.sp),
+        returnSp: (runtime.cpu.sp + 2) & 0xffff,
+        part: runtime.cpu.a,
+        offset: pair(runtime.cpu.h, runtime.cpu.l),
+      };
+    } else if (
+      pendingRead !== undefined &&
+      runtime.cpu.pc === pendingRead.returnPc &&
+      runtime.cpu.sp === pendingRead.returnSp
+    ) {
+      const { part, offset } = pendingRead;
+      const bytes = files[part]?.compilerBytes;
+      if (!runtime.cpu.flags.C && bytes !== undefined) {
+        bytes[offset] = runtime.cpu.a;
+        const last = segments.at(-1);
+        if (last?.part === part && last.end === offset) last.end += 1;
+        else segments.push({ part, start: offset, end: offset + 1 });
+      }
+      pendingRead = undefined;
+    }
     if (runtime.cpu.pc === symbols.AtomFileOpen) {
       // B=0 asks for the next root. Otherwise the B bytes at HL name a file
       // relative to the one being read.
@@ -1318,7 +1326,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
             bank: 0,
             logicalIdentity: opened.logicalIdentity,
             originalBytes: opened.originalBytes,
-            compilerBytes: opened.originalBytes,
+            compilerBytes: opened.originalBytes.slice(),
             physicalPath: opened.physicalPath,
           }));
           identities.set(opened.physicalPath ?? opened, ordinal);
@@ -1338,11 +1346,24 @@ export async function assembleResolvedAtomProject(project, options = {}) {
       continue;
     }
     if (runtime.cpu.pc === symbols.AtomFileRead) {
+      // The file's length marks its end. Each byte comes through the tool
+      // services, so a named-object profile supplies its own source.
+      const part = runtime.cpu.a;
       const offset = pair(runtime.cpu.h, runtime.cpu.l);
-      const byte = files[runtime.cpu.a]?.originalBytes[offset];
-      if (byte !== undefined) sourceReads += 1;
-      runtime.cpu.a = byte ?? 0;
-      setCarry(byte === undefined);
+      const file = files[part];
+      if (file === undefined) {
+        runtime.cpu.a = MESSAGE.sourceLost;
+        setCarry(true);
+      } else if (offset >= file.originalBytes.length) {
+        runtime.cpu.a = 0;
+        setCarry(true);
+      } else {
+        const response = toolServices.dispatch(ATOM_TOOL_SERVICE.sourceRead, { part, offset });
+        const ok = response.status === 0 && response.value !== undefined;
+        if (ok) sourceReads += 1;
+        runtime.cpu.a = ok ? response.value : MESSAGE.sourceLost;
+        setCarry(!ok);
+      }
       returnFromService();
       continue;
     }
@@ -1542,6 +1563,7 @@ export async function assembleResolvedAtomProject(project, options = {}) {
     }),
     ...(trace === undefined ? {} : { trace: Object.freeze([...trace, Object.freeze({ stage: "symbols", records: globalSymbolRecords(memory, symbols) })]) }),
     parts: Object.freeze(files.slice()),
+    segments: Object.freeze(segments.map((segment) => Object.freeze(segment))),
     execution,
     native: result,
     core: Object.freeze({
