@@ -52,6 +52,7 @@
     "build": "node scripts/build.mjs",
     "verify:build": "node scripts/build.mjs --check",
     "docs:records": "node scripts/generate-records-doc.mjs",
+    "check:contracts": "node scripts/check-contracts.mjs",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "pretest": "npm run verify:dependencies",
     "test": "node --test --test-concurrency=2 test/*.test.mjs",
