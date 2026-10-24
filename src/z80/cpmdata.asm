@@ -3,8 +3,8 @@
 
 cpFcbBeg: ; Beginning of descriptor and FCB writable storage.
 cpDesc: ; Twelve-byte native build descriptor.
-    DW   cpSymBeg,cpSymEnd                                          ; Half-open caller symbol-arena bounds.
-    DW   cpRefBeg,cpRefEnd                                          ; Half-open pending-reference arena bounds.
+    DW   0,0                                                        ; Half-open symbol arena, set by cpEntry.
+    DW   0,0                                                        ; Half-open pending-reference arena, set by cpEntry.
     DW   cpTpa,asoCap                                               ; CP/M target origin and maximum byte capacity.
 
 pubFcb: ; Rename FCB overlaid after source reads finish.
@@ -45,8 +45,9 @@ msgBusy: ; Reserved work-file collision diagnostic.
     DB   " exists: erase it first",13,10,'$'                        ; Leftover work file.
 msgMem: ; Insufficient transient-memory diagnostic.
     DB   13,10                                                      ; Start the diagnostic on a new line.
-    DB   "Insufficient transient memory"                            ; Explain the fixed-layout failure.
+    DB   "Insufficient transient memory"                            ; Explain the fixed-workspace failure.
     DB   13,10,'$'                                                  ; End the line and BDOS string.
+msgOom:    DB      "out of memory: $"                               ; Prefix for a full symbol or pending arena.
 cmdAsm:    DB      'A','S','M'                                      ; Default source extension.
 cmdCom:    DB      'C','O','M'                                      ; COM output extension selector.
 cmdBin:    DB      'B','I','N'                                      ; Raw binary output extension selector.

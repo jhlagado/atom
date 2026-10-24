@@ -6,6 +6,7 @@ import {
   readCpm22File,
 } from "@jhlagado/debug80-runtime/platforms/cpm22/filesystem";
 import {
+  cpmLayout,
   expectedRepresentativeProgram,
   representativeSource,
   runCpm22Atom,
@@ -26,6 +27,7 @@ const cpmCensus = JSON.parse(await readFile(
   new URL("../proofs/cpm22-census.json", import.meta.url),
   "utf8",
 ));
+const defaultLayout = cpmLayout(cpmCensus);
 
 async function expectedImageForSource(source, identity) {
   const sourceBytes = Uint8Array.from(source);
@@ -59,7 +61,7 @@ function referenceAsoFile(events) {
 }
 
 test("CP/M rejects an insufficient transient area before touching private arenas", async () => {
-  for (const boundary of [0x8000, 0xe3ff]) {
+  for (const boundary of [0x0100, 0x7000, cpmCensus.minimumBdosAddress - 1]) {
     let bdos;
     const prior = new Uint8Array(128).fill(0xa5);
     const result = await runCpm22Atom(representativeSource, prior, {
@@ -67,7 +69,7 @@ test("CP/M rejects an insufficient transient area before touching private arenas
         bdos = memory.slice(6, 8);
         memory[6] = boundary & 0xff;
         memory[7] = boundary >>> 8;
-        memory.fill(0x69, cpmCensus.workspaceStartAddress, 0xe400);
+        memory.fill(0x69, cpmCensus.workspaceStartAddress, 0xe400); // Up to the emulated CCP.
       },
       beforeBdos({ memory }) {
         memory.set(bdos, 6); // Keep real BDOS callable after the admission check.
@@ -85,22 +87,22 @@ test("CP/M rejects an insufficient transient area before touching private arenas
   }
 });
 
-test("CP/M admits the exact boundary and warm boots with the old CCP return address destroyed", async () => {
-  for (const boundary of [0xe400, 0xe401]) {
+test("CP/M admits the exact boundary and reports full arenas as out of memory", async () => {
+  for (const boundary of [cpmCensus.minimumBdosAddress, cpmCensus.minimumBdosAddress + 1]) {
     let bdos;
-    const result = await runCpm22Atom(representativeSource, undefined, {
-      beforeAtomEntry(memory, registers) {
+    const prior = new Uint8Array(128).fill(0xa5);
+    const result = await runCpm22Atom(representativeSource, prior, {
+      beforeAtomEntry(memory) {
         bdos = memory.slice(6, 8);
         memory[6] = boundary & 0xff;
         memory[7] = boundary >>> 8;
-        memory[registers.sp] = 0xff;
-        memory[registers.sp + 1] = 0xff;
       },
       beforeBdos({ memory }) { memory.set(bdos, 6); },
     });
-    assert.equal(result.returnA, 0);
-    assert.equal(result.returnSp, 0xe400);
-    assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
+    assert.equal(result.returnA, 1);
+    assert.equal(result.returnSp, boundary);
+    assert.match(result.atomTranscript, /INPUT\.ASM:3:1: out of memory: too many symbols\r\n/);
+    assert.deepEqual(result.outputFile.bytes, prior);
   }
 });
 
@@ -134,8 +136,8 @@ test("native Atom assembles and runs a byte-identical COM through real CP/M BDOS
   assert.ok(result.outputFile, "Atom did not publish OUTPUT.COM");
   assert.equal(expected.base, 0x100);
   assert.deepEqual(result.outputFile.bytes.slice(0, expected.bytes.length), expected.bytes);
-  assert.ok(result.atomMinimumSp >= result.census.stackFloorAddress, "Atom crossed its stack floor");
-  assert.equal(result.returnSp, 0xe400, "Atom reached warm boot with an unbalanced private stack");
+  assert.ok(result.atomMinimumSp >= defaultLayout.stackFloorAddress, "Atom crossed its stack floor");
+  assert.equal(result.returnSp, result.entryBdos, "Atom reached warm boot with an unbalanced private stack");
   assert.equal(result.returnA, 0);
   assert.equal(result.runOutput(), "OUTPUT\r\r\nHello from native Atom\r\n\r\nA>");
 });
@@ -159,7 +161,7 @@ test("CP/M runtime arenas and the output window work without COM initialisation"
       memory.fill(
         0xa5,
         cpmCensus.loadedImageEnd,
-        cpmCensus.materializerWindowStart + cpmCensus.materializerWindowBytes,
+        cpmCensus.materializerWindowStart + defaultLayout.materializerWindowBytes,
       );
     },
   });
@@ -288,7 +290,7 @@ test("CP/M writes canonical ASO with a distant forward patch", async () => {
 });
 
 test("CP/M materializes a large BIN and applies a PATCH across replay windows", async () => {
-  const windowBytes = cpmCensus.materializerWindowBytes;
+  const windowBytes = defaultLayout.materializerWindowBytes;
   const patchAddress = 0x100 + windowBytes - 1;
   const targetAddress = patchAddress + 2;
   const source = Buffer.from([
@@ -420,7 +422,7 @@ test("a failed internal spool read preserves the existing COM and removes both t
         memory.fill(
           0xa5,
           cpmCensus.materializerWindowStart,
-          cpmCensus.materializerWindowStart + cpmCensus.materializerWindowBytes,
+          cpmCensus.materializerWindowStart + defaultLayout.materializerWindowBytes,
         );
       },
       beforeBdos({ call, fcb, memory }) {
@@ -458,7 +460,7 @@ test("a failed internal spool read preserves the existing COM and removes both t
   assert.equal(replayWindowWasPrepared, true, "ASO replay must start only after the output window is initialized");
   assert.equal(restoredBdosEntry, true);
   assert.equal(result.returnA, 1);
-  assert.equal(result.returnSp, 0xe400);
+  assert.equal(result.returnSp, result.entryBdos);
   assert.match(result.atomTranscript, /OUTPUT\.COM: could not write the output/);
   assert.doesNotMatch(result.atomTranscript, /INPUT\.ASM:\d/);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
@@ -498,7 +500,7 @@ test("a failed materialized-output write preserves the old COM and removes the s
   assert.equal(injectedWriteFailure, true);
   assert.equal(restoredBdosEntry, true);
   assert.equal(result.returnA, 1);
-  assert.equal(result.returnSp, 0xe400);
+  assert.equal(result.returnSp, result.entryBdos);
   assert.ok(
     !closedFcbAddresses.includes(cpmCensus.binaryIncludeFcbAddress),
     "replay data must not turn the reclaimed binary FCB into a live handle",
@@ -541,7 +543,7 @@ test("a failed materialized-output close preserves the old COM and removes both 
   assert.equal(injectedCloseFailure, true);
   assert.equal(restoredBdosEntry, true);
   assert.equal(result.returnA, 1);
-  assert.equal(result.returnSp, 0xe400);
+  assert.equal(result.returnSp, result.entryBdos);
   assert.match(result.atomTranscript, /OUTPUT\.COM: could not write the output/);
   assert.doesNotMatch(result.atomTranscript, /INPUT\.ASM:\d/);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
@@ -577,7 +579,7 @@ test("a failed output rename restores the prior COM and removes the materialized
   assert.equal(injectedRenameFailure, true);
   assert.equal(restoredBdosEntry, true);
   assert.equal(result.returnA, 1);
-  assert.equal(result.returnSp, 0xe400);
+  assert.equal(result.returnSp, result.entryBdos);
   assert.match(result.atomTranscript, /OUTPUT\.COM: could not write the output/);
   assert.doesNotMatch(result.atomTranscript, /INPUT\.ASM:\d/);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
@@ -927,7 +929,7 @@ test("the CP/M target accepts the full $FF00-byte COM and rejects its next byte"
   assert.ok(accepted.outputFile);
   assert.equal(accepted.outputFile.records, 510);
   assert.equal(accepted.outputFile.bytes.length, 0xff00);
-  assert.ok(accepted.atomMinimumSp >= accepted.census.stackFloorAddress);
+  assert.ok(accepted.atomMinimumSp >= defaultLayout.stackFloorAddress);
   assert.equal(fileCalls.get("33:$$$"), undefined);
   assert.equal(fileCalls.get("34:$$$"), undefined);
   assert.equal(accepted.atomBdosCalls.includes(34), false);
@@ -948,7 +950,7 @@ test("disk full during large COM materialization preserves the prior destination
   assert.match(result.atomTranscript, /OUTPUT\.COM: could not write the output/);
   assert.doesNotMatch(result.atomTranscript, /INPUT\.ASM:\d/);
   assert.equal(result.returnA, 1);
-  assert.equal(result.returnSp, 0xe400);
+  assert.equal(result.returnSp, result.entryBdos);
   assert.deepEqual(result.outputFile?.bytes.slice(0, prior.length), prior);
   assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$$"), undefined);
   assert.equal(readCpm22File(result.finalDisk, "OUTPUT.$$B"), undefined);

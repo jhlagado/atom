@@ -134,10 +134,6 @@ async function build() {
     symbol("srcPgEnd") <= symbol("srcCache"),
     "CP/M source state must fit its page",
   );
-  assert.ok(
-    symbol("feRamHi") <= symbol("matLimit"),
-    "CP/M front-end workspace must end below the replay ceiling",
-  );
   assert.equal(
     symbol("srcCache") & 0xff,
     0,
@@ -152,10 +148,9 @@ async function build() {
     symbol("srcCEnd") <= symbol("incNames") &&
       symbol("incNEnd") <= symbol("srcSaves") &&
       symbol("incEnd") <= symbol("binRamLo") &&
-      symbol("binRamHi") <= symbol("cpSymBeg") &&
-      symbol("cpSymEnd") <= symbol("cpRefBeg") &&
-      symbol("cpRefEnd") <= symbol("asoFcb") &&
-      symbol("asoRec") + 128 <= symbol("feRamLo"),
+      symbol("binRamHi") <= symbol("asoFcb") &&
+      symbol("asoRec") + 128 <= symbol("feRamLo") &&
+      symbol("feRamLo") <= symbol("feRamHi"),
     "CP/M runtime data regions overlap or are out of order",
   );
   assert.equal(
@@ -186,28 +181,24 @@ async function build() {
     symbol("srcCache") + 128 <= symbol("matWin"),
     "HEX DMA buffer must remain disjoint from the output replay window",
   );
-  assert.ok(
-    symbol("asoEnd") <= symbol("matLimit"),
-    "CP/M loaded code exceeds the output-memory ceiling",
-  );
-  assert.ok(
-    symbol("matLimit") - symbol("matWin") >= 128,
-    "CP/M ASO materializer has no complete output record window",
-  );
-  assert.equal(
-    (symbol("matLimit") - symbol("matWin")) % 128,
-    0,
-    "CP/M ASO output window must contain complete sequential records",
-  );
-  assert.ok(
-    symbol("matLimit") + 128 <= symbol("cpFloor"),
-    "CP/M output window must stay at least one record below the stack floor",
-  );
-  assert.equal(
-    symbol("matLimit") - symbol("matWin"),
-    33_280,
-    "CP/M output window must keep its 260-record size",
-  );
+  assert.equal(symbol("cpStkLen"), 0x200, "CP/M private stack must hold 512 bytes");
+  const minimumBdosAddress = symbol("feRamHi") + symbol("cpStkLen");
+  // The entry code puts the stack below BDOS and gives a quarter of the rest
+  // to pending references. Record the result for TEC-OS and a 64K system.
+  const layout = (bdos) => {
+    const stackFloor = bdos - symbol("cpStkLen");
+    const arenaBytes = stackFloor - symbol("feRamHi");
+    const pendingBytes = arenaBytes >>> 2;
+    return {
+      bdosAddress: bdos,
+      stackFloorAddress: stackFloor,
+      symbolBytes: arenaBytes - pendingBytes,
+      pendingBytes,
+      symbols: Math.floor((arenaBytes - pendingBytes) / 8),
+      pendingReferences: Math.floor(pendingBytes / 11),
+      materializerWindowBytes: (stackFloor - symbol("matWin")) & ~0x7f,
+    };
+  };
   assert.equal(bytes.length, symbol("asoEnd") - 0x100);
   const loadedRecordBytes = Math.ceil(bytes.length / 128) * 128;
   assert.ok(
@@ -226,7 +217,7 @@ async function build() {
     bytes,
     report: {
       format: "atom-cpm22-census",
-      version: 15,
+      version: 16,
       loadAddress: 0x100,
       entryAddress: symbol("cpEntry"),
       returnAddress: symbol("cpExit"),
@@ -242,8 +233,8 @@ async function build() {
       residentEnd: symbol("cpResEnd"),
       residentBytes: bytes.length,
       lowResidentBytes: symbol("cpResEnd") - 0x100,
-      minimumBdosAddress: 0xe400,
-      minimumTransientProgramBytes: 0xe300,
+      minimumBdosAddress,
+      minimumTransientProgramBytes: minimumBdosAddress - 0x100,
       spoolCodeStart: symbol("asoBeg"),
       spoolCodeEnd: symbol("asoEnd"),
       spoolCodeBytes: symbol("asoEnd") - symbol("asoBeg"),
@@ -254,9 +245,10 @@ async function build() {
       materializerRecordAddress: symbol("matRec"),
       hexDmaAddress: symbol("srcCache"),
       workspaceStartAddress: symbol("cpWork"),
-      workspaceEndAddress: symbol("asoRec") + 128,
+      workspaceEndAddress: symbol("feRamHi"),
+      arenaStartAddress: symbol("feRamHi"),
+      pendingArenaDivisor: 4,
       materializerWindowStart: symbol("matWin"),
-      materializerWindowBytes: symbol("matLimit") - symbol("matWin"),
       materializerPolicy: "sequential-window-replay",
       asoRunAddress: symbol("asoRun"),
       asoRecordAddress: symbol("asoRec"),
@@ -286,16 +278,14 @@ async function build() {
       resolverStateBytes: 12,
       multipartWorkspaceBytes: 0x100 + 0xff * 11 + 0xff * 5 + 12,
       sourceExecutionWorkspaceBytes: 0x80 + 0x100 + 0xff * 11 + 0xff * 5 + 12,
-      symbolBytes: 0x3000,
-      pendingBytes: 0x1000,
+      layouts: [layout(0xb406), layout(0xe406)],
       asoTargetCapacityBytes: 0xff00,
       asoFcbBytes: 36,
       asoImageRunBytes: 128,
       asoRecordBufferBytes: 128,
       asoFixedBufferBytes: 36 + 128 + 128,
       automaticComBinHexUsesAsoSpool: true,
-      stackBytes: symbol("cpStack") - symbol("cpFloor"),
-      stackFloorAddress: symbol("cpFloor"),
+      stackBytes: symbol("cpStkLen"),
       sha256: createHash("sha256").update(bytes).digest("hex"),
     },
   };

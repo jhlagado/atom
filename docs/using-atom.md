@@ -197,12 +197,35 @@ or `B` suffixes. Includes nest up to eight files deep. Each CP/M `INCBIN` needs
 an explicit count and a current-drive 8.3 filename.
 
 A build accepts up to 255 source files of at most 65,535 bytes each.
-The CP/M assembler requires BDOS at `$E400` or higher. It checks that boundary
-before using its workspace. COM and BIN can span 65,280 bytes from `$0100`
-to `$10000`, subject to available disk space.
+COM and BIN can span 65,280 bytes from `$0100` to `$10000`, subject to
+available disk space.
 
 CP/M files occupy complete 128-byte records. BIN and COM have zero padding in
 the last record. HEX uses `$1A` padding after its end record.
+
+### Memory
+
+ATOM.COM sizes its workspace from the BDOS address in the word at `$0006`.
+It needs a TPA of at least 30,660 bytes, with BDOS at `$78C4` or higher.
+With less, it prints `Insufficient transient memory` and opens no files.
+
+The 512-byte stack sits just below BDOS. Symbols and pending forward
+references share the memory between the fixed workspace, which ends at
+`$76C4`, and the stack. Symbols take three quarters at 8 bytes each and
+pending references the rest at 11 bytes each. A pending reference is freed
+once its symbol is defined. A build that fills either part stops with
+`out of memory: too many symbols` or
+`out of memory: too many forward references`, and the old output is kept.
+
+| BDOS entry | System | Symbols | Pending references |
+| --- | --- | ---: | ---: |
+| `$B406` | TEC-OS | 1,422 | 344 |
+| `$E406` | 64K CP/M 2.2 | 2,574 | 624 |
+
+Memory changes only how large a build can be. Output that fits is the same
+on every system. After assembly, Atom replays the output through a window
+that reaches the stack floor, so a smaller TPA means more replay passes over
+the work file.
 
 ### Interrupted builds
 

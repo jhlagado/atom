@@ -69,10 +69,13 @@ matRun: ; Replay the committed spool into output windows.
     RET  C                                  ; Preserve the old output after a write failure.
     JP   .close                             ; Close only after HEX is complete.
 .nonEmpty: ; Choose a bounded nonempty window.
-    LD   HL,matLimit                        ; Load the exclusive replay-window ceiling.
+    LD   HL,(cpDesc+drRefEnd)               ; The window ends at the stack floor.
     LD   DE,matWin                          ; Subtract the aligned start after overlay code.
     OR   A                                  ; Clear borrow before measuring available memory.
     SBC  HL,DE                              ; Form this build's measured window capacity.
+    LD   A,L                                ; Keep only bit seven of the low byte.
+    AND  $80                                ; Round down to whole 128-byte records.
+    LD   L,A                                ; Retain the rounded capacity.
     EX   DE,HL                              ; Keep the capacity in DE for comparison.
     LD   HL,(matLeft)                       ; Reload the rounded output size.
     OR   A                                  ; Clear carry before comparing window and output.
@@ -81,10 +84,7 @@ matRun: ; Replay the committed spool into output windows.
     LD   HL,(matLeft)                       ; The final window uses the remainder.
     JR   .winReady                          ; Its length remains record-aligned.
 .fullWin: ; Use the complete available window.
-    LD   HL,matLimit                        ; Load the ceiling used by the window calculation.
-    LD   DE,matWin                          ; Load the aligned start after materialiser code.
-    OR   A                                  ; Clear borrow before taking the difference.
-    SBC  HL,DE                              ; Recover the record-aligned window size.
+    EX   DE,HL                              ; Recover the record-aligned window size.
 .winReady: ; Fill and replay the chosen byte range.
     LD   (matWLen),HL                       ; Save this pass's physical byte count.
     LD   (matWCnt),HL                       ; Initialize the fill loop length.

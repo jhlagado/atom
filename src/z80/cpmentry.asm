@@ -15,24 +15,47 @@ cpBdos: ; Enter BDOS while preserving Z80 index registers.
     RET                                         ; Return the BDOS result and flags unchanged.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,IY,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Check available transient memory before leaving the CCP stack. The accepted
-; layout may overlay CCP, so every exit uses warm boot rather than RET.
+; Size the workspace from the BDOS entry in the word at $0006, the first byte
+; above the TPA. The stack sits just below it. The symbol and pending arenas
+; share the memory between the fixed workspace and the stack floor, and a
+; build that outgrows them stops with an out-of-memory error. The layout may
+; overlay CCP, so every exit uses warm boot rather than RET.
 ; A at the exit records 0 for success, 1 for failure or 2 for bad arguments.
 
-cpEntry: ; Check memory and assemble one command.
-    LD   HL,($0006)                             ; Read CP/M's advertised BDOS memory boundary.
-    LD   DE,cpStack                             ; Require the fixed workspace and stack.
-    OR   A                                      ; Clear borrow before the unsigned comparison.
-    SBC  HL,DE                                  ; Is the private region entirely below BDOS?
-    JR   NC,.fits                               ; Equality accepts the exclusive stack top.
+cpEntry: ; Size memory and assemble one command.
+    LD   HL,($0006)                             ; Read CP/M's BDOS entry, the top of the TPA.
+    LD   DE,cpStkLen                            ; Leave room for the private stack below it.
+    OR   A                                      ; Clear borrow before the unsigned subtraction.
+    SBC  HL,DE                                  ; Form the stack floor.
+    JR   C,.short                               ; Too little memory for even the stack.
+    LD   B,H                                    ; Keep the floor in BC.
+    LD   C,L                                    ; Complete the copy.
+    LD   DE,feRamHi                             ; The arenas begin after the fixed workspace.
+    SBC  HL,DE                                  ; Measure the arenas; borrow is clear.
+    JR   NC,.fits                               ; Equality leaves empty arenas.
+.short: ; Refuse a TPA that cannot hold the fixed workspace and stack.
     LD   DE,msgMem                              ; Explain rejection before opening any files.
     LD   C,9                                    ; Select string output on the original CCP stack.
     CALL cpCall5                                ; Use BDOS before installing the private stack.
     LD   A,1                                    ; Record the rejection for diagnostic probes.
     JP   cpExit                                 ; Warm boot without touching private arenas.
-.fits: ; Install the private stack after the memory check.
-    LD   SP,cpStack                             ; Use private RAM for calls and pushes.
-    LD   HL,cpFloor                             ; Mark the bottom of the private stack.
+.fits: ; Install the stack and divide the arenas.
+    LD   SP,($0006)                             ; Use private RAM for calls and pushes.
+    LD   (cpDesc+drSymBeg),DE                   ; Symbols start at the fixed workspace's end.
+    LD   (cpDesc+drRefEnd),BC                   ; Pending references end at the stack floor.
+    SRL  H                                      ; Halve the arena bytes.
+    RR   L                                      ; Complete the halving.
+    SRL  H                                      ; Halve them again.
+    RR   L                                      ; One quarter goes to pending references.
+    EX   DE,HL                                  ; Hold the pending bytes in DE.
+    LD   H,B                                    ; Start from the stack floor.
+    LD   L,C                                    ; Complete the floor.
+    OR   A                                      ; Clear borrow.
+    SBC  HL,DE                                  ; Find the split.
+    LD   (cpDesc+drRefBeg),HL                   ; Pending references start there.
+    LD   (cpDesc+drSymEnd),HL                   ; And the symbols end there.
+    LD   H,B                                    ; Mark the bottom of the private stack.
+    LD   L,C                                    ; Complete its address.
     LD   B,4                                    ; Four guard bytes detect an overflow.
 .guard: ; Write the four stack-floor guard bytes.
     LD   (HL),cpGuard                           ; Store one guard byte.
@@ -82,6 +105,15 @@ cpEntry: ; Check memory and assemble one command.
 .text: ; Print the core diagnostic text.
     CALL errSep                                 ; Separate the location from the message.
     LD   A,(drMsg)                              ; Load the core's message number.
+    CP   drSymMsg+sySymCap                      ; Did the symbol arena fill?
+    JR   Z,.oom                                 ; Memory ran out.
+    CP   drSymMsg+syRefCap                      ; Did the pending arena fill?
+    JR   NZ,.say                                ; No: print the message alone.
+.oom: ; Say that the arenas ran out of memory.
+    LD   DE,msgOom                              ; Name the cause before the message.
+    CALL cpPrint                                ; Print it.
+    LD   A,(drMsg)                              ; Reload the message number.
+.say: ; Print the message and its arguments.
     CALL cpDiag                                 ; Print the message and its arguments.
     LD   DE,msgCrlf                             ; Point at the terminating line break.
     CALL cpPrint                                ; Finish the diagnostic line.
@@ -111,10 +143,10 @@ cpExit: ; Warm boot after transient workspace use.
     JP   $0000                                  ; Reload CP/M's command processor through BIOS.
 
 ;@ROUTINE CLOBBERS A,BC,DE,HL,IX,CARRY,ZERO,SIGN,PARITY,HALFCARRY
-; Report a stack overflow when the guard bytes at cpFloor have changed.
+; Report a stack overflow when the guard bytes at the stack floor have changed.
 
 cpCheck: ; Check the four private-stack guard bytes.
-    LD   HL,cpFloor                             ; Address the first guard byte.
+    LD   HL,(cpDesc+drRefEnd)                   ; Address the first guard byte at the floor.
     LD   B,4                                    ; Check all four.
 .loop: ; Compare each byte with the guard pattern.
     LD   A,(HL)                                 ; Read one guard byte.

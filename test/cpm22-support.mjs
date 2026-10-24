@@ -31,6 +31,19 @@ export const representativeSource = Buffer.from([
   "",
 ].join("\r\n"), "ascii");
 
+// The emulated CP/M 2.2 system advertises its BDOS entry at $EC06.
+export const defaultBdosAddress = 0xec06;
+
+// ATOM.COM sizes its workspace from the BDOS entry: the stack sits just below
+// it and the replay window ends at the stack floor.
+export function cpmLayout(census, bdos = defaultBdosAddress) {
+  const stackFloorAddress = bdos - census.stackBytes;
+  return {
+    stackFloorAddress,
+    materializerWindowBytes: (stackFloorAddress - census.materializerWindowStart) & ~0x7f,
+  };
+}
+
 function projectForParts(parts) {
   return Object.freeze({
     parts: Object.freeze(parts.map((bytes, ordinal) => Object.freeze({
@@ -122,6 +135,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
   platform.terminal.enqueueInput(Buffer.from(`${command}\r`, "ascii"));
   stepUntil(() => runtime.getPC() === census.entryAddress, "Atom entry");
   options.beforeAtomEntry?.(runtimeMemory, runtime.getRegisters());
+  const entryBdos = runtimeMemory[6] | (runtimeMemory[7] << 8);
   const entrySp = runtime.getRegisters().sp;
   tracingAtom = true;
   stepUntil(() => runtime.getPC() === census.returnAddress, "Atom return tail");
@@ -140,6 +154,7 @@ export async function runCpm22Atom(source = representativeSource, priorOutput, o
     atomTranscript: transcript(atomOutputStart),
     atomMinimumSp: minimumSp,
     atomBdosCalls: Object.freeze(bdosCalls.slice()),
+    entryBdos,
     entrySp,
     returnSp,
     returnA,
